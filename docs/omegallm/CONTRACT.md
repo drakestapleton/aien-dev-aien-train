@@ -202,3 +202,40 @@ implement them.
   nothing must not pass.
 - The smoke and v0 runs use LRMICRO = 3000 (lr 3e-3). This contract fixes the reading of LRMICRO,
   not its value.
+
+## 9. Platform units and the UEFI job file
+
+The shared units (`math data model adam ckpt cli`) do no I/O of their own. They call one platform
+unit, concatenated last, which defines `main`, `oargc`, `oargr`, `oflush`, `ocwrite`, `ocread`,
+`odread`, `owflush`, `owopen`, `owclose` and `ooffrd`, and calls `ocmd` (cli.om) once per command.
+
+| Unit | Target | Arguments | Output |
+|---|---|---|---|
+| `lio.om` | `aarch64` (Linux), `x86linux` | the process command line | stdout; checkpoints written to `PATH.tmp` then renamed |
+| `eio.om` | `x86efi` (UEFI application) | one command per line of `\OLLM\JOB.TXT` | the console and `\OLLM\OUT.TXT`; checkpoints written in place |
+
+`eio.om` reads every file from the volume the application was loaded from. `\OLLM\JOB.TXT` (at most
+65535 bytes) holds one command per line without the program name; CR before LF is dropped, empty
+lines and lines starting with `#` are skipped, tokens split on space or tab, and a token in double
+quotes may hold spaces (at most 63 tokens, else exit 2). A missing or longer JOB.TXT prints
+`OLLM efi JOB.TXT?`, waits for a key and exits 2. Otherwise `\OLLM\OUT.TXT` is recreated and receives,
+byte for byte, what the console shows (the console shows bytes outside 9, 10, 13 and 32–126 as `?`):
+
+```
+OLLM efi <JOB.TXT bytes>
+> <job line>
+<the command's stdout, as on Linux, plus LF when it does not end in LF>
+J <wall milliseconds>
+...
+OLLM DONE <jobs> <wall milliseconds>
+```
+
+The application then waits up to 300 s for a key and returns 0. A command that refuses (`exit N`)
+ends the application at once with status N, as on Linux; OUT.TXT then ends with the output flushed
+so far. This needs the `x86efi` compiler of omega-mv#1015 (`5ce9ecaa`): its `exit` flushes and closes
+the open `efi 12` file before returning to the firmware, so the bytes written before the refusal are
+on the volume (`evidence/OMEGALLM/efi/ckbad/`: a refused checkpoint, and OUT.TXT equal to the Linux
+body). Differences from `lio.om`: there is no rename, so a refused or interrupted checkpoint write
+can leave a partial file; a path longer than 255 bytes is an I/O refusal (70). `J` and the `OLLM DONE`
+time are wall clock and are not compared; every other OUT.TXT line must equal what a Linux build
+prints for the same lines (`tests/omegallm/efi-ref.sh`).

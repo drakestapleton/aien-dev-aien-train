@@ -1,0 +1,2 @@
+OLLM efi 38
+> eval \OLLM\CK.BIN \OLLM\MATHREF.TXT 4

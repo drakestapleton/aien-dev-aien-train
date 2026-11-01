@@ -1,5 +1,19 @@
 {
-  "schema_version": "1.0.0",
+  "extensions": {
+    "generated": {
+      "children": [],
+      "children_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "compiled_at": "2026-11-01T23:20:04Z",
+      "compiler": "crumb-compile/1",
+      "digest": "sha256:95d7f29720eb87b52885b13901a8f546544af97fbef41904d2fa5efffc34f3cd",
+      "evidence_files": 0,
+      "evidence_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "files": 2,
+      "generated_at_commit": "73f62902719ae6048bd766e9e02e0c2dc919edfd",
+      "source_tree": "sha256:debba8a4550b266b63fd2a4e6151d0b92e75d7c79bae90cc4ce9a17c868ad000"
+    }
+  },
   "name": "omegallm-docs",
-  "purpose": "Omega LLM v0 contract (CONTRACT.md) and status/run guide (README.md)"
+  "purpose": "Omega LLM v0 contract (CONTRACT.md) and status/run guide (README.md)",
+  "schema_version": "1.0.0"
 }

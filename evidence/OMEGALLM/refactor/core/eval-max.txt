@@ -1,0 +1,10 @@
+receipt: eval-max
+host_cpu: core 7 (Cortex-X925)
+binary: ollm sha256 52f5684fe2a600f0221337925233343cede03883bc81dcbbc32b40123a4dac1b
+source: ollm.om sha256 076871af4be89d59f2fbe2e1bdb99c30277a622b0c0b1504db1edabbe6e31e19
+$ taskset -c 7 nice -n 19 build-rf/ollm eval scratch-rf/work/max.ck data/held.bin 2
+--- output
+E 0 2 5566611 8030922
+--- end
+rc=0 expect=0
+wall_ns=84527967

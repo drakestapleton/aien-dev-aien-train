@@ -1,0 +1,14 @@
+# ollm UEFI acceptance job (aien-train#52). Each line is one ollm command without the program name.
+# Inputs on the image: CK.BIN = run/v0 ck-20000, STORIES.TXT = data/TinyStoriesV2-GPT4-valid.txt,
+# MATHREF.TXT = tests/omegallm/mathref.txt. TR.BIN, HE.BIN and S.CK are written by the jobs.
+mathck \OLLM\MATHREF.TXT
+adamck
+prep \OLLM\STORIES.TXT \OLLM\TR.BIN \OLLM\HE.BIN
+base \OLLM\TR.BIN \OLLM\HE.BIN
+init \OLLM\S.CK 256 8 16 2 32 2 2 52 200 1000
+gcheck \OLLM\S.CK \OLLM\TR.BIN
+train \OLLM\S.CK \OLLM\TR.BIN 20 10
+eval \OLLM\S.CK \OLLM\HE.BIN 16
+eval \OLLM\CK.BIN \OLLM\HE.BIN 64
+sample \OLLM\CK.BIN 7 200 0 "Once upon a time"
+sample \OLLM\CK.BIN 7 200 800 "Once upon a time"

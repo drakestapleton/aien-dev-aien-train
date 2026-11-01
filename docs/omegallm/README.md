@@ -40,6 +40,9 @@ names the binary and source sha256 it ran; `core-receipts.sh` builds all six bin
 | cross-check against the referee | EXERCISED by the oracle lane, on b729cc35 and the three mutants | `evidence/OMEGALLM/oracle/` and `tests/omegallm/ORACLE.md` |
 | the v0 run, 20000 steps (`tests/omegallm/v0-run.sh`) | EXERCISED: 2026-11-01T15:24:54Z to 19:23:57Z on core 9, binary a9b5f3ec, unit `Result=success`; held-out 1.463036 bpb at W=4096 | `evidence/OMEGALLM/v0/run/` (see "v0 result") |
 | a9b5f3ec and b729cc35 compute the same v0 run | EXERCISED | `evidence/OMEGALLM/v0/equiv-a9b5f3ec-b729cc35.txt`: same `E 2000` line from the run's step-2000 checkpoint, byte-identical checkpoint after 10 more steps; control `equiv-control-mut-b.txt` differs |
+| `ollm` as an x86-64 Linux program (`TARGET=x86linux`, omega-mv main `ba5559d9`) | EXERCISED, EMULATED (qemu-x86_64 8.2.2 user mode) | `evidence/OMEGALLM/x86/`: the whole receipt suite, 48/48 PASS, every receipt equal to the AArch64 one apart from hashes, paths and wall time; the v0 checkpoint's final eval `E 20000 4096 1014099 1463036` reproduced |
+| `ollm` as a UEFI application (`TARGET=x86efi`, compiler from draft omega-mv#1015) | EXERCISED, EMULATED (QEMU 8.2.2 TCG + OVMF) | `evidence/OMEGALLM/efi/`: the 11 commands of `tests/omegallm/efi-job.txt` read from `\OLLM\JOB.TXT`; OUT.TXT body byte-identical to the AArch64 Linux run; TR.BIN, HE.BIN and S.CK written on the FAT volume identical; mutant b differs at byte 375; corrupted checkpoint, 65535- and 65536-byte job controls pass |
+| the same image on the physical iMac | NOT_RUN | section "iMac" |
 
 b729cc35 differs from a9b5f3ec only in bounds handling. The source diff shows it: the concatenated
 source goes from `cb80250d…` (a9b5f3ec, recorded in commit da910097's `init-v0.txt`) to `47c27b0b…`
@@ -58,15 +61,25 @@ against `frozen/ollm` and the copied checkpoint, and the unit's start time and c
 ## Build
 
 ```sh
-sh tests/omegallm/build.sh               # -> ../build/ollm
+sh tests/omegallm/build.sh               # -> ../build/ollm (AArch64 Linux)
 sh tests/omegallm/build.sh --mutant a    # also b, c: -> ../build/ollm-mut-X
 sh tests/omegallm/build.sh --variant h5  # also h7: -> ../build/ollm-var-hX
+TARGET=x86linux sh tests/omegallm/build.sh   # x86-64 Linux ELF
+TARGET=x86efi sh tests/omegallm/build.sh     # -> ../build/ollm.efi, a UEFI x86-64 application
 ```
 
 The build script does four things:
 
-1. It checks the omc sha256 (`2c82480596bbdc50cda9626866209ef662d5834f278f839ff4ce0250c495029f`).
-2. It concatenates the units in this order: `math.om data.om model.om adam.om ckpt.om cli.om`.
+1. It checks the sha256 of the target's omc (`OMC`, defaulting to a sibling checkout):
+   - aarch64: `2c82480596bbdc50cda9626866209ef662d5834f278f839ff4ce0250c495029f`
+     (omega-mv `e5b32567`, `../omega-mv`);
+   - x86linux: `be8c51301307555254fc59e351d281aae1aa096d91521777e33a41c8b446448a`
+     (omega-mv main `ba5559d9`, `../omega-mv-x86`);
+   - x86efi: `b4f45121f6c6d5d8a6ed0f5c4f3934b7cc4bec369bfa89523699bd33928f9b55`
+     (draft omega-mv#1015, commit `5ce9ecaa`, `../omega-efi`; main's omc refuses `target x86efi`).
+2. It concatenates `math.om data.om model.om adam.om ckpt.om cli.om` and the platform unit
+   (`lio.om` for Linux, `eio.om` for UEFI; CONTRACT §9). The x86 targets put the line
+   `target x86linux` or `target x86efi` first.
 3. For a mutant, it changes exactly one line of the concatenated copy (`OMUTA`, `OMUTB`, `OMUTC`).
    A variant sets both gcheck steps `GCH` and `GCH2` to 1e-5 (h5) or 1e-7 (h7) and must change
    exactly those two lines; any other count stops the build with exit 4.
@@ -88,6 +101,32 @@ $R $B sample v0.ck SEED 200 800 "Once upon a time"
 Never commit the data or the `.bin` and `.ck` files. Every receipt in the table can be reproduced
 with `sh tests/omegallm/core-receipts.sh`; set `CORE`, `BUILD`, `DATA` or `WORK` to override the
 defaults. The exit codes are listed in CONTRACT §7.
+
+## iMac
+
+`tests/omegallm/efi-receipts.sh` leaves the boot image at `$WORK/ollm.img` (`scratch-efi/ollm.img`;
+the image of the receipted run is sha256 `2b9a420a93486a4d37ed78141a45861427090535502243ecbb67fa4008b6c162`).
+It is a GPT disk with one EFI system partition, FAT label ALLEN, holding:
+
+- `EFI/BOOT/BOOTX64.EFI`, the `ollm.efi` application;
+- `OLLM/JOB.TXT` (a copy of `tests/omegallm/efi-job.txt`), `OLLM/CK.BIN` (the v0 checkpoint),
+  `OLLM/STORIES.TXT` (TinyStoriesV2-GPT4-valid.txt) and `OLLM/MATHREF.TXT`.
+
+Write it whole to a USB stick and start the Intel iMac from the stick (hold Option at the chime and
+pick "EFI Boot"). `ollm` runs the 11 jobs, shows each job's output on the console and appends it to
+`\OLLM\OUT.TXT`. After the last job the console shows `OLLM DONE 11 <ms>`, and `ollm` waits up to
+300 s for a key before returning to the firmware. A refusal ends the application at once; OUT.TXT
+then ends with that job's output. Copy `OLLM/OUT.TXT` (and `TR.BIN`, `HE.BIN`, `S.CK`) off the stick
+and check them against the Linux reference:
+
+```sh
+sh tests/omegallm/efi-check.sh OUT.TXT evidence/OMEGALLM/efi/ref.out 11
+(cd <copied files> && sha256sum TR.BIN HE.BIN S.CK) | diff - evidence/OMEGALLM/efi/ref-files.txt
+```
+
+Status: NOT_RUN on the iMac. Two things only the physical machine can show: whether Apple's firmware
+console displays `efi 13` text (OUT.TXT is written either way), and whether its FAT driver accepts
+the writes. Under TCG the run took 1006 s of wall time on one GB10 core; the iMac's time is unknown.
 
 ## Throughput
 

@@ -14,7 +14,6 @@ global oby uchar 1024
 global owb0 uchar 65536
 global owb1 uchar 65536
 global owbn ulong 2
-global owfd int 2
 global ocnt ulong 65536
 global ocnu ulong 256
 global ocnr ulong 256
@@ -23,9 +22,9 @@ global oseps uchar 16
 note exit codes of this unit: 2 usage, 20 data file empty or too short for T, 21 data file over
 note 2^25 bytes, 70 I/O.
 
-note argv[i] into oarg; returns its length (1 .. 4096) or exits 2.
+note argument i into oarg; returns its length (1 .. 4096) or exits 2.
 fn oargp i ulong to ulong
-r = argread i oarg 0 4096
+r = oargr i
 if or le r 0 gt r 4096
 exit 2
 end
@@ -64,75 +63,8 @@ put od1 sub i ODHALF uchar c
 end
 end
 
-note Read the file named by argv[i] into od0/od1; refuse more than ODCAP bytes (exit 21).
-note Each read pass adds at least one byte or ends, so ODCAP + 2 passes suffice: 64 outer passes
-note of at most 999999 inner passes each cover 2^25 + 2.
-fn odread i ulong to ulong
-n = oargp i
-fd = int fopen oarg 0 n 0 0
-if lt fd 0
-exit 70
-end
-p = ulong 0
-dn = false
-for o ulong 64
-q = ulong 0
-while and not dn lt q 999999 bound 999999
-q = add q 1
-r = long 0
-if lt p ODHALF
-r = read fd od0 p sub ODHALF p
-else
-if lt p ODCAP
-r = read fd od1 sub p ODHALF sub ODCAP p
-else
-r = read fd ochk 0 1
-end
-end
-if lt r 0
-exit 70
-end
-if eq r 0
-dn = true
-else
-p = add p ulong r
-if gt p ODCAP
-exit 21
-end
-end
-end
-if dn
-break
-end
-end
-if not dn
-exit 70
-end
-c = fclose fd
-put odn 0 p
-ret p
-end
-
-note prep output: two buffered writers (k = 0 TRAIN, k = 1 HELD).
-fn owflush k ulong to void
-n = get owbn k
-fd = get owfd k
-p = ulong 0
-while lt p n bound 65537
-w = long 0
-if eq k 0
-w = write fd owb0 p sub n p
-else
-w = write fd owb1 p sub n p
-end
-if le w 0
-exit 70
-end
-p = add p ulong w
-end
-put owbn k 0
-end
-
+note prep output: two buffered writers (k = 0 TRAIN, k = 1 HELD); owopen, owflush and owclose are
+note the platform unit's (lio.om, eio.om).
 fn owbyte k ulong c ulong to void
 n = get owbn k
 if ge n 65536
@@ -145,27 +77,6 @@ else
 put owb1 n uchar c
 end
 put owbn k add n 1
-end
-
-fn owopen k ulong i ulong to void
-n = oargp i
-fd = int fopen oarg 0 n 577 420
-if lt fd 0
-exit 70
-end
-put owfd k fd
-put owbn k 0
-end
-
-fn owclose k ulong to void
-owflush k
-fd = get owfd k
-if ne fsync fd 0
-exit 70
-end
-if ne fclose fd 0
-exit 70
-end
 end
 
 note 1 when the separator <|endoftext|> starts at p (p + 13 <= n).
@@ -241,7 +152,7 @@ end
 note prep IN TRAIN HELD. The scan visits each byte once: 64 outer passes of at most 999999
 note inner passes cover the 2^25-byte maximum input.
 fn cmdprep to void
-if ne argcnt 5
+if ne oargc 5
 exit 2
 end
 oseptab
@@ -303,7 +214,7 @@ end
 note base TRAIN HELD (CONTRACT section 7 and agreed reading A5): unigram and bigram add-one
 note counts over all TRAIN bytes and all N-1 adjacent TRAIN pairs; scored on HELD targets 1..M-1.
 fn cmdbase to void
-if ne argcnt 4
+if ne oargc 4
 exit 2
 end
 n = odread 2

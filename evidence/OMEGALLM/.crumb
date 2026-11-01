@@ -1,5 +1,19 @@
 {
-  "schema_version": "1.0.0",
+  "extensions": {
+    "generated": {
+      "children": [],
+      "children_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "compiled_at": "2026-11-01T23:20:04Z",
+      "compiler": "crumb-compile/1",
+      "digest": "sha256:035fe3f1800500a6256223916e6e15f7ddd01174c7ca7745935be80320aa2a53",
+      "evidence_files": 265,
+      "evidence_root": "sha256:2942d7ec6940384685cc3797c8e7aab65d4e6b14f67fd19927997f1351d993fe",
+      "files": 265,
+      "generated_at_commit": "73f62902719ae6048bd766e9e02e0c2dc919edfd",
+      "source_tree": "sha256:3538168657acde6aa81907e1b70af425fd219dcd0f069c84cf8c1de079b7d71f"
+    }
+  },
   "name": "omegallm-evidence",
-  "purpose": "Receipts for Omega LLM v0: core/ (.om lane runs on GB10 Grace) and oracle/ (referee cross-checks)"
+  "purpose": "Receipts for Omega LLM v0: core/ (.om lane runs on GB10 Grace) and oracle/ (referee cross-checks)",
+  "schema_version": "1.0.0"
 }

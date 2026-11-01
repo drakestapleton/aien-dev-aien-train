@@ -1,0 +1,10 @@
+receipt: final v0 eval recomputed by the x86-64 build, EMULATED
+host_cpu: core 7 (Cortex-X925), nice 19
+target: x86linux EMULATED: qemu-x86_64 version 8.2.2 (Debian 1:8.2.2+ds-0ubuntu1.18)
+b457ca7811ca79df77374d6608ddf10b450cb3684552bcf402da0de3f550c827  build-x86/ollm
+ddf790fc0dd10372746a58fbf8b1754b2e4b3b80c9afbc075df7662d51b8159b  run/v0/ck-20000.bin
+729e0a4a8854934ee6000ead2b367494c6b4c9eb52d554f81d6f7f44403338ed  data/held.bin
+$ taskset -c 7 nice -n 19 build-x86/ollm eval run/v0/ck-20000.bin data/held.bin 4096
+E 20000 4096 1014099 1463036
+rc=0 wall_ns=1071081609297
+run final-eval.txt: E 20000 4096 1014099 1463036

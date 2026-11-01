@@ -1,0 +1,249 @@
+note SPDX-License-Identifier: AGPL-3.0-only
+note omegallm lio.om (aien-train#52): the Linux platform unit, the only unit that uses host words.
+note It is concatenated last for targets aarch64 and x86linux; eio.om replaces it for x86efi. Both
+note define the same functions: oargc, oargr, oflush, ocwrite, ocread, odread, owflush, owopen,
+note owclose, ooffrd and main. Every other unit is free of host words.
+global owfd int 2
+global opth uchar 2100
+global opk uchar 4200
+
+note the argument count (argv[0] included)
+fn oargc to ulong
+ret ulong argcnt
+end
+
+note argv[i] into oarg (at most 4096 bytes); returns the argread result (negative: no such argument)
+fn oargr i ulong to long
+ret argread i oarg 0 4096
+end
+
+fn main to int
+if lt oargc 2
+exit 2
+end
+ret ocmd
+end
+
+fn oflush to void
+n = get oon 0
+p = ulong 0
+while lt p n bound 4097
+w = write 1 oout p sub n p
+if le w 0
+exit 70
+end
+p = add p ulong w
+end
+put oon 0 0
+end
+
+note write ock[0 .. 112 + n) to the path in argv[ai]: write PATH.tmp, fsync, rename
+fn ocwrite ai ulong n ulong to void
+pl = oargp ai
+if gt pl 2000
+exit 2
+end
+for i ulong pl
+put opth i get oarg i
+end
+put opth pl 46
+put opth add pl 1 116
+put opth add pl 2 109
+put opth add pl 3 112
+fd = int fopen opth 0 add pl 4 577 420
+if lt fd 0
+exit 70
+end
+tot = add 112 n
+p = ulong 0
+while lt p tot bound 999999
+w = write fd ock p sub tot p
+if le w 0
+exit 70
+end
+p = add p ulong w
+end
+if ne fsync fd 0
+exit 70
+end
+if ne fclose fd 0
+exit 70
+end
+ocrename pl
+end
+
+note rename opth[0 .. pl+4) to opth[0 .. pl) via a packed two-path list
+fn ocrename pl ulong to void
+put opk 0 2
+put opk 1 0
+put opk 2 uchar and add pl 4 255
+put opk 3 uchar shr add pl 4 8
+for i ulong add pl 4
+put opk add 4 i get opth i
+end
+q = add 8 pl
+put opk q uchar and pl 255
+put opk add q 1 uchar shr pl 8
+for j ulong pl
+put opk add add q 2 j get opth j
+end
+r = renames opk 0 add add q 2 pl 0
+if ne r 0
+exit 70
+end
+end
+
+note read the file named by argv[ai] into ock; returns its length (at most OCKCAP)
+fn ocread ai ulong to ulong
+n = oargp ai
+fd = int fopen oarg 0 n 0 0
+if lt fd 0
+exit 70
+end
+p = ulong 0
+dn = false
+while not dn bound 999999
+r = long 0
+if lt p OCKCAP
+r = read fd ock p sub OCKCAP p
+else
+r = read fd ochk 0 1
+if gt r 0
+exit 15
+end
+end
+if lt r 0
+exit 70
+end
+if eq r 0
+dn = true
+else
+p = add p ulong r
+end
+end
+if not dn
+exit 70
+end
+c = fclose fd
+ret p
+end
+
+note Read the file named by argv[i] into od0/od1; refuse more than ODCAP bytes (exit 21).
+note Each read pass adds at least one byte or ends, so ODCAP + 2 passes suffice: 64 outer passes
+note of at most 999999 inner passes each cover 2^25 + 2.
+fn odread i ulong to ulong
+n = oargp i
+fd = int fopen oarg 0 n 0 0
+if lt fd 0
+exit 70
+end
+p = ulong 0
+dn = false
+for o ulong 64
+q = ulong 0
+while and not dn lt q 999999 bound 999999
+q = add q 1
+r = long 0
+if lt p ODHALF
+r = read fd od0 p sub ODHALF p
+else
+if lt p ODCAP
+r = read fd od1 sub p ODHALF sub ODCAP p
+else
+r = read fd ochk 0 1
+end
+end
+if lt r 0
+exit 70
+end
+if eq r 0
+dn = true
+else
+p = add p ulong r
+if gt p ODCAP
+exit 21
+end
+end
+end
+if dn
+break
+end
+end
+if not dn
+exit 70
+end
+c = fclose fd
+put odn 0 p
+ret p
+end
+
+note prep output: two buffered writers (k = 0 TRAIN, k = 1 HELD).
+fn owflush k ulong to void
+n = get owbn k
+fd = get owfd k
+p = ulong 0
+while lt p n bound 65537
+w = long 0
+if eq k 0
+w = write fd owb0 p sub n p
+else
+w = write fd owb1 p sub n p
+end
+if le w 0
+exit 70
+end
+p = add p ulong w
+end
+put owbn k 0
+end
+
+fn owopen k ulong i ulong to void
+n = oargp i
+fd = int fopen oarg 0 n 577 420
+if lt fd 0
+exit 70
+end
+put owfd k fd
+put owbn k 0
+end
+
+fn owclose k ulong to void
+owflush k
+fd = get owfd k
+if ne fsync fd 0
+exit 70
+end
+if ne fclose fd 0
+exit 70
+end
+end
+
+note read argv[ai] (B little-endian u64 offsets) into ochk; exit 21 unless it holds exactly 8 B bytes
+fn ooffrd ai ulong to void
+n = oargp ai
+fd = int fopen oarg 0 n 0 0
+if lt fd 0
+exit 70
+end
+p = ulong 0
+dn = false
+while not dn bound 70000
+r = read fd ochk p sub 65536 p
+if lt r 0
+exit 70
+end
+if eq r 0
+dn = true
+else
+p = add p ulong r
+if ge p 65536
+exit 21
+end
+end
+end
+c = fclose fd
+if ne p mul 8 get og 6
+exit 21
+end
+end
+

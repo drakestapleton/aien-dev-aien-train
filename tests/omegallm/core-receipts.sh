@@ -5,6 +5,10 @@
 #      this clone), DATA (TinyStoriesV2-GPT4-valid.txt; default data/ beside it), WORK (scratch for
 #      checkpoints), CORE (taskset core, default 6). Derived .bin files go beside DATA and are never
 #      committed.
+#      TARGET (aarch64, the default, or x86linux; passed to build.sh) and EV (receipt directory,
+#      default evidence/OMEGALLM/core in this clone). An x86linux run executes the x86-64 ELFs through
+#      the host's qemu-x86_64 binfmt handler; each receipt then names the emulator (EMULATED, not a
+#      physical x86 run). The pinned value lines are the same for both targets.
 # The script runs from the clone's parent directory and every path is relative to it, so the
 # committed receipts name no absolute (private) paths. Give BUILD/DATA/WORK relative to that parent.
 # Step 0 builds every binary from this tree with tests/omegallm/build.sh, so the receipts always
@@ -20,7 +24,12 @@ BUILD=${BUILD:-build}
 DATA=${DATA:-data/TinyStoriesV2-GPT4-valid.txt}
 WORK=${WORK:-scratch-core/work}
 CORE=${CORE:-6}
-E=$r/evidence/OMEGALLM/core
+TARGET=${TARGET:-aarch64}
+E=${EV:-$r/evidence/OMEGALLM/core}
+EMUL=
+if [ "$TARGET" = x86linux ]; then
+	EMUL="x86linux EMULATED: $(qemu-x86_64 --version | head -n 1), binfmt $(sed -n 's/^flags: /flags /p' /proc/sys/fs/binfmt_misc/qemu-x86_64)"
+fi
 DD=$(dirname "$DATA")
 TR=$DD/train.bin
 HE=$DD/held.bin
@@ -31,7 +40,7 @@ mkdir -p "$E" "$WORK"
 : > "$E/build.txt"
 for a in "" "--mutant a" "--mutant b" "--mutant c" "--variant h5" "--variant h7"; do
 	# shellcheck disable=SC2086
-	OUT=$BUILD CORE=$CORE sh "$r/tests/omegallm/build.sh" $a >> "$E/build.txt" 2>&1 || {
+	OUT=$BUILD CORE=$CORE TARGET=$TARGET sh "$r/tests/omegallm/build.sh" $a >> "$E/build.txt" 2>&1 || {
 		echo "BUILD_FAIL $a" | tee -a "$E/build.txt"
 		exit 1
 	}
@@ -49,6 +58,7 @@ rec() {
 	{
 		echo "receipt: $name"
 		echo "host_cpu: core $CORE ($(lscpu -e=CPU,MODELNAME 2>/dev/null | awk -v c="$CORE" '$1==c {$1=""; print substr($0,2)}'))"
+		[ -z "$EMUL" ] || echo "target: $EMUL"
 		echo "binary: $bin sha256 $(sha256sum "$BUILD/$bin" | cut -d' ' -f1)"
 		echo "source: $bin.om sha256 $(sha256sum "$BUILD/$bin.om" | cut -d' ' -f1)"
 		echo "\$ $RUN $BUILD/$bin $*"
@@ -83,6 +93,7 @@ sha256sum "$DATA" > "$E/data-sha256.txt"
 	echo "core $CORE midr_el1 $(cat /sys/devices/system/cpu/cpu$CORE/regs/identification/midr_el1)"
 	echo "core $CORE cpuinfo_max_freq_khz $(cat /sys/devices/system/cpu/cpu$CORE/cpufreq/cpuinfo_max_freq)"
 	lscpu -e=CPU,MODELNAME,MAXMHZ 2>/dev/null | awk -v c="$CORE" 'NR==1 || $1==c'
+	[ -z "$EMUL" ] || echo "target: $EMUL"
 } > "$E/host.txt"
 
 # 1. prep on the real data, then the derived file hashes

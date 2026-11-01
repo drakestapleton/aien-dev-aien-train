@@ -133,19 +133,6 @@ end
 ret q
 end
 
-fn oflush to void
-n = get oon 0
-p = ulong 0
-while lt p n bound 4097
-w = write 1 oout p sub n p
-if le w 0
-exit 70
-end
-p = add p ulong w
-end
-put oon 0 0
-end
-
 fn oputc c ulong to void
 n = get oon 0
 if ge n OMOUT

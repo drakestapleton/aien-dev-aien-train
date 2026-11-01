@@ -1,5 +1,19 @@
 {
-  "schema_version": "1.0.0",
+  "extensions": {
+    "generated": {
+      "children": [],
+      "children_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "compiled_at": "2026-11-01T23:20:04Z",
+      "compiler": "crumb-compile/1",
+      "digest": "sha256:0d7510cc061726a637be8b620cd609af222cd2258ec1721a648496a4cfb86c8b",
+      "evidence_files": 0,
+      "evidence_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "files": 15,
+      "generated_at_commit": "73f62902719ae6048bd766e9e02e0c2dc919edfd",
+      "source_tree": "sha256:ad58082c12a0bdf6dc9f33b2810ef1fb9a27cae13352a96d78ad0e82f8dee31e"
+    }
+  },
   "name": "omegallm-tests",
-  "purpose": "Build script, core receipt script, Wolfram exp/log reference and the Python-stdlib referee (oracle.py) for Omega LLM v0; verification only, never in the build"
+  "purpose": "Build script, core receipt script, Wolfram exp/log reference and the Python-stdlib referee (oracle.py) for Omega LLM v0; verification only, never in the build",
+  "schema_version": "1.0.0"
 }
