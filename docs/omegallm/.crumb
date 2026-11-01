@@ -1,0 +1,5 @@
+{
+  "schema_version": "1.0.0",
+  "name": "omegallm-docs",
+  "purpose": "Omega LLM v0 contract (CONTRACT.md) and status/run guide (README.md)"
+}

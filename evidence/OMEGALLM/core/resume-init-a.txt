@@ -1,0 +1,10 @@
+receipt: resume-init-a
+host_cpu: core 6 (Cortex-X925)
+binary: ollm sha256 a9b5f3ec8291c1b046d350dcb7ee6550a271a9e06ee30ba13062d28732aa6137
+source: ollm.om sha256 cb80250d6ee78d58056114a304b4c8269c44f9241c534e970c4bba44e096179b
+$ taskset -c 6 nice -n 19 build/ollm init scratch-core/work/ra.ck 256 64 64 4 256 2 16 52 20000 3000
+--- output
+I 119104
+--- end
+rc=0 expect=0
+wall_ns=12028017

@@ -1,0 +1,54 @@
+{
+ "check": "xbase",
+ "binary": "frozen/ollm-mut-b",
+ "binary_sha256": "4b12510f499b2a4394f58246484ce3d40621c0c24e545c7177d8e2a02b7787ea",
+ "oracle_sha256": "74ec6e991dfc964f25a93f147cf9ee1575a405a21297c71a5b95229db203f02a",
+ "started": "2026-11-01T15:32:30Z",
+ "affinity": [
+  8
+ ],
+ "nice": 19,
+ "commands": [
+  {
+   "argv": [
+    "frozen/ollm-mut-b",
+    "base",
+    "/tmp/ollm-oracle-nc/work/mut-b/oracle-train.bin",
+    "/tmp/ollm-oracle-nc/work/mut-b/oracle-held.bin"
+   ],
+   "rc": 0,
+   "stdout": "B 4415645 3295113\n",
+   "stderr": "",
+   "seconds": 0.296
+  }
+ ],
+ "results": [
+  {
+   "rc": 0,
+   "name": "rc 0",
+   "ok": true
+  },
+  {
+   "got": [
+    "B",
+    "4415645",
+    "3295113"
+   ],
+   "want": [
+    "B",
+    "4415645",
+    "3295113"
+   ],
+   "uni_bpb": 4.415645449094261,
+   "bi_bpb": 3.2951126836573197,
+   "name": "stdout micro values",
+   "ok": true
+  }
+ ],
+ "verdict": "PASS",
+ "data": {
+  "train": "101b41c6d9396e353d4027759252fd8c1c5ec26ae8bec8834af2c9ae07d62fef",
+  "held": "729e0a4a8854934ee6000ead2b367494c6b4c9eb52d554f81d6f7f44403338ed"
+ },
+ "finished": "2026-11-01T15:32:32Z"
+}

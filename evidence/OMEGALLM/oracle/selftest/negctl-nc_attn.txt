@@ -1,0 +1,87 @@
+# negative control: oracle.py with one edit (diff below), selftest must FAIL
+356c356
+<                         dkj[i] += dsj * qt[i]
+---
+>                         dkj[i] -= dsj * qt[i]
+$ taskset -c 8 nice -n 19 python3 nc_attn.py selftest
+PASS fnv1a64(b'') = cbf29ce484222325
+PASS fnv1a64(b'a') = af63dc4c8601ec8c
+PASS fnv1a64(b'foobar') = 85944171f73967e8
+PASS fnv1a64(b'OLLMCK01') = 29c48bb36358f164
+PASS splitmix64(0) = e220a8397b1dcdaf
+PASS splitmix64(1) = 910a2dec89025cc1
+PASS splitmix64(18446744073709551615) = e4d971771b652c20
+PASS splitmix64(42) = bdd732262feb6e95
+PASS batch offset KAT 533
+PASS init draw KAT S=42 i=5
+PASS small P = 8400
+PASS v0 P = 119104
+PASS init value i=5
+PASS checkpoint round trip
+PASS hash mismatch refused
+PASS loss finite 6.246743
+PASS grad wte    [3834] analytic -4.5680498908e-04 numeric -4.5680503824e-04 relerr 1.08e-07
+PASS grad wte    [3549] analytic -1.0531652888e-03 numeric -1.0531652883e-03 relerr 4.63e-10
+PASS grad wte    [816] analytic -2.3987618636e-03 numeric -2.3987618114e-03 relerr 2.18e-08
+FAIL grad wte    [3521] analytic -4.0315395014e-02 numeric -4.3759780199e-02 relerr 7.87e-02
+FAIL grad wpe    [11] analytic 3.7071315544e-03 numeric -5.9517326623e-03 relerr 1.62e+00
+FAIL grad wpe    [124] analytic 5.7193193144e-02 numeric 1.5111830356e-01 relerr 6.22e-01
+FAIL grad wpe    [72] analytic -1.0528563924e-03 numeric -3.9166849186e-02 relerr 9.73e-01
+FAIL grad g1.0   [3] analytic 8.2753672200e-02 numeric -2.4856611258e-02 relerr 1.30e+00
+FAIL grad g1.0   [4] analytic 9.2935971872e-02 numeric 2.5982101715e-02 relerr 7.20e-01
+FAIL grad g1.0   [13] analytic 1.7704680971e-02 numeric 8.2433990611e-02 relerr 7.85e-01
+FAIL grad wq.0   [46] analytic -2.5023436549e-02 numeric -2.8775402061e-03 relerr 8.85e-01
+FAIL grad wq.0   [230] analytic 3.2875384144e-02 numeric 3.5250311647e-02 relerr 6.74e-02
+FAIL grad wq.0   [26] analytic -1.5246382484e-03 numeric -1.1610702710e-02 relerr 8.69e-01
+FAIL grad wk.0   [57] analytic -2.2869504362e-02 numeric 1.8258121059e-02 relerr 1.80e+00
+FAIL grad wk.0   [178] analytic -3.2664849458e-02 numeric 1.7242380856e-02 relerr 1.53e+00
+FAIL grad wk.0   [24] analytic -2.6210597517e-03 numeric -1.2878796696e-03 relerr 5.09e-01
+FAIL grad wv.0   [88] analytic 3.3075703957e-03 numeric -9.1024208615e-03 relerr 1.36e+00
+FAIL grad wv.0   [110] analytic 4.7342188588e-03 numeric -7.4551017804e-03 relerr 1.64e+00
+FAIL grad wv.0   [249] analytic -3.0116767502e-02 numeric -7.5640888486e-02 relerr 6.02e-01
+FAIL grad wo.0   [240] analytic -5.7002711760e-02 numeric -4.8012022225e-02 relerr 1.58e-01
+FAIL grad wo.0   [137] analytic -1.3178920303e-04 numeric 2.7419393422e-02 relerr 1.00e+00
+FAIL grad wo.0   [90] analytic 2.4908018566e-03 numeric -1.7518288153e-02 relerr 1.14e+00
+FAIL grad g2.0   [11] analytic -9.5815319194e-02 numeric -7.5041881864e-02 relerr 2.17e-01
+FAIL grad g2.0   [2] analytic -7.7305515348e-02 numeric -8.7323551012e-02 relerr 1.15e-01
+FAIL grad g2.0   [13] analytic -3.5556901297e-02 numeric -3.2535626193e-02 relerr 8.50e-02
+FAIL grad w1.0   [244] analytic 5.0471915024e-02 numeric 3.0654616667e-02 relerr 3.93e-01
+FAIL grad w1.0   [154] analytic 6.5087523972e-02 numeric 6.2103706444e-02 relerr 4.58e-02
+FAIL grad w1.0   [179] analytic -5.0827999437e-02 numeric -5.6123551895e-02 relerr 9.44e-02
+FAIL grad w2.0   [265] analytic 1.5793565354e-02 numeric 1.5887254001e-02 relerr 5.90e-03
+FAIL grad w2.0   [119] analytic -2.1286693012e-02 numeric -1.6103404832e-02 relerr 2.43e-01
+FAIL grad w2.0   [197] analytic -1.0594765516e-02 numeric -9.9797252684e-03 relerr 5.81e-02
+FAIL grad g1.1   [6] analytic -2.4486480369e-02 numeric -2.2299245206e-02 relerr 8.93e-02
+FAIL grad g1.1   [13] analytic 7.2378866997e-02 numeric 6.1500164561e-02 relerr 1.50e-01
+FAIL grad g1.1   [1] analytic -9.3286643077e-03 numeric -6.3805729589e-04 relerr 9.32e-01
+PASS grad wq.1   [1] analytic -3.1426986295e-03 numeric -3.1426986347e-03 relerr 1.64e-09
+PASS grad wq.1   [48] analytic 1.0763595499e-02 numeric 1.0763595482e-02 relerr 1.64e-09
+PASS grad wq.1   [249] analytic 1.9190082270e-04 numeric 1.9190085077e-04 relerr 1.46e-07
+FAIL grad wk.1   [194] analytic -5.6002280324e-03 numeric 5.6002280591e-03 relerr 2.00e+00
+FAIL grad wk.1   [235] analytic 7.3240813302e-03 numeric -7.3240813414e-03 relerr 2.00e+00
+FAIL grad wk.1   [68] analytic 1.2312486132e-02 numeric -1.2312486142e-02 relerr 2.00e+00
+PASS grad wv.1   [198] analytic 1.0660267997e-02 numeric 1.0660268046e-02 relerr 4.60e-09
+PASS grad wv.1   [252] analytic -9.2161341405e-04 numeric -9.2161345222e-04 relerr 4.14e-08
+PASS grad wv.1   [21] analytic -5.8782375605e-04 numeric -5.8782374524e-04 relerr 1.84e-08
+PASS grad wo.1   [70] analytic 3.3198445541e-03 numeric 3.3198444882e-03 relerr 1.99e-08
+PASS grad wo.1   [203] analytic -1.1907547267e-01 numeric -1.1907547264e-01 relerr 2.43e-10
+PASS grad wo.1   [163] analytic 7.1961008081e-02 numeric 7.1961007997e-02 relerr 1.17e-09
+PASS grad g2.1   [9] analytic 7.2640284829e-03 numeric 7.2640284898e-03 relerr 9.59e-10
+PASS grad g2.1   [11] analytic -1.0227873219e-02 numeric -1.0227873215e-02 relerr 3.81e-10
+PASS grad g2.1   [6] analytic 1.5961679331e-03 numeric 1.5961679090e-03 relerr 1.52e-08
+PASS grad w1.1   [270] analytic -5.2516256471e-03 numeric -5.2516256677e-03 relerr 3.91e-09
+PASS grad w1.1   [405] analytic -8.0098371703e-04 numeric -8.0098372379e-04 relerr 8.44e-09
+PASS grad w1.1   [443] analytic -7.8077144888e-03 numeric -7.8077145638e-03 relerr 9.60e-09
+PASS grad w2.1   [64] analytic -1.6410177199e-02 numeric -1.6410177173e-02 relerr 1.61e-09
+PASS grad w2.1   [377] analytic 1.8789684527e-02 numeric 1.8789684519e-02 relerr 4.09e-10
+PASS grad w2.1   [197] analytic -9.1890026525e-03 numeric -9.1890026699e-03 relerr 1.89e-09
+PASS grad gf     [5] analytic 1.1258914229e-02 numeric 1.1258914201e-02 relerr 2.53e-09
+PASS grad gf     [1] analytic 2.3590282107e-02 numeric 2.3590282172e-02 relerr 2.75e-09
+PASS grad gf     [0] analytic 9.8240787311e-02 numeric 9.8240787239e-02 relerr 7.33e-10
+selftest worst finite-difference relerr 2.000e+00
+PASS adam step 0 = -lr/100 * g/(|g|+eps)
+PASS clip to norm 1
+PASS prep KAT
+PASS base direct = counted
+SELFTEST FAIL (34 failures)
+rc=1

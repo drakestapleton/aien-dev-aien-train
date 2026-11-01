@@ -1,0 +1,225 @@
+note SPDX-License-Identifier: AGPL-3.0-only
+note omegallm ckpt.om (aien-train#52): checkpoint OLLMCK01 and gradient OLLMGR01 files
+note (CONTRACT section 6). Needs math.om, data.om, model.om, adam.om before it.
+note A file is built in, or read into, the byte image ock: header 112 bytes, then the f64 payload
+note little-endian. The largest file is 112 + 3 P_max 8 with P_max = 217664 (Wolfram:
+note 112 + 3*217664*8 -> 5223936); one spare byte detects an over-long file.
+note Magic as a little-endian u64 (Wolfram FromDigits[Reverse[ToCharacterCode["OLLMCK01"]],256]
+note -> 3544415659172318287; "OLLMGR01" -> 3544423372933581903).
+note Load refusals (exit codes): 10 file shorter than its header or than 112 + 24 P, 11 bad magic,
+note 12 a shape zero, over the maximum, D mod H != 0, or TOTAL > 999999, 13 P disagrees with the
+note shapes, 14 FNV-1a mismatch, 15 file longer than 112 + 24 P; 70 I/O.
+const OCKCAP ulong 5223937
+global ock uchar 5223937
+global ockn ulong 1
+global opth uchar 2100
+global opk uchar 4200
+
+fn ocput8 o ulong v ulong to void
+for k ulong 8
+put ock add o k uchar and shr v mul k 8 255
+end
+end
+
+fn ocget8 o ulong to ulong
+v = ulong 0
+for k ulong 8
+v = or v shl ulong get ock add o k mul k 8
+end
+ret v
+end
+
+note FNV-1a 64 over ock[112 .. 112 + n): basis cbf29ce484222325, prime 100000001b3
+fn ocfnv n ulong to ulong
+h = ulong 14695981039346656037
+for o ulong 6
+for i ulong 999999
+j = add mul o 999999 i
+if ge j n
+break
+end
+h = mul xor h ulong get ock add 112 j 1099511628211
+end
+end
+ret h
+end
+
+note header fields from og; step field st, magic mg
+fn ochead mg ulong st ulong to void
+ocput8 0 mg
+for i ulong 7
+ocput8 add 8 mul i 8 get og i
+end
+ocput8 64 get og 40
+ocput8 72 st
+ocput8 80 get og 42
+ocput8 88 get og 43
+ocput8 96 get og 8
+end
+
+note copy P values from pool offset po into payload block k (block k starts at 112 + 8 P k)
+fn ocpay po ulong k ulong to void
+p = get og 8
+b = add 112 mul mul k p 8
+for i ulong p
+ocput8 add b mul i 8 bitcast ulong get ow add po i
+end
+end
+
+note payload block k into P values at pool offset po
+fn ocget po ulong k ulong to void
+p = get og 8
+b = add 112 mul mul k p 8
+for i ulong p
+put ow add po i bitcast f64 ocget8 add b mul i 8
+end
+end
+
+note save the image (n payload bytes) to the path in argv[ai]: write PATH.tmp, fsync, rename
+fn ocsave ai ulong n ulong to void
+ocput8 104 ocfnv n
+pl = oargp ai
+if gt pl 2000
+exit 2
+end
+for i ulong pl
+put opth i get oarg i
+end
+put opth pl 46
+put opth add pl 1 116
+put opth add pl 2 109
+put opth add pl 3 112
+fd = int fopen opth 0 add pl 4 577 420
+if lt fd 0
+exit 70
+end
+tot = add 112 n
+p = ulong 0
+while lt p tot bound 999999
+w = write fd ock p sub tot p
+if le w 0
+exit 70
+end
+p = add p ulong w
+end
+if ne fsync fd 0
+exit 70
+end
+if ne fclose fd 0
+exit 70
+end
+ocrename pl
+end
+
+note rename opth[0 .. pl+4) to opth[0 .. pl) via a packed two-path list
+fn ocrename pl ulong to void
+put opk 0 2
+put opk 1 0
+put opk 2 uchar and add pl 4 255
+put opk 3 uchar shr add pl 4 8
+for i ulong add pl 4
+put opk add 4 i get opth i
+end
+q = add 8 pl
+put opk q uchar and pl 255
+put opk add q 1 uchar shr pl 8
+for j ulong pl
+put opk add add q 2 j get opth j
+end
+r = renames opk 0 add add q 2 pl 0
+if ne r 0
+exit 70
+end
+end
+
+note write checkpoint: params, m, v
+fn ocksave ai ulong to void
+ochead 3544415659172318287 get og 41
+ocpay 0 0
+ocpay get og 11 1
+ocpay get og 12 2
+ocsave ai mul 24 get og 8
+end
+
+note write gradient file: header with step = B, payload grad
+fn ogrsave ai ulong to void
+ochead 3544423372933581903 get og 6
+ocpay get og 10 0
+ocsave ai mul 8 get og 8
+end
+
+note read the file named by argv[ai] into ock; returns its length (at most OCKCAP)
+fn ocread ai ulong to ulong
+n = oargp ai
+fd = int fopen oarg 0 n 0 0
+if lt fd 0
+exit 70
+end
+p = ulong 0
+dn = false
+while not dn bound 999999
+r = long 0
+if lt p OCKCAP
+r = read fd ock p sub OCKCAP p
+else
+r = read fd ochk 0 1
+if gt r 0
+exit 15
+end
+end
+if lt r 0
+exit 70
+end
+if eq r 0
+dn = true
+else
+p = add p ulong r
+end
+end
+if not dn
+exit 70
+end
+c = fclose fd
+ret p
+end
+
+note load the checkpoint named by argv[ai] into og and ow (params, m, v)
+fn ockload ai ulong to void
+n = ocread ai
+if lt n 112
+exit 10
+end
+if ne ocget8 0 3544415659172318287
+exit 11
+end
+for i ulong 7
+put og i ocget8 add 8 mul i 8
+end
+if not ogeom
+exit 12
+end
+put og 40 ocget8 64
+put og 41 ocget8 72
+put og 42 ocget8 80
+put og 43 ocget8 88
+if gt get og 42 999999
+exit 12
+end
+p = get og 8
+if ne ocget8 96 p
+exit 13
+end
+pb = mul 24 p
+if lt n add 112 pb
+exit 10
+end
+if gt n add 112 pb
+exit 15
+end
+if ne ocget8 104 ocfnv pb
+exit 14
+end
+ocget 0 0
+ocget get og 11 1
+ocget get og 12 2
+end

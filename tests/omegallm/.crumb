@@ -1,0 +1,5 @@
+{
+  "schema_version": "1.0.0",
+  "name": "omegallm-tests",
+  "purpose": "Build script, core receipt script, Wolfram exp/log reference and the Python-stdlib referee (oracle.py) for Omega LLM v0; verification only, never in the build"
+}

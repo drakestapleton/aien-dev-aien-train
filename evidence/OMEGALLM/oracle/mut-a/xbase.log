@@ -1,0 +1,7 @@
+$ taskset -c 8 nice -n 19 python3 aien-train/tests/omegallm/oracle.py xbase --ollm frozen/ollm-mut-a --train /tmp/ollm-oracle-nc/work/mut-a/oracle-train.bin --held /tmp/ollm-oracle-nc/work/mut-a/oracle-held.bin --receipt aien-train/evidence/OMEGALLM/oracle/mut-a/xbase.json
+$ frozen/ollm-mut-a base /tmp/ollm-oracle-nc/work/mut-a/oracle-train.bin /tmp/ollm-oracle-nc/work/mut-a/oracle-held.bin
+  rc=0 0.30s stdout='B 4415645 3295113\n'
+PASS rc 0
+PASS stdout micro values
+XBASE PASS
+rc=0

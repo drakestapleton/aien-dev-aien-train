@@ -1,0 +1,19 @@
+receipt: train-v0-50
+host_cpu: core 6 (Cortex-X925)
+binary: ollm sha256 a9b5f3ec8291c1b046d350dcb7ee6550a271a9e06ee30ba13062d28732aa6137
+source: ollm.om sha256 cb80250d6ee78d58056114a304b4c8269c44f9241c534e970c4bba44e096179b
+$ taskset -c 6 nice -n 19 build/ollm train scratch-core/work/v0.ck data/train.bin 50 5
+--- output
+T 5 5429638
+T 10 5167769
+T 15 4965627
+T 20 4702053
+T 25 4404937
+T 30 4099218
+T 35 3765766
+T 40 3448276
+T 45 3216285
+T 50 3110411
+--- end
+rc=0 expect=0
+wall_ns=35360512365

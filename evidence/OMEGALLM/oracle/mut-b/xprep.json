@@ -1,0 +1,74 @@
+{
+ "check": "xprep",
+ "binary": "frozen/ollm-mut-b",
+ "binary_sha256": "4b12510f499b2a4394f58246484ce3d40621c0c24e545c7177d8e2a02b7787ea",
+ "oracle_sha256": "74ec6e991dfc964f25a93f147cf9ee1575a405a21297c71a5b95229db203f02a",
+ "started": "2026-11-01T15:32:29Z",
+ "affinity": [
+  8
+ ],
+ "nice": 19,
+ "commands": [
+  {
+   "argv": [
+    "frozen/ollm-mut-b",
+    "prep",
+    "data/TinyStoriesV2-GPT4-valid.txt",
+    "/tmp/ollm-oracle-nc/work/mut-b/ollm-train.bin",
+    "/tmp/ollm-oracle-nc/work/mut-b/ollm-held.bin"
+   ],
+   "rc": 0,
+   "stdout": "P 27630 24867 2763 19883834 2220914\n",
+   "stderr": "",
+   "seconds": 0.186
+  }
+ ],
+ "results": [
+  {
+   "rc": 0,
+   "name": "rc 0",
+   "ok": true
+  },
+  {
+   "got": [
+    "P",
+    "27630",
+    "24867",
+    "2763",
+    "19883834",
+    "2220914"
+   ],
+   "want": [
+    "P",
+    "27630",
+    "24867",
+    "2763",
+    "19883834",
+    "2220914"
+   ],
+   "name": "stdout",
+   "ok": true
+  },
+  {
+   "oracle": "101b41c6d9396e353d4027759252fd8c1c5ec26ae8bec8834af2c9ae07d62fef",
+   "ollm": "101b41c6d9396e353d4027759252fd8c1c5ec26ae8bec8834af2c9ae07d62fef",
+   "bytes": 19883834,
+   "name": "TRAIN sha256 identical",
+   "ok": true
+  },
+  {
+   "oracle": "729e0a4a8854934ee6000ead2b367494c6b4c9eb52d554f81d6f7f44403338ed",
+   "ollm": "729e0a4a8854934ee6000ead2b367494c6b4c9eb52d554f81d6f7f44403338ed",
+   "bytes": 2220914,
+   "name": "HELD sha256 identical",
+   "ok": true
+  }
+ ],
+ "verdict": "PASS",
+ "data": {
+  "path": "data/TinyStoriesV2-GPT4-valid.txt",
+  "sha256": "6874bae9a4c1a4e7edcf0e53b86c17817e9cf881fc75ff2368da457b80c0585d",
+  "bytes": 22502601
+ },
+ "finished": "2026-11-01T15:32:29Z"
+}

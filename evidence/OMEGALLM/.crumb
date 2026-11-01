@@ -1,0 +1,5 @@
+{
+  "schema_version": "1.0.0",
+  "name": "omegallm-evidence",
+  "purpose": "Receipts for Omega LLM v0: core/ (.om lane runs on GB10 Grace) and oracle/ (referee cross-checks)"
+}

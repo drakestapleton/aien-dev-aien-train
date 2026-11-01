@@ -1,0 +1,8 @@
+check	rc	command
+selftest	0	taskset -c 8 nice -n 19 python3 aien-train/tests/omegallm/oracle.py selftest
+xprep	0	taskset -c 8 nice -n 19 python3 aien-train/tests/omegallm/oracle.py xprep --ollm frozen/ollm-mut-b --data data/TinyStoriesV2-GPT4-valid.txt --outdir /tmp/ollm-oracle-nc/work/mut-b --receipt aien-train/evidence/OMEGALLM/oracle/mut-b/xprep.json
+xbase	0	taskset -c 8 nice -n 19 python3 aien-train/tests/omegallm/oracle.py xbase --ollm frozen/ollm-mut-b --train /tmp/ollm-oracle-nc/work/mut-b/oracle-train.bin --held /tmp/ollm-oracle-nc/work/mut-b/oracle-held.bin --receipt aien-train/evidence/OMEGALLM/oracle/mut-b/xbase.json
+xinit	0	taskset -c 8 nice -n 19 python3 aien-train/tests/omegallm/oracle.py xinit --ollm frozen/ollm-mut-b --receipt aien-train/evidence/OMEGALLM/oracle/mut-b/xinit.json
+xgrad	1	taskset -c 8 nice -n 19 python3 aien-train/tests/omegallm/oracle.py xgrad --ollm frozen/ollm-mut-b --data /tmp/ollm-oracle-nc/work/mut-b/train64k.bin --receipt aien-train/evidence/OMEGALLM/oracle/mut-b/xgrad.json
+xstep	1	taskset -c 8 nice -n 19 python3 aien-train/tests/omegallm/oracle.py xstep --ollm frozen/ollm-mut-b --data /tmp/ollm-oracle-nc/work/mut-b/train64k.bin --receipt aien-train/evidence/OMEGALLM/oracle/mut-b/xstep.json
+xeval	1	taskset -c 8 nice -n 19 python3 aien-train/tests/omegallm/oracle.py xeval --ollm frozen/ollm-mut-b --held /tmp/ollm-oracle-nc/work/mut-b/oracle-held.bin --receipt aien-train/evidence/OMEGALLM/oracle/mut-b/xeval.json

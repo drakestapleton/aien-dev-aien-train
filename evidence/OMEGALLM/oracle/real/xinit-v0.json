@@ -1,0 +1,88 @@
+{
+ "check": "xinit",
+ "binary": "frozen/ollm",
+ "binary_sha256": "a9b5f3ec8291c1b046d350dcb7ee6550a271a9e06ee30ba13062d28732aa6137",
+ "oracle_sha256": "74ec6e991dfc964f25a93f147cf9ee1575a405a21297c71a5b95229db203f02a",
+ "started": "2026-11-01T15:31:27Z",
+ "affinity": [
+  8
+ ],
+ "nice": 19,
+ "commands": [
+  {
+   "argv": [
+    "frozen/ollm",
+    "init",
+    "/tmp/tmpdto9pjeb/ck",
+    "256",
+    "64",
+    "64",
+    "4",
+    "256",
+    "2",
+    "16",
+    "42",
+    "50",
+    "3000"
+   ],
+   "rc": 0,
+   "stdout": "I 119104\n",
+   "stderr": "",
+   "seconds": 0.011
+  }
+ ],
+ "results": [
+  {
+   "rc": 0,
+   "name": "rc 0",
+   "ok": true
+  },
+  {
+   "stdout": "I 119104\n",
+   "name": "stdout 'I P'",
+   "ok": true
+  },
+  {
+   "ndiff": 0,
+   "first": [],
+   "name": "params bit-identical",
+   "ok": true
+  },
+  {
+   "name": "m, v zero",
+   "ok": true
+  },
+  {
+   "header": {
+    "c": {
+     "V": 256,
+     "T": 64,
+     "D": 64,
+     "H": 4,
+     "F": 256,
+     "L": 2,
+     "B": 16
+    },
+    "seed": 42,
+    "step": 0,
+    "total": 50
+   },
+   "name": "header",
+   "ok": true
+  },
+  {
+   "got": "3f689374bc6a7efa",
+   "ref": "3f689374bc6a7efa",
+   "name": "lr bits = 3000/1e6",
+   "ok": true
+  },
+  {
+   "got": "6ecdbbc0b8615c2d158bea7531cdfdc439633c8b97fe91906700ab47f8331236",
+   "ref": "6ecdbbc0b8615c2d158bea7531cdfdc439633c8b97fe91906700ab47f8331236",
+   "name": "whole file sha256 identical",
+   "ok": true
+  }
+ ],
+ "verdict": "PASS",
+ "finished": "2026-11-01T15:31:27Z"
+}
