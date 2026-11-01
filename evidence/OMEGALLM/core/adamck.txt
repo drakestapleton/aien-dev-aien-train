@@ -7,4 +7,4 @@ $ taskset -c 6 nice -n 19 build/ollm adamck
 A 5 3cd046ce38e38e38 0
 --- end
 rc=0 expect=0
-wall_ns=3346895
+wall_ns=2560818

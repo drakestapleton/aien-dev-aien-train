@@ -6,4 +6,4 @@ $ taskset -c 6 nice -n 19 build/ollm eval scratch-core/work/count.ck data/held.b
 --- output
 --- end
 rc=13 expect=13
-wall_ns=2827019
+wall_ns=2490386

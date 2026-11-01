@@ -7,4 +7,4 @@ $ taskset -c 6 nice -n 19 build/ollm eval scratch-core/work/v0.ck data/held.bin 
 E 50 256 3049318 4399237
 --- end
 rc=0 expect=0
-wall_ns=4634561469
+wall_ns=4635153590

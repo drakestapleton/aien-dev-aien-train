@@ -27,8 +27,8 @@ oracle.py xinit --ollm BIN [--cfg small|v0]                           # params b
 oracle.py xgrad --ollm BIN --data DATA [--cfg small|v0] [--batch B]   # loss + every gradient entry
 oracle.py xstep --ollm BIN --data DATA [--cfg small|v0]               # train s -> s+1: params, m, v, step
 oracle.py xeval --ollm BIN --held HELD [--cfg small|v0]               # eval stdout
-# All checks for one binary, with receipts under OUTDIR/LABEL:
-DATA=.../TinyStoriesV2-GPT4-valid.txt WORK=/tmp/scratch tests/omegallm/xcheck.sh BIN LABEL OUTDIR [v0]
+# All checks for one binary, with receipts under OUTDIR/LABEL (relative paths, so receipts name none):
+DATA=data/TinyStoriesV2-GPT4-valid.txt WORK=scratch-oracle/work tests/omegallm/xcheck.sh BIN LABEL OUTDIR [v0]
 ```
 
 `selftest` checks:

@@ -6,4 +6,4 @@ $ taskset -c 6 nice -n 19 build/ollm sample scratch-core/work/v0.ck 7 200 800 On
 --- output
 d uhe he e utthtalon edty etey e"hi y ante  derslnd aiahehldateearod ielwadenlbob TlasSy gxni tüŒr ..ynlsoyl.eluweœd.eiTll vlie²sano cie u all diùt lsfnsTaar d aaypecadg eoae ltrdfyito itje itp l--- end
 rc=0 expect=0
-wall_ns=3297464966
+wall_ns=3299754377

@@ -6,4 +6,4 @@ $ taskset -c 6 nice -n 19 build/ollm eval scratch-core/work/trunc.ck data/held.b
 --- output
 --- end
 rc=10 expect=10
-wall_ns=2968796
+wall_ns=3271671

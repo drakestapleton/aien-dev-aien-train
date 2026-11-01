@@ -7,4 +7,4 @@ $ taskset -c 6 nice -n 19 build/ollm-mut-c adamck
 A 5 3fe473698d936acd 639088417544678
 --- end
 rc=41 expect=41
-wall_ns=2725198
+wall_ns=2926037

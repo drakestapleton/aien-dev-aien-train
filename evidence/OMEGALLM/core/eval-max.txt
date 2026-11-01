@@ -7,4 +7,4 @@ $ taskset -c 6 nice -n 19 build/ollm eval scratch-core/work/max.ck data/held.bin
 E 0 2 5566611 8030922
 --- end
 rc=0 expect=0
-wall_ns=85132817
+wall_ns=84490025

@@ -7,4 +7,4 @@ $ taskset -c 6 nice -n 19 build/ollm base data/train.bin data/held.bin
 B 4415645 3295113
 --- end
 rc=0 expect=0
-wall_ns=297876914
+wall_ns=297518195

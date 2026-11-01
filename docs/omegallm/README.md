@@ -12,7 +12,7 @@ The normative spec is [CONTRACT.md](CONTRACT.md). The receipts are under
 
 ## Status
 
-Evidence for every row is in `evidence/OMEGALLM/core/summary.tsv` (44/44 as expected). Every receipt
+Evidence for every row is in `evidence/OMEGALLM/core/summary.tsv` (48/48 as expected). Every receipt
 names the binary and source sha256 it ran; `core-receipts.sh` builds all six binaries first
 (`build.txt`):
 
@@ -41,12 +41,19 @@ names the binary and source sha256 it ran; `core-receipts.sh` builds all six bin
 | the v0 run, 20000 steps (`tests/omegallm/v0-run.sh`) | RUNNING since 2026-11-01T15:24:54Z on core 9, binary a9b5f3ec | `evidence/OMEGALLM/v0/` when it finishes |
 | a9b5f3ec and b729cc35 compute the same v0 run | EXERCISED | `evidence/OMEGALLM/v0/equiv-a9b5f3ec-b729cc35.txt`: same `E 2000` line from the run's step-2000 checkpoint, byte-identical checkpoint after 10 more steps; control `equiv-control-mut-b.txt` differs |
 
-b729cc35 differs from a9b5f3ec only in bounds handling (`evidence/OMEGALLM/v0/bounds-ab.txt`, core 7,
-20 s timeout). On a valid largest-shape `init`, a9b5f3ec exits 103 (bounds trap). On `eval` with
-W = 2^58, where `W·T + 1` wraps, it was still running at 20 s and the timeout killed it (rc 124). On a
-huge `grad` offset it exits 103. b729cc35 sizes the checkpoint buffer for the largest shape
-(`I 217664`, rc 0) and refuses the other two with 23 and 22. On in-range inputs the two give
-identical output (the equivalence receipt).
+b729cc35 differs from a9b5f3ec only in bounds handling. The source diff shows it: the concatenated
+source goes from `cb80250d…` (a9b5f3ec, recorded in commit da910097's `init-v0.txt`) to `47c27b0b…`
+(`build.txt`), and the only code changes are `OCKCAP` in `native/omegallm/ckpt.om` and the two range
+checks in `native/omegallm/cli.om` (`ooffrow`, `cmdeval`); the rest are note lines.
+`evidence/OMEGALLM/v0/bounds-ab.txt` (core 7, 20 s timeout) shows the behaviour. On a valid
+largest-shape `init`, a9b5f3ec exits 103 (bounds trap). On `eval` with W = 2^58, where `W·T + 1`
+wraps, it was still running at 20 s and the timeout killed it (rc 124). On a huge `grad` offset it
+exits 103. b729cc35 sizes the checkpoint buffer for the largest shape (`I 217664`, rc 0) and refuses
+the other two with 23 and 22; `eval-edge-w3`/`refuse-eval-edge-w4` and
+`grad-edge-o128`/`refuse-grad-edge-o129` pin the exact boundaries. On in-range inputs the two give
+identical output (the equivalence receipt). `evidence/OMEGALLM/v0/provenance.txt` ties the running
+unit to the compared files: the sha256 of the run directory's `ollm`, `run.sh` and `ck-2000.bin`
+against `frozen/ollm` and the copied checkpoint, and the unit's start time and command line.
 
 ## Build
 
@@ -84,16 +91,17 @@ defaults. The exit codes are listed in CONTRACT §7.
 
 ## Throughput
 
-All timings ran on Spark GB10 Grace core 6. `lscpu` reports it as a Cortex-X925 with a 3900 MHz
-maximum. The process ran single-threaded under `nice -n 19` on a shared host, so the step time
-depends on what else runs on that core. Each figure below is one run, not a distribution.
+All timings ran on Spark GB10 Grace core 6. `host.txt` records its `midr_el1` (0x410fd851, Arm part
+0xd85, Cortex-X925) and a 3900 MHz maximum clock. The process ran single-threaded under `nice -n 19`
+on a shared host, so the step time depends on what else runs on that core. Each figure below is one
+run, not a distribution.
 
-- `train-v0-50.txt`: 50 steps took 35.374432664 s wall, including 10 checkpoint saves.
-  - Per step: WolframLanguageEvaluator `35.374432664/50` → 0.70749 s.
-  - Throughput: `50*1024/35.374432664` → 1447.37 training bytes/s.
-- `resume-a-0-40.txt`: 40 steps with one save took 28.154792990 s. Per step: `28.154792990/40` →
-  0.70387 s. `100*(sps-s40)/s40` → 0.51%: this run's per-step time with a save every 5 steps was
-  0.51% above the one-save run. With one sample of each, that is not a measured cost of saving.
+- `train-v0-50.txt`: 50 steps took 35.315644994 s wall, including 10 checkpoint saves.
+  - Per step: WolframLanguageEvaluator `35.315644994/50` → 0.70631 s.
+  - Throughput: `50*1024/35.315644994` → 1449.78 training bytes/s.
+- `resume-a-0-40.txt`: 40 steps with one save took 28.143739881 s. Per step: `28.143739881/40` →
+  0.70359 s. `100*(sps-s40)/s40` → 0.39%: this run's per-step time with a save every 5 steps was
+  0.39% above the one-save run. With one sample of each, that is not a measured cost of saving.
 - `gcheck-v0-init.txt`: 44.7 s for 76 indices.
 - A checkpoint is `112+24*119104` → 2,858,608 B.
 
@@ -110,8 +118,14 @@ The run directory holds `v0-run.sh` copied as `run.sh` (same sha256, `4898aae5�
 
 ```sh
 systemd-run --user --unit=ollm-v0 --collect -p CPUAffinity=9 -p Nice=19 -p MemoryMax=1G \
-  -p WorkingDirectory=<run dir> /bin/sh <run dir>/run.sh
+  /bin/sh <run dir>/run.sh
 ```
+
+The unit keeps systemd's default working directory (the home directory); `run.sh` begins with
+`cd "$(dirname "$0")"`, so every file it names is in the run directory. `provenance.txt` records
+the unit's `ExecStart`, `CPUAffinity`, `Nice`, `MemoryMax`, `WorkingDirectory` and start time, and the
+sha256 of the running `ollm`, `run.sh`, `ck-2000.bin` and data against the copies the equivalence
+receipts used.
 
 The running binary is a9b5f3ec, built before the bounds fix. On in-range inputs it gives the same
 output as b729cc35: `evidence/OMEGALLM/v0/equiv-a9b5f3ec-b729cc35.txt` evaluates and trains 10 steps
@@ -119,10 +133,11 @@ from the run's own step-2000 checkpoint with both binaries, and the two checkpoi
 (`equiv-control-mut-b.txt` is the negative control). `bounds-ab.txt` shows where they differ: init at
 the largest shape and the two overflow refusals.
 
-Planned length, WolframLanguageEvaluator with sps = 0.70749 s/step from `train-v0-50.txt`:
+Planned length, WolframLanguageEvaluator with sps = 0.70631 s/step from `train-v0-50.txt`:
 
-- Duration: `20000*sps/3600` → 3.93 h of training on one X925 core at nice 19 on a shared host,
-  plus the evals.
+- Duration: `20000*sps/3600` → 3.92 h of training on one X925 core at nice 19 on a shared host,
+  plus the evals. (The launch estimate, from an earlier run of the same receipt at 0.70749 s/step,
+  was 3.93 h.)
 - Data seen: `20000*16*64/19883834` → 1.03 passes over the training bytes, in expectation.
 - LRMICRO 3000 is the only learning rate exercised.
 
@@ -219,5 +234,7 @@ Every query is WolframLanguageEvaluator, 2026-11-01.
   N[{rel[10^-4],rel[2 10^-4],rel[3 10^-4]},16]
   ```
 
-  → {0.6386062690569244, 0.6389678457053756, 0.6390884175446797}. The maximum matches
-  `mut-c-adamck.txt`, `A 5 3fe473698d936acd 639088417544678` (maxrel × 1e15), in all 15 digits.
+  → {0.6386062690569244, 0.6389678457053756, 0.6390884175446797}. The maximum agrees with
+  `mut-c-adamck.txt`, `A 5 3fe473698d936acd 639088417544678` (maxrel × 1e15), to 14 significant
+  digits: WolframLanguageEvaluator decodes the bits to 0.6390884175446786, |Δ| → 1.143e-15, f64
+  rounding of the sum.

@@ -7,4 +7,4 @@ $ taskset -c 6 nice -n 19 build/ollm train scratch-core/work/ra.ck data/train.bi
 T 40 3448276
 --- end
 rc=0 expect=0
-wall_ns=28154792990
+wall_ns=28143739881

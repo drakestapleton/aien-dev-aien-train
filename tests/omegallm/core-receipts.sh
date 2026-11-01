@@ -78,6 +78,12 @@ want() {
 }
 
 sha256sum "$DATA" > "$E/data-sha256.txt"
+# the core's identification register (0x410fd851: Arm, part 0xd85 Cortex-X925) and its maximum clock
+{
+	echo "core $CORE midr_el1 $(cat /sys/devices/system/cpu/cpu$CORE/regs/identification/midr_el1)"
+	echo "core $CORE cpuinfo_max_freq_khz $(cat /sys/devices/system/cpu/cpu$CORE/cpufreq/cpuinfo_max_freq)"
+	lscpu -e=CPU,MODELNAME,MAXMHZ 2>/dev/null | awk -v c="$CORE" 'NR==1 || $1==c'
+} > "$E/host.txt"
 
 # 1. prep on the real data, then the derived file hashes
 rec prep 0 ollm prep "$DATA" "$TR" "$HE"
@@ -147,6 +153,21 @@ rec eval-max 0 ollm eval "$WORK/max.ck" "$HE" 2
 rec refuse-eval-hugew 23 ollm eval "$WORK/ra.ck" "$HE" 288230376151711744
 head -c 128 /dev/zero | tr '\000' '\377' > "$WORK/offs-huge.bin"
 rec refuse-grad-hugeoff 22 ollm grad "$WORK/ra.ck" "$TR" "$WORK/offs-huge.bin" "$WORK/huge.gr"
+
+# 5d. the exact boundaries of the same two checks, on 193-byte slices (T = 64):
+#     eval accepts W = floor((193 - 1) / 64) = 3 and refuses W = 4 with 23;
+#     grad accepts o = 193 - 64 - 1 = 128 (window o..o+T ends on the last byte) and refuses 129 with
+#     22. The refusing offset file holds fifteen offsets 128 and one 129, so the last row decides.
+head -c 193 "$HE" > "$WORK/held-193.bin"
+head -c 193 "$TR" > "$WORK/train-193.bin"
+rec eval-edge-w3 0 ollm eval "$WORK/ra.ck" "$WORK/held-193.bin" 3
+rec refuse-eval-edge-w4 23 ollm eval "$WORK/ra.ck" "$WORK/held-193.bin" 4
+: > "$WORK/offs-128.bin"
+for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16; do printf '\200\0\0\0\0\0\0\0' >> "$WORK/offs-128.bin"; done
+head -c 120 "$WORK/offs-128.bin" > "$WORK/offs-129.bin"
+printf '\201\0\0\0\0\0\0\0' >> "$WORK/offs-129.bin"
+rec grad-edge-o128 0 ollm grad "$WORK/ra.ck" "$WORK/train-193.bin" "$WORK/offs-128.bin" "$WORK/e128.gr"
+rec refuse-grad-edge-o129 22 ollm grad "$WORK/ra.ck" "$WORK/train-193.bin" "$WORK/offs-129.bin" "$WORK/e129.gr"
 
 # 6. eval and sample on the 50-step v0 checkpoint
 rec eval-v0 0 ollm eval "$WORK/v0.ck" "$HE" 256

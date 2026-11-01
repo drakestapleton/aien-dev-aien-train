@@ -7,4 +7,4 @@ $ taskset -c 6 nice -n 19 build/ollm init scratch-core/work/s.ck 256 8 16 2 32 2
 I 8400
 --- end
 rc=0 expect=0
-wall_ns=13426406
+wall_ns=9302930

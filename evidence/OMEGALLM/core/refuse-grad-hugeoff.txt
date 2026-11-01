@@ -6,4 +6,4 @@ $ taskset -c 6 nice -n 19 build/ollm grad scratch-core/work/ra.ck data/train.bin
 --- output
 --- end
 rc=22 expect=22
-wall_ns=12996691
+wall_ns=13658065

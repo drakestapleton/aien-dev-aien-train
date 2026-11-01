@@ -6,4 +6,4 @@ $ taskset -c 6 nice -n 19 build/ollm eval scratch-core/work/magic.ck data/held.b
 --- output
 --- end
 rc=11 expect=11
-wall_ns=2351801
+wall_ns=2323601

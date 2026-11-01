@@ -6,4 +6,4 @@ $ taskset -c 6 nice -n 19 build/ollm sample scratch-core/work/v0.ck 7 200 0 Once
 --- output
   a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a --- end
 rc=0 expect=0
-wall_ns=3287840680
+wall_ns=3289962654

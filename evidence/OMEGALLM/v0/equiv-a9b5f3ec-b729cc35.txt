@@ -1,3 +1,4 @@
+host_cpu: core 7 (Cortex-X925)
 a9b5f3ec8291c1b046d350dcb7ee6550a271a9e06ee30ba13062d28732aa6137  frozen/ollm
 b729cc35faa6b3543ff1893c64e8a6feafc224feba7b99f7f13353e1d2179f22  build/ollm
 1fc4f22f96e3446897187d97a84b993c0ac4c177a31b3f02b1f17fb42e9c3d4f  scratch-equiv/v0-ck-2000.bin

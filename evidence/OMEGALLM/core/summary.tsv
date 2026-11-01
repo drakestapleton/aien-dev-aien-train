@@ -24,6 +24,10 @@ init-max:value	-	I 217664	PASS
 eval-max	0	0	PASS
 refuse-eval-hugew	23	23	PASS
 refuse-grad-hugeoff	22	22	PASS
+eval-edge-w3	0	0	PASS
+refuse-eval-edge-w4	23	23	PASS
+grad-edge-o128	0	0	PASS
+refuse-grad-edge-o129	22	22	PASS
 eval-v0	0	0	PASS
 eval-v0:value	-	E 50 256 3049318 4399237	PASS
 sample-v0-argmax	0	0	PASS
