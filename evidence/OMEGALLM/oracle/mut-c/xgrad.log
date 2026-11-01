@@ -1,5 +1,5 @@
-$ taskset -c 8 nice -n 19 python3 aien-train/tests/omegallm/oracle.py xgrad --ollm frozen/ollm-mut-c --data /tmp/ollm-oracle-nc/work/mut-c/train64k.bin --receipt aien-train/evidence/OMEGALLM/oracle/mut-c/xgrad.json
-$ frozen/ollm-mut-c grad /tmp/tmpj7it6zif/ck.init /tmp/ollm-oracle-nc/work/mut-c/train64k.bin /tmp/tmpj7it6zif/offs.init /tmp/tmpj7it6zif/gr.init
+$ taskset -c 8 nice -n 19 python3 aien-train/tests/omegallm/oracle.py xgrad --ollm build/ollm-mut-c --data scratch-oracle/work/mut-c/train64k.bin --receipt aien-train/evidence/OMEGALLM/oracle/mut-c/xgrad.json
+$ build/ollm-mut-c grad scratch-oracle/work/mut-c/tmp/tmpsp0oh01s/ck.init scratch-oracle/work/mut-c/train64k.bin scratch-oracle/work/mut-c/tmp/tmpsp0oh01s/offs.init scratch-oracle/work/mut-c/tmp/tmpsp0oh01s/gr.init
   rc=0 0.01s stdout='G 401614490af7b792 5519810\n'
 PASS init: rc 0
 PASS init: loss
@@ -24,7 +24,7 @@ PASS init: OLLMGR01 header
   w2.1   maxerr 2.623e-14 at 145 (got -6.6130862133067809e-05 ref -6.6130862133069544e-05)
   gf     maxerr 1.334e-15 at 6 (got 0.00016252089911020261 ref 0.0001625208991102024)
 PASS init: gradient (rtol 1e-09)
-$ frozen/ollm-mut-c grad /tmp/tmpj7it6zif/ck.perturbed /tmp/ollm-oracle-nc/work/mut-c/train64k.bin /tmp/tmpj7it6zif/offs.perturbed /tmp/tmpj7it6zif/gr.perturbed
+$ build/ollm-mut-c grad scratch-oracle/work/mut-c/tmp/tmpsp0oh01s/ck.perturbed scratch-oracle/work/mut-c/train64k.bin scratch-oracle/work/mut-c/tmp/tmpsp0oh01s/offs.perturbed scratch-oracle/work/mut-c/tmp/tmpsp0oh01s/gr.perturbed
   rc=0 0.01s stdout='G 401b312cf1a7b14c 6798023\n'
 PASS perturbed: rc 0
 PASS perturbed: loss

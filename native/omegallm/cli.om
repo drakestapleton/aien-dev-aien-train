@@ -142,11 +142,16 @@ exit 21
 end
 end
 
-note load batch row b from offset ochk[b]; exit 22 when the window passes the end of DATA
+note load batch row b from offset ochk[b]; exit 22 when the window o..o+T passes the end of DATA.
+note Written as o >= N - T (after N > T) so that an offset near 2^64 cannot wrap o + T.
 fn ooffrow b ulong to void
 o = ochk64 mul b 8
-e = add o get og 1
-if ge e get odn 0
+n = get odn 0
+tt = get og 1
+if le n tt
+exit 22
+end
+if ge o sub n tt
 exit 22
 end
 obrow b o
@@ -218,7 +223,14 @@ ockload 2
 m = odread 3
 ww = oargu 4
 tt = get og 1
-if or eq ww 0 gt add mul ww tt 1 m
+note W T + 1 > M, tested as W > (M - 1) / T so that a huge W cannot wrap W T
+if eq ww 0
+exit 23
+end
+if eq m 0
+exit 23
+end
+if gt ww div sub m 1 tt
 exit 23
 end
 ls = 0.0f64

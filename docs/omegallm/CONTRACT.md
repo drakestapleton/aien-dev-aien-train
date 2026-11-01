@@ -128,8 +128,10 @@ Its payload is the gradient `grad[P]` only, and the hash covers that payload.
 
 `*_micro` means round(value × 10^6) printed in decimal (reading A7). `loss_bits_hex` means the 16
 lowercase hex digits of the f64 bits. Exit codes: 0 ok; 2 usage; 10–15 checkpoint refusals (10 short
-file, 11 bad magic, 12 shape over the maximum or TOTAL over 999999, 13 P disagrees with the shapes,
-14 hash mismatch, 15 file longer than the largest checkpoint); 20 data file shorter than T + 1 bytes;
+file, 11 bad magic, 12 a shape zero or over the maximum, D mod H ≠ 0, or TOTAL over 999999, 13 P
+disagrees with the shapes, 14 hash mismatch, 15 file longer than 112 + 24·P, the size its header
+implies; a file longer than the largest checkpoint, 112 + 24·217664 = 5224048 B, is refused with 15
+while it is read); 20 data file shorter than T + 1 bytes;
 21 data over 2^25 bytes, OFFS not exactly 8·B bytes, or a mathck reference not a whole number of
 36-byte lines; 22 an OFFS offset with o + T ≥ N; 23 eval W = 0 or W·T + 1 > M; 24 prep story over
 999999 bytes; 40 gcheck over tolerance; 41 adamck over tolerance; 42 mathck over tolerance; 70 I/O.

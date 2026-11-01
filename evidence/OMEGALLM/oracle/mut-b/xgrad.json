@@ -1,9 +1,9 @@
 {
  "check": "xgrad",
- "binary": "frozen/ollm-mut-b",
- "binary_sha256": "4b12510f499b2a4394f58246484ce3d40621c0c24e545c7177d8e2a02b7787ea",
- "oracle_sha256": "74ec6e991dfc964f25a93f147cf9ee1575a405a21297c71a5b95229db203f02a",
- "started": "2026-11-01T15:32:32Z",
+ "binary": "build/ollm-mut-b",
+ "binary_sha256": "c7ddea4cea9952209e6e4516fc01e98aaf33940a80ccf9a4d7a5cb4d6881fa89",
+ "oracle_sha256": "3edfb60718c1b7c786275e16d4d593cc6418f591be4f30c5a5e17e0555c0d0fa",
+ "started": "2026-11-01T16:00:15Z",
  "affinity": [
   8
  ],
@@ -11,31 +11,31 @@
  "commands": [
   {
    "argv": [
-    "frozen/ollm-mut-b",
+    "build/ollm-mut-b",
     "grad",
-    "/tmp/tmpqdq0hewy/ck.init",
-    "/tmp/ollm-oracle-nc/work/mut-b/train64k.bin",
-    "/tmp/tmpqdq0hewy/offs.init",
-    "/tmp/tmpqdq0hewy/gr.init"
+    "scratch-oracle/work/mut-b/tmp/tmpthijngdd/ck.init",
+    "scratch-oracle/work/mut-b/train64k.bin",
+    "scratch-oracle/work/mut-b/tmp/tmpthijngdd/offs.init",
+    "scratch-oracle/work/mut-b/tmp/tmpthijngdd/gr.init"
    ],
    "rc": 0,
    "stdout": "G 4016135654d62324 5518884\n",
    "stderr": "",
-   "seconds": 0.006
+   "seconds": 0.009
   },
   {
    "argv": [
-    "frozen/ollm-mut-b",
+    "build/ollm-mut-b",
     "grad",
-    "/tmp/tmpqdq0hewy/ck.perturbed",
-    "/tmp/ollm-oracle-nc/work/mut-b/train64k.bin",
-    "/tmp/tmpqdq0hewy/offs.perturbed",
-    "/tmp/tmpqdq0hewy/gr.perturbed"
+    "scratch-oracle/work/mut-b/tmp/tmpthijngdd/ck.perturbed",
+    "scratch-oracle/work/mut-b/train64k.bin",
+    "scratch-oracle/work/mut-b/tmp/tmpthijngdd/offs.perturbed",
+    "scratch-oracle/work/mut-b/tmp/tmpthijngdd/gr.perturbed"
    ],
    "rc": 0,
    "stdout": "G 401a68406569f6fe 6601808\n",
    "stderr": "",
-   "seconds": 0.005
+   "seconds": 0.006
   }
  ],
  "results": [
@@ -194,7 +194,7 @@
  ],
  "verdict": "FAIL",
  "data": {
-  "path": "/tmp/ollm-oracle-nc/work/mut-b/train64k.bin",
+  "path": "scratch-oracle/work/mut-b/train64k.bin",
   "sha256": "c440a9689f2592cf976f7ff564c4d7d6bc5a58a54feef881c85c4548ceae3f63",
   "bytes": 65536
  },
@@ -202,5 +202,5 @@
   "init": 0.01,
   "perturbed": 0.01
  },
- "finished": "2026-11-01T15:32:32Z"
+ "finished": "2026-11-01T16:00:15Z"
 }

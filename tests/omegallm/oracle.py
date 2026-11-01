@@ -8,10 +8,12 @@ Usage: see tests/omegallm/ORACLE.md.
 """
 
 import hashlib
+import contextlib
 import json
 import math
 import os
 import random
+import shutil
 import struct
 import subprocess
 import sys
@@ -36,6 +38,23 @@ SEP = b"<|endoftext|>"
 RTOL = 1e-9
 FLOOR_FRAC = 1e-3
 
+
+
+@contextlib.contextmanager
+def scratch():
+    """A temporary directory, under $OLLM_TMP when it is set. The path is made relative to the
+    current directory there, so receipts that log commands name no absolute (private) path."""
+    base = os.environ.get("OLLM_TMP")
+    if not base:
+        with tempfile.TemporaryDirectory() as d:
+            yield d
+        return
+    os.makedirs(base, exist_ok=True)
+    d = os.path.relpath(tempfile.mkdtemp(dir=base))
+    try:
+        yield d
+    finally:
+        shutil.rmtree(d)
 
 # ---------------------------------------------------------------- integers and hashes
 
@@ -544,7 +563,7 @@ def selftest():
     rng = random.Random(1)
     ck = dict(c=dict(c), seed=42, step=3, total=50, lr=3e-3, params=flat,
               m=[rng.uniform(-1, 1) for _ in range(P)], v=[rng.random() for _ in range(P)])
-    with tempfile.TemporaryDirectory() as d:
+    with scratch() as d:
         p = os.path.join(d, "ck")
         write_ck(p, ck)
         r = read_ck(p)
@@ -677,7 +696,7 @@ def make_ck(c, seed, total, lrmicro):
 def x_init(a):
     R = Receipt("xinit", a.ollm)
     c, seed, total, lrm = load_cfg(a.cfg), a.seed, 50, 3000
-    with tempfile.TemporaryDirectory() as d:
+    with scratch() as d:
         ckp = os.path.join(d, "ck")
         rec = R.run([a.ollm, "init", ckp] + cfg_args(c) + [str(seed), str(total), str(lrm)])
         P = param_count(c)
@@ -725,7 +744,7 @@ def x_grad(a):
     with open(a.data, "rb") as f:
         data = f.read()
     R.r["data"] = dict(path=a.data, sha256=hashlib.sha256(data).hexdigest(), bytes=len(data))
-    with tempfile.TemporaryDirectory() as d:
+    with scratch() as d:
         cases = [("init", make_ck(c, a.seed, 1000, 3000)),
                  ("perturbed", synth_ck(c, a.seed + 1, 7, 1000, 3e-3, 0.3))]
         for label, ck in cases:
@@ -771,7 +790,7 @@ def x_step(a):
     with open(a.data, "rb") as f:
         data = f.read()
     R.r["data"] = dict(path=a.data, sha256=hashlib.sha256(data).hexdigest(), bytes=len(data))
-    with tempfile.TemporaryDirectory() as d:
+    with scratch() as d:
         small_gf = make_ck(c, a.seed + 1, 300, 3000)
         small_gf["step"] = 2
         _, off, _, cc = tensor_specs(c)[-1]
@@ -867,7 +886,7 @@ def x_eval(a):
     c = load_cfg(a.cfg)
     with open(a.held, "rb") as f:
         he = f.read()
-    with tempfile.TemporaryDirectory() as d:
+    with scratch() as d:
         ck = synth_ck(c, a.seed + 3, 5, 100, 1e-3, 0.3)
         ckp = os.path.join(d, "ck")
         write_ck(ckp, ck)

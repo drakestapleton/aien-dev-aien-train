@@ -3,14 +3,14 @@ note omegallm ckpt.om (aien-train#52): checkpoint OLLMCK01 and gradient OLLMGR01
 note (CONTRACT section 6). Needs math.om, data.om, model.om, adam.om before it.
 note A file is built in, or read into, the byte image ock: header 112 bytes, then the f64 payload
 note little-endian. The largest file is 112 + 3 P_max 8 with P_max = 217664 (Wolfram:
-note 112 + 3*217664*8 -> 5223936); one spare byte detects an over-long file.
+note 112 + 3*217664*8 -> 5224048); one spare byte detects an over-long file, so OCKCAP 5224049.
 note Magic as a little-endian u64 (Wolfram FromDigits[Reverse[ToCharacterCode["OLLMCK01"]],256]
 note -> 3544415659172318287; "OLLMGR01" -> 3544423372933581903).
 note Load refusals (exit codes): 10 file shorter than its header or than 112 + 24 P, 11 bad magic,
 note 12 a shape zero, over the maximum, D mod H != 0, or TOTAL > 999999, 13 P disagrees with the
 note shapes, 14 FNV-1a mismatch, 15 file longer than 112 + 24 P; 70 I/O.
-const OCKCAP ulong 5223937
-global ock uchar 5223937
+const OCKCAP ulong 5224049
+global ock uchar 5224049
 global ockn ulong 1
 global opth uchar 2100
 global opk uchar 4200

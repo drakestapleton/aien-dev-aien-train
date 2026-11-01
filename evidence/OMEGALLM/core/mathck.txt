@@ -1,11 +1,11 @@
 receipt: mathck
 host_cpu: core 6 (Cortex-X925)
-binary: ollm sha256 a9b5f3ec8291c1b046d350dcb7ee6550a271a9e06ee30ba13062d28732aa6137
-source: ollm.om sha256 cb80250d6ee78d58056114a304b4c8269c44f9241c534e970c4bba44e096179b
+binary: ollm sha256 b729cc35faa6b3543ff1893c64e8a6feafc224feba7b99f7f13353e1d2179f22
+source: ollm.om sha256 47c27b0b6f0f962f359330d5fbbaa4b9f974265feb6471359202710d5e70c889
 $ taskset -c 6 nice -n 19 build/ollm mathck aien-train/tests/omegallm/mathref.txt
 --- output
 M e 3017 1 3cb37f4016f424e8 270
 M l 2122 2 3cb84aa00c26b048 337
 --- end
 rc=0 expect=0
-wall_ns=2696758
+wall_ns=2840317

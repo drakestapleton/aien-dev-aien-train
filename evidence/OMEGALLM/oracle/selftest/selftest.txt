@@ -1,5 +1,5 @@
 $ taskset -c 8 nice -n 19 python3 tests/omegallm/oracle.py selftest
-# 2026-11-01T15:13:57Z core 8 MIDR 0x00000000410fd851 oracle sha256 74ec6e991dfc964f25a93f147cf9ee1575a405a21297c71a5b95229db203f02a
+# 2026-11-01T16:02:00Z core 8 MIDR 0x00000000410fd851 oracle sha256 3edfb60718c1b7c786275e16d4d593cc6418f591be4f30c5a5e17e0555c0d0fa
 PASS fnv1a64(b'') = cbf29ce484222325
 PASS fnv1a64(b'a') = af63dc4c8601ec8c
 PASS fnv1a64(b'foobar') = 85944171f73967e8

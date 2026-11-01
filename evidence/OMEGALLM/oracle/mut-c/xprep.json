@@ -1,9 +1,9 @@
 {
  "check": "xprep",
- "binary": "frozen/ollm-mut-c",
- "binary_sha256": "73afec7973008e72a99d1da3b855ba632ade30057c3223b8091affe7f0fe7e64",
- "oracle_sha256": "74ec6e991dfc964f25a93f147cf9ee1575a405a21297c71a5b95229db203f02a",
- "started": "2026-11-01T15:32:34Z",
+ "binary": "build/ollm-mut-c",
+ "binary_sha256": "41c852501c356dcc969ca06cdb367798d36018e2bbb1d896985b453be90bfddb",
+ "oracle_sha256": "3edfb60718c1b7c786275e16d4d593cc6418f591be4f30c5a5e17e0555c0d0fa",
+ "started": "2026-11-01T16:00:17Z",
  "affinity": [
   8
  ],
@@ -11,16 +11,16 @@
  "commands": [
   {
    "argv": [
-    "frozen/ollm-mut-c",
+    "build/ollm-mut-c",
     "prep",
     "data/TinyStoriesV2-GPT4-valid.txt",
-    "/tmp/ollm-oracle-nc/work/mut-c/ollm-train.bin",
-    "/tmp/ollm-oracle-nc/work/mut-c/ollm-held.bin"
+    "scratch-oracle/work/mut-c/ollm-train.bin",
+    "scratch-oracle/work/mut-c/ollm-held.bin"
    ],
    "rc": 0,
    "stdout": "P 27630 24867 2763 19883834 2220914\n",
    "stderr": "",
-   "seconds": 0.176
+   "seconds": 0.179
   }
  ],
  "results": [
@@ -70,5 +70,5 @@
   "sha256": "6874bae9a4c1a4e7edcf0e53b86c17817e9cf881fc75ff2368da457b80c0585d",
   "bytes": 22502601
  },
- "finished": "2026-11-01T15:32:34Z"
+ "finished": "2026-11-01T16:00:17Z"
 }

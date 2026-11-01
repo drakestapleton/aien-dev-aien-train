@@ -1,9 +1,9 @@
 {
  "check": "xinit",
- "binary": "frozen/ollm-mut-a",
- "binary_sha256": "f1747fcdf7d7c5205352f5ca92cf8501acd2587a9fdb3ea98321b7b93cdaba14",
- "oracle_sha256": "74ec6e991dfc964f25a93f147cf9ee1575a405a21297c71a5b95229db203f02a",
- "started": "2026-11-01T15:32:27Z",
+ "binary": "build/ollm-mut-a",
+ "binary_sha256": "69825ec63bde79737483561760b2fa1caabbb019a5019210e84d14ac6f2d93d2",
+ "oracle_sha256": "3edfb60718c1b7c786275e16d4d593cc6418f591be4f30c5a5e17e0555c0d0fa",
+ "started": "2026-11-01T16:00:10Z",
  "affinity": [
   8
  ],
@@ -11,9 +11,9 @@
  "commands": [
   {
    "argv": [
-    "frozen/ollm-mut-a",
+    "build/ollm-mut-a",
     "init",
-    "/tmp/tmpumfct62g/ck",
+    "scratch-oracle/work/mut-a/tmp/tmp2v64jsrv/ck",
     "256",
     "8",
     "16",
@@ -28,7 +28,7 @@
    "rc": 0,
    "stdout": "I 8400\n",
    "stderr": "",
-   "seconds": 0.004
+   "seconds": 0.007
   }
  ],
  "results": [
@@ -84,5 +84,5 @@
   }
  ],
  "verdict": "PASS",
- "finished": "2026-11-01T15:32:27Z"
+ "finished": "2026-11-01T16:00:10Z"
 }

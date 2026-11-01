@@ -1,6 +1,6 @@
-$ taskset -c 8 nice -n 19 python3 aien-train/tests/omegallm/oracle.py xstep --ollm frozen/ollm --data /tmp/ollm-oracle-nc/work/real/train64k.bin --receipt aien-train/evidence/OMEGALLM/oracle/real/xstep.json
+$ taskset -c 8 nice -n 19 python3 aien-train/tests/omegallm/oracle.py xstep --ollm build/ollm --data scratch-oracle/work/real/train64k.bin --receipt aien-train/evidence/OMEGALLM/oracle/real/xstep.json
 PASS step0-init: covers clip=True
-$ frozen/ollm train /tmp/tmpv8blowzv/ck.step0-init /tmp/ollm-oracle-nc/work/real/train64k.bin 1 1
+$ build/ollm train scratch-oracle/work/real/tmp/tmpe6s44lcj/ck.step0-init scratch-oracle/work/real/train64k.bin 1 1
   rc=0 0.01s stdout='T 1 5519810\n'
 PASS step0-init: rc 0
 PASS step0-init: stdout
@@ -70,7 +70,7 @@ v
   gf     maxerr 6.644e-15 at 3 (got 6.4737006122392839e-09 ref 6.4737006122393269e-09)
 PASS step0-init: v (rtol 1e-09)
 PASS step1-chain: covers clip=True
-$ frozen/ollm train /tmp/tmpv8blowzv/ck.step1-chain /tmp/ollm-oracle-nc/work/real/train64k.bin 2 1
+$ build/ollm train scratch-oracle/work/real/tmp/tmpe6s44lcj/ck.step1-chain scratch-oracle/work/real/train64k.bin 2 1
   rc=0 0.01s stdout='T 2 5580300\n'
 PASS step1-chain: rc 0
 PASS step1-chain: stdout
@@ -140,7 +140,7 @@ v
   gf     maxerr 5.951e-15 at 1 (got 4.4479605066819822e-07 ref 4.4479605066820087e-07)
 PASS step1-chain: v (rtol 1e-09)
 PASS step2-unclipped: covers clip=False
-$ frozen/ollm train /tmp/tmpv8blowzv/ck.step2-unclipped /tmp/ollm-oracle-nc/work/real/train64k.bin 3 1
+$ build/ollm train scratch-oracle/work/real/tmp/tmpe6s44lcj/ck.step2-unclipped scratch-oracle/work/real/train64k.bin 3 1
   rc=0 0.01s stdout='T 3 5542253\n'
 PASS step2-unclipped: rc 0
 PASS step2-unclipped: stdout
@@ -210,7 +210,7 @@ v
   gf     maxerr 3.952e-15 at 2 (got 1.1301832560107412e-08 ref 1.1301832560107457e-08)
 PASS step2-unclipped: v (rtol 1e-09)
 PASS step150-synthetic-clip: covers clip=True
-$ frozen/ollm train /tmp/tmpv8blowzv/ck.step150-synthetic-clip /tmp/ollm-oracle-nc/work/real/train64k.bin 151 1
+$ build/ollm train scratch-oracle/work/real/tmp/tmpe6s44lcj/ck.step150-synthetic-clip scratch-oracle/work/real/train64k.bin 151 1
   rc=0 0.01s stdout='T 151 8679908\n'
 PASS step150-synthetic-clip: rc 0
 PASS step150-synthetic-clip: stdout

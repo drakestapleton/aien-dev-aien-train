@@ -1,7 +1,7 @@
 receipt: gcheck-v0-step50
 host_cpu: core 6 (Cortex-X925)
-binary: ollm sha256 a9b5f3ec8291c1b046d350dcb7ee6550a271a9e06ee30ba13062d28732aa6137
-source: ollm.om sha256 cb80250d6ee78d58056114a304b4c8269c44f9241c534e970c4bba44e096179b
+binary: ollm sha256 b729cc35faa6b3543ff1893c64e8a6feafc224feba7b99f7f13353e1d2179f22
+source: ollm.om sha256 47c27b0b6f0f962f359330d5fbbaa4b9f974265feb6471359202710d5e70c889
 $ taskset -c 6 nice -n 19 build/ollm gcheck scratch-core/work/v0.ck data/train.bin
 --- output
 c 74 499247870 499247754
@@ -83,4 +83,4 @@ c 119086 -10951537255 -10951537455
 C 76 3f40e25f8a7fba97 515267 75817 0
 --- end
 rc=0 expect=0
-wall_ns=44683813879
+wall_ns=44638112494

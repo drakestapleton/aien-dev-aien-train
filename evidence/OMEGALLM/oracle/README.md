@@ -2,32 +2,34 @@
 
 Run date: 2026-11-01. Host: DGX Spark, GB10 Grace. All runs were pinned to core 8 with `taskset -c 8 nice -n 19`. Core 8 is a Cortex-X925: `/sys/devices/system/cpu/cpu8/regs/identification/midr_el1` = `0x410fd851`, part 0xd85. Python 3.12.3, standard library only.
 
-The binaries were built with `tests/omegallm/build.sh` using the pinned omc (omega-mv e5b32567). The final candidate's source sha is `cb80250d`, as reported by OllmCore. Before the run, `build/ollm*` was copied to `/tmp/ollm-oracle-nc/frozen/` so that a rebuild during the run could not change what was checked. Each JSON receipt records the sha256 of the binary it ran (`binary_sha256`), and within each label every check ran on the same binary.
+The binaries were built with `tests/omegallm/build.sh` using the pinned omc (omega-mv e5b32567), source sha256 `47c27b0b6f0f962f359330d5fbbaa4b9f974265feb6471359202710d5e70c889` for `ollm`. Each JSON receipt records the sha256 of the binary it ran (`binary_sha256`) and of the referee (`oracle_sha256`, `tests/omegallm/oracle.py` = `3edfb60718c1b7c786275e16d4d593cc6418f591be4f30c5a5e17e0555c0d0fa`); within each label every check ran on the same binary.
 
 | label | binary | sha256 checked |
 |---|---|---|
-| real | build/ollm (final candidate) | a9b5f3ec8291c1b046d350dcb7ee6550a271a9e06ee30ba13062d28732aa6137 |
-| mut-a | build/ollm-mut-a (attention dK sign) | f1747fcdf7d7c5205352f5ca92cf8501acd2587a9fdb3ea98321b7b93cdaba14 |
-| mut-b | build/ollm-mut-b (target shift y = data[o+2..]) | 4b12510f499b2a4394f58246484ce3d40621c0c24e545c7177d8e2a02b7787ea |
-| mut-c | build/ollm-mut-c (Adam bias correction removed) | 73afec7973008e72a99d1da3b855ba632ade30057c3223b8091affe7f0fe7e64 |
+| real | build/ollm (final candidate) | b729cc35faa6b3543ff1893c64e8a6feafc224feba7b99f7f13353e1d2179f22 |
+| mut-a | build/ollm-mut-a (attention dK sign) | 69825ec63bde79737483561760b2fa1caabbb019a5019210e84d14ac6f2d93d2 |
+| mut-b | build/ollm-mut-b (target shift y = data[o+2..]) | c7ddea4cea9952209e6e4516fc01e98aaf33940a80ccf9a4d7a5cb4d6881fa89 |
+| mut-c | build/ollm-mut-c (Adam bias correction removed) | 41c852501c356dcc969ca06cdb367798d36018e2bbb1d896985b453be90bfddb |
+
+An earlier run of this lane checked the pre-fix binaries (ollm a9b5f3ec; mutants f1747fcd, 4b12510f,
+73afec79). The fix changed only bounds handling, and every `results` entry of all 28 JSON receipts is
+identical between the two runs once shas, paths and timings are left out.
 
 ## Commands
 
-These were run from the directory that holds the `aien-train` clone, `build/` and `data/`. Every path
-is relative, so the receipts name no absolute paths. `frozen` is a symlink to `/tmp/ollm-oracle-nc/frozen`.
-The receipts were regenerated with these commands on 2026-11-01 after the path change in `xcheck.sh`;
-the binaries and shas are the ones in the table above.
+These were run from the directory that holds the `aien-train` clone, `build/` and `data/`, after
+`sh aien-train/tests/omegallm/core-receipts.sh` had built `build/`. Every path is relative; `xcheck.sh`
+points the referee's scratch files at `$WORK/<label>/tmp`, so the receipts name no absolute paths.
 
 ```sh
-S=/tmp/ollm-oracle-nc/frozen; mkdir -p $S; cp build/ollm build/ollm-mut-a build/ollm-mut-b build/ollm-mut-c $S/
-ln -sfn $S frozen
-export DATA=data/TinyStoriesV2-GPT4-valid.txt WORK=/tmp/ollm-oracle-nc/work
-sh aien-train/tests/omegallm/xcheck.sh frozen/ollm real aien-train/evidence/OMEGALLM/oracle v0   # exit 0
-for m in a b c; do sh aien-train/tests/omegallm/xcheck.sh frozen/ollm-mut-$m mut-$m aien-train/evidence/OMEGALLM/oracle; done
+rm -rf scratch-oracle aien-train/evidence/OMEGALLM/oracle/real aien-train/evidence/OMEGALLM/oracle/mut-?
+export DATA=data/TinyStoriesV2-GPT4-valid.txt WORK=scratch-oracle/work
+sh aien-train/tests/omegallm/xcheck.sh build/ollm real aien-train/evidence/OMEGALLM/oracle v0   # exit 0
+for m in a b c; do sh aien-train/tests/omegallm/xcheck.sh build/ollm-mut-$m mut-$m aien-train/evidence/OMEGALLM/oracle; done
 # mut-a exit 1, mut-b exit 1, mut-c exit 1
 ```
 
-`<label>/summary.tsv` lists every check with its exit code and the exact command. `<label>/<check>.log` holds the full output, and `<label>/<check>.json` holds the receipt: argv, rc, stdout, stderr tail, seconds, binary and oracle sha256, and per-result details. The derived `.bin` files stayed in `/tmp` and are not committed.
+`<label>/summary.tsv` lists every check with its exit code and the exact command. `<label>/<check>.log` holds the full output, and `<label>/<check>.json` holds the receipt: argv, rc, stdout, stderr tail, seconds, binary and oracle sha256, and per-result details. The derived `.bin` files stay under `WORK` and are not committed.
 
 ## Matrix (exit codes of each check)
 
@@ -86,13 +88,13 @@ The largest observed error is 1.5e-11, below the 1e-9 limit.
 
 | measurement | real binary | oracle |
 |---|---|---|
-| v0 grad, B=16, one call | 0.72–0.74 s | 7.75–7.8 s |
-| small train step | about 0.006 s | not measured |
-| whole real-binary xcheck run, v0 included | 61.7 s wall, binary and oracle together | |
+| v0 grad, B=16, one call | 0.731–0.734 s | 7.73–7.88 s |
+| small train step | 0.007–0.008 s | not measured |
+| whole real-binary xcheck run, v0 included | 63 s wall (15:59:02Z–16:00:05Z), binary and oracle together | |
 
 ## Oracle self-test and negative controls
 
-The receipts are in `selftest/`:
+The receipts are in `selftest/`, run against oracle sha256 `3edfb607…`; the mutated copies were made in scratch, and each file holds its one-line diff:
 
 - `selftest.txt` shows `SELFTEST PASS (0 failures)`, rc 0.
 - `negctl-nc_attn.txt` uses an oracle with the dK accumulation sign flipped (the diff is in the file). It shows `SELFTEST FAIL (34 failures)`, rc 1.
@@ -103,4 +105,4 @@ The receipts are in `selftest/`:
 - `sample` is not cross-checked. The contract defines it, but the oracle has no check for it.
 - The mutants were run only at the small configuration, not at v0.
 - `train` was cross-checked only for one step per case. No multi-step run or long training run was compared.
-- The `grad`/`ckpt` refusal exit codes of the binary for corrupt input were not exercised; only the oracle's own refusals were tested.
+- The oracle does not test the binary's refusals. Those are core receipts: checkpoint exits 10–15 and data-range exits 22/23 in `evidence/OMEGALLM/core/refuse-*.txt`, and the pre-fix/fixed A/B in `evidence/OMEGALLM/v0/bounds-ab.txt`.

@@ -1,9 +1,9 @@
 {
  "check": "xinit",
- "binary": "frozen/ollm",
- "binary_sha256": "a9b5f3ec8291c1b046d350dcb7ee6550a271a9e06ee30ba13062d28732aa6137",
- "oracle_sha256": "74ec6e991dfc964f25a93f147cf9ee1575a405a21297c71a5b95229db203f02a",
- "started": "2026-11-01T15:31:26Z",
+ "binary": "build/ollm",
+ "binary_sha256": "b729cc35faa6b3543ff1893c64e8a6feafc224feba7b99f7f13353e1d2179f22",
+ "oracle_sha256": "3edfb60718c1b7c786275e16d4d593cc6418f591be4f30c5a5e17e0555c0d0fa",
+ "started": "2026-11-01T15:59:05Z",
  "affinity": [
   8
  ],
@@ -11,9 +11,9 @@
  "commands": [
   {
    "argv": [
-    "frozen/ollm",
+    "build/ollm",
     "init",
-    "/tmp/tmpvimn_4n_/ck",
+    "scratch-oracle/work/real/tmp/tmpc4a4ohmu/ck",
     "256",
     "8",
     "16",
@@ -28,7 +28,7 @@
    "rc": 0,
    "stdout": "I 8400\n",
    "stderr": "",
-   "seconds": 0.014
+   "seconds": 0.016
   }
  ],
  "results": [
@@ -84,5 +84,5 @@
   }
  ],
  "verdict": "PASS",
- "finished": "2026-11-01T15:31:26Z"
+ "finished": "2026-11-01T15:59:05Z"
 }

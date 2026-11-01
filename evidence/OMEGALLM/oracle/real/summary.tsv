@@ -1,12 +1,12 @@
 check	rc	command
 selftest	0	taskset -c 8 nice -n 19 python3 aien-train/tests/omegallm/oracle.py selftest
-xprep	0	taskset -c 8 nice -n 19 python3 aien-train/tests/omegallm/oracle.py xprep --ollm frozen/ollm --data data/TinyStoriesV2-GPT4-valid.txt --outdir /tmp/ollm-oracle-nc/work/real --receipt aien-train/evidence/OMEGALLM/oracle/real/xprep.json
-xbase	0	taskset -c 8 nice -n 19 python3 aien-train/tests/omegallm/oracle.py xbase --ollm frozen/ollm --train /tmp/ollm-oracle-nc/work/real/oracle-train.bin --held /tmp/ollm-oracle-nc/work/real/oracle-held.bin --receipt aien-train/evidence/OMEGALLM/oracle/real/xbase.json
-xinit	0	taskset -c 8 nice -n 19 python3 aien-train/tests/omegallm/oracle.py xinit --ollm frozen/ollm --receipt aien-train/evidence/OMEGALLM/oracle/real/xinit.json
-xgrad	0	taskset -c 8 nice -n 19 python3 aien-train/tests/omegallm/oracle.py xgrad --ollm frozen/ollm --data /tmp/ollm-oracle-nc/work/real/train64k.bin --receipt aien-train/evidence/OMEGALLM/oracle/real/xgrad.json
-xstep	0	taskset -c 8 nice -n 19 python3 aien-train/tests/omegallm/oracle.py xstep --ollm frozen/ollm --data /tmp/ollm-oracle-nc/work/real/train64k.bin --receipt aien-train/evidence/OMEGALLM/oracle/real/xstep.json
-xeval	0	taskset -c 8 nice -n 19 python3 aien-train/tests/omegallm/oracle.py xeval --ollm frozen/ollm --held /tmp/ollm-oracle-nc/work/real/oracle-held.bin --receipt aien-train/evidence/OMEGALLM/oracle/real/xeval.json
-xinit-v0	0	taskset -c 8 nice -n 19 python3 aien-train/tests/omegallm/oracle.py xinit --cfg v0 --ollm frozen/ollm --receipt aien-train/evidence/OMEGALLM/oracle/real/xinit-v0.json
-xgrad-v0	0	taskset -c 8 nice -n 19 python3 aien-train/tests/omegallm/oracle.py xgrad --cfg v0 --ollm frozen/ollm --data /tmp/ollm-oracle-nc/work/real/oracle-train.bin --receipt aien-train/evidence/OMEGALLM/oracle/real/xgrad-v0.json
-xstep-v0	0	taskset -c 8 nice -n 19 python3 aien-train/tests/omegallm/oracle.py xstep --cfg v0 --ollm frozen/ollm --data /tmp/ollm-oracle-nc/work/real/oracle-train.bin --receipt aien-train/evidence/OMEGALLM/oracle/real/xstep-v0.json
-xeval-v0	0	taskset -c 8 nice -n 19 python3 aien-train/tests/omegallm/oracle.py xeval --cfg v0 --ollm frozen/ollm --held /tmp/ollm-oracle-nc/work/real/oracle-held.bin --receipt aien-train/evidence/OMEGALLM/oracle/real/xeval-v0.json
+xprep	0	taskset -c 8 nice -n 19 python3 aien-train/tests/omegallm/oracle.py xprep --ollm build/ollm --data data/TinyStoriesV2-GPT4-valid.txt --outdir scratch-oracle/work/real --receipt aien-train/evidence/OMEGALLM/oracle/real/xprep.json
+xbase	0	taskset -c 8 nice -n 19 python3 aien-train/tests/omegallm/oracle.py xbase --ollm build/ollm --train scratch-oracle/work/real/oracle-train.bin --held scratch-oracle/work/real/oracle-held.bin --receipt aien-train/evidence/OMEGALLM/oracle/real/xbase.json
+xinit	0	taskset -c 8 nice -n 19 python3 aien-train/tests/omegallm/oracle.py xinit --ollm build/ollm --receipt aien-train/evidence/OMEGALLM/oracle/real/xinit.json
+xgrad	0	taskset -c 8 nice -n 19 python3 aien-train/tests/omegallm/oracle.py xgrad --ollm build/ollm --data scratch-oracle/work/real/train64k.bin --receipt aien-train/evidence/OMEGALLM/oracle/real/xgrad.json
+xstep	0	taskset -c 8 nice -n 19 python3 aien-train/tests/omegallm/oracle.py xstep --ollm build/ollm --data scratch-oracle/work/real/train64k.bin --receipt aien-train/evidence/OMEGALLM/oracle/real/xstep.json
+xeval	0	taskset -c 8 nice -n 19 python3 aien-train/tests/omegallm/oracle.py xeval --ollm build/ollm --held scratch-oracle/work/real/oracle-held.bin --receipt aien-train/evidence/OMEGALLM/oracle/real/xeval.json
+xinit-v0	0	taskset -c 8 nice -n 19 python3 aien-train/tests/omegallm/oracle.py xinit --cfg v0 --ollm build/ollm --receipt aien-train/evidence/OMEGALLM/oracle/real/xinit-v0.json
+xgrad-v0	0	taskset -c 8 nice -n 19 python3 aien-train/tests/omegallm/oracle.py xgrad --cfg v0 --ollm build/ollm --data scratch-oracle/work/real/oracle-train.bin --receipt aien-train/evidence/OMEGALLM/oracle/real/xgrad-v0.json
+xstep-v0	0	taskset -c 8 nice -n 19 python3 aien-train/tests/omegallm/oracle.py xstep --cfg v0 --ollm build/ollm --data scratch-oracle/work/real/oracle-train.bin --receipt aien-train/evidence/OMEGALLM/oracle/real/xstep-v0.json
+xeval-v0	0	taskset -c 8 nice -n 19 python3 aien-train/tests/omegallm/oracle.py xeval --cfg v0 --ollm build/ollm --held scratch-oracle/work/real/oracle-held.bin --receipt aien-train/evidence/OMEGALLM/oracle/real/xeval-v0.json

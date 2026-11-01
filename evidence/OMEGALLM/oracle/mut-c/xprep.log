@@ -1,5 +1,5 @@
-$ taskset -c 8 nice -n 19 python3 aien-train/tests/omegallm/oracle.py xprep --ollm frozen/ollm-mut-c --data data/TinyStoriesV2-GPT4-valid.txt --outdir /tmp/ollm-oracle-nc/work/mut-c --receipt aien-train/evidence/OMEGALLM/oracle/mut-c/xprep.json
-$ frozen/ollm-mut-c prep data/TinyStoriesV2-GPT4-valid.txt /tmp/ollm-oracle-nc/work/mut-c/ollm-train.bin /tmp/ollm-oracle-nc/work/mut-c/ollm-held.bin
+$ taskset -c 8 nice -n 19 python3 aien-train/tests/omegallm/oracle.py xprep --ollm build/ollm-mut-c --data data/TinyStoriesV2-GPT4-valid.txt --outdir scratch-oracle/work/mut-c --receipt aien-train/evidence/OMEGALLM/oracle/mut-c/xprep.json
+$ build/ollm-mut-c prep data/TinyStoriesV2-GPT4-valid.txt scratch-oracle/work/mut-c/ollm-train.bin scratch-oracle/work/mut-c/ollm-held.bin
   rc=0 0.18s stdout='P 27630 24867 2763 19883834 2220914\n'
 PASS rc 0
 PASS stdout

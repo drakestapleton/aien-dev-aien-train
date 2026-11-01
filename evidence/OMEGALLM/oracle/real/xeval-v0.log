@@ -1,6 +1,6 @@
-$ taskset -c 8 nice -n 19 python3 aien-train/tests/omegallm/oracle.py xeval --cfg v0 --ollm frozen/ollm --held /tmp/ollm-oracle-nc/work/real/oracle-held.bin --receipt aien-train/evidence/OMEGALLM/oracle/real/xeval-v0.json
-$ frozen/ollm eval /tmp/tmpkl0rb2i2/ck /tmp/ollm-oracle-nc/work/real/oracle-held.bin 4
-  rc=0 0.08s stdout='E 5 4 8894240 12831676\n'
+$ taskset -c 8 nice -n 19 python3 aien-train/tests/omegallm/oracle.py xeval --cfg v0 --ollm build/ollm --held scratch-oracle/work/real/oracle-held.bin --receipt aien-train/evidence/OMEGALLM/oracle/real/xeval-v0.json
+$ build/ollm eval scratch-oracle/work/real/tmp/tmpsnn1_i8y/ck scratch-oracle/work/real/oracle-held.bin 4
+  rc=0 0.09s stdout='E 5 4 8894240 12831676\n'
 PASS rc 0
 PASS stdout
 XEVAL PASS

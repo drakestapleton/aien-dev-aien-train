@@ -1,0 +1,9 @@
+receipt: refuse-grad-hugeoff
+host_cpu: core 6 (Cortex-X925)
+binary: ollm sha256 b729cc35faa6b3543ff1893c64e8a6feafc224feba7b99f7f13353e1d2179f22
+source: ollm.om sha256 47c27b0b6f0f962f359330d5fbbaa4b9f974265feb6471359202710d5e70c889
+$ taskset -c 6 nice -n 19 build/ollm grad scratch-core/work/ra.ck data/train.bin scratch-core/work/offs-huge.bin scratch-core/work/huge.gr
+--- output
+--- end
+rc=22 expect=22
+wall_ns=12996691

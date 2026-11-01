@@ -1,5 +1,6 @@
 # negative control: oracle.py with one edit (diff below), selftest must FAIL
-356c356
+# 2026-11-01T16:02:02Z core 8 MIDR 0x00000000410fd851 base oracle sha256 3edfb60718c1b7c786275e16d4d593cc6418f591be4f30c5a5e17e0555c0d0fa
+375c375
 <                         dkj[i] += dsj * qt[i]
 ---
 >                         dkj[i] -= dsj * qt[i]

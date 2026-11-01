@@ -152,7 +152,8 @@ end
 note adamck: Adam self-check on the small shape. With a constant gradient g from zero moments,
 note exact arithmetic gives m/bc1 = g and v/bc2 = g^2 at every step, so after K steps
 note p = -sum_s lr_s g/(|g| + 1e-8). Prints `A K maxrel_bits_hex maxrel_e15` and exits 41 when
-note maxrel > 1e-12. Without bias correction (mutant c) the step-2 ratio is 1.347 (Wolfram, README).
+note maxrel > 1e-12. Without bias correction (mutant c) the step-1 ratio is exactly 1 and the step-2
+note ratio is 1.347; the query and the predicted 0.63909 are in docs/omegallm/README.md, "Sizing".
 fn cmdadamck to void
 put og 0 256
 put og 1 8

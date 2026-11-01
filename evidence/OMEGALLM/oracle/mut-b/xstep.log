@@ -1,6 +1,6 @@
-$ taskset -c 8 nice -n 19 python3 aien-train/tests/omegallm/oracle.py xstep --ollm frozen/ollm-mut-b --data /tmp/ollm-oracle-nc/work/mut-b/train64k.bin --receipt aien-train/evidence/OMEGALLM/oracle/mut-b/xstep.json
+$ taskset -c 8 nice -n 19 python3 aien-train/tests/omegallm/oracle.py xstep --ollm build/ollm-mut-b --data scratch-oracle/work/mut-b/train64k.bin --receipt aien-train/evidence/OMEGALLM/oracle/mut-b/xstep.json
 PASS step0-init: covers clip=True
-$ frozen/ollm-mut-b train /tmp/tmpd5dkc8zz/ck.step0-init /tmp/ollm-oracle-nc/work/mut-b/train64k.bin 1 1
+$ build/ollm-mut-b train scratch-oracle/work/mut-b/tmp/tmp95i6w8p6/ck.step0-init scratch-oracle/work/mut-b/train64k.bin 1 1
   rc=0 0.01s stdout='T 1 5518884\n'
 PASS step0-init: rc 0
 FAIL step0-init: stdout
@@ -70,7 +70,7 @@ v
   gf     maxerr 1.258e+02 at 12 (got 2.1385605971674364e-07 ref 1.6861547859265136e-09)
 FAIL step0-init: v (rtol 1e-09)
 PASS step1-chain: covers clip=True
-$ frozen/ollm-mut-b train /tmp/tmpd5dkc8zz/ck.step1-chain /tmp/ollm-oracle-nc/work/mut-b/train64k.bin 2 1
+$ build/ollm-mut-b train scratch-oracle/work/mut-b/tmp/tmp95i6w8p6/ck.step1-chain scratch-oracle/work/mut-b/train64k.bin 2 1
   rc=0 0.01s stdout='T 2 5519069\n'
 PASS step1-chain: rc 0
 FAIL step1-chain: stdout
@@ -140,7 +140,7 @@ v
   gf     maxerr 5.375e+01 at 4 (got 7.0656733100496852e-08 ref 1.2905856194289856e-09)
 FAIL step1-chain: v (rtol 1e-09)
 PASS step2-unclipped: covers clip=False
-$ frozen/ollm-mut-b train /tmp/tmpd5dkc8zz/ck.step2-unclipped /tmp/ollm-oracle-nc/work/mut-b/train64k.bin 3 1
+$ build/ollm-mut-b train scratch-oracle/work/mut-b/tmp/tmp95i6w8p6/ck.step2-unclipped scratch-oracle/work/mut-b/train64k.bin 3 1
   rc=0 0.01s stdout='T 3 5542654\n'
 PASS step2-unclipped: rc 0
 FAIL step2-unclipped: stdout
@@ -210,7 +210,7 @@ v
   gf     maxerr 2.187e+01 at 0 (got 5.4354460778336576e-08 ref 9.6285440776524698e-12)
 FAIL step2-unclipped: v (rtol 1e-09)
 PASS step150-synthetic-clip: covers clip=True
-$ frozen/ollm-mut-b train /tmp/tmpd5dkc8zz/ck.step150-synthetic-clip /tmp/ollm-oracle-nc/work/mut-b/train64k.bin 151 1
+$ build/ollm-mut-b train scratch-oracle/work/mut-b/tmp/tmp95i6w8p6/ck.step150-synthetic-clip scratch-oracle/work/mut-b/train64k.bin 151 1
   rc=0 0.01s stdout='T 151 9345812\n'
 PASS step150-synthetic-clip: rc 0
 FAIL step150-synthetic-clip: stdout

@@ -1,0 +1,16 @@
+receipt: bounds-ab (a9b5f3ec = pre-fix binary of the v0 run, b729cc35 = this tree)
+host_cpu: core 7 (Cortex-X925); each probe under timeout 20 s (rc 124 = killed by the timeout)
+a9b5f3ec8291c1b046d350dcb7ee6550a271a9e06ee30ba13062d28732aa6137  frozen/ollm
+b729cc35faa6b3543ff1893c64e8a6feafc224feba7b99f7f13353e1d2179f22  build/ollm
+$ timeout 20 taskset -c 7 nice -n 19 frozen/ollm init scratch-equiv/ab/max-a9b5f3ec.ck 256 64 64 8 256 4 16 1 100 3000
+init-max a9b5f3ec rc=103 
+$ timeout 20 taskset -c 7 nice -n 19 frozen/ollm eval scratch-core/work/ra.ck data/held.bin 288230376151711744
+eval-hugew a9b5f3ec rc=124 
+$ timeout 20 taskset -c 7 nice -n 19 frozen/ollm grad scratch-core/work/ra.ck data/train.bin scratch-core/work/offs-huge.bin scratch-equiv/ab/huge-a9b5f3ec.gr
+grad-hugeoff a9b5f3ec rc=103 
+$ timeout 20 taskset -c 7 nice -n 19 build/ollm init scratch-equiv/ab/max-b729cc35.ck 256 64 64 8 256 4 16 1 100 3000
+init-max b729cc35 rc=0 I 217664
+$ timeout 20 taskset -c 7 nice -n 19 build/ollm eval scratch-core/work/ra.ck data/held.bin 288230376151711744
+eval-hugew b729cc35 rc=23 
+$ timeout 20 taskset -c 7 nice -n 19 build/ollm grad scratch-core/work/ra.ck data/train.bin scratch-core/work/offs-huge.bin scratch-equiv/ab/huge-b729cc35.gr
+grad-hugeoff b729cc35 rc=22 

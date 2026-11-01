@@ -1,9 +1,9 @@
 {
  "check": "xgrad",
- "binary": "frozen/ollm",
- "binary_sha256": "a9b5f3ec8291c1b046d350dcb7ee6550a271a9e06ee30ba13062d28732aa6137",
- "oracle_sha256": "74ec6e991dfc964f25a93f147cf9ee1575a405a21297c71a5b95229db203f02a",
- "started": "2026-11-01T15:31:26Z",
+ "binary": "build/ollm",
+ "binary_sha256": "b729cc35faa6b3543ff1893c64e8a6feafc224feba7b99f7f13353e1d2179f22",
+ "oracle_sha256": "3edfb60718c1b7c786275e16d4d593cc6418f591be4f30c5a5e17e0555c0d0fa",
+ "started": "2026-11-01T15:59:05Z",
  "affinity": [
   8
  ],
@@ -11,26 +11,26 @@
  "commands": [
   {
    "argv": [
-    "frozen/ollm",
+    "build/ollm",
     "grad",
-    "/tmp/tmpha43pgur/ck.init",
-    "/tmp/ollm-oracle-nc/work/real/train64k.bin",
-    "/tmp/tmpha43pgur/offs.init",
-    "/tmp/tmpha43pgur/gr.init"
+    "scratch-oracle/work/real/tmp/tmp7dha9rd0/ck.init",
+    "scratch-oracle/work/real/train64k.bin",
+    "scratch-oracle/work/real/tmp/tmp7dha9rd0/offs.init",
+    "scratch-oracle/work/real/tmp/tmp7dha9rd0/gr.init"
    ],
    "rc": 0,
    "stdout": "G 401614490af7b792 5519810\n",
    "stderr": "",
-   "seconds": 0.006
+   "seconds": 0.007
   },
   {
    "argv": [
-    "frozen/ollm",
+    "build/ollm",
     "grad",
-    "/tmp/tmpha43pgur/ck.perturbed",
-    "/tmp/ollm-oracle-nc/work/real/train64k.bin",
-    "/tmp/tmpha43pgur/offs.perturbed",
-    "/tmp/tmpha43pgur/gr.perturbed"
+    "scratch-oracle/work/real/tmp/tmp7dha9rd0/ck.perturbed",
+    "scratch-oracle/work/real/train64k.bin",
+    "scratch-oracle/work/real/tmp/tmp7dha9rd0/offs.perturbed",
+    "scratch-oracle/work/real/tmp/tmp7dha9rd0/gr.perturbed"
    ],
    "rc": 0,
    "stdout": "G 401b312cf1a7b14c 6798023\n",
@@ -194,7 +194,7 @@
  ],
  "verdict": "PASS",
  "data": {
-  "path": "/tmp/ollm-oracle-nc/work/real/train64k.bin",
+  "path": "scratch-oracle/work/real/train64k.bin",
   "sha256": "c440a9689f2592cf976f7ff564c4d7d6bc5a58a54feef881c85c4548ceae3f63",
   "bytes": 65536
  },
@@ -202,5 +202,5 @@
   "init": 0.01,
   "perturbed": 0.01
  },
- "finished": "2026-11-01T15:31:26Z"
+ "finished": "2026-11-01T15:59:05Z"
 }

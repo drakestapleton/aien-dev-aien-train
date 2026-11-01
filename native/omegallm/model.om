@@ -12,8 +12,8 @@ note  30 WPE 31 LAY0 32 LSTR (per-layer parameter stride) 33 GF
 note  40 seed S 41 step 42 TOTAL 43 lr bits
 note Per layer activations (T rows of width D unless noted): HIN, A, Q, K, U, O, HMID, BN, S1[T],
 note S2[T], PA[H][T][T], FP[T][F] (pre-relu), RL[T][F]. Every sum runs over its index ascending.
-note Pool size: the maximum shape (V 256, T 64, D 64, H 8, F 256, L 4) ends at 1334336
-note (Wolfram, see docs/omegallm/README.md); OWN leaves room and ogeom refuses any layout past it.
+note Pool size: the maximum shape (V 256, T 64, D 64, H 8, F 256, L 4) ends at 1334336 (Wolfram
+note query in docs/omegallm/README.md, "Sizing"); OWN leaves room and ogeom refuses any layout past it.
 const OWN ulong 1400000
 global ow f64 1400000
 

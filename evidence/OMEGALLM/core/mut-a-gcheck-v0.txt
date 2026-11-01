@@ -1,7 +1,7 @@
 receipt: mut-a-gcheck-v0
 host_cpu: core 6 (Cortex-X925)
-binary: ollm-mut-a sha256 f1747fcdf7d7c5205352f5ca92cf8501acd2587a9fdb3ea98321b7b93cdaba14
-source: ollm-mut-a.om sha256 041f1a7fa5dcacc759c92d4b9c050061d18b78cabaf51d2d1d43791d3c172276
+binary: ollm-mut-a sha256 69825ec63bde79737483561760b2fa1caabbb019a5019210e84d14ac6f2d93d2
+source: ollm-mut-a.om sha256 d458510e5399f2d300b5fccac43f530b9664a2a01bd4bf731e3627c93a9f6a7f
 $ taskset -c 6 nice -n 19 build/ollm-mut-a gcheck scratch-core/work/g0.ck data/train.bin
 --- output
 c 7361 32356846181 32326751941
@@ -83,4 +83,4 @@ c 119064 1645220771 1645220848
 C 76 3ffffff1bd71b028 1999986400 75558 38
 --- end
 rc=40 expect=40
-wall_ns=66746849583
+wall_ns=66749092493

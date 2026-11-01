@@ -1,9 +1,9 @@
 {
  "check": "xeval",
- "binary": "frozen/ollm-mut-c",
- "binary_sha256": "73afec7973008e72a99d1da3b855ba632ade30057c3223b8091affe7f0fe7e64",
- "oracle_sha256": "74ec6e991dfc964f25a93f147cf9ee1575a405a21297c71a5b95229db203f02a",
- "started": "2026-11-01T15:32:37Z",
+ "binary": "build/ollm-mut-c",
+ "binary_sha256": "41c852501c356dcc969ca06cdb367798d36018e2bbb1d896985b453be90bfddb",
+ "oracle_sha256": "3edfb60718c1b7c786275e16d4d593cc6418f591be4f30c5a5e17e0555c0d0fa",
+ "started": "2026-11-01T16:00:20Z",
  "affinity": [
   8
  ],
@@ -11,10 +11,10 @@
  "commands": [
   {
    "argv": [
-    "frozen/ollm-mut-c",
+    "build/ollm-mut-c",
     "eval",
-    "/tmp/tmp1wv7xnpe/ck",
-    "/tmp/ollm-oracle-nc/work/mut-c/oracle-held.bin",
+    "scratch-oracle/work/mut-c/tmp/tmp6aypeknl/ck",
+    "scratch-oracle/work/mut-c/oracle-held.bin",
     "4"
    ],
    "rc": 0,
@@ -50,5 +50,5 @@
   }
  ],
  "verdict": "PASS",
- "finished": "2026-11-01T15:32:37Z"
+ "finished": "2026-11-01T16:00:20Z"
 }
