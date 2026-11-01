@@ -1,0 +1,16 @@
+# sh tests/omegallm/efi-check.sh evidence/OMEGALLM/imac/OUT.TXT evidence/OMEGALLM/efi/ref.out 11
+body EQUAL
+EQUAL
+rc=0
+# sha256 TR.BIN HE.BIN S.CK vs evidence/OMEGALLM/efi/ref-files.txt
+files EQUAL rc=0
+# negative control: OUT.TXT with byte 41 set to X (cmp prints the temp file of efi-check.sh)
+TMP evidence/OMEGALLM/efi/ref.out differ: char 28, line 2
+DIFFERENT
+rc=1
+# negative control: JOBS 10
+last line is not OLLM DONE 10 ms
+J lines 11, want 10
+body EQUAL
+DIFFERENT
+rc=1
