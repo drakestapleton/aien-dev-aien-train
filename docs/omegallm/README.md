@@ -38,7 +38,7 @@ names the binary and source sha256 it ran; `core-receipts.sh` builds all six bin
 | mutants a (dK sign), c (no bias correction) | EXERCISED, killed | `mut-a-gcheck.txt` and `mut-a-gcheck-v0.txt` (rc 40, maxrel 2.0), `mut-c-adamck.txt` (rc 41, maxrel 0.639088) |
 | mutant b (targets shifted) | killed by the oracle only | `mut-b-gcheck.txt` passes the self-check, as expected; the kill is in `evidence/OMEGALLM/oracle/` |
 | cross-check against the referee | EXERCISED by the oracle lane, on b729cc35 and the three mutants | `evidence/OMEGALLM/oracle/` and `tests/omegallm/ORACLE.md` |
-| the v0 run, 20000 steps (`tests/omegallm/v0-run.sh`) | RUNNING since 2026-11-01T15:24:54Z on core 9, binary a9b5f3ec | `evidence/OMEGALLM/v0/` when it finishes |
+| the v0 run, 20000 steps (`tests/omegallm/v0-run.sh`) | EXERCISED: 2026-11-01T15:24:54Z to 19:23:57Z on core 9, binary a9b5f3ec, unit `Result=success`; held-out 1.463036 bpb at W=4096 | `evidence/OMEGALLM/v0/run/` (see "v0 result") |
 | a9b5f3ec and b729cc35 compute the same v0 run | EXERCISED | `evidence/OMEGALLM/v0/equiv-a9b5f3ec-b729cc35.txt`: same `E 2000` line from the run's step-2000 checkpoint, byte-identical checkpoint after 10 more steps; control `equiv-control-mut-b.txt` differs |
 
 b729cc35 differs from a9b5f3ec only in bounds handling. The source diff shows it: the concatenated
@@ -141,8 +141,40 @@ Planned length, WolframLanguageEvaluator with sps = 0.70631 s/step from `train-v
 - Data seen: `20000*16*64/19883834` → 1.03 passes over the training bytes, in expectation.
 - LRMICRO 3000 is the only learning rate exercised.
 
-When the run finishes, its outputs (the eval, train and sample text, without checkpoints) will be
-committed to `evidence/OMEGALLM/v0/` together with the result.
+## v0 result
+
+All figures below come from `evidence/OMEGALLM/v0/run/` (core 9, Cortex-X925, nice 19, binary
+a9b5f3ec, data `101b41c6…`/`729e0a4a…` in `shas.txt`). Arithmetic is WolframLanguageEvaluator,
+quoted with each result.
+
+- The unit ended `Result=success`, `ExecMainStatus=0` (`unit.txt`). It ran from 15:24:54Z to
+  19:23:57Z, 14343 s: `14343/20000` → 0.717 s/step, including 21 evals and 20 checkpoint copies.
+- Final checkpoint `ck.bin` = `ck-20000.bin`, sha256 `ddf790fc…`, 2,858,608 B (not committed).
+- Held-out loss, first 256 windows (`evals.txt`), bits per byte:
+
+| step | 0 | 1000 | 2000 | 5000 | 10000 | 15000 | 19000 | 20000 |
+|---|---|---|---|---|---|---|---|---|
+| bpb | 7.991001 | 2.163609 | 1.929394 | 1.693245 | 1.563117 | 1.491841 | 1.440312 | 1.432839 |
+
+  Still falling at the end: 19000→20000 is `100*(1.432839-1.440312)/1.440312` → −0.519%,
+  18000→19000 → −0.947%. This run does not show where it stops falling.
+- Final eval (`final-eval.txt`): `E 20000 4096 1014099 1463036`, 1.463036 bpb over 4096 windows,
+  `4096*64/2220914` → 11.8% of the held-out positions (the W=256 series covers 0.74%).
+  `final-eval-b729cc35.txt` recomputes this line from `ck-20000.bin` with the bounds-fixed binary.
+- Against the byte baselines in `base.txt`: `100*(1-1.463036/3.295113)` → 55.6% below bigram,
+  `100*(1-1.463036/4.415645)` → 66.9% below unigram. The baselines score every byte transition of
+  the held-out file, the eval only the first 4096 windows, so this compares different position sets.
+- Training loss of the last step (`train.txt`, one batch): `T 20000 917244` → `0.917244/ln 2` →
+  1.3233 bits per byte. Single-batch values swing (19500: 0.937854, 19750: 1.003060 nats), so the
+  gap to held-out is not measured here.
+- Samples (`sample-*.txt`, 400 bytes after "Once upon a time"; not cross-checked by the oracle):
+  the model writes TinyStories-shaped text with names, quotes and sentence structure, plus misspelled
+  and invented words ("chisting", "spinnat"). The argmax sample falls into a loop ("The bird said, \"I
+  will help you to the park.\"" repeats from about byte 100).
+
+This is a 119,104-parameter byte model trained once with one learning rate on one seed. The run
+shows that the `.om` trainer learns on real data end to end; it does not establish quality against
+any other implementation's training run of the same shape.
 
 ## Self-check constants
 

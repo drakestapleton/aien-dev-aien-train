@@ -1,0 +1,16 @@
+receipt: end state of the v0 run unit (ollm-v0) and its final checkpoints
+host_cpu: core 9 (Cortex-X925), midr_el1 0x00000000410fd851, nice 19, MemoryMax 1G
+taken: 2026-11-01T19:26:15Z
+$ systemctl --user show ollm-v0 -p Result -p ExecMainStatus
+Result=success
+ExecMainStatus=0
+$ sha256sum run/v0/ollm run/v0/run.sh run/v0/ck.bin run/v0/ck-20000.bin; stat -c "%n %s" run/v0/ck.bin
+a9b5f3ec8291c1b046d350dcb7ee6550a271a9e06ee30ba13062d28732aa6137  run/v0/ollm
+4898aae5362da73252de96b85dbed435f6ca4838d2415c790ca44d21e706c590  run/v0/run.sh
+ddf790fc0dd10372746a58fbf8b1754b2e4b3b80c9afbc075df7662d51b8159b  run/v0/ck.bin
+ddf790fc0dd10372746a58fbf8b1754b2e4b3b80c9afbc075df7662d51b8159b  run/v0/ck-20000.bin
+run/v0/ck.bin 2858608
+$ wc -l run/v0/evals.txt run/v0/train.txt
+  21 run/v0/evals.txt
+  80 run/v0/train.txt
+ 101 total
