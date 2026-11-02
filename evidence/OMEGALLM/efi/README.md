@@ -1,8 +1,8 @@
 # Omega LLM as a UEFI application (x86efi): EMULATED
 
 Evidence class: **EMULATED** (QEMU 8.2.2 TCG, q35 + OVMF, on a DGX Spark GB10 host). It is not
-hardware qualification. The physical iMac run is NOT_RUN; the image for it is described in
-`docs/omegallm/README.md` (section "iMac").
+hardware qualification. The physical iMac run is EXERCISED on physical hardware (one machine);
+its receipt is [`../imac/`](../imac/).
 
 ## What ran
 
@@ -25,7 +25,7 @@ mathck, adamck, prep, base, init, gcheck, train 20, eval S.CK, eval CK 64, two s
 
 | Check | Want | Got |
 |---|---|---|
-| main | OUT.TXT starts with `OLLM efi N`, has one `J ms` line per job, ends with `OLLM DONE 11 ms`; with those lines removed it is byte-identical to the Linux reference (`efi-check.sh`, `cmp`) | EQUAL |
+| main | banner `OLLM efi N` first, exactly one `J ms` after each job, `OLLM DONE 11 ms` last. The OUT.TXT body matches the AArch64 reference after efi-check.sh strips the banner, J (timing) and DONE lines | EQUAL |
 | mut-b (negative control) | the one-line mutant `ollm-mut-b.efi` must differ | differs: `byte 375, line 13` (`mut-b/check.txt`) |
 | ckbad | a checkpoint with one payload byte zeroed: the reference refuses it (rc 14) and the UEFI body equals the reference body | `body-equal,ref-refused` |
 | job65535 | a 65535-byte JOB.TXT (OJCAP − 1) runs | EQUAL |
@@ -56,5 +56,5 @@ No other byte of the receipts was changed.
 | `imac-image` (Omega) | builds the GPT disk and the empty FAT container | already Omega |
 | mtools 4.0.43 (`mmd`, `mcopy`) | adds `EFI/BOOT/BOOTX64.EFI` and `OLLM/*` to the FAT volume; reads OUT.TXT and the written files back | PROPOSED: a FAT member writer in `imac-image` (directory entries and cluster chains); the read-back stays an oracle |
 | sgdisk 1.0.10 | checks the partition table (oracle, read-only) | none needed |
-| QEMU 8.2.2, OVMF 2024.02-2ubuntu0.10 (`OVMF_CODE_4M.fd` `ad23261d…b083`) | emulator and firmware (verification oracle) | none; the physical iMac replaces them for qualification |
+| QEMU 8.2.2, OVMF 2024.02-2ubuntu0.10 (`OVMF_CODE_4M.fd` `ad23261d…b083`) | emulator and firmware (verification oracle) | none; the physical run is [`../imac/`](../imac/) (EXERCISED on physical hardware (one machine)) |
 | sh, coreutils (`sha256sum`, `cmp`, `tr`) | glue and comparison (oracle) | none needed |

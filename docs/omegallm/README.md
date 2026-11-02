@@ -41,8 +41,8 @@ names the binary and source sha256 it ran; `core-receipts.sh` builds all six bin
 | the v0 run, 20000 steps (`tests/omegallm/v0-run.sh`) | EXERCISED: 2026-11-01T15:24:54Z to 19:23:57Z on core 9, binary a9b5f3ec, unit `Result=success`; held-out 1.463036 bpb at W=4096 | `evidence/OMEGALLM/v0/run/` (see "v0 result") |
 | a9b5f3ec and b729cc35 compute the same v0 run | EXERCISED | `evidence/OMEGALLM/v0/equiv-a9b5f3ec-b729cc35.txt`: same `E 2000` line from the run's step-2000 checkpoint, byte-identical checkpoint after 10 more steps; control `equiv-control-mut-b.txt` differs |
 | `ollm` as an x86-64 Linux program (`TARGET=x86linux`, omega-mv main `ba5559d9`) | EXERCISED, EMULATED (qemu-x86_64 8.2.2 user mode) | `evidence/OMEGALLM/x86/`: the whole receipt suite, 48/48 PASS, every receipt equal to the AArch64 one apart from hashes, paths and wall time; the v0 checkpoint's final eval `E 20000 4096 1014099 1463036` reproduced |
-| `ollm` as a UEFI application (`TARGET=x86efi`, compiler from draft omega-mv#1015) | EXERCISED, EMULATED (QEMU 8.2.2 TCG + OVMF) | `evidence/OMEGALLM/efi/`: the 11 commands of `tests/omegallm/efi-job.txt` read from `\OLLM\JOB.TXT`; OUT.TXT body byte-identical to the AArch64 Linux run; TR.BIN, HE.BIN and S.CK written on the FAT volume identical; mutant b differs at byte 375; corrupted checkpoint, 65535- and 65536-byte job controls pass |
-| the same image on the physical iMac (iMac18,3, Core i5-7500) | QUALIFIED for this job, one machine | `evidence/OMEGALLM/imac/`: OUT.TXT body byte-identical to the AArch64 Linux reference, TR.BIN, HE.BIN and S.CK identical, `OLLM DONE 11 186521`; both negative controls DIFFERENT; FAT clean after the firmware's writes |
+| `ollm` as a UEFI application (`TARGET=x86efi`, compiler from draft omega-mv#1015) | EXERCISED, EMULATED (QEMU 8.2.2 TCG + OVMF) | `evidence/OMEGALLM/efi/`: the 11 commands of `tests/omegallm/efi-job.txt` read from `\OLLM\JOB.TXT`; the OUT.TXT body matches the AArch64 reference after efi-check.sh strips the banner, J (timing) and DONE lines; TR.BIN, HE.BIN and S.CK written on the FAT volume identical; mutant b differs at byte 375; corrupted checkpoint, 65535- and 65536-byte job controls pass |
+| the same image on one physical machine (names iMac18,3 and Core i5-7500 are from earlier aienux evidence; this run does not record them) | EXERCISED on physical hardware (one machine) | `evidence/OMEGALLM/imac/`: the OUT.TXT body matches the AArch64 reference after efi-check.sh strips the banner, J (timing) and DONE lines; TR.BIN, HE.BIN and S.CK identical, `OLLM DONE 11 186521`; negative controls in `check.txt` DIFFERENT; FAT clean after the firmware's writes |
 
 b729cc35 differs from a9b5f3ec only in bounds handling. The source diff shows it: the concatenated
 source goes from `cb80250d…` (a9b5f3ec, recorded in commit da910097's `init-v0.txt`) to `47c27b0b…`
@@ -117,17 +117,19 @@ pick "EFI Boot"). `ollm` runs the 11 jobs, shows each job's output on the consol
 `\OLLM\OUT.TXT`. After the last job the console shows `OLLM DONE 11 <ms>`, and `ollm` waits up to
 300 s for a key before returning to the firmware. A refusal ends the application at once; OUT.TXT
 then ends with that job's output. Copy `OLLM/OUT.TXT` (and `TR.BIN`, `HE.BIN`, `S.CK`) off the stick
-and check them against the Linux reference:
+and check them against the Linux reference. `678` is the byte size of `tests/omegallm/efi-job.txt`,
+which the banner must equal:
 
 ```sh
-sh tests/omegallm/efi-check.sh OUT.TXT evidence/OMEGALLM/efi/ref.out 11
+sh tests/omegallm/efi-check.sh OUT.TXT evidence/OMEGALLM/efi/ref.out 11 678
 (cd <copied files> && sha256sum TR.BIN HE.BIN S.CK) | diff - evidence/OMEGALLM/efi/ref-files.txt
 ```
 
-Status: QUALIFIED for this job on one machine (`evidence/OMEGALLM/imac/`, run 2026-11-01). Apple's
-firmware ran all 11 jobs and its FAT driver accepted the writes: OUT.TXT matches `ref.out` under
-`efi-check.sh`, the three written files match `ref-files.txt`, and `fsck.vfat -n` finds the volume
-clean. The firmware clock gave 186521 ms in total, against 1004245 ms under TCG on one GB10 core.
+Status: EXERCISED on physical hardware (one machine) (`evidence/OMEGALLM/imac/`, run 2026-11-01). Apple's
+firmware ran all 11 jobs and its FAT driver accepted the writes: the OUT.TXT body matches the AArch64
+reference after efi-check.sh strips the banner, J (timing) and DONE lines, the three written files match
+`ref-files.txt`, and `fsck.vfat -n` finds the volume clean. The firmware clock gave 186521 ms in total,
+against 1004245 ms under TCG on one GB10 core. The run itself does not record machine identity.
 Whether the console showed the `efi 13` text was not recorded.
 
 Reading the stick back: after the run, macOS 26 refused to mount the stick's partition, even

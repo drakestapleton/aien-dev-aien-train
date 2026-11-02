@@ -1,17 +1,17 @@
-# Omega LLM on the physical iMac (x86efi): QUALIFIED for this job
+# Omega LLM on the physical iMac (x86efi): EXERCISED on physical hardware (one machine)
 
-Evidence class: **QUALIFIED** on one physical machine for one job. The UEFI build of `ollm` was
-booted from a USB stick on Drake's Intel iMac. Its output file and the three files it wrote are
-byte-identical to the AArch64 Linux reference that the emulated run (`../efi/`) was checked
-against. This covers the 11 commands of `tests/omegallm/efi-job.txt` and nothing wider: there was
-no long training run on the iMac and no second machine.
+Evidence class: **EXERCISED on physical hardware (one machine)**. The UEFI build of `ollm` was
+booted from a USB stick on Drake's Intel iMac. The OUT.TXT body matches the AArch64 reference
+after efi-check.sh strips the banner, J (timing) and DONE lines. TR.BIN, HE.BIN and S.CK match
+the hashes in `../efi/ref-files.txt`. This covers the 11 commands of `tests/omegallm/efi-job.txt`
+and nothing wider: there was no long training run on the iMac and no second machine.
 
 ## What ran
 
 | Item | Value |
 |---|---|
-| Machine | Drake's iMac, recorded as `iMac18,3` (27-inch Retina 5K, 2017), Intel Core i5-7500, Apple firmware, in [aienux `evidence/imac_boot0_2026-10-16`](https://github.com/aien-dev/aienux/blob/main/evidence/imac_boot0_2026-10-16/README.md). `ollm` does not print SMBIOS, so this run itself does not record the model |
-| Program | `ollm.efi` sha256 `2474a842…8d7f`, the same file as in `../efi/build.txt`: omc `b4f45121…` from draft omega-mv [#1015](https://github.com/aien-dev/omega-mv/pull/1015) `5ce9ecaa` (not merged) |
+| Machine | The run itself does not record machine identity. `ollm` prints no SMBIOS and no CPUID; adding that output is a follow-up. The names iMac18,3 (27-inch Retina 5K, 2017), Intel Core i5-7500 and Apple firmware come from earlier aienux evidence, [aienux `evidence/imac_boot0_2026-10-16`](https://github.com/aien-dev/aienux/blob/main/evidence/imac_boot0_2026-10-16/README.md) |
+| Program | `ollm.efi` sha256 `2474a842…8d7f`, the same file as in `../efi/build.txt`: omc `b4f45121…` from draft omega-mv [#1015](https://github.com/aien-dev/omega-mv/pull/1015) `5ce9ecaa` (not merged). `stick.txt:23` (`mdir ::/OLLM`) does not hash `\EFI\BOOT\BOOTX64.EFI`, so this readback does not check that the stick's boot binary is `2474a842` |
 | Stick image | `aien-imac-ollm-2474a842.img` sha256 `2b9a420a93486a4d37ed78141a45861427090535502243ecbb67fa4008b6c162`, the `../efi/image.txt` image, written by Drake to a SanDisk Cruzer Glide on 2026-11-01 |
 | Job | `\OLLM\JOB.TXT`, `tests/omegallm/efi-job.txt` (678 bytes; banner `OLLM efi 678`) |
 | Run | FAT times of `TR.BIN`/`HE.BIN`/`S.CK` 23:37, `OUT.TXT` 23:38 (firmware clock); last line `OLLM DONE 11 186521` |
@@ -21,10 +21,15 @@ no long training run on the iMac and no second machine.
 
 | Check | Want | Got | Receipt |
 |---|---|---|---|
-| OUT.TXT | `OLLM efi N` banner, one `J ms` line per job, `OLLM DONE 11 ms`; the rest byte-identical to `../efi/ref.out` (`efi-check.sh`) | EQUAL, rc 0 | `check.txt`, `OUT.TXT` |
+| OUT.TXT | banner `OLLM efi 678` first, exactly one `J ms` after each job, `OLLM DONE 11 ms` last. The OUT.TXT body matches the AArch64 reference after efi-check.sh strips the banner, J (timing) and DONE lines | EQUAL, rc 0 | `check.txt`, `OUT.TXT` |
 | TR.BIN, HE.BIN, S.CK | sha256 equal to `../efi/ref-files.txt` | all three equal | `files.txt`, `check.txt` |
 | negative control: one byte of OUT.TXT changed | DIFFERENT | DIFFERENT, rc 1 | `check.txt` |
 | negative control: job count 10 instead of 11 | DIFFERENT | DIFFERENT, rc 1 | `check.txt` |
+| negative control: banner byte count 677 | DIFFERENT | DIFFERENT, rc 1 | `check.txt` |
+| negative control: a `J` line inserted in job output | DIFFERENT | DIFFERENT, rc 1 | `check.txt` |
+| negative control: a second `J` line after the first job | DIFFERENT | DIFFERENT, rc 1 | `check.txt` |
+| negative control: the first `J` line moved before that job's output | DIFFERENT | DIFFERENT, rc 1 | `check.txt` |
+| negative control: `OLLM DONE` not last | DIFFERENT | DIFFERENT, rc 1 | `check.txt` |
 | FAT after the firmware's writes | `fsck.vfat -n` clean | rc 0, 14 files; of sectors 0, 1, 6 and 7 (boot, FSInfo and their backups) only FSInfo changed (free count, next free); both FATs equal | `stick.txt` |
 
 ## Job times
@@ -62,8 +67,10 @@ not known. The readback therefore copies the raw partition instead of mounting i
 
 ## Reproduce the check
 
-    sh tests/omegallm/efi-check.sh evidence/OMEGALLM/imac/OUT.TXT evidence/OMEGALLM/efi/ref.out 11
+    sh tests/omegallm/efi-check.sh evidence/OMEGALLM/imac/OUT.TXT evidence/OMEGALLM/efi/ref.out 11 678
     MTOOLS_SKIP_CHECK=1 mcopy -i STICK.img ::/OLLM/TR.BIN ::/OLLM/HE.BIN ::/OLLM/S.CK DIR/
     (cd DIR && sha256sum TR.BIN HE.BIN S.CK) | diff - evidence/OMEGALLM/efi/ref-files.txt
 
-`STICK.img` is the partition copy; it is not in the repository (99597824 bytes, sha256 above).
+`678` is the byte size of `tests/omegallm/efi-job.txt`. The same checker on the emulated
+`../efi/main/OUT.TXT` also returns EQUAL (`check.txt`). That file is the existing receipt, not a
+new boot. `STICK.img` is the partition copy; it is not in the repository (99597824 bytes, sha256 above).

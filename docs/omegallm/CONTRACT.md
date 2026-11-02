@@ -236,6 +236,9 @@ so far. This needs the `x86efi` compiler of omega-mv#1015 (`5ce9ecaa`): its `exi
 the open `efi 12` file before returning to the firmware, so the bytes written before the refusal are
 on the volume (`evidence/OMEGALLM/efi/ckbad/`: a refused checkpoint, and OUT.TXT equal to the Linux
 body). Differences from `lio.om`: there is no rename, so a refused or interrupted checkpoint write
-can leave a partial file; a path longer than 255 bytes is an I/O refusal (70). `J` and the `OLLM DONE`
-time are wall clock and are not compared; every other OUT.TXT line must equal what a Linux build
-prints for the same lines (`tests/omegallm/efi-ref.sh`).
+can leave a partial file; a path longer than 255 bytes is an I/O refusal (70). The banner
+`OLLM efi <JOB.TXT bytes>` is first, exactly one `J <ms>` follows each job, and
+`OLLM DONE <jobs> <ms>` is last. Those three are wall clock or the job-file size and are not part of
+the body comparison. Every other OUT.TXT line, including a line shaped like `J n` or `OLLM DONE a b`
+inside a job, must equal what a Linux build prints for the same lines (`tests/omegallm/efi-ref.sh`,
+checked in that order by `tests/omegallm/efi-check.sh`).

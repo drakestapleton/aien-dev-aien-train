@@ -69,6 +69,7 @@ cp "$t/mathref.txt" "$WORK/ref/MATHREF.TXT"
 CORE=$CORE sh "$t/efi-ref.sh" "$ABUILD/ollm" "$t/efi-job.txt" "$WORK/ref" > "$E/ref.out"
 (cd "$WORK/ref" && sha256sum TR.BIN HE.BIN S.CK) > "$E/ref-files.txt"
 jobs=$(grep -cvE '^(#|$)' "$t/efi-job.txt")
+bytes=$(wc -c < "$t/efi-job.txt" | tr -d ' ')
 
 # 2. images
 img() { # efi img job [extra SRC:NAME...]
@@ -94,7 +95,7 @@ boot "$WORK/mutb.img" mut-b 900 "$MCORE" &
 p2=$!
 wait "$p1"
 wait "$p2"
-sh "$t/efi-check.sh" "$E/main/OUT.TXT" "$E/ref.out" "$jobs" > "$E/main/check.txt" 2>&1
+sh "$t/efi-check.sh" "$E/main/OUT.TXT" "$E/ref.out" "$jobs" "$bytes" > "$E/main/check.txt" 2>&1
 row main EQUAL "$(tail -n 1 "$E/main/check.txt")"
 for f in TR.BIN HE.BIN S.CK; do
 	want=$(grep " $f\$" "$E/ref-files.txt" | cut -d' ' -f1)
@@ -144,7 +145,7 @@ for s in 65535 65536; do
 	img "$EBUILD/ollm.efi" "$WORK/job$s.img" "$WORK/job$s.txt" > /dev/null
 done
 boot "$WORK/job65535.img" job65535 300 "$CORE"
-sh "$t/efi-check.sh" "$E/job65535/OUT.TXT" "$WORK/job65535.ref" 1 > "$E/job65535/check.txt" 2>&1
+sh "$t/efi-check.sh" "$E/job65535/OUT.TXT" "$WORK/job65535.ref" 1 65535 > "$E/job65535/check.txt" 2>&1
 row job65535 EQUAL "$(tail -n 1 "$E/job65535/check.txt")"
 boot "$WORK/job65536.img" job65536 300 "$CORE"
 grep -aq 'OLLM efi JOB.TXT?' "$E/job65536/serial.log" && got=refused || got=no-message
