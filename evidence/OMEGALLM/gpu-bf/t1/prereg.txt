@@ -1,0 +1,30 @@
+BF16 training window bf-t1, pre-registered before the window opens (2026-11-02, UTC)
+
+Opens only if window bf-g1 met its decision rule (g1/prereg.txt). Same binary P
+/dev/shm/ollm-bf/build-gb10/ollm-gb10 b74c1afe8be1d69f3b438d577c1e32a3a4d3675ba3a548e1cfcd1df3d6e8f88c
+(aien-train feat/omega-llm-bf16 e329675), same data as rung 7.
+Input: /tmp/gk/r7/ckL0.bin fc8835feae77a7ee93b59807337d51c72dd5df277b48fd93f011e5c592c5ac86
+(ollm init ckL0.bin 4096 256 384 12 1536 8 64 1 30000 3000 16, the rung-7 start).
+
+Part 1, profile (no gate, measurement only): gprof CK train.tok 3 and gprofb CK train.tok 3,
+alternating, three rounds each (nothing is saved). Each GP line `GP id gx gy gz m n k wait_ns` gives
+a launch's rate 2mnk/wait_ns. Reported per launch id that is a GEMM: median over the three rounds of
+the summed 2mnk / summed wait_ns, f32 GEMM ids next to BF16 ids 27..36, and the total wait per step.
+
+Part 2, training (gate): gtrainb ck.bin train.tok 250 250, geval held.tok 2243 merges4096.bin,
+then gtrainb 2000 250 and geval, mirroring rung 7's first two legs (gtrainf, same schedule).
+Rung-7 reference (gpu2/ollm-gb10 1853303e..., /tmp/gk/r7/run): E 250 2243 2773849,
+E 2000 2243 1756935; leg walls from train.txt stamps: 0->250 61.930813385 s, 250->2000
+434.158613786 s (Wolfram: 1793641369496140656 - 1793640935337526870 -> 434158613786 ns).
+
+Predictions:
+T1 both gtrainb legs rc 0; every T line finite.
+T2 E 2000 <= 1765719 µnats (Wolfram: Floor[1756935*1.005] -> 1765719), the CONTRACT-BF16 4.6 bound.
+   E 250 is reported next to 2773849, not gated.
+T3 the 250->2000 leg wall is below 434.158613786 s (the same leg of rung 7, also non-quiet).
+Decision: BF16 is adopted for a long run only if T1, T2 and T3 all hold. T2 failing means BF16
+costs quality at this step count and the lane stops at the measured numbers; T3 failing means it
+buys no time on this path and the per-kernel profile of part 1 says where. Either way the receipts
+are kept as they are. The E 2000 drop is NOT a held-out improvement claim: it is the same step
+count as rung 7 and must stay within 0.5%; the long-run quality claim needs its own prereg.
+Window: spark-window bf-t1, --lease 40 --gb10 shared --quiet none. Timings are non-quiet.

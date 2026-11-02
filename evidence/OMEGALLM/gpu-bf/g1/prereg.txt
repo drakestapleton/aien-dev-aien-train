@@ -1,0 +1,61 @@
+BF16 gate window bf-g1, pre-registered before the window opens (2026-11-02, UTC)
+
+Purpose: before any BF16 training step, show on the chip that (a) the ten BF16 kernels compute
+exactly the contract numerics (docs/omegallm/CONTRACT-BF16.md 4.1, 4.2), (b) the gates catch the
+four planted kernel/reference defects, (c) a BF16 gradient stays within the 4.3 heuristic bound of
+the CPU f64 gradient, and (d) every f32 command of the BF16 binary still reproduces the rung-7
+receipts (4.5).
+
+Source: aien-train feat/omega-llm-bf16 e329675 (code), a00bdfe (contract), ed656ae (crumbs).
+Binaries (evidence/OMEGALLM/gpu-bf/build.txt):
+  P   /dev/shm/ollm-bf/build-gb10/ollm-gb10        b74c1afe8be1d69f3b438d577c1e32a3a4d3675ba3a548e1cfcd1df3d6e8f88c
+  Mu  ollm-mut-u-gb10 d5e266f5...  Ml ollm-mut-l-gb10 783f9dc2...
+  Mo  ollm-mut-o-gb10 99eae40d...  Mv ollm-mut-v-gb10 5f083f67...
+  P7  /tmp/gk/r7/gpu2/ollm-gb10 (rung-7 run binary) 1853303e82e9770822e643d0a22e5af9d3c7377a1a8b2c5cbf55ba6774814f0f
+Host evidence already taken: slots 27..36 disassemble clean (GPR declared 152 >= need 145, SMEM
+  target 17, 16 HMMA.16816.F32.BF16 each); every f32 slot's code and GPR/SMEM bytes equal the base
+  273ca2a build; the AArch64 build equals the base (6da13670...).
+
+Inputs:
+  /tmp/gk/r7/ckb8.bin       0a4c382cbd2fdbb9fe6bc6f5e07e59b1012ec738491ce05570fe38a15be854a3 (v2 max, B 8)
+  /tmp/gk/r7/ckL0.bin       fc8835feae77a7ee93b59807337d51c72dd5df277b48fd93f011e5c592c5ac86 (rung-7 start, B 64)
+  /tmp/gk/r7/run/ck30000.bin 378d5a2d877841007a1e9319ba2f7c2378a8ad575520adc71f08ca6b15113a73
+  /tmp/gk/r6/ck30000.bin    8ccaa099ad68ab02afafef9743b8fddc793b9cad029ab8291e91fb86e82d5509
+  /tmp/gk/r6/ck9000.bin     e91349fbfe2e0851491af1a02799af5bad045b09a602fb7b56f4f320df8b206d
+  /tmp/gk/r7/g/ckg.bin      1ab162bf8d2e06e56884045ef17ca6999c4d328f01f75d666e0433c92c9b7094 (rung-7 gate step 250)
+  cks.bin                   c8693160c03c47781d69b6001794be43148221c4995bb0bfa07b18e0931a40ac
+     (cpu/ollm init cks.bin 256 32 64 2 128 2 8 1 100 10; the parity shape, P 84288. It replaces
+     the earlier small checkpoint 8e6a879b..., which no longer exists on this host, so B10 compares
+     P with P7 on the same input instead of with the k9 receipt.)
+
+Predictions (each a pass/fail line in REPORT.txt):
+B1  gbfrag ckb8 with P: GBFRAG PASS, rc 0, GFS 0 (26 GF lines, all bad 0).
+B2  gbfrag with Mu, Ml, Mo, Mv: each GBFRAG FAIL, rc 50.
+B3  gbcmp ckb8 train.tok 7 with P: GBCMP PASS, rc 0 (gbcmp itself fails on a sample past its bound,
+    no BF16 GEMM, or coverage short of epilogues 1 and 2, cz 3, beta false and true). The GBC
+    line's gemms, worst_e6 and idmask are reported.
+B4  gbcmp ckL0 train.tok 7 with P (B 64, the training shape): GBCMP PASS, rc 0.
+B5  gbcmp ckb8 with Ml, Mo, Mv: each GBCMP FAIL, rc 48. Mu: reported, not gated (CONTRACT 5).
+B6  gbcmp2 ckb8 train.tok 7 with P: GBCMP2 PASS, rc 0, with tolb_e9 649703979 (Wolfram
+    nc*(2u+u^2) at L 8 -> 0.6497039794921875). cos, rel0, rel1 and dlossrel are reported; they are
+    the measured BF16-vs-f64 gradient distance at the v2 maximum.
+B7  geval r7 ck30000 with P: exactly `E 30000 2243 1254741 468077` (the rung-7 run's geval.txt
+    line), rc 0.
+B8  geval r6 ck30000 with P: exactly `E 30000 2243 1338156 499194`, rc 0.
+B9  gtrainf 9200 200 from a copy of r6 ck9000 with P: rc 0 and ck_after
+    ec4a8c2125791277047b80dff00c18f4dcbcce0f16f5d0b8028c6cc5d1d1a047 (bit-identical to the v1 and
+    rung-7 binaries).
+B10 gcmp2 cks.bin train.dec 3 with P and with P7: both GCMP2 PASS rc 0, and the two GC2 lines are
+    equal in every field except the timing field 14.
+B11 gcmp2 ckb8 train.tok 7 with P: GCMP2 PASS rc 0, and its GC2 line equals the rung-7 gate2
+    receipt `GC2 15833472 342030 991 122070 425 91553 5 5 267282 2213833 0 8408630 8408630 * 0`
+    in every field except field 14.
+B12 gacmp ckg.bin train.tok 7 with P: GACMP PASS rc 0, and the GA line equals the rung-7 gate2
+    receipt `GA 15833472 59587 4063468404 14664 132 15259 3147017 2774219` except any timing field.
+
+Decision: BF16 training (window bf-t1) starts only if B1-B4 and B6-B12 hold and every mutant in B2
+and B5 (Ml, Mo, Mv) fails. A mutant that passes means that gate does not cover its defect; the
+training window does not open and the gate is fixed first. Nothing is rerun to replace a failing
+receipt. Infrastructure failures (window, ENOSPC, timeout without a verdict) are disclosed and the
+affected item reruns in a new window, recorded as a rerun.
+Window: spark-window bf-g1, --lease 40 --gb10 shared --quiet none. Timings are non-quiet.
