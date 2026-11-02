@@ -685,6 +685,359 @@ gkquad64 shr h 1 and h 1 beta ep
 end
 gkexit
 end
+note BF16 tensor-core GEMM (ids 27..36, docs/omegallm/CONTRACT-BF16.md): one 64x64 tile of C per
+note 128-thread block, K tiles of 32, f32 operands rounded to bf16 (round to nearest even) by F2FP while
+note staging into shared memory, HMMA.16816.F32.BF16 accumulating in f32, the f32 epilogue of gkepi64.
+note Words verified with nvdisasm -b SM121 against ptxas 13.0 sm_121 output for mma.sync.aligned
+note .m16n8k16.row.col.f32.bf16.bf16.f32, cvt.rn.bf16x2.f32 and ld.global.v4.f32.
+note HMMA d a b c: d, c and a 4-aligned, b 2-aligned. ptxas keeps 16 cycles between the HMMAs of a warp
+note (stall 15, then gknop of stall 1); a dependent HMMA comes 128 cycles later here.
+fn gkhmma d uint a uint b uint c uint wt uint to void
+gkq or or 29244 shl d 16 shl a 24 b or c 268288 gkcw 15 7 7 wt
+gknop
+end
+fn gknop to void
+gkq 31000 0 0 gkcw 1 7 7 0
+end
+note F2FP.BF16.F32.PACK_AB d a b: d = bf16(a) << 16 | bf16(b), round to nearest even; rz rounds toward
+note zero (mutant v only). Stall 2 as ptxas.
+const OMUTV ulong 1
+fn gkf2fp d uint a uint b uint wt uint to void
+c = uint 4351
+if eq OMUTV 0
+c = 102655
+end
+gkq or or 29246 shl d 16 shl a 24 b c or gkcw 2 7 7 wt 8192
+end
+note LDG.E.128 R d..d+3 = [R a:a+1] under predicate p (7 = PT)
+fn gkldgq d uint a uint more bool p uint to void
+gkvar or or or 2433 shl p 12 shl d 16 shl a 24 4 203300096 more
+end
+note R d = ((tid >> s) & m) mult (+ R d unless first); R8 is the scratch.
+fn gkbt d uint s uint m uint mult uint first bool to void
+if eq s 0
+gkandi 8 0 m
+else
+gkshr 8 0 s
+gkandi 8 8 m
+end
+c = d
+if first
+c = 255
+end
+gkimadi d 8 mult c
+end
+note Operand ab of the BF16 tile. Mode 0 (O, outer stride 4): thread loads outers 4 (tid & 15) + 0..3,
+note depths 4 (tid >> 4) + j, j < 4 (one LDG.128 per depth, delta = depth stride). Mode 1 (K, depth
+note stride 4): outers (tid >> 3) + 16 i, i < 4 (delta 16 outer strides), depths 4 (tid & 7) + 0..3.
+note Pointer R112 + 2 ab, delta R137 + ab, tile step (32 depths) R139 + ab.
+fn gkopndb mode uint blk uint ab uint to void
+o = add uint 896 mul ab 32
+if eq mode 0
+gkandi 11 0 15
+gkimadi 11 11 4 255
+gkshr 12 0 4
+gkimadi 12 12 4 255
+else
+gkshr 11 0 3
+gkandi 12 0 7
+gkimadi 12 12 4 255
+end
+gkimadi 13 blk 64 11
+gkldc 14 add o 8 false
+gkldc 15 add o 12 true
+gkimad 13 13 14 255
+gkimad 13 12 15 13
+gkldc 14 add o 16 false
+gkldc 15 add o 20 true
+gkimad 13 6 14 13
+gkimad 13 7 15 13
+gkldc64 10 o
+gkimadw add 112 mul ab 2 13 1 10
+gkldc add 137 ab add o 24 false
+gkldc add 139 ab add o 28 true
+end
+note Shared memory, per 8192-byte buffer, k pair p = k >> 1 (0..15), outer r (0..63): A at
+note 2048 (p >> 3) + 512 (r >> 4) + 64 (r & 7) + 16 (p & 3) + 4 ((r >> 3) & 1) + 8 ((p >> 2) & 1),
+note B at 4096 + the same with the weights 4 and 8 exchanged, so that one LDS.128 at 512 j + 16 lane
+note (+ 2048 per k16 step) gives a lane its four A registers (rows g, g + 8; k 2t, 2t + 8) of m16
+note block j, or the two B registers of n8 blocks 2j and 2j + 1 (g = lane >> 2, t = lane & 3).
+note gkstsb: the thread's STS base R132 + ab for operand mode (o = 4 for A, 8 for B is the r-bit-3 weight).
+fn gkstsb mode uint ab uint to void
+d = add 132 ab
+ro = add 4 mul ab 4
+ko = sub 12 ro
+if eq mode 1
+gkbt d 2 1 2048 true
+gkbt d 3 7 64 false
+gkbt d 0 1 32 false
+gkbt d 6 1 ro false
+gkbt d 1 1 ko false
+else
+gkbt d 6 1 2048 true
+gkbt d 2 3 512 false
+gkbt d 0 1 256 false
+gkbt d 4 1 32 false
+gkbt d 1 1 ro false
+gkbt d 5 1 ko false
+end
+end
+note LDS bases: R134 = 1024 wm + 16 lane (A, warp row wm = tid >> 6), R135 = 1024 wn + 16 lane (B, warp
+note column wn = (tid >> 5) & 1). Mutant l (OMUTL 0) swaps the A rows of lanes g and g ^ 1.
+const OMUTL ulong 1
+fn gkldsb to void
+gkbt 134 6 1 1024 true
+gkbt 134 0 31 16 false
+if eq OMUTL 0
+gkbt 134 2 1 4294967168 false
+gkmovi 8 64
+gkiadd 134 134 8
+end
+gkbt 135 5 1 1024 true
+gkbt 135 0 31 16 false
+end
+note Load a K tile into staging under predicate p: A in R80-95, B in R96-111 (addresses R116-131),
+note then advance both operand pointers by their tile steps.
+fn gkldb p uint to void
+for i uint 4
+gkimadw add 116 mul i 2 137 i 112
+end
+for i uint 4
+gkimadw add 124 mul i 2 138 i 114
+end
+gkimadw 112 139 1 112
+gkimadw 114 140 1 114
+for i uint 4
+gkldgq add 80 mul i 4 add 116 mul i 2 ne i 0 p
+end
+for i uint 4
+gkldgq add 96 mul i 4 add 124 mul i 2 true p
+end
+end
+note Packed word x (0..7) of a staged operand at s: mode 1 is (i, e) = (x >> 1, x & 1), the k pair e of
+note outer load i; mode 0 is (jp, c) = (x >> 2, x & 3), depth pair jp of outer c. gkcvd is the packed
+note register (in place), gkcvl the lower-k f32 register (the hi one follows it, + 1 or + 4), gkcvo
+note the STS offset.
+fn gkcvl md uint x uint s uint to uint
+if eq md 1
+ret add add s mul shr x 1 4 mul and x 1 2
+end
+ret add add s mul shr x 2 8 and x 3
+end
+fn gkcvd md uint x uint s uint to uint
+if eq md 1
+ret add add s mul shr x 1 4 and x 1
+end
+ret gkcvl md x s
+end
+fn gkcvo md uint x uint to uint
+if eq md 1
+ret add mul shr x 1 512 mul and x 1 16
+end
+ret add mul and x 3 64 mul shr x 2 16
+end
+note Round the staged tile to bf16 pairs (the first F2FP waits for the loads), then store it.
+fn gkcvsb ma uint mb uint to void
+w = get gkpend 0
+put gkpend 0 0
+for ab uint 2
+md = ma
+if eq ab 1
+md = mb
+end
+s = add 80 mul ab 16
+hd = uint 1
+if eq md 0
+hd = 4
+end
+for x uint 8
+l = gkcvl md x s
+gkf2fp gkcvd md x s add l hd l w
+w = 0
+end
+end
+for ab uint 2
+md = ma
+if eq ab 1
+md = mb
+end
+gkcvst md ab add 80 mul ab 16
+end
+end
+note gkcvsb's stores of operand ab (mode md, staged at register s)
+fn gkcvst md uint ab uint s uint to void
+for x uint 8
+gksts add 132 ab add gkcvo md x mul ab 4096 gkcvd md x s or ne x 0 ne ab 0
+end
+end
+note Mutant o (OMUTO 0) runs one K tile fewer than the tile count.
+const OMUTO ulong 1
+fn gkgemmb ma uint mb uint beta bool ep uint to void
+put gkpend 0 0
+gkldc 1 892 false
+gks2r 0 33 true
+gks2r 2 37 true
+gks2r 3 38 true
+gks2r 5 39 true
+gkq 4278482860 27392 134220288 or gkcw 4 2 7 get gkpend 0 8192
+put gkpend 0 4
+gkldc 8 988 false
+gkldc 9 992 true
+gkimadh 6 5 8 255
+gkimad 7 6 9 5
+gkczx
+gkldsb
+gkstsb ma 0
+gkstsb mb 1
+gkopndb ma 3 0
+gkopndb mb 2 1
+gkczk 136 139 112
+gkmovi 141 4294967295
+if eq OMUTO 0
+gkiadd 136 136 141
+end
+for i uint 32
+gkmovz add 16 i
+end
+put gkpend 0 63
+gkldb 7
+gkcvsb ma mb
+gksync
+gkmovi 142 8192
+gkiadd 132 132 142
+gkiadd 133 133 142
+top = div get gkat 0 16
+gkisge 1 136 2
+for kk uint 2
+s = add 3 kk
+f = add 48 mul kk 16
+ko = mul kk 2048
+gklds f 134 ko s 0
+gklds add f 4 134 add ko 512 s 0
+gklds add f 8 135 add ko 4096 s 0
+gklds add f 12 135 add ko 4608 s 0
+end
+gkldb 1
+for kk uint 2
+gkmmak kk
+end
+gkcvsb ma mb
+gksync
+gkiadd 134 134 142
+gkiadd 135 135 142
+gkimad 142 142 141 255
+gkiadd 132 132 142
+gkiadd 133 133 142
+gkiadd 136 136 141
+gkisge 0 136 1
+gkbra 0 ulong top
+gkepib beta ep
+end
+note gkgemmb's eight HMMAs of k16 step kk (the first waits on barrier 3 + kk of the LDS loads)
+fn gkmmak kk uint to void
+w = shl uint 1 add 3 kk
+f = add 48 mul kk 16
+for mi uint 2
+for ni uint 4
+d = add add 16 mul mi 16 mul ni 4
+b = add add add f 8 mul shr ni 1 4 mul and ni 1 2
+gkhmma d add f mul mi 4 b d w
+w = 0
+end
+end
+end
+note Address pairs R48 + 2 e of the 16 elements e = 4 ni + c of one m16 half (row g + 8 (c >> 1),
+note column 8 ni + 2t + (c & 1)) from half base hb; row stride R14, column stride R15.
+fn gkhadrb hb uint to void
+gkimadw 52 14 8 hb
+gkimadw 48 15 0 hb
+for e uint 16
+if and ne e 0 ne e 2
+src = hb
+if ge and e 3 2
+src = 52
+end
+gkimadw add 48 mul e 2 15 add mul shr e 2 8 and e 1 src
+end
+end
+end
+note One m16 half mi of the thread's accumulators (R16 + 16 mi + e): ep 2 loads M into R80-95, beta
+note the old C; alpha R141; fused epilogue as gkquad64. Half bases: C R112 + 4 mi, second R114 + 4 mi.
+fn gkhalfb mi uint beta bool ep uint to void
+hc = add 112 mul mi 4
+hy = add 114 mul mi 4
+a0 = add 16 mul mi 16
+if eq ep 2
+gkhadrb hy
+for e uint 16
+gkldg add 80 e add 48 mul e 2 0 ne e 0
+end
+end
+gkhadrb hc
+if beta
+for e uint 16
+gkldg add 80 e add 48 mul e 2 0 ne e 0
+end
+end
+for e uint 16
+if beta
+gkffmaf add a0 e add a0 e 141 add 80 e
+else
+gkfmulf add a0 e add a0 e 141
+end
+end
+if eq ep 2
+t = gkthm 140
+for e uint 16
+gkepm add a0 e add 80 e t
+end
+end
+for e uint 16
+gkstg add 48 mul e 2 add a0 e 0 ne e 0
+end
+if eq ep 1
+for e uint 16
+gkepm add a0 e add a0 e 255
+end
+gkhadrb hy
+for e uint 16
+gkstg add 48 mul e 2 add a0 e 0 ne e 0
+end
+end
+end
+note Thread C base R112 (and second base R114 when fused): row 64 R3 + 32 wm + g, column
+note 64 R2 + 32 wn + 2t; half 1 bases R116 / R118 are 16 rows further.
+fn gkepib beta bool ep uint to void
+gkbt 12 6 1 32 true
+gkbt 12 2 7 1 false
+gkimadi 12 3 64 12
+gkbt 13 5 1 32 true
+gkbt 13 0 3 2 false
+gkimadi 13 2 64 13
+gkldc 14 968 false
+gkldc 15 972 true
+gkimad 12 12 14 255
+gkimad 12 13 15 12
+gkldc 10 976 false
+gkldc 11 980 true
+gkimad 12 6 10 12
+gkimad 12 7 11 12
+gkldc64 10 960
+gkimadw 112 12 1 10
+if ne ep 0
+gkldc64 10 1016
+gkimadw 114 12 1 10
+end
+gkimadw 116 14 16 112
+if ne ep 0
+gkimadw 118 14 16 114
+end
+gkldc 141 996 false
+for mi uint 2
+gkhalfb mi beta ep
+end
+gkexit
+end
 note Kernel table: ids 0..7 = 32x32 gemm (one 16 KiB slot each), ids 40, 42, ..., 54 = 64x64 gemm
 note (40 + 2 (ma + 2 mb + 4 beta), two slots each: the pipelined K loop does not fit in one). Fused
 note epilogue kernels (gkope, beta false): 25 (32x32) and 56 (64x64) ep 1 with ma 1 mb 0 (the FFN W1
@@ -724,6 +1077,34 @@ if not gkemit id ma mb bt ep big
 ret false
 end
 end
+for g uint 10
+ma = and g 1
+mb = and shr g 1 1
+bt = ne and g 4 0
+ep = uint 0
+if ge g 8
+ep = sub g 7
+ma = 1
+mb = sub ep 1
+bt = false
+end
+if not gkemitb add 27 g ma mb bt ep
+ret false
+end
+end
+ret true
+end
+note Emit the BF16 kernel (ma, mb, beta, ep) into slot id: ids 27 + ma + 2 mb + 4 beta, 35 ep 1 (ma 1
+note mb 0), 36 ep 2 (ma 1 mb 1); highest GPR R142, so 152 (multiple of 8 at least 145).
+fn gkemitb id uint ma uint mb uint bt bool ep uint to bool
+gkslot id
+gkgemmb ma mb bt ep
+put gkgpr id 152
+put gksm id 16384
+if gt get gkat 0 mul ulong add id 1 16384
+ret false
+end
+put gkthr id 128
 ret true
 end
 note Emit one GEMM kernel into slot id (two slots when big, the 64x64 kernel); false on overflow.
@@ -1133,6 +1514,13 @@ note 2 A is zero below its diagonal (C = P^T DO, DK = DS^T Q), so row tile r sta
 note 3 only C on and below the diagonal is needed (S = Q K^T, DP = DO U^T), so blocks above it exit.
 note Modes 1 and 2 need k = m, mode 3 needs m = n. Mutant q (OMUTQ 0) stops mode 1 one K tile short.
 const OMUTQ ulong 1
+note BF16 path (docs/omegallm/CONTRACT-BF16.md): gkbf 1 (gtrainb, gprofb and the gb.om gates) runs every
+note 64x64 gkmm on the tensor-core kernels 27..36; 32x32 GEMMs (n = E) stay f32. gkbck 1 checks each
+note BF16 launch against gb.om's sampled reference (gbpre before, gbpost after), with gkbp holding
+note m n k nz h2 beta ep cz. No fallback: a GEMM the kernels cannot take fails with nverr -22.
+global gkbf uint 1
+global gkbck uint 1
+global gkbp uint 8
 global gkcz uint 1
 fn gkopz cz uint to void
 put gkcz 0 cz
@@ -1157,6 +1545,9 @@ put gkcz 0 0
 kd = uint 16
 if eq t 64
 kd = 8
+if eq get gkbf 0 1
+kd = 32
+end
 end
 pt = div t kd
 put gkarg 22 div k kd
@@ -1224,14 +1615,86 @@ ret false
 end
 put gkarg 24 neg h2
 t = gktile m n
+bf = and eq get gkbf 0 1 eq t 64
+if bf
+if not gkbfok k
+put gkcz 0 0
+put nverr 0 neg long 22
+ret false
+end
+else
 gkopt 0 t
 gkopt 1 t
+end
+put gkbp 7 get gkcz 0
 gkczarg t k
 put gkps 0 m
 put gkps 1 n
 put gkps 2 k
 id = gkmmid t beta ep
+if bf
+id = gkmmb beta ep
+end
+if not and bf eq get gkbck 0 1
 ret gklaunch id div n t div m t nz
+end
+gkbpset m n k nz h2 beta
+put gkbp 6 ep
+gbpre
+if not gklaunch id div n t div m t nz
+ret false
+end
+ret gbpost
+end
+note BF16 operands both take the 16-byte tile (gkbfop) and k is a multiple of the K tile 32
+fn gkbfok k uint to bool
+ba = gkbfop 0
+bb = gkbfop 1
+ret and and ba bb eq rem k 32 0
+end
+note gkbp words 0..5 for gb.om's check: m n k nz h2 beta
+fn gkbpset m uint n uint k uint nz uint h2 uint beta bool to void
+put gkbp 0 m
+put gkbp 1 n
+put gkbp 2 k
+put gkbp 3 nz
+put gkbp 4 h2
+put gkbp 5 0
+if beta
+put gkbp 5 1
+end
+end
+note Operand ab for the BF16 tile: 16-byte aligned pointer and batch strides, and 16-byte loads
+note (mode 1: so a multiple of 16; mode 0: so = 4, sk a multiple of 16); sets delta and tile step.
+fn gkbfop ab uint to bool
+o = mul ab 8
+so = get gkarg add o 2
+sk = get gkarg add o 3
+ok = eq rem get gkarg o 16 0
+ok = and ok eq rem get gkarg add o 4 16 0
+ok = and ok eq rem get gkarg add o 5 16 0
+if eq get gkmd ab 1
+ok = and ok eq rem so 16 0
+put gkarg add o 6 mul so 16
+else
+ok = and ok and eq so 4 eq rem sk 16 0
+put gkarg add o 6 sk
+end
+put gkarg add o 7 mul sk 32
+ret ok
+end
+note BF16 kernel id for beta and fused epilogue ep; sets the arg count
+fn gkmmb beta bool ep uint to uint
+if ne ep 0
+put gkna 0 32
+ret add 34 ep
+end
+put gkna 0 29
+id = add add 27 get gkmd 0 mul 2 get gkmd 1
+if beta
+id = add id 4
+end
+ret id
 end
 note kernel id of a gkmm (gkall's table) for tile t, beta and fused epilogue ep; sets the arg count
 fn gkmmid t uint beta bool ep uint to uint

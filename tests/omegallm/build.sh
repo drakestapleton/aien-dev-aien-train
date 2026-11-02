@@ -1,6 +1,6 @@
 #!/bin/sh
 # Build ollm (aien-train#52) from native/omegallm/*.om with the pinned seeded omc.
-# Usage: sh tests/omegallm/build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p|t|r|x|q|w | --variant h5|h7|r0|b0]
+# Usage: sh tests/omegallm/build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p|t|r|x|q|w|u|l|o|v | --variant h5|h7|r0]
 # Env: TARGET (aarch64, the default, gb10, x86linux or x86efi), OMC (default ../omega-mv/seed/out/omc
 #      beside this clone for aarch64 and gb10, ../omega-mv-x86/seed/out/omc for x86linux,
 #      ../omega-efi/seed/out/omc for x86efi), OUT (default ../build beside it), CORE (taskset core,
@@ -35,6 +35,11 @@
 # OMUTQ) stops each causal P U and DS K GEMM row tile one K tile before the diagonal block's end,
 # which gcmp2 must catch, and mutant w (gr.om OMUTW) makes both softmax kernels skip loading the
 # diagonal 32-column chunk of each row from chunk 1 on, which gcmp2 must catch.
+# BF16 (gpu/gb.om, concatenated before gg.om; docs/omegallm/CONTRACT-BF16.md): gtrainb, gprofb, gbcmp,
+# gbcmp2 and gbfrag. Mutant u (gb.om OMUTU) skips the bf16 rounding in the gates' reference, mutant l
+# (gk.om OMUTL) swaps the A fragment rows of lanes g and g ^ 1, mutant o (gk.om OMUTO) runs one K tile
+# fewer and mutant v (gk.om OMUTV) rounds the operands toward zero (F2FP RZ); gbfrag and gbcmp must
+# catch all four.
 # Mutants (ollm-mut-X, one changed line) plant a defect the checks must catch. Variants (ollm-var-X)
 # h5 and h7 (two changed lines) set both gcheck steps GCH and GCH2 to 1e-5 (h5) or 1e-7 (h7), the step
 # sizes that the README's GCH section rejects; r0 (gk.om OKREU 0, one changed line) clears the GEMM FFMA
@@ -56,7 +61,7 @@ OUT=${OUT:-$here/../build}
 CORE=${CORE:-6}
 mut= kind=
 if [ $# -ge 1 ]; then
-  { [ "$1" = --mutant ] || [ "$1" = --variant ]; } && [ $# -eq 2 ] || { echo "usage: build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p|t|r|x|q|w | --variant h5|h7|r0|b0]" >&2; exit 2; }
+  { [ "$1" = --mutant ] || [ "$1" = --variant ]; } && [ $# -eq 2 ] || { echo "usage: build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p|t|r|x|q|w|u|l|o|v | --variant h5|h7|r0]" >&2; exit 2; }
   kind=$1 mut=$2
 fi
 got=$(sha256sum "$OMC" | cut -d' ' -f1)
@@ -75,7 +80,7 @@ if [ "$TARGET" = gb10 ]; then
   [ "$n" = 1 ] || { echo "MAIN_COUNT $n, want 1" >&2; exit 4; }
   sed 's/^fn main to int$/fn ocpumain to int/' "$OUT/ollm.om" > "$OUT/ollm.tmp.om"
   g=$src/gpu
-  cat "$OUT/ollm.tmp.om" "$g/context.om" "$g/vector.om" "$g/launch.om" "$g/gk.om" "$g/gr.om" "$g/gg.om" > "$OUT/ollm.om"
+  cat "$OUT/ollm.tmp.om" "$g/context.om" "$g/vector.om" "$g/launch.om" "$g/gk.om" "$g/gr.om" "$g/gb.om" "$g/gg.om" > "$OUT/ollm.om"
   rm -f "$OUT/ollm.tmp.om"
 fi
 case "$kind$mut" in
@@ -97,10 +102,14 @@ case "$kind$mut" in
   --mutantx) pat='s/^const OMUTX ulong 1$/const OMUTX ulong 0/' want=1 ;;
   --mutantq) pat='s/^const OMUTQ ulong 1$/const OMUTQ ulong 0/' want=1 ;;
   --mutantw) pat='s/^const OMUTW ulong 1$/const OMUTW ulong 0/' want=1 ;;
+  --mutantu) pat='s/^const OMUTU ulong 1$/const OMUTU ulong 0/' want=1 ;;
+  --mutantl) pat='s/^const OMUTL ulong 1$/const OMUTL ulong 0/' want=1 ;;
+  --mutanto) pat='s/^const OMUTO ulong 1$/const OMUTO ulong 0/' want=1 ;;
+  --mutantv) pat='s/^const OMUTV ulong 1$/const OMUTV ulong 0/' want=1 ;;
   --varianth5) pat='s/^const GCH f64 0\.000001$/const GCH f64 0.00001/;s/^const GCH2 f64 0\.00000025$/const GCH2 f64 0.00001/' want=2 ;;
   --varianth7) pat='s/^const GCH f64 0\.000001$/const GCH f64 0.0000001/;s/^const GCH2 f64 0\.00000025$/const GCH2 f64 0.0000001/' want=2 ;;
   --variantr0) pat='s/^const OKREU ulong 1$/const OKREU ulong 0/' want=1 ;;
-  *) echo "usage: build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p|t|r|x|q|w | --variant h5|h7|r0]" >&2; exit 2 ;;
+  *) echo "usage: build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p|t|r|x|q|w|u|l|o|v | --variant h5|h7|r0]" >&2; exit 2 ;;
 esac
 if [ -n "$mut" ]; then
   [ "$kind" = --mutant ] && name=ollm-mut-$mut || name=ollm-var-$mut
