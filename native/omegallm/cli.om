@@ -121,9 +121,6 @@ oputc 10
 oflush
 end
 
-fn odneed to void
-end
-
 note little-endian u64 at ochk[o..o+8)
 fn ochk64 o ulong to ulong
 v = ulong 0
@@ -193,7 +190,10 @@ if eq na 7
 k = oargu 6
 end
 gg = get og 44
-if or or eq k 0 gt k gg ne rem gg k 0
+if or eq k 0 gt k gg
+exit 29
+end
+if ne rem gg k 0
 exit 29
 end
 put og 45 k

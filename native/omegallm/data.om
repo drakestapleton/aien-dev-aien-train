@@ -169,8 +169,17 @@ end
 
 fn opshift ai ulong a ulong to void
 wn = get opst 1
-for i ulong sub wn a
+cnt = sub wn a
+i = ulong 0
+for o ulong 3
+lim = mul add o 1 999999
+if gt lim cnt
+lim = cnt
+end
+while lt i lim bound 999999
 put opw i get opw add a i
+i = add i 1
+end
 end
 wb = add get opst 0 a
 wn = sub wn a
