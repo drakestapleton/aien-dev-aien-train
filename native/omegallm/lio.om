@@ -279,3 +279,38 @@ exit 70
 end
 ret p
 end
+
+note v1 (CONTRACT-V1 section 7): write obm[0 .. n) (bpe.om) to the path in argv[ai] as ocwrite does:
+note PATH.tmp, fsync, rename
+fn obmsave ai ulong n ulong to void
+pl = oargp ai
+if gt pl 2000
+exit 2
+end
+for i ulong pl
+put opth i get oarg i
+end
+put opth pl 46
+put opth add pl 1 116
+put opth add pl 2 109
+put opth add pl 3 112
+fd = int fopen opth 0 add pl 4 577 420
+if lt fd 0
+exit 70
+end
+p = ulong 0
+while lt p n bound 999999
+w = write fd obm p sub n p
+if le w 0
+exit 70
+end
+p = add p ulong w
+end
+if ne fsync fd 0
+exit 70
+end
+if ne fclose fd 0
+exit 70
+end
+ocrename pl
+end

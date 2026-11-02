@@ -510,3 +510,17 @@ end
 oeclose
 ret m
 end
+
+note v1 (CONTRACT-V1 section 7): write obm[0 .. n) (bpe.om) to the path in argument ai, in place
+fn obmsave ai ulong n ulong to void
+pl = oargp ai
+r = efi 12 oefa 1 0 oarg 0 pl
+if oeerr r
+exit 70
+end
+w = efi 12 oefa 3 0 obm 0 n
+if ne w n
+exit 70
+end
+oeclose
+end

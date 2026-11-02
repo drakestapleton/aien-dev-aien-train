@@ -1,0 +1,975 @@
+note SPDX-License-Identifier: AGPL-3.0-only
+note omegallm bpe.om (aien-train#52, CONTRACT-V1 sections 2, 7 and 8): the byte-pair tokenizer.
+note Text is read as a stream through the opw window of data.om (opstart, opshift) and cut into
+note chunks (2.1). bpefit counts chunk types, then merges with a hashed pair table, per-pair lists
+note of the types that hold the pair and a lazy max-heap keyed count << 24 | (4095 - a) << 12 |
+note (4095 - b): the largest key is the largest count, then the smallest a, then the smallest b.
+note A pair's count only falls once its newest token exists, so a popped key whose count is still
+note current is the true maximum; a stale one is pushed again with its current count (if any).
+note Encode applies, per chunk, the present merge of lowest rank until none is left. That equals
+note merges 0, 1, ... in order (2.4): merge k's pair never reappears after merge k, since a later
+note merge only makes pairs that hold its own new token. Chunk types cache their tokens.
+note Exits: 2 usage (bpefit V outside 257..4096); 21 a capacity below, an odd token file, or
+note MAXBYTES with no byte 0 inside; 25 a token >= V; 26 a bad merges file; 27 V above the file's
+note V, or V <= 256; 28 no pair left to merge; 70 I/O.
+note Interface for the model units (section 8): obload, obtlen, obtput, obprompt and obtk.
+note Capacities: 524288 chunk types, 4194304 pool symbols (2 per byte of type), 900000 pairs,
+note 4194304 type-in-pair list nodes.
+const BQTCAP ulong 524288
+const BQHMSK ulong 1048575
+const BQSCAP ulong 4194304
+const BQPCAP ulong 900000
+const BQPMSK ulong 1048575
+const BQNCAP ulong 4194304
+const BQLCAP ulong 1099511627776
+global obtk ulong 4096
+global obm uchar 15384
+global bqma ushort 4096
+global bqmb ushort 4096
+global bqln ulong 4096
+global bqrk uint 8192
+global bqrt ushort 8192
+global bqv ulong 2
+global bqcl uchar 256
+global bqtm ushort 128
+global bqsk ushort 4100
+global bqst ulong 16
+global bqhs uint 1048576
+global bqto uint 524288
+global bqtl uchar 524288
+global bqtn uchar 524288
+global bqtc ulong 524288
+global bqts uint 524288
+global bqsy ushort 4194304
+global bqpk uint 1048576
+global bqpc ulong 1048576
+global bqph uint 1048576
+global bqpl uint 1048576
+global bqnl uint 1048576
+global bqnt uint 4194304
+global bqnx uint 4194304
+global bqhp ulong 1048576
+
+note bqst: 0 types, 1 pool symbols used, 2 chunks, 3 bytes read, 4 tokens, 5 pairs, 6 new pairs
+note of this merge (bqnl), 7 list nodes, 8 heap entries.
+
+note class table: bqcl[c] = 1 when A(c) (section 2)
+fn bpcls to void
+for c ulong 256
+v = uchar 0
+if or or and ge c 48 le c 57 and ge c 65 le c 90 or and ge c 97 le c 122 ge c 128
+v = uchar 1
+end
+put bqcl c v
+end
+end
+
+note length of the chunk at opw[i] (section 2.1, pieces of at most 64) in a text ending at n > i
+fn bpclen i ulong n ulong to ulong
+c = ulong get opw i
+j = add i 1
+if eq get bqcl c 0
+if ne c 32
+ret 1
+end
+if ge j n
+ret 1
+end
+if eq get bqcl get opw j 0
+ret 1
+end
+j = add j 1
+end
+e = add i 64
+if lt n e
+e = n
+end
+while lt j e bound 64
+if eq get bqcl get opw j 0
+break
+end
+j = add j 1
+end
+ret sub j i
+end
+
+note as bpclen, over the argument bytes oarg (obprompt)
+fn bpclena i ulong n ulong to ulong
+c = ulong get oarg i
+j = add i 1
+if eq get bqcl c 0
+if ne c 32
+ret 1
+end
+if ge j n
+ret 1
+end
+if eq get bqcl get oarg j 0
+ret 1
+end
+j = add j 1
+end
+e = add i 64
+if lt n e
+e = n
+end
+while lt j e bound 64
+if eq get bqcl get oarg j 0
+break
+end
+j = add j 1
+end
+ret sub j i
+end
+
+note FNV-1a 64 of opw[i .. i + l)
+fn bphash i ulong l ulong to ulong
+h = ulong 14695981039346656037
+for k ulong l
+h = mul xor h ulong get opw add i k 1099511628211
+end
+ret h
+end
+
+note does type y hold the bytes opw[i .. i + l)?
+fn bpsame y ulong i ulong l ulong to bool
+if ne ulong get bqtl y l
+ret false
+end
+o = ulong get bqto y
+for k ulong l
+if ne ulong get bqsy add o k ulong get opw add i k
+ret false
+end
+end
+ret true
+end
+
+note new type in empty slot s for opw[i .. i + l): its bytes become symbols at bqsy[o], 2 l pool
+note symbols are reserved (encode stores the tokens after the bytes); BQTCAP when full
+fn bpins s ulong i ulong l ulong to ulong
+nt = get bqst 0
+o = get bqst 1
+if ge nt BQTCAP
+ret BQTCAP
+end
+if gt add o mul 2 l BQSCAP
+ret BQTCAP
+end
+put bqhs s uint add nt 1
+put bqto nt uint o
+put bqtl nt uchar l
+put bqtn nt uchar l
+put bqtc nt 0
+put bqts nt 0
+for k ulong l
+put bqsy add o k ushort get opw add i k
+end
+put bqst 0 add nt 1
+put bqst 1 add o l
+ret nt
+end
+
+note type id of the chunk opw[i .. i + l), added when absent; BQTCAP when absent and full
+fn bpfind i ulong l ulong to ulong
+s = and bphash i l BQHMSK
+for q ulong 524289
+y = ulong get bqhs s
+if eq y 0
+ret bpins s i l
+end
+y = sub y 1
+if bpsame y i l
+ret y
+end
+s = and add s 1 BQHMSK
+end
+ret BQTCAP
+end
+
+note fit: count one chunk
+fn bpcount i ulong l ulong to void
+y = bpfind i l
+if eq y BQTCAP
+exit 21
+end
+put bqtc y add get bqtc y 1
+put bqst 2 add get bqst 2 1
+end
+
+note append token t to output 0 as u16 LE
+fn bpwtok t ulong to void
+owbyte 0 and t 255
+owbyte 0 shr t 8
+end
+
+note rank of pair (a, b): its merge token, or 65535 when it is not a merge below V
+fn bprank a ulong b ulong to ulong
+key = add mul a 4096 b
+s = shr mul add key 1 ulong 11400714819323198485 51
+for q ulong 8192
+k = ulong get bqrk s
+if eq k 0
+ret 65535
+end
+if eq k add key 1
+ret ulong get bqrt s
+end
+s = and add s 1 8191
+end
+ret 65535
+end
+
+note replace in bqtm[0 .. m) every (a, b) of merge token t, left to right without overlap
+fn bprepl m ulong t ulong to ulong
+a = get bqma t
+b = get bqmb t
+w = ulong 0
+j = ulong 0
+while lt j m bound 128
+x = get bqtm j
+z = ushort 65535
+if lt add j 1 m
+z = get bqtm add j 1
+end
+if and eq x a eq z b
+put bqtm w ushort t
+j = add j 2
+else
+put bqtm w x
+j = add j 1
+end
+w = add w 1
+end
+ret w
+end
+
+note encode bqtm[0 .. n) (bytes) in place (section 2.4); returns the token count
+fn bpenct n ulong to ulong
+m = n
+dn = false
+while and not dn gt m 1 bound 64
+best = ulong 65535
+for j ulong sub m 1
+r = bprank ulong get bqtm j ulong get bqtm add j 1
+if lt r best
+best = r
+end
+end
+if eq best 65535
+dn = true
+else
+m = bprepl m best
+end
+end
+ret m
+end
+
+note encode: one chunk opw[i .. i + l) to output 0, through the type cache when it has room
+fn bpenc1 i ulong l ulong to void
+put bqst 2 add get bqst 2 1
+y = bpfind i l
+if eq y BQTCAP
+for k ulong l
+put bqtm k ushort get opw add i k
+end
+m = bpenct l
+for k ulong m
+bpwtok ulong get bqtm k
+end
+put bqst 4 add get bqst 4 m
+else
+o = add ulong get bqto y l
+if eq get bqtc y 0
+for k ulong l
+put bqtm k ushort get opw add i k
+end
+mt = bpenct l
+for k ulong mt
+put bqsy add o k get bqtm k
+end
+put bqtn y uchar mt
+put bqtc y 1
+put bqst 1 add get bqst 1 mt
+end
+m = ulong get bqtn y
+for k ulong m
+bpwtok ulong get bqsy add o k
+end
+put bqst 4 add get bqst 4 m
+end
+end
+
+note the chunks of the first lim bytes of argument ai (all of it when shorter) through bpcount
+note (mode 0) or bpenc1 (mode 1, output 0 opened on argument oa once the text is open); bqst 3 =
+note bytes read. A chunk needs at most 65 bytes past its start, so the window moves to the
+note current chunk when fewer are left and the file goes on.
+note window position of i after a refill: when fewer than need bytes are left from opw[i] and the
+note file goes on, opw[i ..] moves to the front (0); else i
+fn bprefil ai ulong i ulong need ulong to ulong
+if gt add i need get opst 1
+if eq get opst 2 0
+opshift ai i
+ret 0
+end
+end
+ret i
+end
+
+fn bpscan ai ulong lim ulong mode ulong oa ulong to void
+opstart ai
+if eq mode 1
+owopen 0 oa
+end
+i = ulong 0
+dn = false
+while not dn bound 999999
+q = ulong 0
+while and not dn lt q 999999 bound 999999
+q = add q 1
+i = bprefil ai i 65
+wn = get opst 1
+wb = get opst 0
+n = wn
+if lt sub lim wb n
+n = sub lim wb
+end
+if ge i n
+dn = true
+put bqst 3 add wb i
+else
+l = bpclen i n
+if eq mode 0
+bpcount i l
+else
+bpenc1 i l
+end
+i = add i l
+end
+end
+end
+end
+
+note fitbytes for MAXBYTES m: just after the last byte 0 among the first m bytes of argument ai;
+note exit 21 when there is none
+fn bpcut ai ulong m ulong to ulong
+opstart ai
+last = ulong 0
+dn = false
+while not dn bound 999999
+wb = get opst 0
+wn = get opst 1
+e = wn
+if lt sub m wb e
+e = sub m wb
+end
+j = ulong 0
+for o ulong 3
+lj = mul add o 1 999999
+if gt lj e
+lj = e
+end
+while lt j lj bound 999999
+if eq get opw j 0
+last = add add wb j 1
+end
+j = add j 1
+end
+end
+if or lt e wn ne get opst 2 0
+dn = true
+else
+opshift ai wn
+end
+end
+if eq last 0
+exit 21
+end
+ret last
+end
+
+note pair table slot of key a 4096 + b, made (count 0, no list) when absent; new slots are listed
+note in bqnl; exit 21 past BQPCAP pairs
+fn bppslot key ulong to ulong
+s = shr mul add key 1 ulong 11400714819323198485 44
+for q ulong 1048577
+k = ulong get bqpk s
+if eq k 0
+nf = get bqst 5
+if ge nf BQPCAP
+exit 21
+end
+put bqpk s uint add key 1
+put bqpc s 0
+put bqph s 0
+put bqpl s 0
+put bqst 5 add nf 1
+nn = get bqst 6
+put bqnl nn uint s
+put bqst 6 add nn 1
+ret s
+end
+if eq k add key 1
+ret s
+end
+s = and add s 1 BQPMSK
+end
+ret s
+end
+
+note list type y under pair slot s (once per type in a row); exit 21 past BQNCAP nodes
+fn bpnode s ulong y ulong to void
+if ne ulong get bqpl s add y 1
+put bqpl s uint add y 1
+nn = get bqst 7
+if ge nn BQNCAP
+exit 21
+end
+put bqnt nn uint y
+put bqnx nn get bqph s
+put bqph s uint add nn 1
+put bqst 7 add nn 1
+end
+end
+
+fn bpkey c ulong a ulong b ulong to ulong
+ret or or shl c 24 shl sub 4095 a 12 sub 4095 b
+end
+
+fn bphpush x ulong to void
+i = get bqst 8
+put bqst 8 add i 1
+dn = false
+while and not dn gt i 0 bound 64
+p = div sub i 1 2
+v = get bqhp p
+if ge v x
+dn = true
+else
+put bqhp i v
+i = p
+end
+end
+put bqhp i x
+end
+
+note pop the heap's largest key (the heap is not empty)
+fn bphpop to ulong
+top = get bqhp 0
+n = sub get bqst 8 1
+put bqst 8 n
+x = get bqhp n
+i = ulong 0
+dn = false
+while not dn bound 64
+l = add mul i 2 1
+if ge l n
+dn = true
+else
+c = l
+r = add l 1
+if lt r n
+if gt get bqhp r get bqhp l
+c = r
+end
+end
+v = get bqhp c
+if ge x v
+dn = true
+else
+put bqhp i v
+i = c
+end
+end
+end
+if gt n 0
+put bqhp i x
+end
+ret top
+end
+
+note bqpc[s] += c and -= c, one big array per function (error 12 at this pin otherwise)
+fn bppcadd s ulong c ulong to void
+put bqpc s add get bqpc s c
+end
+fn bppcsub s ulong c ulong to void
+put bqpc s sub get bqpc s c
+end
+
+note count the pairs of type y and list y under them
+fn bpinty y ulong to void
+o = ulong get bqto y
+c = get bqtc y
+for j ulong sub ulong get bqtn y 1
+x = ulong get bqsy add o j
+z = ulong get bqsy add add o j 1
+s = bppslot add mul x 4096 z
+bppcadd s c
+bpnode s y
+end
+end
+
+note count the pairs of every type, list the types under them, heap every pair
+fn bpinit to void
+nt = get bqst 0
+for y ulong nt
+bpinty y
+end
+for s ulong 1048576
+k = ulong get bqpk s
+if ne k 0
+c = get bqpc s
+if gt c 0
+k = sub k 1
+bphpush bpkey c div k 4096 and k 4095
+end
+end
+end
+end
+
+note the pair to merge: the slot of the heap's largest current key; exit 28 when none is left.
+note Each pair has at most one heap entry, and one pop sequence meets a pair at most twice.
+fn bpsel to ulong
+for o ulong 3
+while gt get bqst 8 0 bound 999999
+x = bphpop
+c = shr x 24
+a = sub 4095 and shr x 12 4095
+b = sub 4095 and x 4095
+s = bppslot add mul a 4096 b
+cc = get bqpc s
+if eq cc c
+ret s
+end
+if gt cc 0
+bphpush bpkey cc a b
+end
+end
+end
+exit 28
+end
+
+fn bphas o ulong n ulong a ulong b ulong to bool
+for j ulong sub n 1
+x = ulong get bqsy add o j
+z = ulong get bqsy add add o j 1
+if and eq x a eq z b
+ret true
+end
+end
+ret false
+end
+
+note take count c of every pair in bqsy[o .. o + n)
+fn bpsub o ulong n ulong c ulong to void
+for j ulong sub n 1
+x = ulong get bqsy add o j
+z = ulong get bqsy add add o j 1
+s = bppslot add mul x 4096 z
+bppcsub s c
+end
+end
+
+note replace (a, b) by t in bqsy[o .. o + n), left to right without overlap; returns the length
+fn bprpool o ulong n ulong a ulong b ulong t ulong to ulong
+w = ulong 0
+j = ulong 0
+while lt j n bound 128
+x = ulong get bqsy add o j
+z = ulong 65535
+if lt add j 1 n
+z = ulong get bqsy add add o j 1
+end
+if and eq x a eq z b
+put bqsy add o w ushort t
+j = add j 2
+else
+put bqsy add o w ushort x
+j = add j 1
+end
+w = add w 1
+end
+ret w
+end
+
+note add count c of every pair in bqsy[o .. o + m) of type y; list y under the pairs holding t
+fn bpadd o ulong m ulong c ulong y ulong t ulong to void
+for j ulong sub m 1
+x = ulong get bqsy add o j
+z = ulong get bqsy add add o j 1
+s = bppslot add mul x 4096 z
+bppcadd s c
+if or eq x t eq z t
+bpnode s y
+end
+end
+end
+
+note apply merge (a, b) -> t to type y, moving its pair counts
+fn bpmtype y ulong a ulong b ulong t ulong to void
+o = ulong get bqto y
+n = ulong get bqtn y
+if bphas o n a b
+c = get bqtc y
+bpsub o n c
+m = bprpool o n a b t
+put bqtn y uchar m
+bpadd o m c y t
+end
+end
+
+note merge t over every type listed under pair slot s (each type once: stamp t - 255)
+fn bpwalk s ulong a ulong b ulong t ulong to void
+nd = ulong get bqph s
+st = uint sub t 255
+for o ulong 5
+while gt nd 0 bound 999999
+y = ulong get bqnt sub nd 1
+nd = ulong get bqnx sub nd 1
+if ne get bqts y st
+put bqts y st
+bpmtype y a b t
+end
+end
+end
+end
+
+note merges 0 .. v - 257 into bqma/bqmb and obm[24 ..)
+fn bpmerge v ulong to void
+for k ulong sub v 256
+s = bpsel
+key = sub ulong get bqpk s 1
+a = div key 4096
+b = and key 4095
+t = add 256 k
+put bqma t ushort a
+put bqmb t ushort b
+p = add 24 mul 4 k
+put obm p uchar and a 255
+put obm add p 1 uchar shr a 8
+put obm add p 2 uchar and b 255
+put obm add p 3 uchar shr b 8
+put bqst 6 0
+bpwalk s a b t
+bpnewp
+end
+end
+
+note heap every pair slot made by this merge (bqnl[0 .. bqst 6)) that has a count
+fn bpnewp to void
+nw = get bqst 6
+for i ulong nw
+q = ulong get bqnl i
+c = get bqpc q
+if gt c 0
+kq = sub ulong get bqpk q 1
+bphpush bpkey c div kq 4096 and kq 4095
+end
+end
+end
+
+note obm[p .. p + 8) = v as u64 LE
+fn bpu64 p ulong v ulong to void
+for k ulong 8
+put obm add p k uchar and shr v mul k 8 255
+end
+end
+
+note FNV-1a 64 of obm[24 .. e)
+fn bpfnvm e ulong to ulong
+h = ulong 14695981039346656037
+for k ulong sub e 24
+h = mul xor h ulong get obm add 24 k 1099511628211
+end
+ret h
+end
+
+note u16 LE at opw[p]
+fn bprd16 p ulong to ulong
+lo = ulong get opw p
+hi = ulong get opw add p 1
+ret or lo shl hi 8
+end
+
+note u64 LE at opw[p]
+fn bprd64 p ulong to ulong
+v = ulong 0
+for k ulong 8
+v = or v shl ulong get opw add p k mul k 8
+end
+ret v
+end
+
+note read and check the merges file of argument ai (section 2.3; refusals 26) into bqma/bqmb;
+note returns its V. Uses opw.
+fn bpload ai ulong to ulong
+n = oprd ai 0 0 15385
+if or lt n 24 gt n 15384
+exit 26
+end
+if ne bprd64 0 3550332126946413647
+exit 26
+end
+vm = bprd64 8
+if or lt vm 257 gt vm 4096
+exit 26
+end
+if ne n add 24 mul 4 sub vm 256
+exit 26
+end
+h = ulong 14695981039346656037
+for k ulong sub n 24
+h = mul xor h ulong get opw add 24 k 1099511628211
+end
+if ne h bprd64 16
+exit 26
+end
+for k ulong sub vm 256
+p = add 24 mul 4 k
+a = bprd16 p
+b = bprd16 add p 2
+lk = add 256 k
+if or ge a lk ge b lk
+exit 26
+end
+t = add 256 k
+put bqma t ushort a
+put bqmb t ushort b
+end
+put bqv 1 vm
+ret vm
+end
+
+note use the first v - 256 merges: decoded lengths (held at 2^40) and the rank table
+fn bpsetv v ulong to void
+for t ulong 256
+put bqln t 1
+end
+for k ulong sub v 256
+t = add 256 k
+ma = ulong get bqma t
+mb = ulong get bqmb t
+la = get bqln ma
+s = add la get bqln mb
+if gt s BQLCAP
+s = BQLCAP
+end
+put bqln t s
+end
+for s ulong 8192
+put bqrk s 0
+end
+for k ulong sub v 256
+t = add 256 k
+ma = ulong get bqma t
+mb = ulong get bqmb t
+key = add mul ma 4096 mb
+s = shr mul add key 1 ulong 11400714819323198485 51
+dn = false
+while not dn bound 8192
+if eq get bqrk s 0
+put bqrk s uint add key 1
+put bqrt s ushort t
+dn = true
+else
+s = and add s 1 8191
+end
+end
+end
+put bqv 0 v
+end
+
+note write the decoded bytes of token t to stdout (mode 0) or to output 0 (mode 1)
+fn bpexp t ulong mode ulong to void
+put bqsk 0 ushort t
+sp = ulong 1
+while gt sp 0 bound 999999
+q = ulong 0
+while and gt sp 0 lt q 999999 bound 999999
+q = add q 1
+sp = sub sp 1
+x = ulong get bqsk sp
+if lt x 256
+if eq mode 0
+oputc x
+else
+owbyte 0 x
+end
+else
+put bqsk sp get bqmb x
+put bqsk add sp 1 get bqma x
+sp = add sp 2
+end
+end
+end
+end
+
+note decode token t to output 0 and add its length to bqst 4
+fn bpdec1 t ulong to void
+bpexp t 1
+put bqst 4 add get bqst 4 get bqln t
+end
+
+note token file argument ai: mode 0 checks it (exit 21 odd length, then 25 a token >= v) and
+note returns its token count; mode 1 decodes it to output 0 (bqst 4 = bytes)
+fn bpdscan ai ulong v ulong mode ulong to ulong
+opstart ai
+i = ulong 0
+nt = ulong 0
+bad = false
+odd = false
+dn = false
+while not dn bound 999999
+q = ulong 0
+while and not dn lt q 999999 bound 999999
+q = add q 1
+i = bprefil ai i 2
+wn = get opst 1
+if gt add i 2 wn
+dn = true
+if lt i wn
+odd = true
+end
+else
+t = bprd16 i
+if ge t v
+bad = true
+end
+if eq mode 1
+bpdec1 t
+end
+nt = add nt 1
+i = add i 2
+end
+end
+end
+if odd
+exit 21
+end
+if bad
+exit 25
+end
+ret nt
+end
+
+note print C a b c (C = 77 M, 75 K, 68 D)
+fn bpline c ulong a ulong b ulong d ulong to void
+oputc c
+oputc 32
+oputu a
+oputc 32
+oputu b
+if ne c 75
+if ne c 68
+oputc 32
+oputu d
+end
+end
+oputc 10
+oflush
+end
+
+note section 8: load merges argument ai for vocabulary v (26, 27)
+fn obload ai ulong v ulong to void
+vm = bpload ai
+if or le v 256 gt v vm
+exit 27
+end
+bpsetv v
+bpcls
+end
+
+fn obtlen t ulong to ulong
+ret get bqln t
+end
+
+fn obtput t ulong to void
+bpexp t 0
+end
+
+note section 8: encode argument ai (at most 4000 bytes, CONTRACT 7.2; longer exit 2) into obtk;
+note returns the token count
+fn obprompt ai ulong to ulong
+n = oargp ai
+if gt n 4000
+exit 2
+end
+i = ulong 0
+m = ulong 0
+while lt i n bound 4097
+l = bpclena i n
+for k ulong l
+put bqtm k ushort get oarg add i k
+end
+c = bpenct l
+for k ulong c
+put obtk add m k ulong get bqtm k
+end
+m = add m c
+i = add i l
+end
+ret m
+end
+
+note bpefit TEXT MERGES V [MAXBYTES]
+fn cmdbpfit to void
+na = oargc
+if or lt na 5 gt na 6
+exit 2
+end
+v = oargu 4
+if or lt v 257 gt v 4096
+exit 2
+end
+lim = ulong 18446744073709551615
+if eq na 6
+lim = bpcut 2 oargu 5
+end
+bpcls
+bpscan 2 lim 0 0
+bpinit
+bpmerge v
+nb = add 24 mul 4 sub v 256
+bpu64 0 3550332126946413647
+bpu64 8 v
+bpu64 16 bpfnvm nb
+obmsave 3 nb
+oputc 77
+oputc 32
+oputu v
+oputc 32
+oputu get bqst 0
+oputc 32
+oputu get bqst 2
+oputc 32
+oputu get bqst 3
+oputc 10
+oflush
+end
+
+note bpeenc MERGES V TEXT TOKS
+fn cmdbpenc to void
+if ne oargc 6
+exit 2
+end
+v = oargu 3
+obload 2 v
+bpscan 4 ulong 18446744073709551615 1 5
+owclose 0
+bpline 75 get bqst 3 get bqst 4 0
+end
+
+note bpedec MERGES TOKS OUT (V = the file's V)
+fn cmdbpdec to void
+if ne oargc 5
+exit 2
+end
+vm = bpload 2
+bpsetv vm
+nt = bpdscan 3 vm 0
+owopen 0 4
+put bqst 4 0
+nd = bpdscan 3 vm 1
+owclose 0
+bpline 68 nt get bqst 4 0
+end
