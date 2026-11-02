@@ -24,7 +24,7 @@ attention row needs columns 0 … t only, yet both kernels read and wrote all 25
 - New build-time mutant w (`build.sh --mutant w`, `gr.om` `OMUTW 0`): load predicates t ≥ 32u + 32.
   From chunk 1 on, each row's diagonal chunk is then not loaded, and its stale register enters the
   softmax.
-- `tests/omegallm/gpu-disasm.sh` takes `SHAPE="T D H … "` (default the parity shape
+- `tests/omegallm/gpu-disasm.sh` takes `SHAPE="V T D H F B"` (the `grset` arguments; default the parity shape
   `256 32 64 2 128 2`), and it refuses with `SHAPE_NOT_SET` (rc 2) when the `grset` line in
   `gpu-dump.om` does not match. The predicated code exists only at T > 32, so the max shape needs it.
   Empty slots (8, 12, …) now print `SLOT n empty` instead of stopping the script under `set -e`.
