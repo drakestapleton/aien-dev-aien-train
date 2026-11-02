@@ -66,6 +66,8 @@ sh tests/omegallm/build.sh --mutant a    # also b, c: -> ../build/ollm-mut-X
 sh tests/omegallm/build.sh --variant h5  # also h7: -> ../build/ollm-var-hX
 TARGET=x86linux sh tests/omegallm/build.sh   # x86-64 Linux ELF
 TARGET=x86efi sh tests/omegallm/build.sh     # -> ../build/ollm.efi, a UEFI x86-64 application
+TARGET=gb10 sh tests/omegallm/build.sh       # -> ../build/ollm-gb10, CPU ollm plus the GB10 GPU commands
+TARGET=gb10 sh tests/omegallm/build.sh --mutant g   # also h: -> ../build/ollm-mut-X-gb10
 ```
 
 The build script does four things:
@@ -77,7 +79,7 @@ The build script does four things:
      (omega-mv main `ba5559d9`, `../omega-mv-x86`);
    - x86efi: `b4f45121f6c6d5d8a6ed0f5c4f3934b7cc4bec369bfa89523699bd33928f9b55`
      (draft omega-mv#1015, commit `5ce9ecaa`, `../omega-efi`; main's omc refuses `target x86efi`).
-2. It concatenates `math.om data.om model.om adam.om ckpt.om cli.om` and the platform unit
+2. It concatenates `math.om data.om model.om adam.om ckpt.om bpe.om cli.om` and the platform unit
    (`lio.om` for Linux, `eio.om` for UEFI; CONTRACT §9). The x86 targets put the line
    `target x86linux` or `target x86efi` first.
 3. For a mutant, it changes exactly one line of the concatenated copy (`OMUTA`, `OMUTB`, `OMUTC`).
@@ -318,3 +320,36 @@ Every query is WolframLanguageEvaluator, 2026-11-01.
   `mut-c-adamck.txt`, `A 5 3fe473698d936acd 639088417544678` (maxrel × 1e15), to 14 significant
   digits: WolframLanguageEvaluator decodes the bits to 0.6390884175446786, |Δ| → 1.143e-15, f64
   rounding of the sum.
+
+## GB10 GPU training (rung 4)
+
+`TARGET=gb10` builds `ollm-gb10`: the aarch64 `ollm` with its `fn main` renamed `ocpumain` and
+`native/omegallm/gpu/` appended. `gk.om` (tiled f32 GEMMs) and `gr.om` (slots 9-24: embedding, RMS
+norm, causal softmax, ReLU, CE, the embedding-gradient CSR gather, the SQN sum of squares and ADAM) emit
+SASS for sm_121 into a code image; `gg.om` plans
+an arena, uploads, launches and reads back through `context.om`/`vector.om`/`launch.om`, vendored from
+aien-dev/CUDApp dcba8bb8, on the raw NVIDIA driver. No CUDA runtime or toolkit is used to build or run
+it; nvdisasm is a read-only oracle (`tests/omegallm/gpu-disasm.sh SLOT...`).
+
+```sh
+B=../build/ollm-gb10
+$B gcmp CK DATA S                 # chip gradient vs CPU f64 ograd for batch S; GCMP PASS or exit 45
+$B gacmp CK DATA S                # one step, on-chip f32 Adam vs CPU f64 oadam; GACMP PASS or exit 46
+$B gtrain CK TRAIN UNTIL EVERY    # train with the chip gradient, Adam on the CPU
+$B gtrainf CK TRAIN UNTIL EVERY   # train with weights and Adam state resident on the chip
+```
+
+Run them only inside a `spark-window`. The checkpoint format is unchanged, so CPU `eval`, `sample` and
+`train` read what `gtrain`/`gtrainf` write.
+
+| What | Status | Receipt (`evidence/OMEGALLM/gpu/`) |
+|---|---|---|
+| chip gradient matches the CPU f64 gradient within γ_R = R·2^-24 | EXERCISED (GB10, non-quiet) | `gc-small.txt` rel 2.35e-7, `gc-night.txt` rel 1.614e-4 < 3.05e-4; mutant g FAIL rc 45 on both |
+| on-chip Adam matches `oadam` above f32 weight rounding (resid < 2^-16) | EXERCISED (GB10, non-quiet) | `ga-small.txt` resid 2.34e-7, `ga-night.txt` resid 1.28e-7; mutant h FAIL rc 46 on the night checkpoint (step 1000); on the step-0 checkpoint mutant h is invisible by construction |
+| `gtrain` 1750→9000 on the v1 night shape | EXERCISED (GB10, non-quiet) | `gtrain1-3.txt`, 0.235-0.248 s/step |
+| `gtrainf` 0→9000, the whole v1 schedule | EXERCISED (GB10, non-quiet) | `gtrainf-0-9000.txt`, 483.8 s, 0.0538 s/step; trajectory within 1.4% of `gtrain` at every shared save point |
+| held-out eval of both step-9000 checkpoints (CPU `eval`, W 4486) | EXERCISED | `eval9000-gtrain.txt` 1.824653 nats, 0.680680 bpb; `eval9000-gtrainf.txt` 1.826877 nats, 0.681510 bpb |
+
+The γ_R gate, the ReLU kink cases that the night shape exposes, the Adam residual, the windows and all
+timings are in `evidence/OMEGALLM/gpu/README.md`. Not QUALIFIED: no quiet-machine timing, one chip, and
+a bitwise comparison with the CPU path is not expected (f32 against f64).

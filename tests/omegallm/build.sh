@@ -1,8 +1,8 @@
 #!/bin/sh
 # Build ollm (aien-train#52) from native/omegallm/*.om with the pinned seeded omc.
-# Usage: sh tests/omegallm/build.sh [--mutant a|b|c|d|e | --variant h5|h7]
-# Env: TARGET (aarch64, the default, x86linux or x86efi), OMC (default ../omega-mv/seed/out/omc
-#      beside this clone for aarch64, ../omega-mv-x86/seed/out/omc for x86linux,
+# Usage: sh tests/omegallm/build.sh [--mutant a|b|c|d|e|g|h | --variant h5|h7]
+# Env: TARGET (aarch64, the default, gb10, x86linux or x86efi), OMC (default ../omega-mv/seed/out/omc
+#      beside this clone for aarch64 and gb10, ../omega-mv-x86/seed/out/omc for x86linux,
 #      ../omega-efi/seed/out/omc for x86efi), OUT (default ../build beside it), CORE (taskset core,
 #      default 6).
 # Each target has its own pinned omc: aarch64 is omega-mv e5b32567 (the v0 pin); x86linux is
@@ -13,6 +13,12 @@
 # `target x86efi`; every later line is the same as the aarch64 source except the platform unit, which
 # is lio.om on Linux and eio.om on UEFI (CONTRACT §9). The x86efi output is ollm.efi, a PE32+ EFI
 # application.
+# gb10 is the aarch64 build plus native/omegallm/gpu/ (rung 4): the CPU `fn main` is renamed
+# ocpumain (exactly one line) and gg.om's main adds the GPU commands gcmp, gtrain, gacmp and gtrainf
+# on the raw NVIDIA driver (no CUDA). gpu/context.om, vector.om and launch.om are vendored unmodified
+# from aien-dev/CUDApp dcba8bb8 (native/nvrm/context.om, native/blackwell/vector.om and launch.om).
+# The output is ollm-gb10; mutant g (gg.om OMUTG) breaks the attention DK backward for gcmp, mutant h
+# (gr.om OMUTH) sets the on-chip Adam beta1 to 0.8 for gacmp.
 # Mutants (ollm-mut-X, one changed line) plant a defect the checks must catch. Variants (ollm-var-X,
 # two changed lines) set both gcheck steps GCH and GCH2 to 1e-5 (h5) or 1e-7 (h7), the step sizes
 # that the README's GCH section rejects. Both are made by sed on the concatenated copy only, and the
@@ -21,19 +27,19 @@ set -eu
 here=$(cd "$(dirname "$0")/../.." && pwd)
 TARGET=${TARGET:-aarch64}
 case "$TARGET" in
-  aarch64) PIN=2c82480596bbdc50cda9626866209ef662d5834f278f839ff4ce0250c495029f
+  aarch64|gb10) PIN=2c82480596bbdc50cda9626866209ef662d5834f278f839ff4ce0250c495029f
            OMC=${OMC:-$here/../omega-mv/seed/out/omc} lead= plat=lio.om ext= ;;
   x86linux) PIN=be8c51301307555254fc59e351d281aae1aa096d91521777e33a41c8b446448a
             OMC=${OMC:-$here/../omega-mv-x86/seed/out/omc} lead='target x86linux' plat=lio.om ext= ;;
   x86efi) PIN=b4f45121f6c6d5d8a6ed0f5c4f3934b7cc4bec369bfa89523699bd33928f9b55
           OMC=${OMC:-$here/../omega-efi/seed/out/omc} lead='target x86efi' plat=eio.om ext=.efi ;;
-  *) echo "TARGET must be aarch64, x86linux or x86efi" >&2; exit 2 ;;
+  *) echo "TARGET must be aarch64, gb10, x86linux or x86efi" >&2; exit 2 ;;
 esac
 OUT=${OUT:-$here/../build}
 CORE=${CORE:-6}
 mut= kind=
 if [ $# -ge 1 ]; then
-  { [ "$1" = --mutant ] || [ "$1" = --variant ]; } && [ $# -eq 2 ] || { echo "usage: build.sh [--mutant a|b|c|d|e | --variant h5|h7]" >&2; exit 2; }
+  { [ "$1" = --mutant ] || [ "$1" = --variant ]; } && [ $# -eq 2 ] || { echo "usage: build.sh [--mutant a|b|c|d|e|g|h | --variant h5|h7]" >&2; exit 2; }
   kind=$1 mut=$2
 fi
 got=$(sha256sum "$OMC" | cut -d' ' -f1)
@@ -45,6 +51,15 @@ name=ollm
   [ -z "$lead" ] || printf '%s\n' "$lead"
   cat "$src/math.om" "$src/data.om" "$src/model.om" "$src/adam.om" "$src/ckpt.om" "$src/bpe.om" "$src/cli.om" "$src/$plat"
 } > "$OUT/ollm.om"
+if [ "$TARGET" = gb10 ]; then
+  ext=-gb10
+  n=$(grep -c '^fn main to int$' "$OUT/ollm.om" || true)
+  [ "$n" = 1 ] || { echo "MAIN_COUNT $n, want 1" >&2; exit 4; }
+  sed 's/^fn main to int$/fn ocpumain to int/' "$OUT/ollm.om" > "$OUT/ollm.tmp.om"
+  g=$src/gpu
+  cat "$OUT/ollm.tmp.om" "$g/context.om" "$g/vector.om" "$g/launch.om" "$g/gk.om" "$g/gr.om" "$g/gg.om" > "$OUT/ollm.om"
+  rm -f "$OUT/ollm.tmp.om"
+fi
 case "$kind$mut" in
   '') ;;
   --mutanta) pat='s/^const OMUTA ulong 1$/const OMUTA ulong 0/' want=1 ;;
@@ -52,9 +67,11 @@ case "$kind$mut" in
   --mutantc) pat='s/^const OMUTC ulong 1$/const OMUTC ulong 0/' want=1 ;;
   --mutantd) pat='s/^const OMUTD ulong 1$/const OMUTD ulong 0/' want=1 ;;
   --mutante) pat='s/^const OMUTE ulong 1$/const OMUTE ulong 0/' want=1 ;;
+  --mutantg) pat='s/^const OMUTG ulong 1$/const OMUTG ulong 0/' want=1 ;;
+  --mutanth) pat='s/^const OMUTH ulong 1$/const OMUTH ulong 0/' want=1 ;;
   --varianth5) pat='s/^const GCH f64 0\.000001$/const GCH f64 0.00001/;s/^const GCH2 f64 0\.00000025$/const GCH2 f64 0.00001/' want=2 ;;
   --varianth7) pat='s/^const GCH f64 0\.000001$/const GCH f64 0.0000001/;s/^const GCH2 f64 0\.00000025$/const GCH2 f64 0.0000001/' want=2 ;;
-  *) echo "usage: build.sh [--mutant a|b|c|d|e | --variant h5|h7]" >&2; exit 2 ;;
+  *) echo "usage: build.sh [--mutant a|b|c|d|e|g|h | --variant h5|h7]" >&2; exit 2 ;;
 esac
 if [ -n "$mut" ]; then
   [ "$kind" = --mutant ] && name=ollm-mut-$mut || name=ollm-var-$mut
