@@ -193,8 +193,11 @@ only these functions of it:
 2. Tokenizer: merges and token files byte-identical to the referee for V = 512 fitted on
    `TinyStoriesV2-GPT4-valid.txt` prepped TRAIN, and decode(encode(text)) == text on the full prepped
    training text. Negative control: a merges file with one pair altered must change the tokens.
-3. Model: CK02 checkpoints, `grad` outputs, `eval` and `sample` outputs byte-identical to the
-   referee at a small token config (V = 300, T = 8, D = 16, H = 2, F = 32, L = 2, B = 4, G = 2).
+3. Model, against the referee, with the v0 standard of `tests/omegallm/ORACLE.md` ("Tolerance"):
+   init bit for bit; `grad` and one `train` step per entry within the v0 relative 10⁻⁹ rule; printed
+   loss, eval and base micro integers exact; CK02 header fields exact. Config V = 300, T = 8, D = 16,
+   H = 2, F = 32, L = 2, B = 4, G = 2. Bit identity of model arithmetic is required only between `.om`
+   runs (check 4), not against the referee.
 4. Workers: after 20 steps at that config, K = 1 and K = 2 checkpoints are byte-identical. At the v0
    small byte config (V = 256), a CK01 checkpoint trained by the v1 binary equals the v0 binary's
    checkpoint byte for byte after 20 steps.
