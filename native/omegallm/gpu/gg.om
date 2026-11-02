@@ -298,7 +298,7 @@ ggu 8 ulong gz
 ggrun 14 9 ggcd mn 64 nz 1
 end
 
-note 17 RELUF, 18 RELUB, 19 COPY (x into y), 20 ZERO (x) over n elements
+note 19 COPY (x into y), 20 ZERO (x) over n elements (the FFN ReLU is fused into the GEMMs, gkope)
 fn ggew id uint n ulong x ulong y ulong to void
 ggu 0 n
 ggpt 1 x
@@ -475,9 +475,10 @@ s = ggl l 9
 ggrmsf hm w x s
 fp = ggl l 10
 w = ggw opw1 l
+y = ggl l 11
+gkope 1 y
 ggxw x w fp f d false
-x = ggl l 11
-ggew 17 mul ggr f fp x
+x = y
 o = ggout l
 ggew 19 rd hm o
 w = ggw opw2 l
@@ -531,7 +532,8 @@ ggpt 3 x
 ggrun 21 8 ggcd r 64 1 1
 end
 
-note layer l FFN backward: DH holds d out on entry, d hm on exit
+note layer l FFN backward: DH holds d out on entry, d hm on exit. The dF GEMM's fused epilogue (gkope 2)
+note applies the ReLU mask FP > 0; the forward W1 GEMM (ggffn, gkope 1) stores both FP and Y.
 fn ggbffn l ulong to void
 d = get og 2
 f = get og 4
@@ -539,9 +541,9 @@ dh = gga1 13
 df = gga1 17
 da = gga1 14
 w = ggw opw2 l
-ggxwt dh w df f d false
 x = ggl l 10
-ggew 18 mul ggr f x df
+gkope 2 x
+ggxwt dh w df f d false
 x = ggl l 11
 w = ggg opw2 l
 ggwg x dh w f d
@@ -1123,7 +1125,7 @@ end
 
 note model.om's ReLU mask hook (ogkm[0] = 1, gcmp2 only): for row t of layer l of the sequence in
 note flight, check every unit's reference FP against the chip's FP (left in the arena by gggrad),
-note then zero dF where the chip's FP is not > 0, the chip RELUB mask (NaN included).
+note then zero dF where the chip's FP is not > 0, the chip's fused dF mask (gkope 2; NaN included).
 fn ogmask yo ulong l ulong t ulong to void
 f = get og 4
 xo = add oafp l mul t f

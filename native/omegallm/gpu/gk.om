@@ -247,9 +247,9 @@ gkimadwr add pa 2 13 add st 1 add pa 2
 end
 note One 32x32 tile of C per 64-thread block, 4x4 per thread, K tiles of 16 through shared memory.
 note C args: ptr words 16/17, row stride 18, col stride 19, batch strides 20/21; 22 ktiles (base),
-note 23 batch magic, 24 minus level-2 count, 25 alpha bits, 26-28 causal (gkczx, gkczk). beta true
-note adds the old C.
-fn gkgemm ma uint mb uint beta bool to void
+note 23 batch magic, 24 minus level-2 count, 25 alpha bits, 26-28 causal (gkczx, gkczk), 30/31 the
+note fused epilogue's second pointer (gkope). beta true adds the old C; ep is the fused epilogue.
+fn gkgemm ma uint mb uint beta bool ep uint to void
 put gkpend 0 0
 gkldc 1 892 false
 gks2r 0 33 true
@@ -314,10 +314,13 @@ end
 gkiadd 96 96 101
 gkisge 0 96 1
 gkbra 0 ulong top
-gkepi beta
+gkepi beta ep
 end
 note GEMM epilogue: C address of the thread's 4x4 block, alpha scale, optional old-C add, store.
-fn gkepi beta bool to void
+note Fused epilogue ep (gkope, beta false): 1 also stores Y = C > 0 ? C : 0 at the second pointer
+note (words 30/31, base R90), the FFN ReLU forward; 2 loads M at the second pointer's same offsets
+note into R40-55 and stores M > 0 ? C : 0, the FFN ReLU backward mask (NaN M gives 0).
+fn gkepi beta bool ep uint to void
 gkshr 12 0 3
 gkimadi 12 12 4 255
 gkimadi 12 3 32 12
@@ -334,14 +337,18 @@ gkimad 12 6 10 12
 gkimad 12 7 11 12
 gkldc64 10 960
 gkimadw 88 12 1 10
-for i uint 4
-r0 = add 56 mul i 8
-gkimadw r0 14 i 88
-for j uint 3
-gkimadw add r0 mul add j 1 2 15 add j 1 r0
-end
+if ne ep 0
+gkldc64 10 1016
+gkimadw 90 12 1 10
 end
 gkldc 12 996 false
+if eq ep 2
+gkadr32 90
+for k uint 16
+gkldg add 40 k add 56 mul k 2 0 ne k 0
+end
+end
+gkadr32 88
 if beta
 for k uint 16
 gkldg add 40 k add 56 mul k 2 0 ne k 0
@@ -354,10 +361,52 @@ for k uint 16
 gkfmulf add 16 k add 16 k 12
 end
 end
+if eq ep 2
+t = gkthm 92
+for k uint 16
+gkepm add 16 k add 40 k t
+end
+end
 for k uint 16
 gkstg add 56 mul k 2 add 16 k 0 ne k 0
 end
+if eq ep 1
+for k uint 16
+gkepm add 16 k add 16 k 255
+end
+gkadr32 90
+for k uint 16
+gkstg add 56 mul k 2 add 16 k 0 ne k 0
+end
+end
 gkexit
+end
+note Address pairs R56-87 of the thread's 4x4 block (row stride R14, column stride R15) from base b.
+fn gkadr32 b uint to void
+for i uint 4
+r0 = add 56 mul i 8
+gkimadw r0 14 i b
+for j uint 3
+gkimadw add r0 mul add j 1 2 15 add j 1 r0
+end
+end
+end
+note Fused epilogue select: P2 = R m > R t, R e = P2 ? R e : 0 (FSETP.GT, FSEL; gr.om's encoders,
+note verified against nvdisasm there). t is RZ (255) except under mutant m.
+fn gkepm e uint m uint t uint to void
+grfsetp 2 m t 4
+grfsel e e 255 2
+end
+note Mutant m: 1 in the product, 0 in the mutant, whose fused backward mask (ep 2) is M > 2^-10 (the
+note forward and its stored FP unchanged). gkthm loads that threshold into R r and returns the
+note mask's compare register: RZ (255) in the product, r in the mutant.
+const OMUTM ulong 1
+fn gkthm r uint to uint
+if eq OMUTM 0
+gkmovi r grf 0.0009765625f64
+ret r
+end
+ret 255
 end
 note 64x64 GEMM: one 64x64 tile of C per 64-thread block, 8x8 per thread at rows ty*4+i and 32+ty*4+i,
 note columns tx*4+j and 32+tx*4+j (ty = tid>>3, tx = tid&7), K tiles of 8 through shared memory
@@ -480,7 +529,7 @@ for r uint 8
 gksts 133 add 2176 mul r db add 150 r true
 end
 end
-fn gkgemm64 ma uint mb uint beta bool to void
+fn gkgemm64 ma uint mb uint beta bool ep uint to void
 put gkpend 0 0
 gkldc 1 892 false
 gks2r 0 33 true
@@ -534,31 +583,23 @@ gkiadd 133 133 158
 gkiadd 136 136 141
 gkisge 0 136 1
 gkbra 0 ulong top
-gkepi64 beta
+gkepi64 beta ep
 end
 note Accumulator register of element k (row k>>2, column k&3) of quadrant (rh, ch).
 fn gkacc64 rh uint ch uint k uint to uint
 ret add add 16 mul add mul rh 4 shr k 2 8 add mul ch 4 and k 3
 end
 note One 4x4 quadrant of the 64x64 epilogue: address pairs R80-111 from base R128 (+32 rows R10,
-note +32 columns R11), alpha R141, old C in R112-127 when beta, store.
-fn gkquad64 rh uint ch uint beta bool to void
-qb = uint 128
-if eq rh 1
-gkimadw 130 10 1 128
-qb = 130
-end
-if eq ch 1
-gkimadw 130 11 1 qb
-qb = 130
-end
-for i uint 4
-r0 = add 80 mul i 8
-gkimadw r0 14 i qb
-for j uint 3
-gkimadw add r0 mul add j 1 2 15 add j 1 r0
+note +32 columns R11), alpha R141, old C in R112-127 when beta, store. Fused epilogue ep as in gkepi,
+note second base R142 (quadrant base R144); ep 2 loads M into R112-127 (beta is false there).
+fn gkquad64 rh uint ch uint beta bool ep uint to void
+if eq ep 2
+gkqadr rh ch 142 144
+for k uint 16
+gkldg add 112 k add 80 mul k 2 0 ne k 0
 end
 end
+gkqadr rh ch 128 130
 if beta
 for k uint 16
 gkldg add 112 k add 80 mul k 2 0 ne k 0
@@ -572,13 +613,50 @@ else
 gkfmulf e e 141
 end
 end
+if eq ep 2
+t = gkthm 140
+for k uint 16
+gkepm gkacc64 rh ch k add 112 k t
+end
+end
+for k uint 16
+e = gkacc64 rh ch k
+gkstg add 80 mul k 2 e 0 ne k 0
+end
+if eq ep 1
+for k uint 16
+e = gkacc64 rh ch k
+gkepm e e 255
+end
+gkqadr rh ch 142 144
 for k uint 16
 e = gkacc64 rh ch k
 gkstg add 80 mul k 2 e 0 ne k 0
 end
 end
-note 64x64 epilogue: C base of the thread (R128), quadrant offsets R10/R11, then four quadrants.
-fn gkepi64 beta bool to void
+end
+note Address pairs R80-111 of quadrant (rh, ch) from thread base b (quadrant base in R t when moved).
+fn gkqadr rh uint ch uint b uint t uint to void
+qb = b
+if eq rh 1
+gkimadw t 10 1 b
+qb = t
+end
+if eq ch 1
+gkimadw t 11 1 qb
+qb = t
+end
+for i uint 4
+r0 = add 80 mul i 8
+gkimadw r0 14 i qb
+for j uint 3
+gkimadw add r0 mul add j 1 2 15 add j 1 r0
+end
+end
+end
+note 64x64 epilogue: C base of the thread (R128), second base R142 when fused, quadrant offsets
+note R10/R11, then four quadrants.
+fn gkepi64 beta bool ep uint to void
 gkshr 12 0 3
 gkimadi 12 12 4 255
 gkimadi 12 3 64 12
@@ -595,16 +673,22 @@ gkimad 12 6 10 12
 gkimad 12 7 11 12
 gkldc64 10 960
 gkimadw 128 12 1 10
+if ne ep 0
+gkldc64 10 1016
+gkimadw 142 12 1 10
+end
 gkimadi 10 14 32 255
 gkimadi 11 15 32 255
 gkldc 141 996 false
 for h uint 4
-gkquad64 shr h 1 and h 1 beta
+gkquad64 shr h 1 and h 1 beta ep
 end
 gkexit
 end
 note Kernel table: ids 0..7 = 32x32 gemm (one 16 KiB slot each), ids 40, 42, ..., 54 = 64x64 gemm
-note (40 + 2 (ma + 2 mb + 4 beta), two slots each: the pipelined K loop does not fit in one).
+note (40 + 2 (ma + 2 mb + 4 beta), two slots each: the pipelined K loop does not fit in one). Fused
+note epilogue kernels (gkope, beta false): 25 (32x32) and 56 (64x64) ep 1 with ma 1 mb 0 (the FFN W1
+note forward, ggxw), 26 and 58 ep 2 with ma 1 mb 1 (the FFN dF backward, ggxwt).
 note gkgpr must be at least the highest GPR the kernel touches + 3: the hardware burns 2 GPRs of the
 note QMD count for the program counter (Mesa NAK sm70.rs hw_reserved_gprs), so R(n-2) and R(n-1) are
 note outside the allocation and a kernel using them hangs (launch wait -110). The 64x64 kernels use
@@ -614,31 +698,52 @@ fn gkslot id uint to void
 put gkat 0 mul ulong id 16384
 end
 fn gkall to bool
-for g uint 16
+for g uint 20
 id = g
-ns = uint 1
-if ge g 8
-id = add 40 mul sub g 8 2
-ns = 2
-end
-gkslot id
 ma = and g 1
 mb = and shr g 1 1
 bt = ne and g 4 0
-if lt g 8
-gkgemm ma mb bt
-put gkgpr id 104
-put gksm id 4608
-else
-gkgemm64 ma mb bt
+ep = uint 0
+if ge g 16
+ep = add and g 1 1
+ma = 1
+mb = sub ep 1
+bt = false
+end
+big = and ge g 8 and ne g 16 ne g 17
+if ge g 8
+id = add 40 mul sub g 8 2
+end
+if ge g 16
+id = add 24 ep
+end
+if ge g 18
+id = add 54 mul ep 2
+end
+if not gkemit id ma mb bt ep big
+ret false
+end
+end
+ret true
+end
+note Emit one GEMM kernel into slot id (two slots when big, the 64x64 kernel); false on overflow.
+fn gkemit id uint ma uint mb uint bt bool ep uint big bool to bool
+gkslot id
+ns = uint 1
+if big
+gkgemm64 ma mb bt ep
 put gkgpr id 168
 put gksm id 8704
+ns = 2
+else
+gkgemm ma mb bt ep
+put gkgpr id 104
+put gksm id 4608
 end
 if gt get gkat 0 mul ulong add id ns 16384
 ret false
 end
 put gkthr id 64
-end
 ret true
 end
 note Launch: QMD for kernel id with grid gx gy gz; args gkarg[0..gkna).
@@ -1073,7 +1178,39 @@ if eq cz 3
 put gkarg 28 0
 end
 end
+note Fused epilogue ep for the next gkmm, which consumes it (see gkepi): 1 also stores
+note Y = C > 0 ? C : 0 at y, 2 stores M > 0 ? C : 0 with M read at y; y has C's strides. ep 1 needs
+note operand modes ma 1 mb 0 and ep 2 ma 1 mb 1 (the only fused kernels, gkall), both beta false.
+note Measured (k9, evidence/OMEGALLM/gpu-k9): replaces gr.om RELUF/RELUB, 16 launches per max-shape step
+note fewer; summed GPU wait 144.56 -> 133.54 ms/step (-7.62%, three rounds each, non-quiet); t200 checkpoint
+note bit-identical to the unfused k8 product.
+global gkep uint 1
+fn gkope ep uint y ulong to void
+put gkep 0 ep
+put gkarg 30 gblo y
+put gkarg 31 gbhi y
+end
+note true when fused epilogue ep may run with the pending operand modes and beta
+fn gkepok ep uint beta bool to bool
+if eq ep 0
+ret true
+end
+if or gt ep 2 beta
+ret false
+end
+if ne get gkmd 0 1
+ret false
+end
+ret eq get gkmd 1 sub ep 1
+end
 fn gkmm m uint n uint k uint nz uint h2 uint beta bool to bool
+ep = get gkep 0
+put gkep 0 0
+if not gkepok ep beta
+put gkcz 0 0
+put nverr 0 neg long 22
+ret false
+end
 if or not gkshape m n k nz h2 not gkczok m n k get gkcz 0
 put gkcz 0 0
 put nverr 0 neg long 22
@@ -1093,6 +1230,18 @@ gkczarg t k
 put gkps 0 m
 put gkps 1 n
 put gkps 2 k
+id = gkmmid t beta ep
+ret gklaunch id div n t div m t nz
+end
+note kernel id of a gkmm (gkall's table) for tile t, beta and fused epilogue ep; sets the arg count
+fn gkmmid t uint beta bool ep uint to uint
+if ne ep 0
+put gkna 0 32
+if eq t 64
+ret add 54 mul ep 2
+end
+ret add 24 ep
+end
 put gkna 0 29
 id = add get gkmd 0 mul 2 get gkmd 1
 if beta
@@ -1101,5 +1250,5 @@ end
 if eq t 64
 id = add 40 mul id 2
 end
-ret gklaunch id div n t div m t nz
+ret id
 end

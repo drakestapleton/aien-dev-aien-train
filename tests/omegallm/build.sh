@@ -20,7 +20,8 @@
 # unmodified from aien-dev/CUDApp dcba8bb8 (native/nvrm/context.om, native/blackwell/vector.om and
 # launch.om). The output is ollm-gb10; mutant g (gg.om OMUTG) breaks the attention DK backward for
 # gcmp and gcmp2, mutant h (gr.om OMUTH) sets the on-chip Adam beta1 to 0.8 for gacmp, mutant m
-# (gr.om OMUTM) makes the chip RELUB mask x > 2^-10 while its forward and FP stay unchanged,
+# (gk.om OMUTM) makes the chip's fused dF ReLU mask (GEMM epilogue ep 2) FP > 2^-10 while its forward
+# and FP stay unchanged,
 # mutant f (gg.om OMUTF) uploads layer 0's W1 times 1 + 2^-10, a forward error gcmp2's FP check must
 # name, mutant k (gr.om OMUTK) makes each CE lane's sum a plain sequential f32 sum (a lane of the
 # warp-per-row CE kernel sums V/32 terms, so its effect is reported, not a control), mutant s

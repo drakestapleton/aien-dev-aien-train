@@ -1,0 +1,7 @@
+spark-window: note, other lanes also want the chip (L679 L332 L424 L401 L400 L386 L312 L354 L355 L356 L314 L313 L352 L369 L371 L375 L376 L788). Courtesy rule (Drake 2026-10-24): post what you run and for how long on ~/handoffs/BOARD.md, let anyone mid-measurement finish, step aside if asked.
+spark-window: window 20261102T164003Z-8a32e1 open, chip lock shared, quiet lock none (waited 2 s); box state in ~/yardsticks/windows/20261102T164003Z-8a32e1/open.json
+20261102T164003Z-8a32e1
+spark-window: verdict for its timings: quiet machine
+spark-window: window 20261102T164003Z-8a32e1 closed (closed). It holds:
+  close.json
+  open.json

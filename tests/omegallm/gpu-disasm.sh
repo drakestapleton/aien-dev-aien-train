@@ -1,7 +1,7 @@
 #!/bin/sh
 # Disassemble the GB10 kernels that native/omegallm/gpu/ emits (rung 4), with nvdisasm as a read-only
 # oracle. Builds the gb10 sources without gg.om plus tests/omegallm/gpu-dump.om, runs the dump on the
-# CPU (no GPU), cuts slot N (16 KiB at N * 16384; two slots for the 64x64 GEMM ids 40-54, whose kernels
+# CPU (no GPU), cuts slot N (16 KiB at N * 16384; two slots for the 64x64 GEMM ids 40-58, whose kernels
 # span two), trims trailing zero bytes to a 16-byte multiple (an untrimmed slot disassembles its zero tail
 # as illegal instructions) and prints the listing. Then it checks the slot's declared GPR count gkgpr
 # (the dump's stderr, one byte per id) against the highest GPR in the listing: the hardware burns 2 GPRs
@@ -10,7 +10,8 @@
 # upper bound: a .128/.64/.WIDE opcode widens every register operand outside brackets, a bracketed
 # R.64 counts as a pair. Prints "GPR s max R m need k declared d OK|LOW"; any LOW exits 4. Then
 # "SMEM s target t" with the slot's QMD TARGET_SM_CONFIG hw value (gk.om gksmw; KiB = (t - 1) * 4).
-# Usage: sh tests/omegallm/gpu-disasm.sh SLOT...   (0-7 GEMM 32x32, 9-24 gr.om, 40-54 even GEMM 64x64)
+# Usage: sh tests/omegallm/gpu-disasm.sh SLOT...   (0-7 GEMM 32x32, 9-24 gr.om, 25-26 fused-epilogue
+#        GEMM 32x32, 40-54 even GEMM 64x64, 56/58 fused-epilogue GEMM 64x64)
 # Env: OMC (default ../omega-mv/seed/out/omc), OUT (default ../build), NVDISASM
 #      (default /usr/local/cuda/bin/nvdisasm), CORE (default 6), SHAPE (grset V T D H F B, default the
 #      parity shape "256 32 64 2 128 2"; "4096 256 256 8 1024 8" is the max shape, whose T 256 gives
@@ -42,7 +43,7 @@ chmod +x "$OUT/gpu-dump"
 echo "DUMP $(sha256sum "$OUT/gpu-dump" | cut -d' ' -f1) source_sha256 $(sha256sum "$OUT/gpu-dump.om" | cut -d' ' -f1) code_sha256 $(sha256sum "$OUT/gpu-code.bin" | cut -d' ' -f1)"
 for s in "$@"; do
   ns=1
-  [ "$s" -ge 40 ] && [ "$s" -le 54 ] && ns=2
+  [ "$s" -ge 40 ] && [ "$s" -le 58 ] && ns=2
   dd if="$OUT/gpu-code.bin" of="$OUT/gpu-slot$s.bin" bs=16384 skip="$s" count="$ns" status=none
   last=$(od -An -v -tu1 "$OUT/gpu-slot$s.bin" | tr -s ' ' '\n' | awk 'NF { n++; if ($1 != 0) l = n } END { print l + 0 }')
   n=$(( (last + 15) / 16 * 16 ))

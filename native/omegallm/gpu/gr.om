@@ -358,42 +358,20 @@ gkstgp 12 add 48 u mul u 128 ne u 0 grcp and u 4294967294
 end
 gkexit
 end
-note 17 RELUF y = x > 0 ? x : 0; 18 RELUB dy = x > 0 ? dy : 0; 19 COPY; 20 ZERO; args n then pointers
-note Mutant m: 1 in the product, 0 in the mutant, whose RELUB mask is x > 2^-10 (RELUF unchanged).
-const OMUTM ulong 1
+note 19 COPY y = x; 20 ZERO; args n then pointers. The FFN ReLU forward and backward mask are fused
+note into the GEMM epilogue (gk.om gkepi, kernels 25/26/56/58), so slots 17/18 stay empty.
 fn grew kind uint to void
 grpro
 grptr 10 1 4 4
 if eq kind 20
 gkstg 10 255 0 false
 else
-grew2 kind
-end
-gkexit
-end
-fn grew2 kind uint to void
 grptr 12 3 4 4
 gkldg 32 10 0 false
-if eq kind 18
-gkldg 33 12 0 true
-end
-if eq kind 17
-grfsetp 1 32 255 4
-grfsel 34 32 255 1
-end
-if eq kind 18
-if eq OMUTM 0
-gkmovi 35 grf 0.0009765625f64
-grfsetp 1 32 35 4
-else
-grfsetp 1 32 255 4
-end
-grfsel 34 33 255 1
-end
-if eq kind 19
 grfadd 34 32 255
-end
 gkstg 12 34 0 false
+end
+gkexit
 end
 note 21 CE: per row r of logits L (R x V): m, e = exp(l - m), sum; L <- (e/sum - [c = y]) sc;
 note stats[r] = (m, sum, l_y); sc = 1/(T B); args R*32 L y st. One warp per row (grrrow): lane l
@@ -582,7 +560,7 @@ gkstg 12 33 0 true
 gkstg 14 34 0 true
 gkexit
 end
-note emit slots 9..22 for dims V T D H F B; false when a kernel overflows its 16 KiB slot
+note emit slots 9..24 (12, 17 and 18 empty) for dims V T D H F B; false when a kernel overflows its 16 KiB slot
 fn grset v ulong t ulong d ulong h ulong f ulong b ulong to void
 put grd 0 v
 put grd 1 t
@@ -623,7 +601,7 @@ end
 if eq id 16
 grsoftb
 end
-if and ge id 17 le id 20
+if and ge id 19 le id 20
 grew id
 end
 if eq id 21
@@ -647,7 +625,7 @@ put gksm id 0
 end
 ret true
 end
-note open the chip with gk slots 0..8 and row slots 9..22 for the given dims, arena asz bytes
+note open the chip with the row slots 9..24 for the given dims, then gkopen's GEMM slots, arena asz bytes
 fn gropen asz ulong to bool
 if not grall
 put nverr 0 neg long 7
