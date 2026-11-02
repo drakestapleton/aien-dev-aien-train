@@ -114,6 +114,15 @@ for u uint n
 gkstg p add s u mul u 128 ne u 0
 end
 end
+note RMS register bank k (k < 4) of n = D/32 words: R32 + 8 k while n <= 8 (the v1 layout, scalars at
+note R64..R67 above it); from n = 9 the banks sit above the scalars at R72 + n k, so D <= 384 (n <= 12)
+note ends at R119 and grall raises the slot's GPR count to 128 (gk.om: highest GPR + 3, multiple of 8).
+fn grrb k uint n uint to uint
+if le n 8
+ret add 32 mul 8 k
+end
+ret add 72 mul n k
+end
 note 10 RMSF: per row r < R: s = 1/sqrt(sum v^2 / D + 1e-5); y = v s g; args R*32 v g y s
 fn grrmsf to void
 d = uint get grd 2
@@ -125,11 +134,13 @@ gkmovi 25 grf 0.00001f64
 grrptr 10 1 d4
 gkldc64 14 grarg 4
 gkimadw 14 9 4 14
-grldw 32 10 n true
-grldw 40 14 n false
+b0 = grrb 0 n
+b1 = grrb 1 n
+grldw b0 10 n true
+grldw b1 14 n false
 gkmovz 64
 for u uint n
-gkffmaf 64 add 32 u add 32 u 64
+gkffmaf 64 add b0 u add b0 u 64
 end
 grwred 0 0
 gkffmaf 65 64 24 25
@@ -138,10 +149,10 @@ grptr 12 7 8 4
 gkstg 12 66 0 false
 grrptr 16 5 d4
 for u uint n
-gkfmulf add 32 u add 32 u 66
-gkfmulf add 32 u add 32 u add 40 u
+gkfmulf add b0 u add b0 u 66
+gkfmulf add b0 u add b0 u add b1 u
 end
-grstw 16 32 n
+grstw 16 b0 n
 gkexit
 end
 note Mutant r: 1 in the product, 0 in the mutant, whose RMSB row sum sum(da g v) skips the lane-1
@@ -160,15 +171,19 @@ gkimadw 12 9 4 12
 grrptr 14 7 d4
 grrptr 16 9 d4
 grptr 20 5 8 4
-grldw 32 14 n true
-grldw 40 12 n false
-grldw 48 10 n false
-grldw 56 16 n false
+b0 = grrb 0 n
+b1 = grrb 1 n
+b2 = grrb 2 n
+b3 = grrb 3 n
+grldw b0 14 n true
+grldw b1 12 n false
+grldw b2 10 n false
+grldw b3 16 n false
 gkldg 67 20 0 true
 gkmovz 64
 for u uint n
-gkfmulf add 40 u add 32 u add 40 u
-gkffmaf 64 add 40 u add 48 u 64
+gkfmulf add b1 u add b0 u add b1 u
+gkffmaf 64 add b1 u add b2 u 64
 end
 if eq OMUTR 0
 grwred 0 1
@@ -180,15 +195,15 @@ gkfmulf 66 66 64
 gkfmulf 66 66 24
 grrptr 18 11 d4
 for u uint n
-gkfmulf add 32 u add 32 u add 48 u
-gkfmulf add 32 u add 32 u 67
-gkfmulf add 48 u add 48 u 66
-grfsub add 40 u add 40 u add 48 u
-gkfmulf add 40 u add 40 u 67
-grfadd add 56 u add 56 u add 40 u
+gkfmulf add b0 u add b0 u add b2 u
+gkfmulf add b0 u add b0 u 67
+gkfmulf add b2 u add b2 u 66
+grfsub add b1 u add b1 u add b2 u
+gkfmulf add b1 u add b1 u 67
+grfadd add b3 u add b3 u add b1 u
 end
-grstw 16 56 n
-grstw 18 32 n
+grstw 16 b3 n
+grstw 18 b0 n
 gkexit
 end
 note 13/14 COLSUM: out[c ostr + i] (=, +=) sum_k in[c cstr + k kstr + i]; grid (n/64, chunks)
@@ -570,8 +585,12 @@ put grd 4 f
 put grd 5 b
 end
 fn grall to bool
-note the warp-per-row RMS kernels hold D/32 columns per lane, softmax T/32, and CE steps 256 columns
+note the warp-per-row RMS kernels hold D/32 columns per lane (D <= 384: four banks end at R119, grrb),
+note softmax T/32, and CE steps 256 columns
 if or ne rem get grd 2 32 0 ne rem get grd 1 32 0
+ret false
+end
+if gt get grd 2 384
 ret false
 end
 if ne rem get grd 0 256 0
@@ -621,6 +640,9 @@ ret false
 end
 put gkthr id 64
 put gkgpr id 72
+if and gt get grd 2 256 or eq id 10 eq id 11
+put gkgpr id 128
+end
 put gksm id 0
 end
 ret true

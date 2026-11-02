@@ -7,8 +7,8 @@ note unit (ocwopen, ocwput, ocwend; lio.om writes PATH.tmp, fsync, rename; eio.o
 note place), then writes the header at position 0. A load reads the header and then the payload in
 note chunks through oprd into opw, hashing and decoding into the pools in one pass.
 note CK01 header 112 bytes (FNV at 104); CK02 120 bytes (G at 104, FNV at 112); GR01 112 bytes, step
-note field = B, one payload. Largest file at the v1 maxima: 120 + 24 P with P = 7409920 (Wolfram:
-note 120+24*7409920 -> 177838200); a file over OCKCAP = 177838201 bytes is refused with 15 before its
+note field = B, one payload. Largest file at the v2 maxima: 120 + 24 P with P = 15833472 (Wolfram:
+note 120+24*15833472 -> 380003448); a file over OCKCAP = 380003449 bytes is refused with 15 before its
 note header is read, as v0 refused a file over its image (exactly OCKCAP bytes goes to the header
 note checks, then 15).
 note Magic as a little-endian u64 (Wolfram FromDigits[Reverse[ToCharacterCode["OLLMCK01"]],256]
@@ -17,7 +17,7 @@ note Load refusals (exit codes): 10 file shorter than its header or than header 
 note 12 a shape zero or over the maximum, V < 256, D mod H != 0, TOTAL > 999999, or (CK02) G = 0,
 note G > B or B mod G != 0, 13 P disagrees with the shapes, 14 FNV-1a mismatch, 15 file longer than
 note header + 24 P; 70 I/O.
-const OCKCAP ulong 177838201
+const OCKCAP ulong 380003449
 const OCKC ulong 65536
 global ock uchar 524288
 
@@ -37,10 +37,10 @@ end
 ret v
 end
 
-note decode m values from ock into ogr[o .. o + m) (a worker's gradient block, lio.om)
+note decode m values from ock into gradient pool [o .. o + m) (a worker's gradient block, lio.om)
 fn ocdecb o ulong m ulong to void
 for j ulong m
-put ogr add o j bitcast f64 ocget8 mul j 8
+ogrp add o j bitcast f64 ocget8 mul j 8
 end
 end
 note little-endian u64 at opw[o .. o + 8)
@@ -93,13 +93,13 @@ end
 if eq k 3
 o = add get og 10 i
 for j ulong m
-ocput8 mul j 8 bitcast ulong get ogr add o j
+ocput8 mul j 8 bitcast ulong ogrg add o j
 end
 ret
 end
 o = add get og add 10 k i
 for j ulong m
-ocput8 mul j 8 bitcast ulong get omv add o j
+ocput8 mul j 8 bitcast ulong omvg add o j
 end
 end
 
@@ -113,7 +113,7 @@ ret
 end
 o = add get og add 10 k i
 for j ulong m
-put omv add o j bitcast f64 opw8 mul j 8
+omvp add o j bitcast f64 opw8 mul j 8
 end
 end
 

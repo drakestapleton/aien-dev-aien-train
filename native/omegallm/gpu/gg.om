@@ -728,7 +728,7 @@ note n values omv[s + j] as f32 to arena byte offset o + 4 j, and back (one chun
 fn ggupmc s ulong o ulong n ulong to void
 h = get gbmem 5
 for j ulong n
-x = bitcast uint f32 get omv add s j
+x = bitcast uint f32 omvg add s j
 m = mapset h add o mul j 4 4 ulong x
 end
 end
@@ -737,7 +737,7 @@ fn ggdnmc s ulong o ulong n ulong to void
 h = get gbmem 5
 for j ulong n
 x = uint mapget h add o mul j 4 4
-put omv add s j f64 bitcast f32 x
+omvp add s j f64 bitcast f32 x
 end
 end
 
@@ -959,7 +959,7 @@ for q ulong ocn p
 i0 = mul q OCH
 for j ulong sub oce q p i0
 i = add i0 j
-put ogr add p i get ogr i
+ogrp add p i get ogr i
 end
 end
 end
@@ -973,7 +973,7 @@ for q ulong ocn p
 i0 = mul q OCH
 for j ulong sub oce q p i0
 i = add i0 j
-rf = get ogr add p i
+rf = ogrg add p i
 dd = sub get ogr i rf
 if lt dd 0.0f64
 dd = neg dd
@@ -1086,11 +1086,11 @@ end
 ret 1000000.0f64
 end
 
-note gcmp2 state. ggfs[j] = s_j for the row in flight (F <= 1024, CONTRACT-V1). ggk2: [0] ReLU
+note gcmp2 state. ggfs[j] = s_j for the row in flight (F <= 1536, CONTRACT-V2). ggk2: [0] ReLU
 note flips (sign of FP_chip differs from FP_ref), [1] non-finite FP values (chip or reference),
 note [2] layer of the largest rho, [3] non-finite gradient values (chip, K0 or K1).
 note ggk3: [0] rho max, [1] max |FP_ref| at a flip, [2] max |FP_chip - FP_ref|.
-global ggfs f64 1024
+global ggfs f64 1536
 global ggk2 ulong 4
 global ggk3 f64 3
 
@@ -1199,7 +1199,7 @@ fn ggstq q ulong p ulong o ulong to void
 i0 = mul q OCH
 for j ulong sub oce q p i0
 i = add i0 j
-put omv add o i get ogr i
+omvp add o i get ogr i
 end
 end
 
@@ -1220,7 +1220,7 @@ end
 
 fn gg2c1 i ulong p ulong to void
 c = get omv i
-r0 = get omv add p i
+r0 = omvg add p i
 r1 = get ogr i
 if not and and ggfin c ggfin r0 ggfin r1
 put ggk2 3 add get ggk2 3 1
@@ -1435,7 +1435,7 @@ fn ggkw q ulong p ulong to void
 i0 = mul q OCH
 for j ulong sub oce q p i0
 i = add i0 j
-put ogr add p i get ow i
+ogrp add p i get ow i
 end
 end
 
@@ -1456,7 +1456,7 @@ note u = c - w0, d = (g - f32(w0)) - u; ggam 0 max |d|, 1 max |u|, 2 max (|d| - 
 note of d above the half-ulp rounding of the f32 master weight
 global ggam f64 3
 fn ggad1 i ulong p ulong to void
-w0 = get ogr add p i
+w0 = ogrg add p i
 c = get ow i
 u = sub c w0
 g = sub get ogr i f64 f32 w0

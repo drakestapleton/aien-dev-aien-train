@@ -51,7 +51,7 @@ for q ulong ocn n
 i = mul q OCH
 ie = oce q n
 while lt i ie bound 999999
-put omv i 0.0f64
+omvp i 0.0f64
 i = add i 1
 end
 end
@@ -141,19 +141,19 @@ end
 
 note moments of parameter i: m = 0.9 m + (1 - 0.9) g; v = 0.99 v + (1 - 0.99) g^2
 fn oadam1 i ulong to void
-g = get ogr add get og 10 i
+g = ogrg add get og 10 i
 mo = add get og 11 i
-m = get omv mo
+m = omvg mo
 m = mul 0.9 m
 a = sub 1.0f64 0.9
 m = add m mul a g
-put omv mo m
+omvp mo m
 vo = add get og 12 i
-v = get omv vo
+v = omvg vo
 v = mul 0.99 v
 a = sub 1.0f64 0.99
 v = add v mul a mul g g
-put omv vo v
+omvp vo v
 oadam2 i m v
 end
 
@@ -231,7 +231,7 @@ end
 
 note GRD[i] += BLK[i] (BLK at P)
 fn ogadd1 i ulong p ulong to void
-x = get ogr add p i
+x = ogrg add p i
 put ogr i add get ogr i x
 end
 
@@ -268,7 +268,7 @@ p = get og 8
 for i ulong p
 x = sub f64 rem i 7 3.0
 x = mul x 0.0001
-put ogr add get og 10 i x
+ogrp add get og 10 i x
 end
 for k ulong 5
 oadam
@@ -293,7 +293,7 @@ end
 end
 
 fn oadamex j ulong to f64
-g = get ogr add get og 10 j
+g = ogrg add get og 10 j
 w = 0.0f64
 for s ulong 5
 w = sub w div mul olrs s bitcast f64 get og 43 g add fabs g 0.00000001

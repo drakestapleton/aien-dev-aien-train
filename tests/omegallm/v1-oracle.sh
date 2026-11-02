@@ -195,11 +195,15 @@ both init4 init init4.ck $CFG 4
 chk init-ck02-g4 init4 0 init4.ck
 both initg3 init g3.ck $CFG 3
 chk init-g3-12 initg3 12 '!g3.ck'
-for s in "4097 8 16 2 32 2 4" "300 257 16 2 32 2 4" "300 8 258 2 32 2 4" "300 8 34 17 32 2 4" \
-    "300 8 16 2 1025 2 4" "300 8 16 2 32 9 4" "300 8 16 2 32 2 65"; do
+# shape limits (CONTRACT-V2 §1): one over each maximum is refused with 12; D and F at their v2
+# maxima init byte-identically
+for s in "4097 8 16 2 32 2 4" "300 257 16 2 32 2 4" "300 8 386 2 32 2 4" "300 8 34 17 32 2 4" \
+    "300 8 16 2 1537 2 4" "300 8 16 2 32 9 4" "300 8 16 2 32 2 65"; do
     both lim init lim.ck $s 5 50 3000
     chk "limit-12 [$s]" lim 12 '!lim.ck'
 done
+both limx init limx.ck 300 8 384 12 1536 2 4 5 50 3000
+chk "limit-max-d384-f1536" limx 0 limx.ck
 for d in "$REF" "$GOT"; do wr "$d/offs" "struct.pack('<4Q', 0, 777777, 5000000, 13000000)"; done
 for g in 2 4; do
     both grad$g grad init$g.ck "$TR" offs g$g.gr
