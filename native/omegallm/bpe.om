@@ -301,7 +301,7 @@ end
 end
 
 note the chunks of the first lim bytes of argument ai (all of it when shorter) through bpcount
-note (mode 0) or bpenc1 (mode 1, output 0 opened on argument oa once the text is open); bqst 3 =
+note (mode 0) or bpenc1 (mode 1, output 0 opened on argument bo once the text is open); bqst 3 =
 note bytes read. A chunk needs at most 65 bytes past its start, so the window moves to the
 note current chunk when fewer are left and the file goes on.
 note window position of i after a refill: when fewer than need bytes are left from opw[i] and the
@@ -316,10 +316,10 @@ end
 ret i
 end
 
-fn bpscan ai ulong lim ulong mode ulong oa ulong to void
+fn bpscan ai ulong lim ulong mode ulong bo ulong to void
 opstart ai
 if eq mode 1
-owopen 0 oa
+owopen 0 bo
 end
 i = ulong 0
 dn = false
