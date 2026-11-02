@@ -1,0 +1,8 @@
+geval gate, written before window gg-ev1 opens.
+PASS for a checkpoint when the geval E line and the CPU eval E line (same CK, held.tok, W, merges)
+agree on step and W and |loss_micro_gpu - loss_micro_cpu| < 10 (1e-5 nats, gcmp's loss tolerance).
+bpb is reported, not gated separately (same nbytes, bpb = loss/ln2 * WT/nbytes).
+Negative control: mutant f (layer-0 W1 uploaded x (1 + 2^-10)) on the same checkpoint; it counts
+as discriminating only if its |delta| >= 10. If it stays under 10 the control is reported as
+non-discriminating, the gate is not changed.
+Determinism: ge-max-9000 and ge-max-9000-rep must print the same E line.

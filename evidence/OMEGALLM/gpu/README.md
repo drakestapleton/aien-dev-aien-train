@@ -132,3 +132,6 @@ Both final checkpoints evaluated by the CPU `ollm eval` (v1 binary b9b4e02d…99
 
 The from-scratch on-chip run ends 0.12% above the mixed CPU/GPU run in both loss and bpb
 (WolframLanguageEvaluator). v0 ended at 1.463036 bpb after 20000 CPU steps on its byte-level shape.
+
+`geval` on the chip now prints both E lines exactly (`../geval/README.md`); its first build, with the
+plain f32 CE sum the training above used, printed 11 µnats less for each.

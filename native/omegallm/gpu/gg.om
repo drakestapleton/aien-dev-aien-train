@@ -1525,8 +1525,212 @@ oflush
 r = nvstop
 end
 
-note gb10 platform main: gcmp, gcmp2, gtrain, gtrainf and gacmp here, every other command through
-note the CPU main (lio.om)
+note geval CK HELD W [MERGES]: eval (cli.om cmdeval) with the forward pass on the chip in f32. Windows
+note w < W at offsets w T, B per forward (og 6); the last set pads its spare rows with window 0 and
+note does not count them. Each window adds its mean row loss in window order and, when V > 256, the
+note decoded length of its T targets, as cmdeval does. Prints `E step W loss_micro bpb_micro` like
+note eval, then `GE gpu_ns` (upload, forwards and loss reads). Exits 2 and 23 as eval.
+global ggev f64 1
+global ggen ulong 1
+fn ggeval to void
+ww = ggevw
+t = monons
+ggopen
+ggupw
+put ggev 0 0.0f64
+put ggen 0 0
+bb = get og 6
+nc = div add ww sub bb 1 bb
+for c ulong nc
+ggevc c ww
+end
+ns = sub monons t
+ggevpr ww
+oputc 71
+oputc 69
+oputc 32
+oputl ns
+oputc 10
+oflush
+r = nvstop
+end
+
+note eval's argument checks; loads CK, MERGES and HELD and returns W
+fn ggevw to ulong
+na = oargc
+if and ne na 5 ne na 6
+exit 2
+end
+ockload 2
+ww = oargu 4
+v = get og 0
+if gt v 256
+if eq na 5
+exit 2
+end
+obload 5 v
+end
+odopen 3
+tt = get og 1
+m = get odn 0
+if eq ww 0
+exit 23
+end
+if gt ww div sub m 1 tt
+exit 23
+end
+ret ww
+end
+
+note window set c: rows b < B hold window c B + b (window 0 past W), one chip forward, then the sums
+fn ggevc c ulong ww ulong to void
+bb = get og 6
+tt = get og 1
+for b ulong bb
+w = add mul c bb b
+if ge w ww
+w = 0
+end
+obrow b mul w tt
+end
+ggupb
+ggfwd
+for b ulong bb
+w = add mul c bb b
+if lt w ww
+ggevr b
+end
+end
+end
+
+note add row b's mean loss (CE stats left by ggfwd) and, when V > 256, its decoded target bytes
+fn ggevr b ulong to void
+tt = get og 1
+o = mul b tt
+s = 0.0f64
+for t ulong tt
+s = add s ggrl add o t
+end
+put ggev 0 add get ggev 0 div s f64 tt
+if gt get og 0 256
+n = get ggen 0
+for t ulong tt
+n = add n obtlen get oby add o t
+end
+put ggen 0 n
+end
+end
+
+note the E line of cmdeval from the sums
+fn ggevpr ww ulong to void
+lo = div get ggev 0 f64 ww
+bp = div lo 0.6931471805599453
+if gt get og 0 256
+tt = get og 1
+bp = div mul bp f64 mul ww tt f64 get ggen 0
+end
+oputc 69
+oputc 32
+oputu get og 41
+oputc 32
+oputu ww
+oputc 32
+oputl rmic lo
+oputc 32
+oputl rmic bp
+oputc 10
+end
+
+note gdiag CK DATA S: the CE kernel's per-row stats (max m, sum of exp(l - m), logit l_y) on the chip
+note in f32 against the CPU's f64 values for the same forward of batch S. Prints R, then the mean
+note over rows times 1e9 of: d m, d l_y, d log sum, d loss, (sum of the chip's p) - 1, d (l_y - m).
+note It located the CE sum bias that the Kahan sum in gr.om grce removes.
+global gdacc f64 6
+global gdcpu f64 3
+fn ggdiag to void
+if ne oargc 5
+exit 2
+end
+ockload 2
+odopen 3
+obatch oargu 4
+put og 10 0
+ggopen
+ggupw
+ggupb
+ggfwd
+for i ulong 6
+put gdacc i 0.0f64
+end
+for b ulong get og 6
+x = ofwd b
+for t ulong get og 1
+ggdrow b t
+end
+end
+n = f64 ggr
+oputu ggr
+for i ulong 6
+oputc 32
+oputl rmic mul div get gdacc i n 1000.0f64
+end
+oputc 10
+oflush
+r = nvstop
+end
+
+fn ggdrow b ulong t ulong to void
+r = add mul b get og 1 t
+ggdcpu t get oby r
+ggdacc r
+put gdacc 4 add get gdacc 4 sub ggdps r 1.0f64
+end
+
+note CPU f64 stats of row t of the last ofwd: max logit, log sum exp(l - max), logit of y
+fn ggdcpu t ulong y ulong to void
+d = get og 2
+v = get og 0
+pr = add get og 18 mul t v
+klogit add get og 17 mul t d pr v d
+m = bitcast f64 ulong 18442240474082181120
+for j ulong v
+m = fmax m get oa add pr j
+end
+s = 0.0f64
+for k ulong v
+s = add s fexp sub get oa add pr k m
+end
+put gdcpu 0 m
+put gdcpu 1 flog s
+put gdcpu 2 get oa add pr y
+end
+
+fn ggdacc r ulong to void
+o = add get gga 12 mul r 12
+mg = sub ggf o get gdcpu 0
+ls = sub flog ggf add o 4 get gdcpu 1
+lg = sub ggf add o 8 get gdcpu 2
+put gdacc 0 add get gdacc 0 mg
+put gdacc 1 add get gdacc 1 lg
+put gdacc 2 add get gdacc 2 ls
+put gdacc 3 add get gdacc 3 sub add ls mg lg
+put gdacc 5 add get gdacc 5 sub lg mg
+end
+
+note sum of the chip's probabilities of row r, recovered from the CE output L = (p - [j = y]) sc
+fn ggdps r ulong to f64
+v = get og 0
+sc = div 1.0f64 f64 ggr
+o = add get gga 11 mul mul r v 4
+s = 0.0f64
+for j ulong v
+s = add s div ggf add o mul j 4 sc
+end
+ret add s 1.0f64
+end
+
+note gb10 platform main: gcmp, gcmp2, gtrain, gtrainf, gacmp, geval and gdiag here, every other
+note command through the CPU main (lio.om)
 fn main to int
 if lt oargc 2
 exit 2
@@ -1550,6 +1754,14 @@ ret 0
 end
 if eq w 482871566695
 ggacmp
+ret 0
+end
+if eq w 465491617127
+ggeval
+ret 0
+end
+if eq w 444015928423
+ggdiag
 ret 0
 end
 ret ocpumain

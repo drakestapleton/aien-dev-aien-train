@@ -338,6 +338,7 @@ $B gcmp2 CK DATA S                # branch-conditioned parity (ReLU flips split 
 $B gacmp CK DATA S                # one step, on-chip f32 Adam vs CPU f64 oadam; GACMP PASS or exit 46
 $B gtrain CK TRAIN UNTIL EVERY    # train with the chip gradient, Adam on the CPU
 $B gtrainf CK TRAIN UNTIL EVERY   # train with weights and Adam state resident on the chip
+$B geval CK HELD W [MERGES]       # eval's forward on the chip in f32; prints eval's E line
 ```
 
 Run them only inside a `spark-window`. The checkpoint format is unchanged, so CPU `eval`, `sample` and
@@ -352,6 +353,9 @@ Run them only inside a `spark-window`. The checkpoint format is unchanged, so CP
 | held-out eval of both step-9000 checkpoints (CPU `eval`, W 4486) | EXERCISED | `eval9000-gtrain.txt` 1.824653 nats, 0.680680 bpb; `eval9000-gtrainf.txt` 1.826877 nats, 0.681510 bpb |
 | rung 5 (V 4096, T 256, D 256, L 8, P 7,409,920, B 64): `gcmp` fails on ReLU branch flips; `gcmp2` passes | EXERCISED (GB10, non-quiet) | `../gpu-max/gc-max.txt` FAIL rc 45; `../gpu-max/gc2-max-s7.txt`, `gc2-max-s11.txt`, `gc2-night-s7.txt`, `gc2-small-s3.txt` PASS; mutants g, m, f FAIL rc 47 |
 | rung 5 `gtrainf` 0→9000 | EXERCISED (GB10, non-quiet) | `../gpu-max/gtrainf-0-250.txt`, `gtrainf-250-9000.txt`: 0.3808 s/step, 43,023 tokens/s; mean batch loss of the last four saves 1.4978 nats |
+| held-out eval of rung-5 steps 2000 and 9000 (CPU `eval`, W 2243 at T 256) | EXERCISED | `../gpu-max/eval2000.txt` 1.789590 nats, 0.667600 bpb; `../gpu-max/eval9000.txt` 1.445466 nats, 0.539226 bpb |
+| CE kernel sum fix: the plain f32 sum of exp over V 4096 ran ~1.04e-5 low; Kahan sum in `grce` | EXERCISED (GB10, non-quiet) | `../geval/plain/gd-*.txt` before, `../geval/gd-*.txt` after; the rung-4 and rung-5 runs above trained with the plain sum |
+| `geval` matches CPU `eval` within 10 µnats | EXERCISED (GB10, non-quiet) | `../geval/ge-night-gtrainf.txt`, `ge-night-gtrain.txt`, `ge-max-2000.txt`, `ge-max-9000.txt`: the CPU E lines exactly, 8.47 s of chip time for the step-9000 eval against 7323 s of CPU; mutant k (plain sum) Δ −11 FAIL; the first build failed the gate (`../geval/plain/`) |
 
 The γ_R gate, the ReLU kink cases that the night shape exposes, the Adam residual, the windows and all
 timings are in `evidence/OMEGALLM/gpu/README.md`. Not QUALIFIED: no quiet-machine timing, one chip, and

@@ -344,6 +344,12 @@ gkstg 12 34 0 false
 end
 note 21 CE: per row r of logits L (R x V): m, e = exp(l - m), sum; L <- (e/sum - [c = y]) sc;
 note stats[r] = (m, sum, l_y); sc = 1/(T B); args R L y st
+note The sum is compensated (Kahan: R40 carries the lost low part, R41 y, R42 t). A plain sequential
+note f32 sum drops every e below half an ulp of the running sum; at V 4096 that biased the sum low
+note by about 1.04e-5 relative on trained checkpoints (gdiag receipt). Mutant k (OMUTK 0) restores
+note the plain sum. Kernels launch with 72 GPRs (gkgpr in grall); the same sum in R69-R71 hung this
+note kernel (launch wait -110, evidence/OMEGALLM/geval/a1), so it uses the free R40-R42.
+const OMUTK ulong 1
 fn grce to void
 v = uint get grd 0
 sc = div 1.0f64 f64 mul get grd 1 get grd 5
@@ -367,12 +373,22 @@ grbot 30 top
 gkfmulf 65 64 29
 grptr 10 1 4 mul v 4
 gkmovz 66
+gkmovz 40
 top2 = grtop 30 div v 8
 grld8 32 10 true
 for u uint 8
 gkffmaf add 32 u add 32 u 28 65
 grmufu add 32 u add 32 u 2048
+if eq OMUTK 0
 grfadd 66 66 add 32 u
+end
+if ne OMUTK 0
+grfsub 41 add 32 u 40
+grfadd 42 66 41
+grfsub 66 42 66
+grfsub 40 66 41
+grfadd 66 42 255
+end
 end
 grst8 10 32
 gradv 10 32

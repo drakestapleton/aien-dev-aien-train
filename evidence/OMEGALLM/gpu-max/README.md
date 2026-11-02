@@ -131,6 +131,14 @@ save points is 1.4978 nats, against 1.7752 for the rung-4 night shape under `gtr
 
 ## Held-out eval
 
-NOT_RUN in this commit. The CPU `eval` of `ck2000` and `ck9000` (W 2243 at T 256, the same target set
-as the night shape's W 4486 at T 128; W 4486 at T 256 exits 23) was still running when this was
-committed.
+CPU `eval` of this tree's `ollm` (bfd92d15…), W 2243 at T 256: the same target set as the night shape's
+W 4486 at T 128 (W 4486 at T 256 exits 23).
+
+| checkpoint | receipt | held-out nats | bpb |
+|---|---|---|---|
+| rung-5 step 2000 | `eval2000.txt` | 1.789590 | 0.667600 |
+| rung-5 step 9000 | `eval9000.txt` | 1.445466 | 0.539226 |
+| rung-4 night shape, `gtrainf` step 9000 (`../gpu/eval9000-gtrainf.txt`) | | 1.826877 | 0.681510 |
+
+Rung 5 ends 0.381411 nats below the night shape, 20.9% fewer bits per byte (WolframLanguageEvaluator).
+The chip's `geval` prints both E lines exactly (`../geval/`).
