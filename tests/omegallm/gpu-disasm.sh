@@ -31,7 +31,7 @@ mkdir -p "$OUT"
 src=$here/native/omegallm
 g=$src/gpu
 # The dump has no gg.om, so model.om's ogmask hook comes from nogpu.om (never reached here).
-cat "$src/math.om" "$src/data.om" "$src/model.om" "$src/adam.om" "$src/ckpt.om" "$src/bpe.om" "$src/cli.om" "$src/lio.om" "$src/nogpu.om" |
+cat "$src/math.om" "$src/data.om" "$src/lpool.om" "$src/model.om" "$src/adam.om" "$src/ckpt.om" "$src/bpe.om" "$src/cli.om" "$src/lio.om" "$src/nogpu.om" |
   sed 's/^fn main to int$/fn ocpumain to int/' > "$OUT/gpu-dump.om"
 sed "s/^grset 256 32 64 2 128 2\$/grset $SHAPE/" "$here/tests/omegallm/gpu-dump.om" > "$OUT/gpu-dump-main.om"
 grep -qx "grset $SHAPE" "$OUT/gpu-dump-main.om" || { echo "SHAPE_NOT_SET $SHAPE" >&2; exit 2; }

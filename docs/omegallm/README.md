@@ -80,7 +80,8 @@ The build script does four things:
      (omega-mv main `ba5559d9`, `../omega-mv-x86`);
    - x86efi: `b4f45121f6c6d5d8a6ed0f5c4f3934b7cc4bec369bfa89523699bd33928f9b55`
      (draft omega-mv#1015, commit `5ce9ecaa`, `../omega-efi`; main's omc refuses `target x86efi`).
-2. It concatenates `math.om data.om model.om adam.om ckpt.om bpe.om cli.om` and the platform unit
+2. It concatenates `math.om data.om`, the pool unit (`lpool.om` on Linux, `epool.om` on UEFI;
+   CONTRACT-V3 §2), `model.om adam.om ckpt.om bpe.om cli.om` and the platform unit
    (`lio.om` for Linux, `eio.om` for UEFI; CONTRACT §9). The x86 targets put the line
    `target x86linux` or `target x86efi` first.
 3. For a mutant, it changes exactly one line of the concatenated copy (`OMUTA`, `OMUTB`, `OMUTC`).
