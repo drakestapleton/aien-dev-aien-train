@@ -9,8 +9,8 @@ global od1 uchar 16777216
 global odn ulong 1
 global oarg uchar 4100
 global ochk uchar 65536
-global obx uchar 1024
-global oby uchar 1024
+global obx ulong 16384
+global oby ulong 16384
 global owb0 uchar 65536
 global owb1 uchar 65536
 global owbn ulong 2
@@ -18,6 +18,10 @@ global ocnt ulong 65536
 global ocnu ulong 256
 global ocnr ulong 256
 global oseps uchar 16
+note v1 (CONTRACT-V1 section 3): the window that the platform's positioned read oprd fills; prep,
+note the bpe commands and the windowed data reads all use it.
+const OPWCAP ulong 2097152
+global opw uchar 2097152
 
 note exit codes of this unit: 2 usage, 20 data file empty or too short for T, 21 data file over
 note 2^25 bytes, 70 I/O.
@@ -79,13 +83,13 @@ end
 put owbn k add n 1
 end
 
-note 1 when the separator <|endoftext|> starts at p (p + 13 <= n).
+note 1 when the separator <|endoftext|> starts at opw[p] (p + 13 <= n).
 fn oissep p ulong n ulong to bool
 if gt add p 13 n
 ret false
 end
 for k ulong 13
-if ne odb add p k ulong get oseps k
+if ne get opw add p k get oseps k
 ret false
 end
 end
@@ -96,9 +100,9 @@ fn owsp c ulong to bool
 ret or or eq c 9 eq c 10 or eq c 13 eq c 32
 end
 
-note Emit story [a, e) after trimming whitespace; an empty story is dropped. st[0..4] count
+note Emit story opw[a, e) after trimming whitespace; an empty story is dropped. st[0..4] count
 note stories, train stories, held stories, train bytes, held bytes. A story over 999999 bytes is
-note refused with exit 24 (the TinyStories file is far below; every loop here is then bounded).
+note refused with exit 24 (cmdprep refuses it already while scanning; every loop here is bounded).
 fn ostory a ulong e ulong st edit ulong 8 to void
 if gt sub e a 999999
 exit 24
@@ -106,13 +110,13 @@ end
 lo = a
 hi = e
 while lt lo hi bound 999999
-if not owsp odb lo
+if not owsp ulong get opw lo
 break
 end
 lo = add lo 1
 end
 while gt hi lo bound 999999
-if not owsp odb sub hi 1
+if not owsp ulong get opw sub hi 1
 break
 end
 hi = sub hi 1
@@ -125,7 +129,7 @@ end
 put st 0 add get st 0 1
 put st add k 1 add get st add k 1 1
 for i ulong sub hi lo
-owbyte k odb add lo i
+owbyte k ulong get opw add lo i
 end
 owbyte k 0
 put st add k 3 add add get st add k 3 sub hi lo 1
@@ -149,25 +153,82 @@ put oseps 11 124
 put oseps 12 62
 end
 
-note prep IN TRAIN HELD. The scan visits each byte once: 64 outer passes of at most 999999
-note inner passes cover the 2^25-byte maximum input.
+note Stream window over argv[ai] (prep and the bpe commands): opw holds the file's bytes
+note [wb, wb + wn) with opst = wb, wn, eof (1 once a refill came back short). opstart fills it from
+note byte 0; opshift a moves opw[a, wn) to the front and refills the rest of the window.
+global opst ulong 4
+fn opstart ai ulong to void
+wn = oprd ai 0 0 OPWCAP
+put opst 0 0
+put opst 1 wn
+put opst 2 0
+if lt wn OPWCAP
+put opst 2 1
+end
+end
+
+fn opshift ai ulong a ulong to void
+wn = get opst 1
+cnt = sub wn a
+i = ulong 0
+for o ulong 3
+lim = mul add o 1 999999
+if gt lim cnt
+lim = cnt
+end
+while lt i lim bound 999999
+put opw i get opw add a i
+i = add i 1
+end
+end
+wb = add get opst 0 a
+wn = sub wn a
+r = oprd ai add wb wn wn sub OPWCAP wn
+put opst 0 wb
+put opst 1 add wn r
+put opst 2 0
+if lt r sub OPWCAP wn
+put opst 2 1
+end
+end
+
+note prep IN TRAIN HELD (CONTRACT-V1 section 3): IN is read as a stream through the window opw.
+note The current story starts at opw[a]; p scans. When the separator test at p needs bytes past
+note the window, opshift moves [a, wn) to the front and refills. A story whose raw length passes
+note 999999 is exit 24 as soon as the scan shows it (v0 refused the same story, after the same
+note earlier stories, in ostory); so a moved story keeps at most 1000012 bytes and every refill
+note reads at least 1097140. Each inner pass advances p by 1 or 13 or ends the scan: 999999 x 999999
+note passes cover any IN below 2^39 bytes.
 fn cmdprep to void
 if ne oargc 5
 exit 2
 end
 oseptab
-n = odread 2
+opstart 2
+wn = get opst 1
+eof = ne get opst 2 0
 owopen 0 3
 owopen 1 4
 st = new ulong 8 0
 a = ulong 0
 p = ulong 0
-for o ulong 64
+dn = false
+while not dn bound 999999
 q = ulong 0
-while and lt p n lt q 999999 bound 999999
+while and not dn lt q 999999 bound 999999
 q = add q 1
-if eq odb p 60
-if oissep p n
+if and gt add p 13 wn not eof
+opshift 2 a
+p = sub p a
+a = ulong 0
+wn = get opst 1
+eof = ne get opst 2 0
+end
+if ge p wn
+dn = true
+else
+if eq get opw p 60
+if oissep p wn
 ostory a p st
 p = add p 13
 a = p
@@ -175,9 +236,13 @@ continue
 end
 end
 p = add p 1
+if gt sub p a 999999
+exit 24
 end
 end
-ostory a n st
+end
+end
+ostory a wn st
 owclose 0
 owclose 1
 oputc 80
@@ -189,7 +254,8 @@ oputc 10
 oflush
 end
 
-note Batch for step s (CONTRACT section 4): x and y for b = 0..B-1 into obx/oby (stride T).
+note Batch for step s (CONTRACT section 4): x and y for b = 0..B-1 into obx/oby (stride T); N, the
+note data length in tokens, is odn[0] (odopen).
 note OMUTB is the target offset: 1 in the product, 2 in mutant b (targets shifted by one).
 const OMUTB ulong 1
 fn obatch s ulong to void
@@ -203,11 +269,66 @@ obrow b o
 end
 end
 
+note v1 data file (CONTRACT-V1 section 3): argument ai holds bytes when V = 256 and u16
+note little-endian tokens when V > 256 (og 49 = bytes per token, og 47 = the argument). Sets
+note odn[0] = N tokens; exit 21 on an odd byte length at V > 256, 20 when N < T + 1. Rows are read
+note through oprd when used, so a token >= V is refused (25) only in a row actually read.
+fn odopen ai ulong to void
+w = ulong 1
+if gt get og 0 256
+w = 2
+end
+nb = ofsz ai
+if ne rem nb w 0
+exit 21
+end
+put og 47 ai
+put og 49 w
+put odn 0 div nb w
+if le get odn 0 get og 1
+exit 20
+end
+end
+
+note token k of the window last read by odrow. OMUTE: 1 in the product (u16 little-endian); 0 in
+note mutant e (big-endian), which the referee comparison must catch.
+const OMUTE ulong 1
+fn odtk k ulong to ulong
+if eq get og 49 1
+ret ulong get opw k
+end
+lo = ulong get opw mul k 2
+hi = ulong get opw add mul k 2 1
+if eq OMUTE 0
+ret or shl lo 8 hi
+end
+ret or shl hi 8 lo
+end
+
+note read tokens o .. o + n - 1 (fewer at the end of the file; the rest read as 0) into opw;
+note exit 25 when a token read is >= V
+fn odrow o ulong n ulong to void
+w = get og 49
+nb = mul n w
+for i ulong nb
+put opw i 0
+end
+r = oprd get og 47 mul o w 0 nb
+m = div r w
+v = get og 0
+for k ulong m
+if ge odtk k v
+exit 25
+end
+end
+end
+
 fn obrow b ulong o ulong to void
 tt = get og 1
+odrow o add tt OMUTB
 for t ulong tt
-put obx add mul b tt t uchar odb add o t
-put oby add mul b tt t uchar odb add add o t OMUTB
+put obx add mul b tt t odtk t
+put oby add mul b tt t odtk add t OMUTB
 end
 end
 

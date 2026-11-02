@@ -6,7 +6,7 @@
 # Environment:
 #   BIN      aarch64 v1 ollm binary; unset = referee outputs only, binary cases NOT_RUN
 #   DATA     directory holding TinyStoriesV2-GPT4-valid.txt (default: ../../data from here)
-#   WORK     scratch directory (default: ../../scratch-v1-oracle); ref/ and bin/ are rebuilt
+#   WORK     scratch directory (default: scratch-v1-oracle beside the clone); ref/ and bin/ are rebuilt
 #   CORE     core for taskset (default 8); every process runs at nice 19
 #   MUTANT   planted referee defect (oracle.py MUTANTS); the run must then report FAIL lines
 #   V0BIN    optional v0 ollm binary for the V = 256 CK01 identity case (§9.4)
@@ -20,7 +20,7 @@ set -u
 here=$(cd "$(dirname "$0")" && pwd)
 ORACLE="$here/oracle.py"
 DATA=${DATA:-$here/../../data}
-WORK=${WORK:-$here/../../scratch-v1-oracle}
+WORK=${WORK:-$here/../../../scratch-v1-oracle}
 CORE=${CORE:-8}
 MUTANT=${MUTANT:-}
 BIN=${BIN:-}

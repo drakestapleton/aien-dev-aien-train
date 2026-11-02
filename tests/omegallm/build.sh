@@ -1,6 +1,6 @@
 #!/bin/sh
 # Build ollm (aien-train#52) from native/omegallm/*.om with the pinned seeded omc.
-# Usage: sh tests/omegallm/build.sh [--mutant a|b|c | --variant h5|h7]
+# Usage: sh tests/omegallm/build.sh [--mutant a|b|c|d|e | --variant h5|h7]
 # Env: TARGET (aarch64, the default, x86linux or x86efi), OMC (default ../omega-mv/seed/out/omc
 #      beside this clone for aarch64, ../omega-mv-x86/seed/out/omc for x86linux,
 #      ../omega-efi/seed/out/omc for x86efi), OUT (default ../build beside it), CORE (taskset core,
@@ -33,7 +33,7 @@ OUT=${OUT:-$here/../build}
 CORE=${CORE:-6}
 mut= kind=
 if [ $# -ge 1 ]; then
-  { [ "$1" = --mutant ] || [ "$1" = --variant ]; } && [ $# -eq 2 ] || { echo "usage: build.sh [--mutant a|b|c | --variant h5|h7]" >&2; exit 2; }
+  { [ "$1" = --mutant ] || [ "$1" = --variant ]; } && [ $# -eq 2 ] || { echo "usage: build.sh [--mutant a|b|c|d|e | --variant h5|h7]" >&2; exit 2; }
   kind=$1 mut=$2
 fi
 got=$(sha256sum "$OMC" | cut -d' ' -f1)
@@ -43,16 +43,18 @@ src=$here/native/omegallm
 name=ollm
 {
   [ -z "$lead" ] || printf '%s\n' "$lead"
-  cat "$src/math.om" "$src/data.om" "$src/model.om" "$src/adam.om" "$src/ckpt.om" "$src/cli.om" "$src/$plat"
+  cat "$src/math.om" "$src/data.om" "$src/model.om" "$src/adam.om" "$src/ckpt.om" "$src/bpe.om" "$src/cli.om" "$src/$plat"
 } > "$OUT/ollm.om"
 case "$kind$mut" in
   '') ;;
   --mutanta) pat='s/^const OMUTA ulong 1$/const OMUTA ulong 0/' want=1 ;;
   --mutantb) pat='s/^const OMUTB ulong 1$/const OMUTB ulong 2/' want=1 ;;
   --mutantc) pat='s/^const OMUTC ulong 1$/const OMUTC ulong 0/' want=1 ;;
+  --mutantd) pat='s/^const OMUTD ulong 1$/const OMUTD ulong 0/' want=1 ;;
+  --mutante) pat='s/^const OMUTE ulong 1$/const OMUTE ulong 0/' want=1 ;;
   --varianth5) pat='s/^const GCH f64 0\.000001$/const GCH f64 0.00001/;s/^const GCH2 f64 0\.00000025$/const GCH2 f64 0.00001/' want=2 ;;
   --varianth7) pat='s/^const GCH f64 0\.000001$/const GCH f64 0.0000001/;s/^const GCH2 f64 0\.00000025$/const GCH2 f64 0.0000001/' want=2 ;;
-  *) echo "usage: build.sh [--mutant a|b|c | --variant h5|h7]" >&2; exit 2 ;;
+  *) echo "usage: build.sh [--mutant a|b|c|d|e | --variant h5|h7]" >&2; exit 2 ;;
 esac
 if [ -n "$mut" ]; then
   [ "$kind" = --mutant ] && name=ollm-mut-$mut || name=ollm-var-$mut
