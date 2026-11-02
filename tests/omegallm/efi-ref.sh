@@ -3,7 +3,7 @@
 # reference the UEFI run's OUT.TXT is compared with.
 # Usage: sh tests/omegallm/efi-ref.sh BIN JOB DIR
 # Prints, per job, `> line` and the command's output (with a line feed added when it does not end in
-# one), like OUT.TXT without its `OLLM efi`, `J` and `OLLM DONE` lines; stops at the first command
+# one), like OUT.TXT without its `OLLM efi`, `M` (identity), `J` and `OLLM DONE` lines; stops at the first command
 # that exits nonzero (as the UEFI app does) and then prints `rc=N`.
 # Env: CORE (taskset core, default 6). The job lines are trusted (shell-split).
 set -u

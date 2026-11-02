@@ -3,12 +3,12 @@
 # Usage: sh tests/omegallm/build.sh [--mutant a|b|c | --variant h5|h7]
 # Env: TARGET (aarch64, the default, x86linux or x86efi), OMC (default ../omega-mv/seed/out/omc
 #      beside this clone for aarch64, ../omega-mv-x86/seed/out/omc for x86linux,
-#      ../omega-efi/seed/out/omc for x86efi), OUT (default ../build beside it), CORE (taskset core,
+#      ../omega-efi-ident/seed/out/omc for x86efi), OUT (default ../build beside it), CORE (taskset core,
 #      default 6).
 # Each target has its own pinned omc: aarch64 is omega-mv e5b32567 (the v0 pin); x86linux is
 # omega-mv main ba5559d9, whose omc has the x86-64 Linux backend with SSE2 floats (docs/X86-LINUX.md);
-# x86efi is omega-mv draft PR #1015 (branch feat/x86efi-main, commit 5ce9ecaa, docs/X86-EFI.md),
-# whose omc adds the UEFI x86-64 backend with efi 12 (files) and efi 13 (console).
+# x86efi is omega-mv branch feat/x86efi-ident (draft PR #1015's feat/x86efi-main plus efi 14, docs/X86-EFI.md),
+# whose omc adds the UEFI x86-64 backend with efi 12 (files), efi 13 (console) and efi 14 (identity).
 # For x86linux and x86efi the concatenated source starts with the opt-in line `target x86linux` or
 # `target x86efi`; every later line is the same as the aarch64 source except the platform unit, which
 # is lio.om on Linux and eio.om on UEFI (CONTRACT §9). The x86efi output is ollm.efi, a PE32+ EFI
@@ -25,8 +25,8 @@ case "$TARGET" in
            OMC=${OMC:-$here/../omega-mv/seed/out/omc} lead= plat=lio.om ext= ;;
   x86linux) PIN=be8c51301307555254fc59e351d281aae1aa096d91521777e33a41c8b446448a
             OMC=${OMC:-$here/../omega-mv-x86/seed/out/omc} lead='target x86linux' plat=lio.om ext= ;;
-  x86efi) PIN=b4f45121f6c6d5d8a6ed0f5c4f3934b7cc4bec369bfa89523699bd33928f9b55
-          OMC=${OMC:-$here/../omega-efi/seed/out/omc} lead='target x86efi' plat=eio.om ext=.efi ;;
+  x86efi) PIN=3ad9f10f64309e7acf8a725082b28e23a2a4aeb07e98322fb4dc0fcd8fc93194
+          OMC=${OMC:-$here/../omega-efi-ident/seed/out/omc} lead='target x86efi' plat=eio.om ext=.efi ;;
   *) echo "TARGET must be aarch64, x86linux or x86efi" >&2; exit 2 ;;
 esac
 OUT=${OUT:-$here/../build}

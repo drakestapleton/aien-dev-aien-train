@@ -3,7 +3,10 @@ note omegallm eio.om (aien-train#52): the UEFI platform unit for `target x86efi`
 note and defines the same functions (oargc, oargr, oflush, ocwrite, ocread, odread, owflush, owopen,
 note owclose, ooffrd, main) with efi words only: efi 1 key, efi 2 stall, efi 10 millisecond clock,
 note efi 12 file (one open file; ARG bits 0..7 sub, 8..15 volume, 16..63 position; result bit 63 set
-note on error), efi 13 console text. Every file is on the volume the image was loaded from (k = 255).
+note on error), efi 13 console text, efi 14 machine identity (CPUID, SystemTable FirmwareVendor and
+note FirmwareRevision, SMBIOS structure table). Every file is on the volume the image was loaded
+note from (k = 255). After the banner main prints the identity line `M cpu=... fw=... fwrev=...
+note smbios=.../.../...` (CONTRACT section 9); it never reads the SMBIOS serial number or UUID.
 note The command lines come from \OLLM\JOB.TXT (CONTRACT section 9): one command per line without the
 note program name, tokens split on space or tab, a token in double quotes may hold spaces, empty lines
 note and lines starting with # are skipped. Each job's line is echoed as `> line`, its output follows
@@ -33,6 +36,10 @@ global owps ulong 2
 global oclk uchar 8
 global okey uchar 8
 global olc ulong 1
+global oidc uchar 16
+global oidb uchar 48
+global oidv uchar 512
+global oids uchar 65536
 
 fn oeerr r ulong to bool
 ret ge r OERR
@@ -412,6 +419,202 @@ oeclose
 put ojn 0 p
 end
 
+note identity byte: c itself when 32..126, else ?
+fn oidp c ulong to void
+if and ge c 32 le c 126
+oputc c
+else
+oputc 63
+end
+end
+
+note CPUID leaf l into oidc (efi 14 sub 0); true when efi 14 answered
+fn oidq l ulong to bool
+r = efi 14 shl l 16 oidc 0 16
+ret eq r 16
+end
+
+note the little-endian u32 at oidc[k]
+fn oidu k ulong to ulong
+v = ulong 0
+for i ulong 4
+v = or v shl ulong get oidc add k i mul i 8
+end
+ret v
+end
+
+note the CPUID brand string (leaves 0x80000002..4) without leading or trailing spaces and NULs, or -
+fn oidcpu to void
+ok = oidq 2147483648
+if ok
+ok = ge oidu 0 2147483652
+end
+if not ok
+oputc 45
+ret
+end
+for j ulong 3
+ok = oidq add 2147483650 j
+if not ok
+oputc 45
+ret
+end
+for k ulong 16
+put oidb add mul j 16 k get oidc k
+end
+end
+s = ulong 0
+while and lt s 48 or eq ulong get oidb s 32 eq ulong get oidb s 0 bound 49
+s = add s 1
+end
+e = ulong 48
+while and gt e s or eq ulong get oidb sub e 1 32 eq ulong get oidb sub e 1 0 bound 49
+e = sub e 1
+end
+if eq e s
+oputc 45
+end
+for i ulong sub e s
+oidp ulong get oidb add s i
+end
+end
+
+note SystemTable FirmwareVendor, one byte per UCS-2 code unit (? outside 32..126), or -
+fn oidfw to void
+r = efi 14 1 oidv 0 512
+if or oeerr r eq r 0
+oputc 45
+ret
+end
+for k ulong div r 2
+oidp or ulong get oidv mul k 2 shl ulong get oidv add mul k 2 1 8
+end
+end
+
+note SystemTable FirmwareRevision as 8 lowercase hex digits, or -
+fn oidrev to void
+r = efi 14 2 oidc 0 0
+if oeerr r
+oputc 45
+ret
+end
+for i ulong 8
+d = and shr r mul sub 7 i 4 15
+if lt d 10
+oputc add 48 d
+else
+oputc add 87 d
+end
+end
+end
+
+note true when oids[q] and oids[q+1] are both 0 (the end of a structure's strings)
+fn oidz q ulong to bool
+ret and eq ulong get oids q 0 eq ulong get oids add q 1 0
+end
+
+note SMBIOS string number n of the structure at p (table length t), or - when n is 0 or absent
+fn oidstr p ulong n ulong t ulong to void
+if eq n 0
+oputc 45
+ret
+end
+q = add p ulong get oids add p 1
+c = ulong 1
+while and lt q t lt c n bound 65537
+if eq ulong get oids q 0
+c = add c 1
+end
+q = add q 1
+end
+if or ge q t eq ulong get oids q 0
+oputc 45
+ret
+end
+while and lt q t ne ulong get oids q 0 bound 65537
+oidp ulong get oids q
+q = add q 1
+end
+end
+
+note field i (0 Manufacturer, 1 Product Name, 2 Version) of the type 1 structure at p, length ln
+fn oidf p ulong ln ulong i ulong t ulong to void
+if lt add 4 i ln
+oidstr p ulong get oids add add p 4 i t
+else
+oputc 45
+end
+end
+
+note SMBIOS type 1 Manufacturer/Product Name/Version, each - when missing; the serial number (offset
+note 7) and the UUID (8..23) are never read
+fn oidsm to void
+t = efi 14 3 oids 0 65536
+p = ulong 0
+if oeerr t
+t = ulong 0
+end
+while lt add p 4 t bound 65537
+ty = ulong get oids p
+ln = ulong get oids add p 1
+if eq ty 1
+oidf p ln 0 t
+oputc 47
+oidf p ln 1 t
+oputc 47
+oidf p ln 2 t
+ret
+end
+if or eq ty 127 lt ln 4
+break
+end
+q = add p ln
+while and lt add q 1 t not oidz q bound 65537
+q = add q 1
+end
+p = add q 2
+end
+oputc 45
+oputc 47
+oputc 45
+oputc 47
+oputc 45
+end
+
+note the identity line: M cpu=... fw=... fwrev=... smbios=.../.../...
+fn oident to void
+oputc 77
+oputc 32
+oputc 99
+oputc 112
+oputc 117
+oputc 61
+oidcpu
+oputc 32
+oputc 102
+oputc 119
+oputc 61
+oidfw
+oputc 32
+oputc 102
+oputc 119
+oputc 114
+oputc 101
+oputc 118
+oputc 61
+oidrev
+oputc 32
+oputc 115
+oputc 109
+oputc 98
+oputc 105
+oputc 111
+oputc 115
+oputc 61
+oidsm
+oputc 10
+end
+
 fn main to int
 ojread
 opath 1
@@ -425,6 +628,7 @@ oputw 7594869011017124943
 oputc 32
 oputu get ojn 0
 oputc 10
+oident
 oflush
 t0 = oms
 nj = ulong 0
