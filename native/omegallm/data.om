@@ -83,13 +83,13 @@ end
 put owbn k add n 1
 end
 
-note 1 when the separator <|endoftext|> starts at p (p + 13 <= n).
+note 1 when the separator <|endoftext|> starts at opw[p] (p + 13 <= n).
 fn oissep p ulong n ulong to bool
 if gt add p 13 n
 ret false
 end
 for k ulong 13
-if ne odb add p k ulong get oseps k
+if ne get opw add p k get oseps k
 ret false
 end
 end
@@ -100,9 +100,9 @@ fn owsp c ulong to bool
 ret or or eq c 9 eq c 10 or eq c 13 eq c 32
 end
 
-note Emit story [a, e) after trimming whitespace; an empty story is dropped. st[0..4] count
+note Emit story opw[a, e) after trimming whitespace; an empty story is dropped. st[0..4] count
 note stories, train stories, held stories, train bytes, held bytes. A story over 999999 bytes is
-note refused with exit 24 (the TinyStories file is far below; every loop here is then bounded).
+note refused with exit 24 (cmdprep refuses it already while scanning; every loop here is bounded).
 fn ostory a ulong e ulong st edit ulong 8 to void
 if gt sub e a 999999
 exit 24
@@ -110,13 +110,13 @@ end
 lo = a
 hi = e
 while lt lo hi bound 999999
-if not owsp odb lo
+if not owsp ulong get opw lo
 break
 end
 lo = add lo 1
 end
 while gt hi lo bound 999999
-if not owsp odb sub hi 1
+if not owsp ulong get opw sub hi 1
 break
 end
 hi = sub hi 1
@@ -129,7 +129,7 @@ end
 put st 0 add get st 0 1
 put st add k 1 add get st add k 1 1
 for i ulong sub hi lo
-owbyte k odb add lo i
+owbyte k ulong get opw add lo i
 end
 owbyte k 0
 put st add k 3 add add get st add k 3 sub hi lo 1
@@ -153,25 +153,73 @@ put oseps 11 124
 put oseps 12 62
 end
 
-note prep IN TRAIN HELD. The scan visits each byte once: 64 outer passes of at most 999999
-note inner passes cover the 2^25-byte maximum input.
+note Stream window over argv[ai] (prep and the bpe commands): opw holds the file's bytes
+note [wb, wb + wn) with opst = wb, wn, eof (1 once a refill came back short). opstart fills it from
+note byte 0; opshift a moves opw[a, wn) to the front and refills the rest of the window.
+global opst ulong 4
+fn opstart ai ulong to void
+wn = oprd ai 0 0 OPWCAP
+put opst 0 0
+put opst 1 wn
+put opst 2 0
+if lt wn OPWCAP
+put opst 2 1
+end
+end
+
+fn opshift ai ulong a ulong to void
+wn = get opst 1
+for i ulong sub wn a
+put opw i get opw add a i
+end
+wb = add get opst 0 a
+wn = sub wn a
+r = oprd ai add wb wn wn sub OPWCAP wn
+put opst 0 wb
+put opst 1 add wn r
+put opst 2 0
+if lt r sub OPWCAP wn
+put opst 2 1
+end
+end
+
+note prep IN TRAIN HELD (CONTRACT-V1 section 3): IN is read as a stream through the window opw.
+note The current story starts at opw[a]; p scans. When the separator test at p needs bytes past
+note the window, opshift moves [a, wn) to the front and refills. A story whose raw length passes
+note 999999 is exit 24 as soon as the scan shows it (v0 refused the same story, after the same
+note earlier stories, in ostory); so a moved story keeps at most 1000012 bytes and every refill
+note reads at least 1097140. Each inner pass advances p by 1 or 13 or ends the scan: 999999 x 999999
+note passes cover any IN below 2^39 bytes.
 fn cmdprep to void
 if ne oargc 5
 exit 2
 end
 oseptab
-n = odread 2
+opstart 2
+wn = get opst 1
+eof = ne get opst 2 0
 owopen 0 3
 owopen 1 4
 st = new ulong 8 0
 a = ulong 0
 p = ulong 0
-for o ulong 64
+dn = false
+while not dn bound 999999
 q = ulong 0
-while and lt p n lt q 999999 bound 999999
+while and not dn lt q 999999 bound 999999
 q = add q 1
-if eq odb p 60
-if oissep p n
+if and gt add p 13 wn not eof
+opshift 2 a
+p = sub p a
+a = ulong 0
+wn = get opst 1
+eof = ne get opst 2 0
+end
+if ge p wn
+dn = true
+else
+if eq get opw p 60
+if oissep p wn
 ostory a p st
 p = add p 13
 a = p
@@ -179,9 +227,13 @@ continue
 end
 end
 p = add p 1
+if gt sub p a 999999
+exit 24
 end
 end
-ostory a n st
+end
+end
+ostory a wn st
 owclose 0
 owclose 1
 oputc 80
