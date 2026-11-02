@@ -67,7 +67,7 @@ sh tests/omegallm/build.sh --variant h5  # also h7: -> ../build/ollm-var-hX
 TARGET=x86linux sh tests/omegallm/build.sh   # x86-64 Linux ELF
 TARGET=x86efi sh tests/omegallm/build.sh     # -> ../build/ollm.efi, a UEFI x86-64 application
 TARGET=gb10 sh tests/omegallm/build.sh       # -> ../build/ollm-gb10, CPU ollm plus the GB10 GPU commands
-TARGET=gb10 sh tests/omegallm/build.sh --mutant g   # also h: -> ../build/ollm-mut-X-gb10
+TARGET=gb10 sh tests/omegallm/build.sh --mutant g   # also h, m, f, k, s, p, t, r, x, q: -> ../build/ollm-mut-X-gb10
 ```
 
 The build script does four things:
@@ -362,6 +362,7 @@ Run them only inside a `spark-window`. The checkpoint format is unchanged, so CP
 | k2: 64×64 f32 GEMM tile (slots 32-39) when m and n are multiples of 64 | EXERCISED (GB10, non-quiet) | `../gpu-k2/`: `gcmp2`, `gacmp`, both `geval` E lines exact; mutant t FAIL rc 47; the checkpoint after 200 steps is bit-identical to k1's; 200 steps 1.061× faster than k1, GEMM wait −17.45% |
 | k3: RMS norm kernels (ids 10, 11) one warp per row, coalesced, single pass | EXERCISED (GB10, non-quiet) | `../gpu-k3/`: `gcmp2`, `gacmp`, both `geval` E lines exact; mutant r FAIL rc 47 (small and max); RMS kernels 2.50× and 2.47× faster in the profile; 200 steps 1.058× faster than k2 in the same window |
 | k4: cross-entropy kernel (id 21) one warp per row, coalesced, no stored e (3 reads + 1 write) | EXERCISED (GB10, non-quiet) | `../gpu-k4/`: `gcmp2`, `gacmp`, both `geval` E lines exact; mutant x FAIL rc 47 (small and max) and `geval` Δ −362083 µnats; `grce` 3.68× faster in the profile; 200 steps 1.041× faster than k3 in the same window |
+| k5: causal attention GEMMs (ids 0, 1, 35 at batch 512) skip blocks and K tiles above the diagonal via arg words; `grsoftb` masks dp above it | EXERCISED (GB10, non-quiet) | `../gpu-k5/`: `gcmp2`, `gacmp`, both `geval` E lines exact; mutant q FAIL rc 47 (small and max); the checkpoint after 200 steps is bit-identical to k4's; the three attention GEMMs 1.35×, 1.52×, 1.42× faster in the profile; 200 steps 1.059× faster than k4 in the same window |
 
 The γ_R gate, the ReLU kink cases that the night shape exposes, the Adam residual, the windows and all
 timings are in `evidence/OMEGALLM/gpu/README.md`. Not QUALIFIED: no quiet-machine timing, one chip, and

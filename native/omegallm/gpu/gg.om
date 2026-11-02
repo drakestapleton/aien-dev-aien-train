@@ -362,8 +362,10 @@ ggpt 2 dp
 ggrun id 6 div tt 2 mul get og 6 get og 3 1
 end
 
-note attention GEMM over the B H (sequence, head) batch; operands set by gghd/ggpl/ggch/ggcp first
-fn ggbh m ulong n ulong k ulong bt bool to void
+note attention GEMM over the B H (sequence, head) batch; operands set by gghd/ggpl/ggch/ggcp first;
+note cz: gkopz causal mode (1 A = P or DS, 2 A = P^T or DS^T, 3 C = S or DP)
+fn ggbh m ulong n ulong k ulong bt bool cz uint to void
+gkopz cz
 ggmm m n k mul get og 6 get og 3 get og 3 bt
 end
 
@@ -434,7 +436,8 @@ gkopc c s0 4 0 s6 f32 1.0f64
 ggmm ggr d d 3 3 false
 end
 
-note P = softmax(q k^T / sqrt(E)), o = P u
+note P = softmax(q k^T / sqrt(E)), o = P u; causal: only S on and below the diagonal is formed
+note (gkmm cz 3) and o stops at the diagonal (cz 1), since P is exactly 0 above it
 fn ggatt l ulong to void
 tt = get og 1
 e = get og 7
@@ -445,14 +448,14 @@ gghd 0 q false
 gghd 1 k false
 isq = div 1.0f64 fsqrt f64 e
 ggcp pp isq
-ggbh tt tt e false
+ggbh tt tt e false 3
 ggsoft 15 pp pp
 u = ggl l 4
 o = ggl l 5
 ggpl 0 pp false
 gghd 1 u true
 ggch o 1.0f64
-ggbh tt e tt false
+ggbh tt e tt false 1
 end
 
 note hm = hin + o wo; bn = rms(hm) g2; out = hm + relu(bn w1) w2
@@ -554,7 +557,9 @@ ggrmsb x w s
 ggain opg2 l
 end
 
-note layer l attention backward: DO, DP, DU, DS (in DP), DQ, DK, then DA
+note layer l attention backward: DO, DP, DU, DS (in DP), DQ, DK, then DA. Causal as in ggatt: DP
+note on and below the diagonal (cz 3, SOFTB reads dp above it as 0), DU and DK start at the diagonal
+note (cz 2), DQ stops there (cz 1).
 fn ggbatt l ulong to void
 d = get og 2
 tt = get og 1
@@ -571,7 +576,7 @@ x = ggl l 4
 gghd 0 dn false
 gghd 1 x false
 ggcp dp 1.0f64
-ggbh tt tt e false
+ggbh tt tt e false 3
 pp = ggl l 12
 dq = gga1 15
 dk = add dq ulong get ggs 6
@@ -579,13 +584,13 @@ du = add dk ulong get ggs 6
 ggpl 0 pp true
 gghd 1 dn true
 ggch du 1.0f64
-ggbh tt e tt false
+ggbh tt e tt false 2
 ggsoft 16 pp dp
 x = ggl l 3
 ggpl 0 dp false
 gghd 1 x true
 ggch dq 1.0f64
-ggbh tt e tt false
+ggbh tt e tt false 1
 al = 1.0f64
 if eq OMUTG 0
 al = neg 1.0f64
@@ -594,7 +599,7 @@ x = ggl l 2
 ggpl 0 dp true
 gghd 1 x true
 ggch dk al
-ggbh tt e tt false
+ggbh tt e tt false 2
 end
 
 note DA = DQ wq^T + DK wk^T + DU wv^T; G wq wk wv += a^T (DQ DK DU) batched; then the rms backward

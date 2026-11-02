@@ -111,6 +111,19 @@ end
 fn gkisge p uint a uint imm uint to void
 gkpr or or 30732 shl p 16 shl a 24 imm 66085488
 end
+note ISETP P p = R a cc R b (signed; cc LT 1, EQ 2, LE 3, GT 4, NE 5, GE 6)
+fn gkisetp p uint a uint b uint cc uint to void
+gkpr or 29196 shl a 24 b or or 66060400 shl cc 12 shl p 17
+end
+note IMAD.WIDE.U32 R d:d+1 = R a * R b + R c:c+1
+fn gkimadwr d uint a uint b uint c uint to void
+gkfx or or 29221 shl d 16 shl a 24 b or 126746624 c
+end
+note @P p EXIT (no trailing self-branch: the block continues when P p is false)
+fn gkexitp p uint to void
+gkq or 2381 shl p 12 0 58720256 or gkcw 5 7 7 get gkpend 0 8192
+put gkpend 0 0
+end
 fn gkldg d uint a uint off uint more bool to void
 gkvar or or 31105 shl d 16 shl a 24 or 4 shl off 8 203299072 more
 end
@@ -195,9 +208,29 @@ k = add k 1
 end
 end
 end
+note Causal attention (gkmm cz). gkczx: the block exits when its column tile R2 exceeds R3 + word 28
+note (word 28 is 0 when only C on and below the diagonal is needed, 2^30 otherwise). gkczk: K tile
+note count R kn = R3 word 26 + word 22, and both operand pointers (pa, pa + 2) start R3 word 27 tiles
+note in (tile steps st, st + 1). Dense: word 26 = word 27 = 0. Uses R12, R13 before the main loop.
+fn gkczx to void
+gkldc 12 1008 false
+gkiadd 12 12 3
+gkisetp 0 2 12 4
+gkexitp 0
+end
+fn gkczk kn uint st uint pa uint to void
+gkldc kn 984 false
+gkldc 12 1000 true
+gkldc 13 1004 true
+gkimad kn 3 12 kn
+gkimad 13 3 13 255
+gkimadwr pa 13 st pa
+gkimadwr add pa 2 13 add st 1 add pa 2
+end
 note One 32x32 tile of C per 64-thread block, 4x4 per thread, K tiles of 16 through shared memory.
-note C args: ptr words 16/17, row stride 18, col stride 19, batch strides 20/21; 22 ktiles,
-note 23 batch magic, 24 minus level-2 count, 25 alpha bits. beta true adds the old C.
+note C args: ptr words 16/17, row stride 18, col stride 19, batch strides 20/21; 22 ktiles (base),
+note 23 batch magic, 24 minus level-2 count, 25 alpha bits, 26-28 causal (gkczx, gkczk). beta true
+note adds the old C.
 fn gkgemm ma uint mb uint beta bool to void
 put gkpend 0 0
 gkldc 1 892 false
@@ -211,13 +244,14 @@ gkldc 8 988 false
 gkldc 9 992 true
 gkimadh 6 5 8 255
 gkimad 7 6 9 5
+gkczx
 gkshr 94 0 3
 gkimadi 94 94 16 255
 gkandi 95 0 7
 gkimadi 95 95 16 255
 gkopnd ma 3 0
 gkopnd mb 2 1
-gkldc 96 984 false
+gkczk 96 99 88
 gkmovi 101 4294967295
 for i uint 16
 gkmovz add 16 i
@@ -421,13 +455,14 @@ gkldc 8 988 false
 gkldc 9 992 true
 gkimadh 6 5 8 255
 gkimad 7 6 9 5
+gkczx
 gkshr 134 0 3
 gkimadi 134 134 16 255
 gkandi 135 0 7
 gkimadi 135 135 16 255
 gkopnd64 ma 3 0
 gkopnd64 mb 2 1
-gkldc 136 984 false
+gkczk 136 139 128
 gkmovi 141 4294967295
 for i uint 64
 gkmovz add 16 i
@@ -906,29 +941,79 @@ ret 64
 end
 ret 32
 end
+note Causal mode cz, set by gkopz before gkmm (attention over a T x T score matrix, zero above its
+note diagonal); gkmm consumes it, so a GEMM without gkopz is dense. 0 dense; 1 A is
+note zero above its diagonal (C = P U, DQ = DS K), so row tile r stops after K column (r + 1) t;
+note 2 A is zero below its diagonal (C = P^T DO, DK = DS^T Q), so row tile r starts at K row r t;
+note 3 only C on and below the diagonal is needed (S = Q K^T, DP = DO U^T), so blocks above it exit.
+note Modes 1 and 2 need k = m, mode 3 needs m = n. Mutant q (OMUTQ 0) stops mode 1 one K tile short.
+const OMUTQ ulong 1
+global gkcz uint 1
+fn gkopz cz uint to void
+put gkcz 0 cz
+end
+fn gkczok m uint n uint k uint cz uint to bool
+if eq cz 0
+ret true
+end
+if le cz 2
+ret eq k m
+end
+if eq cz 3
+ret eq m n
+end
+ret false
+end
+note GEMM K-loop words: 22 K tiles (kd deep), 26 ka, 27 kc, 28 X for tile t and the gkopz mode,
+note which it consumes
+fn gkczarg t uint k uint to void
+cz = get gkcz 0
+put gkcz 0 0
+kd = uint 16
+if eq t 64
+kd = 8
+end
+pt = div t kd
+put gkarg 22 div k kd
+put gkarg 26 0
+put gkarg 27 0
+put gkarg 28 1073741824
+if eq cz 1
+put gkarg 22 pt
+put gkarg 26 pt
+if eq OMUTQ 0
+put gkarg 22 sub pt 1
+end
+end
+if eq cz 2
+put gkarg 26 neg pt
+put gkarg 27 pt
+end
+if eq cz 3
+put gkarg 28 0
+end
+end
 fn gkmm m uint n uint k uint nz uint h2 uint beta bool to bool
-if not gkshape m n k nz h2
+if or not gkshape m n k nz h2 not gkczok m n k get gkcz 0
+put gkcz 0 0
 put nverr 0 neg long 22
 ret false
 end
 put nverr 0 0
 put gkarg 23 gkmagic nz h2
 if ne get nverr 0 0
+put gkcz 0 0
 ret false
 end
 put gkarg 24 neg h2
 t = gktile m n
 gkopt 0 t
 gkopt 1 t
-if eq t 64
-put gkarg 22 div k 8
-else
-put gkarg 22 div k 16
-end
+gkczarg t k
 put gkps 0 m
 put gkps 1 n
 put gkps 2 k
-put gkna 0 26
+put gkna 0 29
 id = add get gkmd 0 mul 2 get gkmd 1
 if beta
 id = add id 4

@@ -12,9 +12,6 @@ end
 fn grarg i uint to uint
 ret add 896 mul i 4
 end
-fn grisetp p uint a uint b uint cc uint to void
-gkpr or 29196 shl a 24 b or or 66060400 shl cc 12 shl p 17
-end
 fn grfsetp p uint a uint b uint cc uint to void
 gkpr or 29195 shl a 24 b or or 66060288 shl cc 12 shl p 17
 end
@@ -32,13 +29,6 @@ gkfx or or 29217 shl d 16 shl a 24 or b 2147483648 0
 end
 fn grmufu d uint a uint op uint to void
 gkvr or 29448 shl d 16 a op
-end
-fn grpexit p uint to void
-gkq or 2381 shl p 12 0 58720256 or gkcw 5 7 7 get gkpend 0 8192
-put gkpend 0 0
-end
-fn grimadwr d uint a uint b uint c uint to void
-gkfx or or 29221 shl d 16 shl a 24 b or 126746624 c
 end
 note pointer number i (odd) sits in arg slots i+1, i+2 so its LDC.64 is 8-byte aligned
 fn grptr d uint i uint idx uint scale uint to void
@@ -77,8 +67,8 @@ gkq 4278482860 27392 134220288 or gkcw 4 2 7 get gkpend 0 8192
 put gkpend 0 4
 gkimadi 4 2 64 0
 gkldc 5 896 false
-grisetp 0 4 5 6
-grpexit 0
+gkisetp 0 4 5 6
+gkexitp 0
 gkmovi 31 4294967295
 gkmovi 26 1
 end
@@ -207,18 +197,18 @@ fn grcol acc bool to void
 grpro
 grptr 10 1 4 4
 gkldc 20 grarg 5 false
-grimadwr 10 3 20 10
+gkimadwr 10 3 20 10
 gkldc 21 grarg 4 false
 gkldc 30 grarg 1 false
 gkmovz 64
 top = div get gkat 0 16
 gkldg 32 10 0 false
 grfadd 64 64 32
-grimadwr 10 26 21 10
+gkimadwr 10 26 21 10
 grbot 30 top
 grptr 12 5 4 4
 gkldc 22 grarg 8 false
-grimadwr 12 3 22 12
+gkimadwr 12 3 22 12
 if acc
 gkldg 33 12 0 false
 grfadd 64 64 33
@@ -277,7 +267,7 @@ end
 gkimadi 20 22 1 255
 gkmovi 64 4286578688
 for u uint n
-grisetp 1 20 21 4
+gkisetp 1 20 21 4
 grfsel add 32 u 27 add 32 u 1
 gkiadd 20 20 23
 grfmax 64 64 add 32 u
@@ -302,7 +292,9 @@ gkstg 10 add 32 u mul u 128 ne u 0
 end
 gkexit
 end
-note 16 SOFTB: ds = p (dp - sum p dp) / sqrt(E) in place over dp; args T*32 P DP
+note 16 SOFTB: ds = p (dp - sum p dp) / sqrt(E) in place over dp; args T*32 P DP. dp above the
+note diagonal (column > t) reads as 0: the causal DP GEMM (gkmm cz 3) skips those tiles, so the
+note buffer holds stale values there, and p (exactly 0 there) times a stale Inf or NaN is NaN.
 fn grsoftb to void
 tt = uint get grd 1
 n = div tt 32
@@ -314,6 +306,13 @@ gkldg add 32 u 10 mul u 128 ne u 0
 end
 for u uint n
 gkldg add 48 u 12 mul u 128 true
+end
+gkmovi 23 32
+gkimadi 20 22 1 255
+for u uint n
+gkisetp 1 20 21 4
+grfsel add 48 u 255 add 48 u 1
+gkiadd 20 20 23
 end
 gkmovz 64
 for u uint n
@@ -451,8 +450,8 @@ grstw 10 32 8
 gradv 10 1024
 grbot 30 top3
 gkandi 21 20 31
-grisetp 1 9 21 5
-grpexit 1
+gkisetp 1 9 21 5
+gkexitp 1
 gkldg 33 14 0 false
 grfsub 33 33 25
 gkstg 14 33 0 false
@@ -470,8 +469,8 @@ grpro
 grptr 10 3 3 4
 gkldg 20 10 0 false
 gkldg 21 10 4 true
-grisetp 1 20 21 2
-grpexit 1
+gkisetp 1 20 21 2
+gkexitp 1
 gkimad 30 20 31 21
 grptr 12 5 20 4
 grptr 16 1 4 4
