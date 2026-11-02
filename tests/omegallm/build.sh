@@ -36,10 +36,9 @@
 # diagonal 32-column chunk of each row from chunk 1 on, which gcmp2 must catch.
 # Mutants (ollm-mut-X, one changed line) plant a defect the checks must catch. Variants (ollm-var-X)
 # h5 and h7 (two changed lines) set both gcheck steps GCH and GCH2 to 1e-5 (h5) or 1e-7 (h7), the step
-# sizes that the README's GCH section rejects; r0 (gk.om OKREU 0) clears the GEMM FFMA reuse bits and
-# b0 (gk.om OKBNK 0) restores k6's accumulator column map, one changed line each, for attributing k7's
-# GEMM timing. Both are made by sed on the concatenated copy only, and the number of changed lines is
-# checked.
+# sizes that the README's GCH section rejects; r0 (gk.om OKREU 0, one changed line) clears the GEMM FFMA
+# reuse bits, for attributing k7's GEMM timing. Variants are made by sed on the concatenated copy only,
+# and the number of changed lines is checked.
 set -eu
 here=$(cd "$(dirname "$0")/../.." && pwd)
 TARGET=${TARGET:-aarch64}
@@ -100,8 +99,7 @@ case "$kind$mut" in
   --varianth5) pat='s/^const GCH f64 0\.000001$/const GCH f64 0.00001/;s/^const GCH2 f64 0\.00000025$/const GCH2 f64 0.00001/' want=2 ;;
   --varianth7) pat='s/^const GCH f64 0\.000001$/const GCH f64 0.0000001/;s/^const GCH2 f64 0\.00000025$/const GCH2 f64 0.0000001/' want=2 ;;
   --variantr0) pat='s/^const OKREU ulong 1$/const OKREU ulong 0/' want=1 ;;
-  --variantb0) pat='s/^const OKBNK ulong 1$/const OKBNK ulong 0/' want=1 ;;
-  *) echo "usage: build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p|t|r|x|q|w | --variant h5|h7|r0|b0]" >&2; exit 2 ;;
+  *) echo "usage: build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p|t|r|x|q|w | --variant h5|h7|r0]" >&2; exit 2 ;;
 esac
 if [ -n "$mut" ]; then
   [ "$kind" = --mutant ] && name=ollm-mut-$mut || name=ollm-var-$mut

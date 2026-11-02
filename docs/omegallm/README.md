@@ -68,7 +68,7 @@ TARGET=x86linux sh tests/omegallm/build.sh   # x86-64 Linux ELF
 TARGET=x86efi sh tests/omegallm/build.sh     # -> ../build/ollm.efi, a UEFI x86-64 application
 TARGET=gb10 sh tests/omegallm/build.sh       # -> ../build/ollm-gb10, CPU ollm plus the GB10 GPU commands
 TARGET=gb10 sh tests/omegallm/build.sh --mutant g   # also h, m, f, k, s, p, t, r, x, q, w: -> ../build/ollm-mut-X-gb10
-TARGET=gb10 sh tests/omegallm/build.sh --variant r0  # also b0: -> ../build/ollm-var-X-gb10
+TARGET=gb10 sh tests/omegallm/build.sh --variant r0  # GEMM FFMAs without reuse: -> ../build/ollm-var-r0-gb10
 ```
 
 The build script does four things:
@@ -367,6 +367,7 @@ Run them only inside a `spark-window`. The checkpoint format is unchanged, so CP
 | k5: causal attention GEMMs (ids 0, 1, 35 at batch 512) skip blocks and K tiles above the diagonal via arg words; `grsoftb` masks dp above it | EXERCISED (GB10, non-quiet) | `../gpu-k5/`: `gcmp2`, `gacmp`, both `geval` E lines exact; mutant q FAIL rc 47 (small and max); the checkpoint after 200 steps is bit-identical to k4's; the three attention GEMMs 1.35×, 1.52×, 1.42× faster in the profile; 200 steps 1.059× faster than k4 in the same window |
 | k6: softmax kernels (ids 15, 16) load and store only the causal chunks of each row (predicated `LDG`/`STG`); `gkisge` predicate-field fix | EXERCISED (GB10, non-quiet) | `../gpu-k6/`: `gcmp2`, `gacmp`, both `geval` E lines exact; mutant w FAIL rc 47 (max; at the small shape its code equals the product's); the checkpoint after 200 steps is bit-identical to k5's; `grsoftf` 1.64× and `grsoftb` 1.68× faster in the profile; 200 steps 1.053× faster than k5 in the same window |
 | k7: GEMM FFMAs (ids 0-7, 32-39) carry Ra operand reuse with control bit 109; accumulator columns remapped (j xor 1) off the b registers' banks | EXERCISED (GB10, non-quiet) | `../gpu-k7/`: `gcmp2`, `gacmp`, both `geval` E lines exact; mutant t FAIL rc 47 (small and max); the checkpoint after 200 steps is bit-identical to k6's; 64×64 GEMM wait 0.918× of k6's in the profile, all from reuse (remap-only variant r0 0.989×, inside the k6 spread); 200 steps 1.034× faster than k6 in the same window |
+| k7b: the accumulator remap removed (`OKBNK`, `gkcol`, variant b0); Ra reuse with bit 109 kept, GPU code byte-equal to k7's reuse-only variant | EXERCISED (GB10, non-quiet) | `../gpu-k7b/`: `gcmp2`, `gacmp`, both `geval` E lines exact; mutant t FAIL rc 47 (small and max); the checkpoint after 200 steps is bit-identical to k6's and k7's; GEMM wait 0.955× of k6's over three rotated profile rounds (k7 0.934×, max k7b below min k6); 200 steps 1.0457× faster than k6 and equal to k7 (1.0003) in the same window |
 
 The γ_R gate, the ReLU kink cases that the night shape exposes, the Adam residual, the windows and all
 timings are in `evidence/OMEGALLM/gpu/README.md`. Not QUALIFIED: no quiet-machine timing, one chip, and
