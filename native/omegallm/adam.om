@@ -30,7 +30,7 @@ i = mul q OCH
 ie = oce q p
 while lt i ie bound 999999
 r = mul f64 shr smx add sd i 11 1.1102230246251565e-16
-put ow i mul sub add r r 1.0 0.034641016151377546
+owp i mul sub add r r 1.0 0.034641016151377546
 i = add i 1
 end
 end
@@ -59,13 +59,13 @@ end
 
 fn oiset o ulong n ulong v f64 to void
 for i ulong n
-put ow add o i v
+owp add o i v
 end
 end
 
 fn oiscale o ulong n ulong v f64 to void
 for i ulong n
-put ow add o i mul get ow add o i v
+owp add o i mul owg add o i v
 end
 end
 
@@ -96,7 +96,7 @@ for q ulong ocn p
 i = mul q OCH
 ie = oce q p
 while lt i ie bound 999999
-g = get ogr i
+g = ocsg i
 ss = add ss mul g g
 i = add i 1
 end
@@ -133,7 +133,7 @@ for q ulong ocn p
 j = mul q OCH
 je = oce q p
 while lt j je bound 999999
-put ogr j mul get ogr j c
+ocsp j mul ocsg j c
 j = add j 1
 end
 end
@@ -164,8 +164,8 @@ u = mul get ofs 3 u
 w = div v get ofs 5
 w = add fsqrt w 0.00000001
 u = div u w
-w = get ow i
-put ow i sub w u
+w = owg i
+owp i sub w u
 end
 
 note one training step at step og[41] on TRAIN; returns the batch loss at the pre-update
@@ -182,7 +182,8 @@ end
 note gradient of the step loss for the batch in obx/oby (no clip, no update); returns the loss.
 note CONTRACT-V1 section 5: G = og[44] blocks of R = B/G sequences; block j is accumulated from
 note zero for b ascending; GRD = block 0, then GRD[i] = GRD[i] + block j[i] for j ascending.
-note G = 1 is the v0 gradient bit for bit.
+note G = 1 is the v0 gradient bit for bit. Every block is accumulated in BLK (CONTRACT-V3 section 2)
+note and block 0 copied into GRD, the same bits as accumulating it in GRD.
 fn ograd to f64
 gg = get og 44
 for i ulong gg
@@ -190,20 +191,17 @@ j = i
 if eq OMUTD 0
 j = sub sub gg 1 i
 end
-if eq i 0
-oblkc j 0
-else
-oblkc j get og 8
-ogadd
-end
+oblkc j
+ogfold eq i 0
 end
 ret olsum
 end
 
-note block j into the gradient at ogr[base] (zeroed first); losses into olos
-fn oblkc j ulong base ulong to void
-put og 10 base
-ozerog base get og 8
+note block j into BLK (gradient pool [P, 2P), zeroed first); losses into olos
+fn oblkc j ulong to void
+p = get og 8
+put og 10 p
+ozerog p p
 bb = get og 6
 sc = div 1.0f64 f64 mul get og 1 bb
 r = div bb get og 44
@@ -214,6 +212,23 @@ obwd b sc
 b = add b 1
 end
 put og 10 0
+end
+
+note BLK into GRD: copied for the first block, else GRD[i] = GRD[i] + BLK[i] (ogadd)
+fn ogfold first bool to void
+if not first
+ogadd
+ret
+end
+p = get og 8
+for q ulong ocn p
+i = mul q OCH
+ie = oce q p
+while lt i ie bound 999999
+ocsp i ogrg add p i
+i = add i 1
+end
+end
 end
 
 note GRD[i] = GRD[i] + BLK[i] for i ascending
@@ -232,7 +247,7 @@ end
 note GRD[i] += BLK[i] (BLK at P)
 fn ogadd1 i ulong p ulong to void
 x = ogrg add p i
-put ogr i add get ogr i x
+ocsp i add ocsg i x
 end
 
 note step loss: sum of olos[b] for b ascending from 0.0, divided by f64 B
@@ -298,7 +313,7 @@ w = 0.0f64
 for s ulong 5
 w = sub w div mul olrs s bitcast f64 get og 43 g add fabs g 0.00000001
 end
-d = fabs sub get ow j w
+d = fabs sub owg j w
 if eq w 0.0
 ret d
 end

@@ -696,9 +696,9 @@ m = mapset h add wo mul i 4 4 ulong x
 end
 end
 
-note the uploaded value of W[i]: ow[i] in the product
+note the uploaded value of W[i]: the parameter at virtual index i in the product
 fn ggupv i ulong to f64
-w = get ow i
+w = owg i
 if eq OMUTF 0
 a = opw1 0
 if and ge i a lt i add a mul get og 2 get og 4
@@ -724,7 +724,8 @@ ggcsr
 put gkinv 0 1
 end
 
-note n values omv[s + j] as f32 to arena byte offset o + 4 j, and back (one chunk of an Adam moment)
+note n values of the Adam pool from s as f32 to arena byte offset o + 4 j, and back (one chunk of an
+note Adam moment)
 fn ggupmc s ulong o ulong n ulong to void
 h = get gbmem 5
 for j ulong n
@@ -741,7 +742,7 @@ omvp add s j f64 bitcast f32 x
 end
 end
 
-note chip parameters of chunk q back into ow as f64
+note chip parameters of chunk q back into the parameter banks as f64
 fn ggdnwc q ulong p ulong to void
 h = get gbmem 5
 o = get gga 0
@@ -749,11 +750,11 @@ i0 = mul q OCH
 for j ulong sub oce q p i0
 i = add i0 j
 x = uint mapget h add o mul i 4 4
-put ow i f64 bitcast f32 x
+owp i f64 bitcast f32 x
 end
 end
 
-note optimizer state (ow, omv) to the chip as f32 (m in gga 21, v in gga 22), and back
+note optimizer state (parameters, Adam pool) to the chip as f32 (m in gga 21, v in gga 22), and back
 fn ggupst to void
 ggupw
 p = get og 8
@@ -820,7 +821,7 @@ put ggcn c add p 1
 end
 end
 
-note ogr[i] = G[i] for i in chunk q of P
+note GRD[i] = G[i] for i in chunk q of P
 fn ggdnc q ulong p ulong to void
 h = get gbmem 5
 go = get gga 1
@@ -828,7 +829,7 @@ i0 = mul q OCH
 for j ulong sub oce q p i0
 i = add i0 j
 x = uint mapget h add go mul i 4 4
-put ogr i f64 bitcast f32 x
+ocsp i f64 bitcast f32 x
 end
 end
 
@@ -953,18 +954,18 @@ end
 oputc 10
 end
 
-note keep the CPU gradient: ogr[P + i] = ogr[i] (chunked: a loop runs at most 999999 passes)
+note keep the CPU gradient: BLK[i] = GRD[i] (chunked: a loop runs at most 999999 passes)
 fn ggkeep p ulong to void
 for q ulong ocn p
 i0 = mul q OCH
 for j ulong sub oce q p i0
 i = add i0 j
-ogrp add p i get ogr i
+ogrp add p i ocsg i
 end
 end
 end
 
-note ggcm[0] = max |ogr[i] - ogr[P + i]|, ggcm[1] = max |ogr[P + i]| over i < P
+note ggcm[0] = max |GRD[i] - BLK[i]|, ggcm[1] = max |BLK[i]| over i < P
 global ggcm f64 2
 fn ggmaxd p ulong to void
 put ggcm 0 0.0f64
@@ -974,7 +975,7 @@ i0 = mul q OCH
 for j ulong sub oce q p i0
 i = add i0 j
 rf = ogrg add p i
-dd = sub get ogr i rf
+dd = sub ocsg i rf
 if lt dd 0.0f64
 dd = neg dd
 end
@@ -1095,12 +1096,12 @@ global ggk2 ulong 4
 global ggk3 f64 3
 
 note s_j = sum_k |bn_k| |W1[k F + j]| for row t of layer l (k < D ascending), the magnitude sum of
-note the FP dot product the chip rounds
+note the FP dot product the chip rounds (layer l is staged: ogmask runs inside olayb)
 fn ggsj l ulong t ulong to void
 d = get og 2
 f = get og 4
 bn = add oabn l mul t d
-w = opw1 l
+w = opx opw1 l
 for j ulong f
 put ggfs j 0.0f64
 end
@@ -1188,7 +1189,8 @@ put ggk3 1 v
 end
 end
 
-note omv[o + i] = ogr[i] for i < P (the chip gradient at o = 0, K0 at o = P; gcmp2 has no Adam step)
+note Adam pool [o + i] = GRD[i] for i < P (the chip gradient at o = 0, K0 at o = P; gcmp2 has no
+note Adam step)
 fn ggstash p ulong o ulong to void
 for q ulong ocn p
 ggstq q p o
@@ -1199,12 +1201,12 @@ fn ggstq q ulong p ulong o ulong to void
 i0 = mul q OCH
 for j ulong sub oce q p i0
 i = add i0 j
-omvp add o i get ogr i
+omvp add o i ocsg i
 end
 end
 
 note ggc2: [0] max |G_chip - K0|, [1] max |K0|, [2] max |G_chip - K1| over i < P, with the chip
-note gradient in omv[0, P), K0 in omv[P, 2P) and K1 in ogr[0, P); non-finite values count in ggk2[3]
+note gradient in the Adam pool [0, P), K0 in [P, 2P) and K1 in GRD; non-finite values count in ggk2[3]
 global ggc2 f64 3
 fn gg2cmp p ulong to void
 for k ulong 3
@@ -1219,9 +1221,9 @@ end
 end
 
 fn gg2c1 i ulong p ulong to void
-c = get omv i
+c = omvg i
 r0 = omvg add p i
-r1 = get ogr i
+r1 = ocsg i
 if not and and ggfin c ggfin r0 ggfin r1
 put ggk2 3 add get ggk2 3 1
 ret
@@ -1241,7 +1243,7 @@ end
 end
 
 note gcmp2 CK DATA S: branch-conditioned parity (evidence/OMEGALLM/gpu-max/README.md). The chip
-note gradient runs first and stays in omv; K0 is the CPU ograd with its own ReLU mask (gcmp's
+note gradient runs first and stays in the Adam pool; K0 is the CPU ograd with its own ReLU mask (gcmp's
 note reference), K1 the CPU ograd with the chip's FP sign as the ReLU mask (ogmask), which also checks
 note every FFN pre-activation. Prints `GC2 P rel0_e9 rel1_e9 tolr_e9 rho_e9 tolf_e9 rho_layer flips
 note vflip_e12 fpdiff_e12 nonfinite cpu_loss_micro gpu_loss_micro gpu_ns fails` and GCMP2 PASS, or
@@ -1430,16 +1432,16 @@ end
 r = nvstop
 end
 
-note ogr[P + i] = ow[i], the f64 parameter before the step
+note BLK[i] = the f64 parameter i before the step
 fn ggkw q ulong p ulong to void
 i0 = mul q OCH
 for j ulong sub oce q p i0
 i = add i0 j
-ogrp add p i get ow i
+ogrp add p i owg i
 end
 end
 
-note ogr[i] = chip parameter i as f64
+note GRD[i] = chip parameter i as f64
 fn ggdw q ulong p ulong to void
 h = get gbmem 5
 wo = get gga 0
@@ -1447,19 +1449,19 @@ i0 = mul q OCH
 for j ulong sub oce q p i0
 i = add i0 j
 x = uint mapget h add wo mul i 4 4
-put ogr i f64 bitcast f32 x
+ocsp i f64 bitcast f32 x
 end
 end
 
-note over i < P with w0 = ogr[P + i], c = ow[i] (CPU f64 result), g = ogr[i] (chip f32 result):
+note over i < P with w0 = BLK[i], c = parameter i (CPU f64 result), g = GRD[i] (chip f32 result):
 note u = c - w0, d = (g - f32(w0)) - u; ggam 0 max |d|, 1 max |u|, 2 max (|d| - 2^-24 |c|), the part
 note of d above the half-ulp rounding of the f32 master weight
 global ggam f64 3
 fn ggad1 i ulong p ulong to void
 w0 = ogrg add p i
-c = get ow i
+c = owg i
 u = sub c w0
-g = sub get ogr i f64 f32 w0
+g = sub ocsg i f64 f32 w0
 d = fabs sub g u
 u = fabs u
 e = sub d mul fabs c 0.000000059604644775390625f64

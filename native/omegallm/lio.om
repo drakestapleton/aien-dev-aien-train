@@ -1,8 +1,9 @@
 note SPDX-License-Identifier: AGPL-3.0-only
 note omegallm lio.om (aien-train#52): the Linux platform unit, the only unit that uses host words.
 note It is concatenated last for targets aarch64 and x86linux; eio.om replaces it for x86efi. Both
-note define the same functions: oargc, oargr, oflush, ocwopen, ocwput, ocwend, ofsz, ogradw, odread,
-note owflush, owopen, owclose, ooffrd, oprd and main. Every other unit is free of host words.
+note define the same functions: oargc, oargr, oflush, ocwopen, ocwput, ocwend, ofsz, ogradw, ocsinit,
+note ocsg, ocsp, odread, owflush, owopen, owclose, ooffrd, oprd and main. Every other unit is free of
+note host words.
 global owfd int 2
 global opth uchar 2100
 global opk uchar 4200
@@ -125,9 +126,38 @@ end
 ret ulong sz
 end
 
+note cold store (CONTRACT-V3 section 2): GRD and the Adam moments, 3 P values at the CONTRACT-V3
+note maxima (3 29995392 -> 89986176 values, 719889408 bytes), in one private anonymous mapping made
+note on first use (mapnew prot 3 read/write, flags 34 private|anonymous; zero-filled, and inherited
+note copy-on-write by the gradient workers). A failed mapping is an I/O refusal (exit 70).
+const OCSN ulong 89986176
+global ocsh long 1
+global ocsf ulong 1
+
+note capacity of the cold store in f64 values (maps it on the first call)
+fn ocsinit to ulong
+if eq get ocsf 0 0
+h = mapnew int -1 0 mul OCSN 8 3 34
+if lt h 0
+exit 70
+end
+put ocsh 0 h
+put ocsf 0 1
+end
+ret OCSN
+end
+
+fn ocsg i ulong to f64
+ret bitcast f64 mapget get ocsh 0 mul i 8 8
+end
+
+fn ocsp i ulong v f64 to void
+x = mapset get ocsh 0 mul i 8 8 bitcast ulong v
+end
+
 note gradient of the step loss with K = og[45] processes (CONTRACT-V1 section 5.1). K = 1 is
 note ograd. For K > 1 the parent forks workers w = 1 .. K-1, each with its own pipe; worker w
-note computes blocks w G/K .. (w+1) G/K - 1 (each from zero into its own GRD copy), writes each
+note computes blocks w G/K .. (w+1) G/K - 1 (each from zero into its own BLK copy), writes each
 note block's f64 bits and then its sequences' losses to the pipe and exits 0. The parent computes
 note blocks 0 .. G/K - 1 itself, then reads the workers in ascending w, adding each block into GRD
 note in ascending j as ograd does, and the losses into olos; olsum sums them in ascending b. So the
@@ -144,12 +174,8 @@ for w ulong sub k 1
 ofork1 w per
 end
 for j ulong per
-if eq j 0
-oblkc 0 0
-else
-oblkc j get og 8
-ogadd
-end
+oblkc j
+ogfold eq j 0
 end
 for w ulong sub k 1
 ojoin1 w per
@@ -202,11 +228,11 @@ exit 70
 end
 end
 
-note worker: blocks j0 .. j0 + n - 1 into GRD (gradient pool from 0), each sent as it is done, then the
-note losses of its sequences
+note worker: blocks j0 .. j0 + n - 1 into BLK (gradient pool from P), each sent as it is done, then
+note the losses of its sequences
 fn owork fd int j0 ulong n ulong to void
 for t ulong n
-oblkc add j0 t 0
+oblkc add j0 t
 osendb fd
 end
 r = div get og 6 get og 44
@@ -240,7 +266,7 @@ p = add p ulong r
 end
 end
 
-note send GRD (gradient pool [0 .. P)) in chunks of OCKC values
+note send BLK (gradient pool [P .. 2P)) in chunks of OCKC values
 fn osendb fd int to void
 p = get og 8
 nc = div add p sub OCKC 1 OCKC
@@ -250,7 +276,7 @@ m = sub p i
 if gt m OCKC
 m = OCKC
 end
-ocenc 3 i m
+ocenc 4 i m
 owall fd mul m 8
 end
 end

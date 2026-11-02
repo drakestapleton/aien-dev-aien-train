@@ -2,88 +2,228 @@ note SPDX-License-Identifier: AGPL-3.0-only
 note omegallm model.om (aien-train#52): geometry, forward pass and hand-derived backward pass
 note (CONTRACT sections 1-3, CONTRACT-V1 section 1). Needs math.om and data.om before it.
 note
-note f64 values live in seven pools (one omc global holds at most 16777216 elements):
-note  ow  parameters, in the CONTRACT section 2 order from 0
-note  ogr, ogb  the gradient pool [0, 2 OWN): gradient GRD at 0 and the block buffer BLK at P
-note      (CONTRACT-V1 section 5); index i lives in ogr[i] below OWN and in ogb[i - OWN] from OWN
-note  omv, omw  the Adam pool [0, 2 OWN) split the same way: m at 0, v at P
-note  oa  per-layer activations, final activations and the backward temporaries
+note f64 values live in banked pools (one omc global holds at most 16777216 elements, and all
+note globals together at most 2^30 bytes, omc error 23; CONTRACT-V3 section 2):
+note  ow  parameter bank A: [0, SB) of the CONTRACT section 2 order, then a one-layer window of
+note      LSTR values at og[36] and the final gain gf at og[37]; oww (lpool.om/epool.om) bank B holds
+note      layers LA .. L-1 at (l - LA) LSTR. When P <= OWC, SB = GF, LA = L and ow is the v2 layout.
+note      Every index outside the kernels is virtual (the section 2 order); owg/owp map it, and opx
+note      maps a hot index of bank A or the staged layer (og[48]).
+note  the gradient pool [0, 2P): GRD [0, P) in the platform cold store (ocsg/ocsp), BLK [P, 2P) in
+note      ogr[j] below OGC and ogb[j - OGC] from OGC (j = i - P), reached through ogrg/ogrp/ogra
+note  the Adam pool [0, 2P) (omvg/omvp): m at 0, v at P, at cold-store index P + i
+note  oa  activations: layers below LAA at l ASTR, later layers in two windows at AW + (l mod 2) ASTR
+note      flushed to bank B oab at (l - LAA) ASTR after their forward and staged back before their
+note      backward; HF and the backward temporaries follow. When END <= OAC, LAA = L (v2 layout).
 note  opa attention probabilities PA[l][n][t][j] of every layer
 note og slots:
 note  0 V  1 T  2 D  3 H  4 F  5 L  6 B  7 E=D/H  8 P  9 CT (positions in use, <= T)
-note  10 GRD (base in ogr of the gradient being accumulated: 0, or P for BLK) 11 MOM (0 in omv)
-note  12 VEL (P in omv) 13 ACT (0 in oa) 14 ASTR (per-layer activation stride) 15 HF 16 SF 17 Z
-note  18 PR 19 DH 20 DA 21 DQ 22 DK 23 DU 24 DO 25 DZ 26 DF 27 TMP 28 END
+note  10 GRD (base in the gradient pool of the gradient being accumulated: 0, or P for BLK) 11 MOM
+note  (0 in the Adam pool) 12 VEL (P) 13 ACT (0 in oa) 14 ASTR (per-layer activation stride) 15 HF
+note  16 SF 17 Z 18 PR 19 DH 20 DA 21 DQ 22 DK 23 DU 24 DO 25 DZ 26 DF 27 TMP 28 END
 note  29 PSTR (per-layer PA stride H T T in opa) 30 WPE 31 LAY0 32 LSTR (per-layer parameter
-note  stride) 33 GF 40 seed S 41 step 42 TOTAL 43 lr bits 44 G (gradient blocks) 45 K (workers)
+note  stride) 33 GF 34 SB (first virtual index of bank B) 35 LA (first layer in bank B) 36 window base
+note  in ow 37 gf in ow 38 LAA (first layer in the activation windows) 39 AW (activation window
+note  base) 48 the layer staged in the parameter window (L: none)
+note  40 seed S 41 step 42 TOTAL 43 lr bits 44 G (gradient blocks) 45 K (workers)
 note  46 checkpoint magic of the run (1 OLLMCK01, 2 OLLMCK02)
 note Per layer activations (T rows of width D unless noted): HIN, A, Q, K, U, O, HMID, BN, S1[T],
 note S2[T], FP[T][F] (pre-relu), RL[T][F]. Every sum runs over its index ascending.
-note Pool sizes at the CONTRACT-V2 maxima (V 4096, T 256, D 384, H 16, F 1536, L 8), Wolfram:
+note Sizes at the CONTRACT-V2 maxima (V 4096, T 256, D 384, H 16, F 1536, L 8), Wolfram:
 note  P = V D + T D + L (4 D^2 + 2 D F + 2 D) + D -> 15833472
 note  ASTR = 8 T D + 2 T + 2 T F -> 1573376; END = L ASTR + 10 T D + T + T V + T F + 4096 -> 15016192
-note  PA = L H T T -> 8388608
-note ogeom refuses any layout past a pool. The gradient and Adam pools hold 2 P, past one array at the
-note v2 maxima, so each is two arrays of OWN reached through ogrg/ogrp/ogra and omvg/omvp.
-const OWN ulong 15833472
+note  and at the CONTRACT-V3 maxima (L 16): P 29995392, PA = L H T T -> 16777216; the bank-B sizes
+note  are in lpool.om. ogeom refuses any layout past a pool.
+note Bank A capacities: OWC parameters, OGC BLK values, OAC activations (the bank-crossing test
+note build of tests/omegallm/build.sh shrinks all three).
+const OWC ulong 15833472
 global ow f64 15833472
+const OGC ulong 15833472
 global ogr f64 15833472
-global ogb f64 15833472
-global omv f64 15833472
-global omw f64 15833472
-const OAN ulong 15016192
+const OAC ulong 15016192
 global oa f64 15016192
-const OPAN ulong 8388608
-global opa f64 8388608
+const OPAN ulong 16777216
+global opa f64 16777216
 
-note gradient pool element i (i < 2 OWN)
+note gradient pool element i (i < 2 P)
 fn ogrg i ulong to f64
-if lt i OWN
-ret get ogr i
+p = get og 8
+if lt i p
+ret ocsg i
 end
-ret get ogb sub i OWN
+j = sub i p
+if lt j OGC
+ret get ogr j
+end
+ret get ogb sub j OGC
 end
 
 fn ogrp i ulong v f64 to void
-if lt i OWN
-put ogr i v
+p = get og 8
+if lt i p
+ocsp i v
+ret
+end
+j = sub i p
+if lt j OGC
+put ogr j v
 else
-put ogb sub i OWN v
+put ogb sub j OGC v
 end
 end
 
 note gradient pool element i += a
 fn ogra i ulong a f64 to void
-if lt i OWN
-put ogr i add get ogr i a
+p = get og 8
+if lt i p
+ocsp i add ocsg i a
+ret
+end
+j = sub i p
+if lt j OGC
+put ogr j add get ogr j a
 else
-j = sub i OWN
-put ogb j add get ogb j a
+k = sub j OGC
+put ogb k add get ogb k a
 end
 end
 
-note Adam pool element i (i < 2 OWN)
+note Adam pool element i (i < 2 P), cold-store index P + i
 fn omvg i ulong to f64
-if lt i OWN
-ret get omv i
-end
-ret get omw sub i OWN
+ret ocsg add get og 8 i
 end
 
 fn omvp i ulong v f64 to void
-if lt i OWN
-put omv i v
+ocsp add get og 8 i v
+end
+
+note parameter at virtual index i (bank A, bank B or gf), and its store
+fn owg i ulong to f64
+sb = get og 34
+if lt i sb
+ret get ow i
+end
+g = get og 33
+if ge i g
+ret get ow add get og 37 sub i g
+end
+ret get oww sub i sb
+end
+
+fn owp i ulong v f64 to void
+sb = get og 34
+if lt i sb
+put ow i v
+ret
+end
+g = get og 33
+if ge i g
+put ow add get og 37 sub i g v
+ret
+end
+put oww sub i sb v
+end
+
+note ow index of virtual index i for the kernels: bank A as is, gf at og[37], a bank-B layer only
+note when it is the staged layer og[48] (else exit 16, a missing ostw)
+fn opx i ulong to ulong
+if lt i get og 34
+ret i
+end
+g = get og 33
+if ge i g
+ret add get og 37 sub i g
+end
+l = div sub i get og 31 get og 32
+if ne l get og 48
+exit 16
+end
+ret add get og 36 sub i opg1 l
+end
+
+note Mutant v (wrong bank-B layer: ostw stages layer LA's block for every layer): 1 in the product,
+note 0 in the mutant.
+const OMUTV ulong 1
+
+const OCH ulong 999999
+
+note stage bank-B layer l into the parameter window (layers below LA live in bank A)
+fn ostw l ulong to void
+la = get og 35
+if lt l la
+ret
+end
+n = get og 32
+s = mul sub l la n
+if eq OMUTV 0
+s = 0
+end
+ostwc get og 36 s n
+put og 48 l
+end
+
+note ow[wb + i] = oww[s + i] for i < n (chunked: a loop runs at most 999999 passes)
+fn ostwc wb ulong s ulong n ulong to void
+for q ulong ocn n
+i = mul q OCH
+ie = oce q n
+while lt i ie bound 999999
+put ow add wb i get oww add s i
+i = add i 1
+end
+end
+end
+
+note copy layer l's activation block between its window and bank B oab (to oab when fo)
+fn oaflip l ulong fo bool to void
+la = get og 38
+if lt l la
+ret
+end
+n = get og 14
+s = mul sub l la n
+oaflc oahin l s n fo
+end
+
+note oab[s + i] = oa[w + i] for i < n when fo, else the reverse
+fn oaflc w ulong s ulong n ulong fo bool to void
+if fo
+oafo w s n
 else
-put omw sub i OWN v
+oafi w s n
 end
 end
+
+fn oafo w ulong s ulong n ulong to void
+for q ulong ocn n
+i = mul q OCH
+ie = oce q n
+while lt i ie bound 999999
+put oab add s i get oa add w i
+i = add i 1
+end
+end
+end
+
+fn oafi w ulong s ulong n ulong to void
+for q ulong ocn n
+i = mul q OCH
+ie = oce q n
+while lt i ie bound 999999
+put oa add w i get oab add s i
+i = add i 1
+end
+end
+end
+
 note TMP holds V logits (sample) or T attention dots
 const OTMP ulong 4096
 
 note Mutant a (attention backward sign flip in the dK term): 1 in the product, 0 in the mutant.
 const OMUTA ulong 1
 
-note Configure og from og[0..6]; false when a shape is zero, over the maximum, or D mod H != 0.
+note Configure og from og[0..6]; false when a shape is zero, over the maximum, or D mod H != 0, or
+note when the layout does not fit the pools.
 fn ogeom to bool
 if not ogok
 ret false
@@ -110,19 +250,82 @@ put og 13 0
 put og 29 mul mul get og 3 t t
 u = mul t d
 put og 14 oastr u
-ogeom3 u
-ogeom2 u
-if gt get og 8 OWN
+if not ogwb
 ret false
 end
-if gt mul get og 5 get og 29 OPAN
+if not ogab u
 ret false
 end
-ret le get og 28 OAN
+p = get og 8
+if gt p add OGC OGBN
+ret false
+end
+if gt mul 3 p ocsinit
+ret false
+end
+ret le mul get og 5 get og 29 OPAN
 end
 
-fn ogeom3 td ulong to void
-put og 15 mul get og 5 get og 14
+note parameter banks: v2 layout when P <= OWC, else LA layers in bank A, the window and gf after
+note them, layers LA .. L-1 in oww
+fn ogwb to bool
+ll = get og 5
+g = get og 33
+put og 34 g
+put og 35 ll
+put og 36 g
+put og 37 g
+put og 48 ll
+if le get og 8 OWC
+ret true
+end
+ls = get og 32
+nd = add add get og 31 ls get og 2
+if lt OWC nd
+ret false
+end
+la = div sub OWC nd ls
+if gt mul sub ll la ls OWWN
+ret false
+end
+sb = add get og 31 mul la ls
+put og 34 sb
+put og 35 la
+put og 36 sb
+put og 37 add sb ls
+ret true
+end
+
+note activation banks: v2 layout when END <= OAC, else LAA layers, two windows, then HF and the
+note backward temporaries
+fn ogab td ulong to bool
+ll = get og 5
+st = get og 14
+put og 38 ll
+put og 39 mul ll st
+ogeom3 td mul ll st
+ogeom2 td
+if le get og 28 OAC
+ret true
+end
+w2 = add sub get og 28 get og 15 mul 2 st
+if lt OAC w2
+ret false
+end
+la = div sub OAC w2 st
+if gt mul sub ll la st OABN
+ret false
+end
+aw = mul la st
+put og 38 la
+put og 39 aw
+ogeom3 td add aw mul 2 st
+ogeom2 td
+ret le get og 28 OAC
+end
+
+fn ogeom3 td ulong hf ulong to void
+put og 15 hf
 put og 16 add get og 15 td
 put og 17 add get og 16 get og 1
 put og 18 add get og 17 td
@@ -135,8 +338,8 @@ a = add mul 8 td mul 2 t
 ret add a mul mul 2 t get og 4
 end
 
-note shape limits (CONTRACT-V2 section 1): every shape >= 1, 256 <= V <= 4096, T <= 256,
-note D <= 384, H <= 16, F <= 1536, L <= 8, B <= 64, D mod H = 0
+note shape limits (CONTRACT-V3 section 1): every shape >= 1, 256 <= V <= 4096, T <= 256,
+note D <= 384, H <= 16, F <= 1536, L <= 16, B <= 64, D mod H = 0
 fn ogok to bool
 for i ulong 7
 if eq get og i 0
@@ -152,7 +355,7 @@ end
 if or gt get og 3 16 gt get og 4 1536
 ret false
 end
-if or gt get og 5 8 gt get og 6 64
+if or gt get og 5 16 gt get og 6 64
 ret false
 end
 ret eq rem get og 2 get og 3 0
@@ -202,9 +405,12 @@ fn opw2 l ulong to ulong
 ret add opw1 l mul get og 2 get og 4
 end
 
-note activation offsets of layer l
+note activation offsets of layer l (layers from LAA in the two windows at AW)
 fn oahin l ulong to ulong
+if lt l get og 38
 ret add get og 13 mul l get og 14
+end
+ret add get og 39 mul rem l 2 get og 14
 end
 fn oatd n ulong to ulong
 ret mul n mul get og 1 get og 2
@@ -256,8 +462,9 @@ note outputs run side by side in separate accumulators, so every result has v0's
 note the four-wide blocks pass through oq.
 global oq f64 4
 
-note y[0..c) = x[0..r) . W[r][c] (overwrites y); x, y in oa, W in ow
-fn kvm xo ulong wo ulong yo ulong r ulong c ulong to void
+note y[0..c) = x[0..r) . W[r][c] (overwrites y); x, y in oa, W in ow at virtual index wv
+fn kvm xo ulong wv ulong yo ulong r ulong c ulong to void
+wo = opx wv
 xe = add xo r
 j = ulong 0
 while le add j 4 c bound 999999
@@ -312,8 +519,10 @@ end
 ret s
 end
 
-note y[k] += sum_j dy[j] W[k][j] for k < r, j < c (y += dy . W^T); dy, y in oa, W in ow
-fn kvta dyo ulong wo ulong yo ulong r ulong c ulong to void
+note y[k] += sum_j dy[j] W[k][j] for k < r, j < c (y += dy . W^T); dy, y in oa, W in ow at virtual
+note index wv
+fn kvta dyo ulong wv ulong yo ulong r ulong c ulong to void
+wo = opx wv
 de = add dyo c
 k = ulong 0
 while le add k 4 r bound 999999
@@ -456,7 +665,6 @@ put oa add o i 0.0f64
 end
 end
 
-const OCH ulong 999999
 fn ozerog o ulong n ulong to void
 for q ulong ocn n
 i = mul q OCH
@@ -481,8 +689,10 @@ end
 ret e
 end
 
-note y = rms(v, g): s = sqrt((sum v^2)/D + 1e-5) stored at so; y[i] = (v[i]/s) g[i]
-fn frms vo ulong go ulong yo ulong so ulong to void
+note y = rms(v, g): s = sqrt((sum v^2)/D + 1e-5) stored at so; y[i] = (v[i]/s) g[i]; g at virtual
+note index gv
+fn frms vo ulong gv ulong yo ulong so ulong to void
+go = opx gv
 d = get og 2
 ss = 0.0f64
 for i ulong d
@@ -499,15 +709,14 @@ end
 end
 
 note rms backward: n = v/s, dn = da g, c = (sum dn n)/D; dv = (dn - n c)/s added to dh;
-note dg += da n added to the gain's gradient.
+note dg += da n added to the gain's gradient. go is the gain's virtual index.
 global ofs f64 8
 fn brms vo ulong go ulong so ulong dao ulong dho ulong to void
 d = get og 2
-s = get oa so
-put ofs 0 s
-c = brmsc vo go dao s
-put ofs 1 div c f64 d
+put ofs 0 get oa so
 gg = add get og 10 go
+go = opx go
+put ofs 1 div brmsc vo go dao get ofs 0 f64 d
 for j ulong d
 brms1 add vo j add go j add dao j add dho j add gg j
 end
@@ -562,7 +771,7 @@ for t ulong get og 9
 wr = get obx add mul b tt t
 wr = mul wr d
 pr = add get og 30 mul t d
-kadd3w add get og 13 mul t d wr pr d
+kadd3w add oahin 0 mul t d wr pr d
 end
 end
 
@@ -668,6 +877,7 @@ end
 end
 
 fn olayf l ulong to void
+ostw l
 for t ulong get og 9
 olayf1 l t
 end
@@ -680,6 +890,7 @@ end
 for t3 ulong get og 9
 olayf2 l t3
 end
+oaflip l true
 end
 
 note row t: a = rms(h, g1); q, k, u = a.wq, a.wk, a.wv
@@ -945,6 +1156,8 @@ ret div mul pj u fsqrt f64 get og 7
 end
 
 fn olayb l ulong to void
+ostw l
+oaflip l false
 ct = get og 9
 for t ulong ct
 offb l t

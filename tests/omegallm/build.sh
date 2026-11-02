@@ -1,6 +1,6 @@
 #!/bin/sh
 # Build ollm (aien-train#52) from native/omegallm/*.om with the pinned seeded omc.
-# Usage: sh tests/omegallm/build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p|t|r|x|q|w | --variant h5|h7|r0|b0]
+# Usage: sh tests/omegallm/build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p|t|r|x|q|w|v | --variant h5|h7|r0|b0|bx]
 # Env: TARGET (aarch64, the default, gb10, x86linux or x86efi), OMC (default ../omega-mv/seed/out/omc
 #      beside this clone for aarch64 and gb10, ../omega-mv-x86/seed/out/omc for x86linux,
 #      ../omega-efi/seed/out/omc for x86efi), OUT (default ../build beside it), CORE (taskset core,
@@ -35,28 +35,34 @@
 # OMUTQ) stops each causal P U and DS K GEMM row tile one K tile before the diagonal block's end,
 # which gcmp2 must catch, and mutant w (gr.om OMUTW) makes both softmax kernels skip loading the
 # diagonal 32-column chunk of each row from chunk 1 on, which gcmp2 must catch.
+# The pool file (CONTRACT-V3 section 2) follows data.om: lpool.om holds the bank-B globals oww, ogb
+# and oab on the Linux targets, epool.om one-element placeholders on x86efi (its v3 limit is the
+# v2 bank-A capacity).
 # Mutants (ollm-mut-X, one changed line) plant a defect the checks must catch. Variants (ollm-var-X)
 # h5 and h7 (two changed lines) set both gcheck steps GCH and GCH2 to 1e-5 (h5) or 1e-7 (h7), the step
 # sizes that the README's GCH section rejects; r0 (gk.om OKREU 0, one changed line) clears the GEMM FFMA
-# reuse bits, for attributing k7's GEMM timing. Variants are made by sed on the concatenated copy only,
-# and the number of changed lines is checked.
+# reuse bits, for attributing k7's GEMM timing; bx (three changed lines) shrinks the bank-A capacities
+# to OWC 8400, OGC 5000 and OAC 12344, so the small shape 256 8 16 2 32 4 crosses every bank (LA = 1,
+# LAA = 1, BLK past OGC) for the bank-crossing test. Mutant v (four changed lines) is bx plus OMUTV 0:
+# ostw stages the first bank-B layer for every layer, which the bank-crossing test must catch.
+# Variants are made by sed on the concatenated copy only, and the number of changed lines is checked.
 set -eu
 here=$(cd "$(dirname "$0")/../.." && pwd)
 TARGET=${TARGET:-aarch64}
 case "$TARGET" in
   aarch64|gb10) PIN=2c82480596bbdc50cda9626866209ef662d5834f278f839ff4ce0250c495029f
-           OMC=${OMC:-$here/../omega-mv/seed/out/omc} lead= plat=lio.om ext= ;;
+           OMC=${OMC:-$here/../omega-mv/seed/out/omc} lead= plat=lio.om pool=lpool.om ext= ;;
   x86linux) PIN=be8c51301307555254fc59e351d281aae1aa096d91521777e33a41c8b446448a
-            OMC=${OMC:-$here/../omega-mv-x86/seed/out/omc} lead='target x86linux' plat=lio.om ext= ;;
+            OMC=${OMC:-$here/../omega-mv-x86/seed/out/omc} lead='target x86linux' plat=lio.om pool=lpool.om ext= ;;
   x86efi) PIN=b4f45121f6c6d5d8a6ed0f5c4f3934b7cc4bec369bfa89523699bd33928f9b55
-          OMC=${OMC:-$here/../omega-efi/seed/out/omc} lead='target x86efi' plat=eio.om ext=.efi ;;
+          OMC=${OMC:-$here/../omega-efi/seed/out/omc} lead='target x86efi' plat=eio.om pool=epool.om ext=.efi ;;
   *) echo "TARGET must be aarch64, gb10, x86linux or x86efi" >&2; exit 2 ;;
 esac
 OUT=${OUT:-$here/../build}
 CORE=${CORE:-6}
 mut= kind=
 if [ $# -ge 1 ]; then
-  { [ "$1" = --mutant ] || [ "$1" = --variant ]; } && [ $# -eq 2 ] || { echo "usage: build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p|t|r|x|q|w | --variant h5|h7|r0|b0]" >&2; exit 2; }
+  { [ "$1" = --mutant ] || [ "$1" = --variant ]; } && [ $# -eq 2 ] || { echo "usage: build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p|t|r|x|q|w|v | --variant h5|h7|r0|b0|bx]" >&2; exit 2; }
   kind=$1 mut=$2
 fi
 got=$(sha256sum "$OMC" | cut -d' ' -f1)
@@ -66,7 +72,7 @@ src=$here/native/omegallm
 name=ollm
 {
   [ -z "$lead" ] || printf '%s\n' "$lead"
-  cat "$src/math.om" "$src/data.om" "$src/model.om" "$src/adam.om" "$src/ckpt.om" "$src/bpe.om" "$src/cli.om" "$src/$plat"
+  cat "$src/math.om" "$src/data.om" "$src/$pool" "$src/model.om" "$src/adam.om" "$src/ckpt.om" "$src/bpe.om" "$src/cli.om" "$src/$plat"
   [ "$TARGET" = gb10 ] || cat "$src/nogpu.om"
 } > "$OUT/ollm.om"
 if [ "$TARGET" = gb10 ]; then
@@ -97,10 +103,12 @@ case "$kind$mut" in
   --mutantx) pat='s/^const OMUTX ulong 1$/const OMUTX ulong 0/' want=1 ;;
   --mutantq) pat='s/^const OMUTQ ulong 1$/const OMUTQ ulong 0/' want=1 ;;
   --mutantw) pat='s/^const OMUTW ulong 1$/const OMUTW ulong 0/' want=1 ;;
+  --mutantv) pat='s/^const OWC ulong 15833472$/const OWC ulong 8400/;s/^const OGC ulong 15833472$/const OGC ulong 5000/;s/^const OAC ulong 15016192$/const OAC ulong 12344/;s/^const OMUTV ulong 1$/const OMUTV ulong 0/' want=4 ;;
   --varianth5) pat='s/^const GCH f64 0\.000001$/const GCH f64 0.00001/;s/^const GCH2 f64 0\.00000025$/const GCH2 f64 0.00001/' want=2 ;;
   --varianth7) pat='s/^const GCH f64 0\.000001$/const GCH f64 0.0000001/;s/^const GCH2 f64 0\.00000025$/const GCH2 f64 0.0000001/' want=2 ;;
   --variantr0) pat='s/^const OKREU ulong 1$/const OKREU ulong 0/' want=1 ;;
-  *) echo "usage: build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p|t|r|x|q|w | --variant h5|h7|r0]" >&2; exit 2 ;;
+  --variantbx) pat='s/^const OWC ulong 15833472$/const OWC ulong 8400/;s/^const OGC ulong 15833472$/const OGC ulong 5000/;s/^const OAC ulong 15016192$/const OAC ulong 12344/' want=3 ;;
+  *) echo "usage: build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p|t|r|x|q|w|v | --variant h5|h7|r0|b0|bx]" >&2; exit 2 ;;
 esac
 if [ -n "$mut" ]; then
   [ "$kind" = --mutant ] && name=ollm-mut-$mut || name=ollm-var-$mut
