@@ -1,18 +1,21 @@
 #!/usr/bin/env python3
-"""Omega LLM v0 referee (aien-train#52).
+"""Omega LLM referee (aien-train#52): v0 (CONTRACT.md) and v1 (CONTRACT-V1.md).
 
-Python 3 standard library only. Implements docs/omegallm/CONTRACT.md independently of the .om
-product and cross-checks the `ollm` binary against it. Verification only; never part of the build.
+Python 3 standard library only. Implements docs/omegallm/CONTRACT.md and CONTRACT-V1.md
+independently of the .om product and cross-checks the `ollm` binary against it. Verification
+only; never part of the build.
 
 Usage: see tests/omegallm/ORACLE.md.
 """
 
+import array
 import hashlib
 import contextlib
 import json
 import math
 import os
 import random
+import re
 import shutil
 import struct
 import subprocess
@@ -900,6 +903,698 @@ def x_eval(a):
     return R.finish(a.receipt)
 
 
+# ---------------------------------------------------------------- v1 (CONTRACT-V1.md)
+#
+# `ollm` below emulates the product's v1 command line: same argv, stdout bytes, exit codes and
+# output files. Tokenizer files and init are exact; model arithmetic is the v0 referee's
+# (libm, its own summation order), compared with `cmp` at the v0 tolerance (CONTRACT-V1 §9.3).
+
+MAXS1 = {"V": 4096, "T": 256, "D": 256, "H": 16, "F": 1024, "L": 8, "B": 64}
+SMALL1 = dict(V=300, T=8, D=16, H=2, F=32, L=2, B=4)
+LN2 = 0.6931471805599453
+CK01, CK02, GR01, BPE1 = b"OLLMCK01", b"OLLMCK02", b"OLLMGR01", b"OLLMBPE1"
+
+# Planted defects for negative controls (OLLM_ORACLE_MUTANT); each must turn a check to FAIL.
+MUTANTS = {
+    "tiemaxa": "bpefit ties go to the largest a",
+    "chunk63": "long chunks are cut into 63-byte pieces",
+    "blockscale": "block gradients scaled by 1/(T*R) instead of 1/(T*B)",
+    "bpbv0": "eval at V > 256 prints the v0 bpb = loss/ln2",
+}
+
+
+def mutant():
+    m = os.environ.get("OLLM_ORACLE_MUTANT", "")
+    if m and m not in MUTANTS:
+        raise SystemExit("unknown OLLM_ORACLE_MUTANT %r (known: %s)" % (m, ", ".join(MUTANTS)))
+    return m
+
+
+class Refuse(Exception):
+    """A contract refusal: the product exits with this code."""
+
+    def __init__(self, code):
+        super().__init__(code)
+        self.code = code
+
+
+# ---- tokenizer (§2)
+
+CHUNK_RE = re.compile(rb"[0-9A-Za-z\x80-\xff]+| [0-9A-Za-z\x80-\xff]+|[^0-9A-Za-z\x80-\xff]")
+
+
+def text_parts(text, size=1 << 23):
+    """Slices of text that each end just after a byte 0 (a chunk boundary), about `size` long."""
+    i, n = 0, len(text)
+    while i < n:
+        j = min(n, i + size)
+        if j < n:
+            k = text.rfind(b"\0", i, j)
+            if k < 0:
+                k = text.find(b"\0", j)
+            j = n if k < 0 else k + 1
+        yield text[i:j]
+        i = j
+
+
+def chunks(text):
+    piece = 63 if mutant() == "chunk63" else 64
+    for part in text_parts(text):
+        for s in CHUNK_RE.findall(part):
+            if len(s) <= piece:
+                yield s
+            else:
+                for i in range(0, len(s), piece):
+                    yield s[i:i + piece]
+
+
+def merge_seq(t, a, b, new):
+    out, i, n = [], 0, len(t)
+    while i < n:
+        if i + 1 < n and t[i] == a and t[i + 1] == b:
+            out.append(new)
+            i += 2
+        else:
+            out.append(t[i])
+            i += 1
+    return out
+
+
+def fit_counts(cnt, nmerge):
+    """§2.2 on chunk-type counts; returns the merge pairs. Raises Refuse(28) when pairs run out."""
+    toks = [list(s) for s in cnt]
+    ws = list(cnt.values())
+    pc, where = Counter(), {}
+    for ti, t in enumerate(toks):
+        for p in zip(t, t[1:]):
+            pc[p] += ws[ti]
+            where.setdefault(p, set()).add(ti)
+    if mutant() == "tiemaxa":
+        key = lambda p: (pc[p], p[0], -p[1])  # noqa: E731
+    else:
+        key = lambda p: (pc[p], -p[0], -p[1])  # noqa: E731
+    merges = []
+    for k in range(nmerge):
+        if not pc:
+            raise Refuse(28)
+        best = max(pc, key=key)
+        a, b = best
+        new = 256 + k
+        for ti in where.pop(best):
+            t, w = toks[ti], ws[ti]
+            nt = merge_seq(t, a, b, new)
+            if len(nt) == len(t):
+                continue  # stale index entry
+            for p in zip(t, t[1:]):
+                v = pc[p] - w
+                if v:
+                    pc[p] = v
+                else:
+                    del pc[p]
+            for p in zip(nt, nt[1:]):
+                pc[p] += w
+                where.setdefault(p, set()).add(ti)
+            toks[ti] = nt
+        assert best not in pc
+        merges.append(best)
+    return merges
+
+
+def bpe_fit(text, V, maxbytes=None):
+    """Returns (merges, types, chunks, fitbytes)."""
+    if maxbytes is not None:
+        pre = text[:maxbytes]
+        k = pre.rfind(b"\0")
+        if k < 0:
+            raise Refuse(21)
+        text = pre[:k + 1]
+    cnt = Counter(chunks(text))
+    merges = fit_counts(cnt, V - 256)
+    return merges, len(cnt), sum(cnt.values()), len(text)
+
+
+def merges_bytes(V, merges):
+    body = struct.pack("<%dH" % (2 * len(merges)), *[x for p in merges for x in p])
+    return BPE1 + struct.pack("<QQ", V, fnv1a64(body)) + body
+
+
+def load_merges(path, V=None):
+    """§2.3 loader. Returns (Vm, first V-256 merges); V None = the file's V."""
+    with open(path, "rb") as f:
+        raw = f.read()
+    if len(raw) < 24 or raw[:8] != BPE1:
+        raise Refuse(26)
+    Vm, h = struct.unpack("<QQ", raw[8:24])
+    if Vm < 257 or Vm > 4096 or len(raw) != 24 + 4 * (Vm - 256) or fnv1a64(raw[24:]) != h:
+        raise Refuse(26)
+    ab = struct.unpack("<%dH" % (2 * (Vm - 256)), raw[24:])
+    merges = list(zip(ab[0::2], ab[1::2]))
+    for k, (a, b) in enumerate(merges):
+        if a >= 256 + k or b >= 256 + k:
+            raise Refuse(26)
+    V = Vm if V is None else V
+    if V > Vm:
+        raise Refuse(27)
+    return Vm, merges[:max(0, V - 256)]
+
+
+class BPE:
+    def __init__(self, merges):
+        self.rank = {}
+        for k, p in enumerate(merges):
+            self.rank.setdefault(p, k)
+        self.dec = [bytes([i]) for i in range(256)]
+        for a, b in merges:
+            self.dec.append(self.dec[a] + self.dec[b])
+        self.V = 256 + len(merges)
+        self.cache = {}
+
+    def enc_chunk(self, s):
+        """Merges in rank order. Equal to applying k = 0, 1, ... in turn: a merge only creates
+        pairs holding the new token 256+k, and those pairs have ranks above k."""
+        t, rank = list(s), self.rank
+        while len(t) > 1:
+            br = None
+            for p in zip(t, t[1:]):
+                r = rank.get(p)
+                if r is not None and (br is None or r < br):
+                    br, best = r, p
+            if br is None:
+                break
+            t = merge_seq(t, best[0], best[1], 256 + br)
+        return t
+
+    def encode(self, text):
+        out, cache = array.array("H"), self.cache
+        for s in chunks(text):
+            t = cache.get(s)
+            if t is None:
+                t = cache[s] = self.enc_chunk(s)
+            out.extend(t)
+        return out
+
+    def tlen(self, t):
+        return len(self.dec[t])
+
+    def decode(self, toks):
+        if toks and max(toks) >= self.V:
+            raise Refuse(25)
+        return b"".join(self.dec[t] for t in toks)
+
+
+def tok_bytes(toks):
+    a = array.array("H", toks)
+    if sys.byteorder != "little":
+        a.byteswap()
+    return a.tobytes()
+
+
+def read_tokens(path):
+    with open(path, "rb") as f:
+        raw = f.read()
+    if len(raw) % 2:
+        raise Refuse(21)
+    a = array.array("H")
+    a.frombytes(raw)
+    if sys.byteorder != "little":
+        a.byteswap()
+    return a
+
+
+def write_atomic(path, data):
+    tmp = path + ".tmp"
+    with open(tmp, "wb") as f:
+        f.write(data)
+    os.rename(tmp, path)
+
+
+# ---- checkpoints (§6)
+
+def ck1_bytes(ck):
+    c, P = ck["c"], param_count(ck["c"])
+    body = b"".join(struct.pack("<%dd" % P, *ck[k]) for k in ("params", "m", "v"))
+    hdr = ck["magic"] + struct.pack("<7Q", *(c[k] for k in "VTDHFLB"))
+    hdr += struct.pack("<5Q", ck["seed"] & M64, ck["step"], ck["total"], ck["lr_bits"], P)
+    if ck["magic"] == CK02:
+        hdr += struct.pack("<Q", ck["G"])
+    return hdr + struct.pack("<Q", fnv1a64(body)) + body
+
+
+def shapes_ok(c):
+    return (all(1 <= c[k] <= MAXS1[k] for k in MAXS1) and c["V"] >= 256
+            and c["D"] % c["H"] == 0)
+
+
+def read_ck1(path):
+    """CK01 or CK02 at v1 shapes, with the refusal codes 10-15 (Refuse)."""
+    with open(path, "rb") as f:
+        raw = f.read()
+    if len(raw) < 112:
+        raise Refuse(10)
+    magic = raw[:8]
+    if magic not in (CK01, CK02):
+        raise Refuse(11)
+    hl = 120 if magic == CK02 else 112
+    if len(raw) < hl:
+        raise Refuse(10)
+    c = dict(zip("VTDHFLB", struct.unpack("<7Q", raw[8:64])))
+    seed, step, total, lrb, P = struct.unpack("<5Q", raw[64:104])
+    G = struct.unpack("<Q", raw[104:112])[0] if magic == CK02 else 1
+    if not shapes_ok(c) or total > 999999 or G == 0 or G > c["B"] or c["B"] % G:
+        raise Refuse(12)
+    if P != param_count(c):
+        raise Refuse(13)
+    if len(raw) < hl + 24 * P:
+        raise Refuse(10)
+    if len(raw) > hl + 24 * P:
+        raise Refuse(15)
+    body = raw[hl:]
+    if fnv1a64(body) != struct.unpack("<Q", raw[hl - 8:hl])[0]:
+        raise Refuse(14)
+    pays = [list(struct.unpack("<%dd" % P, body[8 * P * i: 8 * P * (i + 1)])) for i in range(3)]
+    return dict(magic=magic, c=c, seed=seed, step=step, total=total, lr=bits2f(lrb), lr_bits=lrb,
+                P=P, G=G, params=pays[0], m=pays[1], v=pays[2], raw=raw, hl=hl)
+
+
+def read_gr1(path):
+    """GR01 at v1 shapes (112-byte header, one payload)."""
+    with open(path, "rb") as f:
+        raw = f.read()
+    if len(raw) < 112 or raw[:8] != GR01:
+        raise Refuse(11)
+    c = dict(zip("VTDHFLB", struct.unpack("<7Q", raw[8:64])))
+    P = struct.unpack("<Q", raw[96:104])[0]
+    if not shapes_ok(c) or P != param_count(c) or len(raw) != 112 + 8 * P:
+        raise Refuse(12)
+    if fnv1a64(raw[112:]) != struct.unpack("<Q", raw[104:112])[0]:
+        raise Refuse(14)
+    return dict(c=c, raw=raw, grad=list(struct.unpack("<%dd" % P, raw[112:])))
+
+
+def gr1_bytes(ck, grad):
+    c, P = ck["c"], param_count(ck["c"])
+    body = struct.pack("<%dd" % P, *grad)
+    hdr = GR01 + struct.pack("<7Q", *(c[k] for k in "VTDHFLB"))
+    hdr += struct.pack("<5Q", ck["seed"] & M64, c["B"], ck["total"], ck["lr_bits"], P)
+    return hdr + struct.pack("<Q", fnv1a64(body)) + body
+
+
+# ---- model at v1 shapes (§4, §5)
+
+def load_data(path, c):
+    """Bytes for V = 256, u16 tokens above. N < T + 1 is exit 20."""
+    if c["V"] == 256:
+        with open(path, "rb") as f:
+            data = f.read()
+    else:
+        data = read_tokens(path)
+    if len(data) < c["T"] + 1:
+        raise Refuse(20)
+    return data
+
+
+def seqs_v1(data, offs, c):
+    """Rows read lazily: a token >= V is exit 25 only in a row actually read."""
+    T, out = c["T"], []
+    for o in offs:
+        w = list(data[o:o + T + 1])
+        if max(w) >= c["V"]:
+            raise Refuse(25)
+        out.append((w[:T], w[1:]))
+    return out
+
+
+def prepared(c, flat):
+    Pd = unpack(c, flat)
+    return Pd, {n: transpose(v) for n, v in Pd.items() if not n.startswith("g")}
+
+
+def grad_blocks(c, flat, seqs, G):
+    """§5: G blocks of R = B/G sequences, each into its own buffer; blocks summed in ascending j;
+    losses summed in ascending b and divided by B."""
+    B = len(seqs)
+    R = B // G
+    Pd, PT = prepared(c, flat)
+    scale = 1.0 / (R if mutant() == "blockscale" else B)
+    losses, acc = [], None
+    for j in range(G):
+        Gj = zeros_like(c)
+        for x, y in seqs[j * R:(j + 1) * R]:
+            losses.append(seq_loss_grad(c, Pd, PT, x, y, scale, Gj))
+        fj = pack(c, Gj)
+        acc = fj if acc is None else [a + b for a, b in zip(acc, fj)]
+    tot = 0.0
+    for v in losses:
+        tot += v
+    return tot / B, acc
+
+
+def logits_last(c, Pd, PT, x):
+    """Forward over a context of len(x) <= T positions; the logits at the last one."""
+    D, H, L, V = c["D"], c["H"], c["L"], c["V"]
+    E = D // H
+    sE = math.sqrt(E)
+    n = len(x)
+    wte, wpe = Pd["wte"], Pd["wpe"]
+    h = [[a + b for a, b in zip(wte[x[t]], wpe[t])] for t in range(n)]
+    for l in range(L):
+        g1, g2 = Pd["g1.%d" % l], Pd["g2.%d" % l]
+        a = [rms_fwd(v, g1)[0] for v in h]
+        q = [vecmat(r, PT["wq.%d" % l]) for r in a]
+        k = [vecmat(r, PT["wk.%d" % l]) for r in a]
+        u = [vecmat(r, PT["wv.%d" % l]) for r in a]
+        o = [[0.0] * D for _ in range(n)]
+        for hh in range(H):
+            lo, hi = hh * E, hh * E + E
+            for t in range(n):
+                s = [sum(map(mul, q[t][lo:hi], k[j][lo:hi])) / sE for j in range(t + 1)]
+                mx = max(s)
+                e = [math.exp(v - mx) for v in s]
+                z = sum(e)
+                for j in range(t + 1):
+                    pj = e[j] / z
+                    for i in range(lo, hi):
+                        o[t][i] += pj * u[j][i]
+        att = [vecmat(r, PT["wo.%d" % l]) for r in o]
+        h1 = [[a_ + b_ for a_, b_ in zip(hv, av)] for hv, av in zip(h, att)]
+        b = [rms_fwd(v, g2)[0] for v in h1]
+        f = [[v if v > 0.0 else 0.0 for v in vecmat(r, PT["w1.%d" % l])] for r in b]
+        ff = [vecmat(r, PT["w2.%d" % l]) for r in f]
+        h = [[a_ + b_ for a_, b_ in zip(hv, fv)] for hv, fv in zip(h1, ff)]
+    z = rms_fwd(h[-1], Pd["gf"])[0]
+    return [sum(map(mul, z, wte[cc])) for cc in range(V)]
+
+
+def sample_v1(ck, seed, N, tm, prompt, bpe):
+    c = ck["c"]
+    T = c["T"]
+    ctx = [0] + (list(prompt) if bpe is None else list(bpe.encode(prompt)))
+    ctx = ctx[-T:]
+    Pd, PT = prepared(c, ck["params"])
+    st, out = seed & M64, bytearray()
+    for _ in range(N):
+        lg = logits_last(c, Pd, PT, ctx)
+        if tm == 0:
+            k = max(range(len(lg)), key=lambda i: (lg[i], -i))
+        else:
+            tau = tm / 1000.0
+            xs = [v / tau for v in lg]
+            mx = max(xs)
+            e = [math.exp(v - mx) for v in xs]
+            se = sum(e)
+            p = [v / se for v in e]
+            u = (splitmix64(st) >> 11) * 2.0 ** -53
+            st = (st + GOLDEN) & M64
+            acc, k = 0.0, None
+            for i, pi in enumerate(p):
+                acc += pi
+                if u < acc:
+                    k = i
+                    break
+            if k is None:
+                k = max(i for i, pi in enumerate(p) if pi > 0.0)
+        if k == 0:
+            break
+        out += bytes([k]) if bpe is None else bpe.dec[k]
+        ctx = (ctx + [k])[-T:]
+    return bytes(out)
+
+
+# ---- the v1 command line, emulated
+
+def _ints(args):
+    try:
+        v = [int(a) for a in args]
+    except ValueError:
+        raise Refuse(2)
+    if any(x < 0 for x in v):
+        raise Refuse(2)
+    return v
+
+
+def ollm(argv, out):
+    """Run one product command; writes stdout bytes to `out`; returns the exit code."""
+    try:
+        _ollm(argv, out)
+        return 0
+    except Refuse as r:
+        return r.code
+
+
+def _ollm(argv, out):
+    if not argv:
+        raise Refuse(2)
+    cmd, a = argv[0], argv[1:]
+    if cmd == "prep" and len(a) == 3:
+        with open(a[0], "rb") as f:
+            tr, he, st = prep(f.read())
+        for p_, b_ in ((a[1], tr), (a[2], he)):
+            with open(p_, "wb") as f:
+                f.write(b_)
+        out.write(b"P %d %d %d %d %d\n" % st)
+    elif cmd == "bpefit" and len(a) in (3, 4):
+        (V,) = _ints(a[2:3])
+        mb = _ints(a[3:4])[0] if len(a) == 4 else None
+        if V < 257 or V > 4096:
+            raise Refuse(2)
+        with open(a[0], "rb") as f:
+            text = f.read()
+        merges, types, nch, nb = bpe_fit(text, V, mb)
+        write_atomic(a[1], merges_bytes(V, merges))
+        out.write(b"M %d %d %d %d\n" % (V, types, nch, nb))
+    elif cmd == "bpeenc" and len(a) == 4:
+        (V,) = _ints(a[1:2])
+        _, merges = load_merges(a[0], V)
+        if V <= 256:
+            raise Refuse(27)
+        with open(a[2], "rb") as f:
+            text = f.read()
+        toks = BPE(merges).encode(text)
+        with open(a[3], "wb") as f:
+            f.write(tok_bytes(toks))
+        out.write(b"K %d %d\n" % (len(text), len(toks)))
+    elif cmd == "bpedec" and len(a) == 3:
+        _, merges = load_merges(a[0])
+        toks = read_tokens(a[1])
+        data = BPE(merges).decode(toks)
+        with open(a[2], "wb") as f:
+            f.write(data)
+        out.write(b"D %d %d\n" % (len(toks), len(data)))
+    elif cmd == "init" and len(a) in (11, 12):
+        v = _ints(a[1:])
+        c = dict(zip("VTDHFLB", v[:7]))
+        seed, total, lrm = v[7:10]
+        G = v[10] if len(a) == 12 else 1
+        if not shapes_ok(c) or total > 999999 or G == 0 or G > c["B"] or c["B"] % G:
+            raise Refuse(12)
+        P = param_count(c)
+        ck = dict(magic=CK02 if len(a) == 12 else CK01, c=c, seed=seed, step=0, total=total,
+                  lr_bits=f2bits(float(lrm) / 1000000.0), G=G, params=init_params(c, seed),
+                  m=[0.0] * P, v=[0.0] * P)
+        write_atomic(a[0], ck1_bytes(ck))
+        out.write(b"I %d\n" % P)
+    elif cmd == "grad" and len(a) == 4:
+        ck = read_ck1(a[0])
+        c = ck["c"]
+        data = load_data(a[1], c)
+        with open(a[2], "rb") as f:
+            raw = f.read()
+        if len(raw) != 8 * c["B"]:
+            raise Refuse(21)
+        offs = struct.unpack("<%dQ" % c["B"], raw)
+        if any(o >= len(data) - c["T"] for o in offs):
+            raise Refuse(22)
+        loss, g = grad_blocks(c, ck["params"], seqs_v1(data, offs, c), ck["G"])
+        write_atomic(a[3], gr1_bytes(ck, g))
+        out.write(b"G %016x %d\n" % (f2bits(loss), micro(loss)))
+    elif cmd == "train" and len(a) in (4, 5):
+        ck = read_ck1(a[0])
+        c = ck["c"]
+        until, every = _ints(a[2:4])
+        K = _ints(a[4:5])[0] if len(a) == 5 else 1
+        if every == 0:
+            raise Refuse(2)
+        if K < 1 or K > ck["G"] or ck["G"] % K:
+            raise Refuse(29)
+        data = load_data(a[1], c)
+        end = min(until, ck["total"])
+        while ck["step"] < end:
+            s = ck["step"]
+            offs = batch_offsets(ck["seed"], s, c["B"], len(data), c["T"])
+            loss, g = grad_blocks(c, ck["params"], seqs_v1(data, offs, c), ck["G"])
+            nk, _ = adam_step(ck, g)
+            ck.update(params=nk["params"], m=nk["m"], v=nk["v"], step=s + 1)
+            if (s + 1) % every == 0 or s + 1 == end:
+                write_atomic(a[0], ck1_bytes(ck))
+                out.write(b"T %d %d\n" % (s + 1, micro(loss)))
+    elif cmd == "eval" and len(a) in (3, 4):
+        ck = read_ck1(a[0])
+        c = ck["c"]
+        (W,) = _ints(a[2:3])
+        if c["V"] > 256 and len(a) == 3:
+            raise Refuse(2)
+        bpe = BPE(load_merges(a[3], c["V"])[1]) if c["V"] > 256 else None
+        data = load_data(a[1], c)
+        T = c["T"]
+        if W == 0 or W * T + 1 > len(data):
+            raise Refuse(23)
+        tot = 0.0
+        nbytes = 0
+        for w in range(W):
+            seqs = seqs_v1(data, [w * T], c)
+            tot += loss_only(c, ck["params"], seqs)
+            if bpe is not None:
+                nbytes += sum(bpe.tlen(y) for y in seqs[0][1])
+        loss = tot / W
+        if bpe is None or mutant() == "bpbv0":
+            bpb = loss / LN2
+        else:
+            bpb = ((loss / LN2) * float(W * T)) / float(nbytes)
+        out.write(b"E %d %d %d %d\n" % (ck["step"], W, micro(loss), micro(bpb)))
+    elif cmd == "sample" and len(a) in (5, 6):
+        ck = read_ck1(a[0])
+        c = ck["c"]
+        seed, N, tm = _ints(a[1:4])
+        prompt = os.fsencode(a[4])
+        if N > 999999:
+            raise Refuse(2)
+        if c["V"] > 256:
+            if len(a) == 5 or len(prompt) > 4000:
+                raise Refuse(2)
+            bpe = BPE(load_merges(a[5], c["V"])[1])
+        else:
+            if len(prompt) > 4096:
+                raise Refuse(2)
+            bpe = None
+        out.write(sample_v1(ck, seed, N, tm, prompt, bpe))
+    else:
+        raise Refuse(2)
+
+
+# ---- comparison of product files against referee files (§9.3 standard)
+
+def cmp_v1(kind, got, ref):
+    """ck: header fields exact, params/m/v per entry within RTOL. gr: header exact, grad within
+    RTOL. tok/bytes: exact bytes, first differing offset. Prints one verdict line; 0 = PASS."""
+    if kind in ("tok", "bytes"):
+        with open(got, "rb") as f:
+            g = f.read()
+        with open(ref, "rb") as f:
+            r = f.read()
+        if g == r:
+            print("PASS %s identical (%d bytes)" % (kind, len(g)))
+            return 0
+        i = next((i for i in range(min(len(g), len(r))) if g[i] != r[i]), min(len(g), len(r)))
+        print("FAIL %s first difference at byte %d (got %d bytes, ref %d bytes)"
+              % (kind, i, len(g), len(r)))
+        return 1
+    try:
+        if kind == "gline":
+            # `G hex micro`: micro exact, the loss within RTOL (its bits are not required equal)
+            g, r = [open(p, "rb").read().split() for p in (got, ref)]
+            ok = (len(g) == len(r) == 3 and g[0] == r[0] == b"G" and g[2] == r[2]
+                  and len(g[1]) == 16)
+            if ok:
+                lg, lr = bits2f(int(g[1], 16)), bits2f(int(r[1], 16))
+                ok = abs(lg - lr) <= RTOL * abs(lr)
+            print("%s gline got %r ref %r" % ("PASS" if ok else "FAIL", g, r))
+            return 0 if ok else 1
+        if kind == "ck":
+            G, R = read_ck1(got), read_ck1(ref)
+            hoff, pays = G["hl"] - 8, ("params", "m", "v")
+        else:
+            G, R = read_gr1(got), read_gr1(ref)
+            hoff, pays = 104, ("grad",)
+    except (Refuse, FormatError, ValueError, OSError) as e:
+        print("FAIL %s unreadable: %r" % (kind, e))
+        return 1
+    ok = True
+    if G["raw"][:hoff] != R["raw"][:hoff]:
+        i = next(i for i in range(hoff) if G["raw"][i] != R["raw"][i])
+        print("FAIL %s header field differs at byte %d" % (kind, i))
+        ok = False
+    for k in pays:
+        okk, res = compare_flat(G["c"], G[k], R[k])
+        worst = max(e for e, *_ in res.values())
+        print("  %s %s max relerr %.3e" % (kind, k, worst))
+        if not okk:
+            print(fmt_tensor_errs({n: v for n, v in res.items() if not v[0] <= RTOL}))
+            ok = False
+    print("%s %s (header exact, rtol %g)" % ("PASS" if ok else "FAIL", kind, RTOL))
+    return 0 if ok else 1
+
+
+def selftest_v1():
+    fails = []
+
+    def check(cond, msg):
+        print(("PASS " if cond else "FAIL ") + msg)
+        if not cond:
+            fails.append(msg)
+
+    # §2.1 chunk rule
+    t = b"Hi  there,\nyou 3x" + bytes([0xC3, 0xA9]) + b"! " + b"a" * 130 + b" \0"
+    want = [b"Hi", b" ", b" there", b",", b"\n", b"you", b" 3x\xc3\xa9", b"!", b" " + b"a" * 63,
+            b"a" * 64, b"aaa", b" ", b"\0"]
+    check(list(chunks(t)) == want, "chunk rule KAT")
+    # §2.2 overlapping counts and the tie rule: "aaa" holds (a,a) twice -> it beats (b,c) x1
+    m = fit_counts(Counter({b"aaa": 1, b"bc": 1}), 1)
+    check(m == [(97, 97)], "overlapping count (a,a)=2")
+    m = fit_counts(Counter({b"cd": 1, b"ab": 1, b"ae": 1}), 3)
+    check(m == [(97, 98), (97, 101), (99, 100)], "tie: smallest a, then smallest b")
+    try:
+        fit_counts(Counter({b"ab": 1}), 2)
+        check(False, "exit 28 when pairs run out")
+    except Refuse as r:
+        check(r.code == 28, "exit 28 when pairs run out")
+    # encode = merges applied in order; decode inverts
+    text = b"the cat sat on the mat\0the hat\0" * 3 + bytes(range(1, 256))
+    merges, *_ = bpe_fit(text, 270)
+    bpe = BPE(merges)
+    toks = bpe.encode(text)
+    seq = []
+    for s in chunks(text):
+        t = list(s)
+        for k, (a, b) in enumerate(merges):
+            t = merge_seq(t, a, b, 256 + k)
+        seq += t
+    check(list(toks) == seq, "rank-order encode = sequential merges")
+    check(bpe.decode(toks) == text, "decode(encode(text)) == text")
+    with scratch() as d:
+        p = os.path.join(d, "m")
+        write_atomic(p, merges_bytes(270, merges))
+        check(load_merges(p, 260)[1] == merges[:4], "merges round trip, prefix use")
+        raw = bytearray(open(p, "rb").read())
+        raw[30] ^= 1
+        open(p, "wb").write(raw)
+        try:
+            load_merges(p)
+            check(False, "merges hash refused 26")
+        except Refuse as r:
+            check(r.code == 26, "merges hash refused 26")
+    # CK02 round trip and G=2 blocks equal G=1 within RTOL
+    c = dict(SMALL1)
+    P = param_count(c)
+    rng = random.Random(3)
+    ck = dict(magic=CK02, c=c, seed=9, step=4, total=50, lr_bits=f2bits(3e-3), G=2,
+              params=init_params(c, 9), m=[rng.random() for _ in range(P)],
+              v=[rng.random() for _ in range(P)])
+    with scratch() as d:
+        p = os.path.join(d, "ck")
+        write_atomic(p, ck1_bytes(ck))
+        r = read_ck1(p)
+        check(r["G"] == 2 and r["params"] == ck["params"] and r["v"] == ck["v"]
+              and len(r["raw"]) == 120 + 24 * P, "CK02 round trip")
+    data = [rng.randrange(1, 300) for _ in range(200)]
+    seqs = seqs_v1(data, [3, 50, 90, 130], c)
+    l1, g1 = grad_blocks(c, ck["params"], seqs, 1)
+    l2, g2 = grad_blocks(c, ck["params"], seqs, 2)
+    ok, res = compare_flat(c, g2, g1)
+    check(ok and abs(l1 - l2) <= RTOL * l1, "G=2 gradient = G=1 within rtol")
+    print("SELFTEST-V1 %s (%d failures)" % ("PASS" if not fails else "FAIL", len(fails)))
+    return 0 if not fails else 1
+
+
 # ---------------------------------------------------------------- CLI
 
 def main(argv):
@@ -907,6 +1602,13 @@ def main(argv):
     ap = argparse.ArgumentParser(prog="oracle.py")
     sp = ap.add_subparsers(dest="cmd", required=True)
     sp.add_parser("selftest")
+    sp.add_parser("selftest-v1")
+    p = sp.add_parser("ollm", help="emulate the v1 product command line")
+    p.add_argument("argv", nargs=argparse.REMAINDER)
+    p = sp.add_parser("cmp", help="compare a product file with a referee file")
+    p.add_argument("kind", choices=("ck", "gr", "gline", "tok", "bytes"))
+    p.add_argument("got")
+    p.add_argument("ref")
     for name in ("xinit", "xgrad", "xstep", "xprep", "xbase", "xeval"):
         p = sp.add_parser(name)
         p.add_argument("--ollm", required=True)
@@ -931,6 +1633,15 @@ def main(argv):
     a = ap.parse_args(argv)
     if a.cmd == "selftest":
         return selftest()
+    if a.cmd == "selftest-v1":
+        return selftest_v1()
+    if a.cmd == "ollm":
+        mutant()
+        rc = ollm(a.argv, sys.stdout.buffer)
+        sys.stdout.buffer.flush()
+        return rc
+    if a.cmd == "cmp":
+        return cmp_v1(a.kind, a.got, a.ref)
     if a.cmd == "prep":
         with open(a.inp, "rb") as f:
             tr, he, st = prep(f.read())
