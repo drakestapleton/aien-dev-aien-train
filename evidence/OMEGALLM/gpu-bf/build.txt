@@ -1,0 +1,15 @@
+BF16 lane build receipt (aien-train feat/omega-llm-bf16, source at e329675, crumbs ba2f02c)
+compiler: omega-mv seed/out/omc sha256 2c82480596bbdc50cda9626866209ef662d5834f278f839ff4ce0250c495029f
+command: OMC=<omc> TARGET=<t> OUT=<dir> CORE=3 sh tests/omegallm/build.sh [--mutant X]
+host: DGX Spark GB10 (aarch64), one core, nice default; build only, nothing run on the chip
+
+product gb10   ollm-gb10          b74c1afe8be1d69f3b438d577c1e32a3a4d3675ba3a548e1cfcd1df3d6e8f88c
+               source ollm.om     f6d8e957c6a776b81600f3c64c770b7c3d9597d96690e970833d811e5d5970c8
+               rebuilt from a clean OUT dir at the same tree: same binary and source sha256
+mutant u       ollm-mut-u-gb10    d5e266f5756656f7a4629d8dcdccbf2c4634832b1c7fd3eadca44ffec2603769
+mutant l       ollm-mut-l-gb10    783f9dc275035bf668f73e877e47fffc808cd74b3d13c8f70f80e43d8887572c
+mutant o       ollm-mut-o-gb10    99eae40d3d9e6ef28f330706a0839e1744e9a27ea99ed1a4c5db0f75edc7c199
+mutant v       ollm-mut-v-gb10    5f083f675adf6f9a11f8b2e659d5acd60ce39cbd5d2cb9ffa79216bf4762d1a7
+aarch64 CPU    ollm               6da1367091f03d900a1abcc365082758646fa41eb370b261721550a9d744c2f6
+               equal to the base 273ca2a CPU build used for the rung-7 P5 eval (6da13670...):
+               the BF16 change does not touch the CPU product.
