@@ -306,8 +306,9 @@ ggpt 2 y
 ggrun id 6 ggcd n 64 1 1
 end
 
+note RMSF/RMSB run one warp per row: arg 0 and the thread count are R*32
 fn ggrmsf v ulong g ulong y ulong s ulong to void
-r = ggr
+r = mul ggr 32
 ggu 0 r
 ggpt 1 v
 ggpt 2 g
@@ -318,7 +319,7 @@ end
 
 note dh += RMS backward of da; the gain terms go to WS
 fn ggrmsb v ulong g ulong s ulong to void
-r = ggr
+r = mul ggr 32
 ggu 0 r
 ggpt 1 v
 ggpt 2 g

@@ -102,97 +102,103 @@ grfadd 34 32 33
 gkstg 18 34 0 false
 gkexit
 end
-note 10 RMSF: per row r < R: s = 1/sqrt(sum v^2 / D + 1e-5); y = v s g; args R v g y s
+note RMS kernels: one warp per row (threads R*32, arg 0); lane l holds columns l + 32 u, u < D/32,
+note so each warp load and store is one coalesced 128-byte line and every row is read once.
+note R8 = row, R9 = lane; ld/st w: n words at p + 128 u (gkldg/gkstg chain flag: first false).
+fn grrrow to void
+grpro
+gkshr 8 4 5
+gkandi 9 4 31
+end
+fn grrptr d uint i uint d4 uint to void
+grptr d i 8 d4
+gkimadw d 9 4 d
+end
+fn grldw d uint p uint n uint first bool to void
+for u uint n
+gkldg add d u p mul u 128 or ne u 0 not first
+end
+end
+fn grstw p uint s uint n uint to void
+for u uint n
+gkstg p add s u mul u 128 ne u 0
+end
+end
+note 10 RMSF: per row r < R: s = 1/sqrt(sum v^2 / D + 1e-5); y = v s g; args R*32 v g y s
 fn grrmsf to void
 d = uint get grd 2
 d4 = mul d 4
-grpro
+n = div d 32
+grrrow
 gkmovi 24 grf div 1.0f64 f64 d
 gkmovi 25 grf 0.00001f64
-grptr 10 1 4 d4
+grrptr 10 1 d4
+gkldc64 14 grarg 4
+gkimadw 14 9 4 14
+grldw 32 10 n true
+grldw 40 14 n false
 gkmovz 64
-top = grtop 30 div d 8
-grld8 32 10 true
-for u uint 8
+for u uint n
 gkffmaf 64 add 32 u add 32 u 64
 end
-gradv 10 32
-grbot 30 top
+grwred 0 0
 gkffmaf 65 64 24 25
 grmufu 66 65 5120
-grptr 12 7 4 4
+grptr 12 7 8 4
 gkstg 12 66 0 false
-grptr 10 1 4 d4
-gkldc64 14 grarg 4
-grptr 16 5 4 d4
-top2 = grtop 30 div d 8
-grld8 32 10 true
-grld8 40 14 false
-for u uint 8
+grrptr 16 5 d4
+for u uint n
 gkfmulf add 32 u add 32 u 66
 gkfmulf add 32 u add 32 u add 40 u
 end
-grst8 16 32
-gradv 10 32
-gradv 14 32
-gradv 16 32
-grbot 30 top2
+grstw 16 32 n
 gkexit
 end
-note 11 RMSB: per row: k1 = s^2 sum(da g v)/D; dh += (da g - v k1) s; w = da v s; args R v g s da dh w
+note Mutant r: 1 in the product, 0 in the mutant, whose RMSB row sum sum(da g v) skips the lane-1
+note butterfly step (k1 from half the row), which gcmp2 must catch.
+const OMUTR ulong 1
+note 11 RMSB: per row: k1 = s^2 sum(da g v)/D; dh += (da g - v k1) s; w = da v s; args R*32 v g s da dh w
 fn grrmsb to void
 d = uint get grd 2
 d4 = mul d 4
-grpro
+n = div d 32
+grrrow
 gkmovi 24 grf div 1.0f64 f64 d
-grptr 10 1 4 d4
+grrptr 10 1 d4
 gkldc64 12 grarg 4
-grptr 14 7 4 d4
+gkimadw 12 9 4 12
+grrptr 14 7 d4
+grrptr 16 9 d4
+grptr 20 5 8 4
+grldw 32 14 n true
+grldw 40 12 n false
+grldw 48 10 n false
+grldw 56 16 n false
+gkldg 67 20 0 true
 gkmovz 64
-top = grtop 30 div d 8
-grld8 32 14 true
-grld8 40 12 false
-grld8 48 10 false
-for u uint 8
-gkfmulf add 32 u add 32 u add 40 u
-gkffmaf 64 add 32 u add 48 u 64
+for u uint n
+gkfmulf add 40 u add 32 u add 40 u
+gkffmaf 64 add 40 u add 48 u 64
 end
-gradv 10 32
-gradv 12 32
-gradv 14 32
-grbot 30 top
-grptr 20 5 4 4
-gkldg 65 20 0 false
-gkfmulf 66 65 65
+if eq OMUTR 0
+grwred 0 1
+else
+grwred 0 0
+end
+gkfmulf 66 67 67
 gkfmulf 66 66 64
 gkfmulf 66 66 24
-grptr 10 1 4 d4
-gkldc64 12 grarg 4
-grptr 14 7 4 d4
-grptr 16 9 4 d4
-grptr 18 11 4 d4
-top2 = grtop 30 div d 8
-grld8 32 14 true
-grld8 40 12 false
-grld8 48 10 false
-grld8 56 16 false
-for u uint 8
-gkfmulf add 40 u add 32 u add 40 u
+grrptr 18 11 d4
+for u uint n
 gkfmulf add 32 u add 32 u add 48 u
-gkfmulf add 32 u add 32 u 65
+gkfmulf add 32 u add 32 u 67
 gkfmulf add 48 u add 48 u 66
 grfsub add 40 u add 40 u add 48 u
-gkfmulf add 40 u add 40 u 65
+gkfmulf add 40 u add 40 u 67
 grfadd add 56 u add 56 u add 40 u
 end
-grst8 16 56
-grst8 18 32
-gradv 10 32
-gradv 12 32
-gradv 14 32
-gradv 16 32
-gradv 18 32
-grbot 30 top2
+grstw 16 56 n
+grstw 18 32 n
 gkexit
 end
 note 13/14 COLSUM: out[c ostr + i] (=, +=) sum_k in[c cstr + k kstr + i]; grid (n/64, chunks)
@@ -530,6 +536,10 @@ put grd 4 f
 put grd 5 b
 end
 fn grall to bool
+note the warp-per-row RMS kernels hold D/32 columns per lane, and softmax T/32
+if or ne rem get grd 2 32 0 ne rem get grd 1 32 0
+ret false
+end
 for k uint 16
 id = add k 9
 gkslot id
