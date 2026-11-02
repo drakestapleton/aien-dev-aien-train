@@ -220,89 +220,106 @@ end
 gkstg 12 64 0 false
 gkexit
 end
-note 15 SOFTF: causal softmax of row t of score block z in place, zero above t; grid (T/64, Z); args T P
+note SHFL.BFLY PT, Rd, Ra, lane, 0x1f (codegen.c:671 SHFL.DOWN with the BFLY mode bits, sm121.tbl:183)
+fn grshfl d uint a uint lane uint to void
+gkvr or or 32649 shl d 16 shl a 24 or 201334528 shl lane 21 917504
+end
+note Softmax kernels: one warp per row; lane l holds columns l + 32 u, u < T/32, in R32.. (p) and
+note R48.. (dp), so every load and store of a warp is one coalesced 128-byte line. Threads: T 32
+note per score block (arg 0), grid (T/2, Z); R21 = row t, R22 = lane, R10/R12 = row base + 4 lane.
+fn grsrow tt uint dp bool to void
+grpro
+gkshr 21 4 5
+gkandi 22 4 31
+gkimadi 8 3 tt 21
+grptr 10 1 8 mul tt 4
+gkimadw 10 22 4 10
+if dp
+grptr 12 3 8 mul tt 4
+gkimadw 12 22 4 12
+end
+end
+note sum (op 0) or max (op 1) of R64 across the warp by butterfly, R65 scratch
+fn grwred op uint skip uint to void
+for i uint 5
+o = uint shr 16 i
+if ne o skip
+grshfl 65 64 o
+if eq op 0
+grfadd 64 64 65
+else
+grfmax 64 64 65
+end
+end
+end
+end
+note Mutant s: 1 in the product, 0 in the mutant, whose SOFTF row sum skips the lane-1 butterfly step
+note (each lane then normalizes by half the row), which gcmp and gcmp2 must catch.
+const OMUTS ulong 1
+note 15 SOFTF: causal softmax of row t of score block z in place, zero above t; args T*32 P
 fn grsoftf to void
 tt = uint get grd 1
-grpro
+n = div tt 32
+grsrow tt false
 gkmovi 27 4286578688
 gkmovi 28 grf 1.4426950408889634f64
 gkmovi 29 grf neg 1.4426950408889634f64
-gkimadi 8 3 tt 4
-grptr 10 1 8 mul tt 4
-gkmovz 20
+gkmovi 23 32
+for u uint n
+gkldg add 32 u 10 mul u 128 ne u 0
+end
+gkimadi 20 22 1 255
 gkmovi 64 4286578688
-top = grtop 30 div tt 8
-grld8 32 10 true
-for u uint 8
-grisetp 1 20 4 4
+for u uint n
+grisetp 1 20 21 4
 grfsel add 32 u 27 add 32 u 1
-gkiadd 20 20 26
+gkiadd 20 20 23
 grfmax 64 64 add 32 u
 end
-gradv 10 32
-grbot 30 top
-gkfmulf 65 64 29
-grptr 10 1 8 mul tt 4
-gkmovz 20
-gkmovz 66
-top2 = grtop 30 div tt 8
-grld8 32 10 true
-for u uint 8
-grisetp 1 20 4 4
-grfsel add 32 u 27 add 32 u 1
-gkiadd 20 20 26
-gkffmaf add 32 u add 32 u 28 65
+grwred 1 0
+gkfmulf 66 64 29
+gkmovz 64
+for u uint n
+gkffmaf add 32 u add 32 u 28 66
 grmufu add 32 u add 32 u 2048
-grfadd 66 66 add 32 u
+grfadd 64 64 add 32 u
 end
-grst8 10 32
-gradv 10 32
-grbot 30 top2
-grmufu 67 66 4096
-grptr 10 1 8 mul tt 4
-top3 = grtop 30 div tt 8
-grld8 32 10 true
-for u uint 8
+if eq OMUTS 0
+grwred 0 1
+else
+grwred 0 0
+end
+grmufu 67 64 4096
+for u uint n
 gkfmulf add 32 u add 32 u 67
+gkstg 10 add 32 u mul u 128 ne u 0
 end
-grst8 10 32
-gradv 10 32
-grbot 30 top3
 gkexit
 end
-note 16 SOFTB: ds = p (dp - sum p dp) / sqrt(E) in place over dp; grid (T/64, Z); args T P DP
+note 16 SOFTB: ds = p (dp - sum p dp) / sqrt(E) in place over dp; args T*32 P DP
 fn grsoftb to void
 tt = uint get grd 1
+n = div tt 32
 e = div get grd 2 get grd 3
-grpro
+grsrow tt true
 gkmovi 29 grf div 1.0f64 fsqrt f64 e
-gkimadi 8 3 tt 4
-grptr 10 1 8 mul tt 4
-grptr 12 3 8 mul tt 4
+for u uint n
+gkldg add 32 u 10 mul u 128 ne u 0
+end
+for u uint n
+gkldg add 48 u 12 mul u 128 true
+end
 gkmovz 64
-top = grtop 30 div tt 8
-grld8 32 10 true
-grld8 40 12 false
-for u uint 8
-gkffmaf 64 add 32 u add 40 u 64
+for u uint n
+gkffmaf 64 add 32 u add 48 u 64
 end
-gradv 10 32
-gradv 12 32
-grbot 30 top
-grptr 10 1 8 mul tt 4
-grptr 12 3 8 mul tt 4
-top2 = grtop 30 div tt 8
-grld8 32 10 true
-grld8 40 12 false
-for u uint 8
-grfsub add 40 u add 40 u 64
-gkfmulf add 40 u add 40 u add 32 u
-gkfmulf add 40 u add 40 u 29
+grwred 0 0
+for u uint n
+grfsub add 48 u add 48 u 64
+gkfmulf add 48 u add 48 u add 32 u
+gkfmulf add 48 u add 48 u 29
+gkstg 12 add 48 u mul u 128 ne u 0
 end
-grst8 12 40
-gradv 10 32
-gradv 12 32
-grbot 30 top2
 gkexit
 end
 note 17 RELUF y = x > 0 ? x : 0; 18 RELUB dy = x > 0 ? dy : 0; 19 COPY; 20 ZERO; args n then pointers

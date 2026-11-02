@@ -1,6 +1,6 @@
 #!/bin/sh
 # Build ollm (aien-train#52) from native/omegallm/*.om with the pinned seeded omc.
-# Usage: sh tests/omegallm/build.sh [--mutant a|b|c|d|e|g|h|m|f|k | --variant h5|h7]
+# Usage: sh tests/omegallm/build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p | --variant h5|h7]
 # Env: TARGET (aarch64, the default, gb10, x86linux or x86efi), OMC (default ../omega-mv/seed/out/omc
 #      beside this clone for aarch64 and gb10, ../omega-mv-x86/seed/out/omc for x86linux,
 #      ../omega-efi/seed/out/omc for x86efi), OUT (default ../build beside it), CORE (taskset core,
@@ -15,15 +15,17 @@
 # application. The CPU-only targets end with nogpu.om, whose ogmask (model.om's gcmp2 ReLU mask
 # hook) refuses with exit 2; gb10 takes ogmask from gpu/gg.om instead.
 # gb10 is the aarch64 build plus native/omegallm/gpu/ (rung 4): the CPU `fn main` is renamed
-# ocpumain (exactly one line) and gg.om's main adds the GPU commands gcmp, gcmp2, gtrain, gacmp and
-# gtrainf on the raw NVIDIA driver (no CUDA). gpu/context.om, vector.om and launch.om are vendored
+# ocpumain (exactly one line) and gg.om's main adds the GPU commands gcmp, gcmp2, gtrain, gacmp,
+# gtrainf, geval and gprof on the raw NVIDIA driver (no CUDA). gpu/context.om, vector.om and launch.om are vendored
 # unmodified from aien-dev/CUDApp dcba8bb8 (native/nvrm/context.om, native/blackwell/vector.om and
 # launch.om). The output is ollm-gb10; mutant g (gg.om OMUTG) breaks the attention DK backward for
 # gcmp and gcmp2, mutant h (gr.om OMUTH) sets the on-chip Adam beta1 to 0.8 for gacmp, mutant m
-# (gr.om OMUTM) makes the chip RELUB mask x > 2^-10 while its forward and FP stay unchanged, and
+# (gr.om OMUTM) makes the chip RELUB mask x > 2^-10 while its forward and FP stay unchanged,
 # mutant f (gg.om OMUTF) uploads layer 0's W1 times 1 + 2^-10, a forward error gcmp2's FP check must
-# name, and mutant k (gr.om OMUTK) restores the plain sequential f32 sum in the CE kernel, whose bias
-# geval's gate must name.
+# name, mutant k (gr.om OMUTK) restores the plain sequential f32 sum in the CE kernel, whose bias
+# geval's gate must name, mutant s (gr.om OMUTS) drops the lane-1 butterfly step of the softmax
+# row sum, which gcmp and gcmp2 must catch, and mutant p (gg.om OMUTP) drops the last split-K
+# slice of the weight-gradient sum, which gcmp2 must catch.
 # Mutants (ollm-mut-X, one changed line) plant a defect the checks must catch. Variants (ollm-var-X,
 # two changed lines) set both gcheck steps GCH and GCH2 to 1e-5 (h5) or 1e-7 (h7), the step sizes
 # that the README's GCH section rejects. Both are made by sed on the concatenated copy only, and the
@@ -44,7 +46,7 @@ OUT=${OUT:-$here/../build}
 CORE=${CORE:-6}
 mut= kind=
 if [ $# -ge 1 ]; then
-  { [ "$1" = --mutant ] || [ "$1" = --variant ]; } && [ $# -eq 2 ] || { echo "usage: build.sh [--mutant a|b|c|d|e|g|h|m|f|k | --variant h5|h7]" >&2; exit 2; }
+  { [ "$1" = --mutant ] || [ "$1" = --variant ]; } && [ $# -eq 2 ] || { echo "usage: build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p | --variant h5|h7]" >&2; exit 2; }
   kind=$1 mut=$2
 fi
 got=$(sha256sum "$OMC" | cut -d' ' -f1)
@@ -78,9 +80,11 @@ case "$kind$mut" in
   --mutantm) pat='s/^const OMUTM ulong 1$/const OMUTM ulong 0/' want=1 ;;
   --mutantf) pat='s/^const OMUTF ulong 1$/const OMUTF ulong 0/' want=1 ;;
   --mutantk) pat='s/^const OMUTK ulong 1$/const OMUTK ulong 0/' want=1 ;;
+  --mutants) pat='s/^const OMUTS ulong 1$/const OMUTS ulong 0/' want=1 ;;
+  --mutantp) pat='s/^const OMUTP ulong 1$/const OMUTP ulong 0/' want=1 ;;
   --varianth5) pat='s/^const GCH f64 0\.000001$/const GCH f64 0.00001/;s/^const GCH2 f64 0\.00000025$/const GCH2 f64 0.00001/' want=2 ;;
   --varianth7) pat='s/^const GCH f64 0\.000001$/const GCH f64 0.0000001/;s/^const GCH2 f64 0\.00000025$/const GCH2 f64 0.0000001/' want=2 ;;
-  *) echo "usage: build.sh [--mutant a|b|c|d|e|g|h|m|f|k | --variant h5|h7]" >&2; exit 2 ;;
+  *) echo "usage: build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p | --variant h5|h7]" >&2; exit 2 ;;
 esac
 if [ -n "$mut" ]; then
   [ "$kind" = --mutant ] && name=ollm-mut-$mut || name=ollm-var-$mut

@@ -103,6 +103,8 @@ ggput 20 mul bb d
 ggput 21 get og 8
 ggput 22 get og 8
 ggput 23 div ggp5 512
+note 37: split-K partials for ggsk, at most 2^21 floats (ggks stops doubling once a grid has 1024 blocks)
+ggput 37 2097152
 ret get gga 47
 end
 
@@ -131,7 +133,8 @@ fn ggg o ulong to ulong
 ret add gga1 1 mul o 4
 end
 
-note GEMM tiles need m, n multiples of 32 and k of 16: V T D F E multiples of 32; R = B T
+note GEMM tiles need m, n multiples of 32 and k of 16: V T D F E multiples of 32; R = B T;
+note softmax rows keep T/32 values per lane in R32..R47, so T is at most 512
 fn ggok to bool
 for i ulong 5
 v = get og i
@@ -146,6 +149,9 @@ ret false
 end
 end
 if gt get og 0 65536
+ret false
+end
+if gt get og 1 512
 ret false
 end
 ret le mul get og 6 get og 3 65535
@@ -222,14 +228,74 @@ gkopc c n4 4 0 0 f32 1.0f64
 ggmm ggr n k 1 1 bt
 end
 
-note G[kk][n] += X[R][kk]^T DY[R][n]
+note G[kk][n] += X[R][kk]^T DY[R][n], split over R when the grid is small (ggks)
 fn ggwg x ulong dy ulong g ulong kk ulong n ulong to void
 k4 = uint mul kk 4
 n4 = uint mul n 4
+s = ggks kk n 1
+if eq s 1
 gkopa 0 x 4 k4 0 0
 gkopa 1 dy 4 n4 0 0
 gkopc g n4 4 0 0 f32 1.0f64
 ggmm kk n ggr 1 1 true
+ret
+end
+sl = div ggr s
+gkopa 0 x 4 k4 0 uint mul mul sl kk 4
+gkopa 1 dy 4 n4 0 uint mul mul sl n 4
+ggsk kk n 1 s g 0
+end
+
+note Split-K for the weight gradients, whose depth is R = B T. A grid of (m/32)(n/32)nz blocks
+note leaves most SMs idle (rung-6 gprof: id 4 at 1.7-6 TFLOP/s on 64-256 blocks), so ggks doubles
+note the split s (up to 16, R/s a multiple of 16) until the grid reaches 1024 blocks: then
+note blocks s < 2048, so the m n nz s partials fit the 2^21 floats of slot 37.
+fn ggks m ulong n ulong nz ulong to ulong
+b = mul mul div m 32 div n 32 nz
+r = ggr
+s = ulong 1
+while lt mul b s 1024 bound 8
+s2 = mul s 2
+if or gt s2 16 ne rem r mul s2 16 0
+ret s
+end
+s = s2
+end
+ret s
+end
+
+note Operands A and B are set (gkopa) with the slice stride as s2. Batch z = z1 s + z2 (z1 < nz the
+note caller's batch, z2 < s the slice) writes partial P[z1][z2] = A[z1 z2]^T B[z1 z2] into slot 37,
+note then COLSUM 14 adds G[z1] (byte stride gz) += sum over z2 of P[z1][z2], in slice order.
+note Mutant p (OMUTP 0) adds one slice fewer, which gcmp2 must catch.
+const OMUTP ulong 1
+fn ggsk m ulong n ulong nz ulong s ulong g ulong gz uint to void
+mn = mul m n
+p = gga1 37
+n4 = uint mul n 4
+c1 = uint mul mul mn s 4
+c2 = uint mul mn 4
+gkopc p n4 4 c1 c2 f32 1.0f64
+k = div ggr s
+z = mul nz s
+ggmm m n k z s false
+ggskr mn nz s g gz
+end
+
+note COLSUM 14 over slot 37: G[c gz + i] += sum over z2 < s of P[c][z2][i], i < mn, c < nz
+fn ggskr mn ulong nz ulong s ulong g ulong gz uint to void
+kc = s
+if eq OMUTP 0
+kc = sub s 1
+end
+ggu 0 mn
+ggu 1 kc
+ggpt 1 gga1 37
+ggu 4 mul mn 4
+ggu 5 mul mul mn s 4
+ggpt 3 g
+ggu 8 ulong gz
+ggrun 14 9 ggcd mn 64 nz 1
 end
 
 note 17 RELUF, 18 RELUB, 19 COPY (x into y), 20 ZERO (x) over n elements
@@ -286,12 +352,13 @@ ggu 8 0
 ggrun 14 9 ggcd d 64 1 1
 end
 
+note softmax rows: one warp per row, T 32 threads per score block, grid (T/2, B H)
 fn ggsoft id uint p ulong dp ulong to void
 tt = get og 1
-ggu 0 tt
+ggu 0 mul tt 32
 ggpt 1 p
 ggpt 2 dp
-ggrun id 6 ggcd tt 64 mul get og 6 get og 3 1
+ggrun id 6 div tt 2 mul get og 6 get og 3 1
 end
 
 note attention GEMM over the B H (sequence, head) batch; operands set by gghd/ggpl/ggch/ggcp first
@@ -545,12 +612,20 @@ ggxwt du w da d d true
 a = ggl l 1
 w = ggg opwq l
 s0 = get ggs 0
-gkopa 0 a 4 s0 0 0
 s6 = get ggs 6
-gkopa 1 dq 4 s0 0 s6
 s7 = get ggs 7
+k = ggks d d 3
+if eq k 1
+gkopa 0 a 4 s0 0 0
+gkopa 1 dq 4 s0 0 s6
 gkopc w s0 4 0 s7 f32 1.0f64
 ggmm d d ggr 3 3 true
+else
+sl = uint div ggr k
+gkopa 0 a 4 s0 0 mul sl s0
+gkopa 1 dq 4 s0 s6 mul sl s0
+ggsk d d 3 k w s7
+end
 x = ggl l 0
 w = ggw opg1 l
 s = ggl l 8
@@ -1525,6 +1600,60 @@ oflush
 r = nvstop
 end
 
+note gprof CK TRAIN N: N gtrainf steps from CK, nothing saved. The last step runs with the launch
+note profile on (gk.om gkpf), then 64 ZERO launches of 64 floats measure the bare launch round trip.
+note Prints `T steps loss_micro`, one `GP id gx gy gz m n k wait_ns` per profiled launch, then GT.
+fn ggprof to void
+if ne oargc 5
+exit 2
+end
+ockload 2
+odopen 3
+nn = oargu 4
+if eq nn 0
+exit 2
+end
+ggopen
+ggupst
+ls = 0.0f64
+for i ulong nn
+s = get og 41
+obatch s
+put og 10 0
+if eq add i 1 nn
+put gkpf 0 1
+end
+ls = ggpass false
+t = monons
+ggadam
+put ggtm 5 sub monons t
+put og 41 add s 1
+end
+for i ulong 64
+ggew 20 64 ggg 0 ggg 0
+end
+put gkpf 0 0
+oputc 84
+oputc 32
+oputu get og 41
+oputc 32
+oputl rmic ls
+oputc 10
+for q ulong get gkpc 0
+o = mul q 8
+oputc 71
+oputc 80
+for j ulong 8
+oputc 32
+oputu get gkpl add o j
+end
+oputc 10
+end
+ggtms
+oflush
+r = nvstop
+end
+
 note geval CK HELD W [MERGES]: eval (cli.om cmdeval) with the forward pass on the chip in f32. Windows
 note w < W at offsets w T, B per forward (og 6); the last set pads its spare rows with window 0 and
 note does not count them. Each window adds its mean row loss in window order and, when V > 256, the
@@ -1762,6 +1891,10 @@ ret 0
 end
 if eq w 444015928423
 ggdiag
+ret 0
+end
+if eq w 439956435047
+ggprof
 ret 0
 end
 ret ocpumain

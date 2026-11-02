@@ -437,8 +437,118 @@ gbemit 0
 gbemit 2147483648
 gbrel add mark 16 1179010630
 end
-note launch accounting: 0 launches, 1 build+send ns, 2 wait ns, 3 max wait ns
+note Launch profile (gprof): while gkpf[0] is 1, each launch appends id gx gy gz m n k wait_ns to gkpl
+note (8 words, at most 1024 launches); gkmm sets gkps to its m n k first, other launches log zeros.
+global gkpf uint 1
+global gkpc ulong 1
+global gkpl ulong 8192
+global gkps uint 3
+fn gkplog id uint gx uint gy uint gz uint w long to void
+c = get gkpc 0
+if and eq get gkpf 0 1 lt c 1024
+o = mul c 8
+put gkpl o ulong id
+put gkpl add o 1 ulong gx
+put gkpl add o 2 ulong gy
+put gkpl add o 3 ulong gz
+put gkpl add o 4 ulong get gkps 0
+put gkpl add o 5 ulong get gkps 1
+put gkpl add o 6 ulong get gkps 2
+put gkpl add o 7 ulong w
+put gkpc 0 add c 1
+end
+put gkps 0 0
+put gkps 1 0
+put gkps 2 0
+end
+note launch accounting: 0 launches, 1 build ns, 2 wait ns (send to the QMD release semaphore),
+note 3 max wait ns
 global gkt long 4
+note wait for the release: spin up to 2 ms on the mark (vendored context.om nvwait sleeps 100 us
+note between polls, which cost each launch about 110-150 us in the rung-6 gprof ZERO round trips),
+note then hand the rest of the budget to nvwait, which keeps its checks, sleep and timeout
+fn gkwait m long off ulong value uint budget ulong to bool
+if eq get nvfault 0 0
+start = monons
+while lt sub monons start 2000000
+if eq mapget m off 4 ulong value
+if ne get nvput 0 get nvret 0
+put nvret 0 get nvput 0
+ret true
+end
+end
+end
+end
+ret nvwait m off value budget
+end
+note wait for a word nvwait cannot (it refuses once nvret has caught up with nvput): spin 2 ms,
+note then poll every 100 us up to budget ns; a timeout sets nverr -110 and nvfault as nvwait does
+fn gkpoll m long off ulong value uint budget ulong to bool
+if ne get nvfault 0 0
+put nverr 0 neg long 22
+ret false
+end
+start = monons
+while true
+if eq mapget m off 4 ulong value
+ret true
+end
+el = sub monons start
+if or lt el 0 ge el long budget
+put nverr 0 neg long 110
+put nvfault 0 1
+ret false
+end
+if ge el 2000000
+r = sleepns long 100000
+if ne r 0
+put nverr 0 r
+put nvfault 0 1
+ret false
+end
+end
+end
+ret false
+end
+note submit the built pushbuffer and wait for the launch to retire; returns the wait in ns, or -1
+fn gksend to long
+r = mapset get gbmem 2 8192 4 0
+r = mapset get gbmem 3 0 4 0
+r = mapset get gbmem 3 16 4 0
+n = get gbused 0
+r = mapwrite get gbmem 0 0 gbcmd 0 n
+put nvstage 0 41
+if ne r long n
+put nverr 0 neg long 5
+ret neg long 1
+end
+t1 = monons
+if not nvsend get gbmem 0 0 uint div n 4
+ret neg long 1
+end
+put nvstage 0 42
+if not gkwait get gbmem 3 16 1179010630 5000000000
+ret neg long 1
+end
+put nvstage 0 43
+if ne mapget get gbmem 3 0 4 1145324612
+put nverr 0 neg long 5
+put nvfault 0 1
+ret neg long 1
+end
+note the QMD's own release semaphore is written after the grid retires and may land after the
+note second mark (omega_blackwell_engine.c be_wait_release_semaphore waits for it): wait, not peek
+put nvstage 0 44
+if not gkpoll get gbmem 2 8192 6 1000000000
+ret neg long 1
+end
+w = sub monons t1
+put gkt 2 add get gkt 2 w
+if gt w get gkt 3
+put gkt 3 w
+end
+ret w
+end
 fn gklaunch id uint gx uint gy uint gz uint to bool
 if or or or eq gx 0 eq gy 0 eq gz 0 ne get nvfault 0 0
 put nverr 0 neg long 22
@@ -451,38 +561,13 @@ end
 put nvstage 0 40
 t0 = monons
 gkbuild id gx gy gz
-r = mapset get gbmem 2 8192 4 0
-r = mapset get gbmem 3 0 4 0
-r = mapset get gbmem 3 16 4 0
-r = mapwrite get gbmem 0 0 gbcmd 0 get gbused 0
-put nvstage 0 41
-if not nvsend get gbmem 0 0 uint div get gbused 0 4
-ret false
-end
-put nvstage 0 42
-t1 = monons
-if not nvwait get gbmem 3 16 1179010630 5000000000
-ret false
-end
-t2 = monons
 put gkt 0 add get gkt 0 1
-put gkt 1 add get gkt 1 sub t1 t0
-w = sub t2 t1
-put gkt 2 add get gkt 2 w
-if gt w get gkt 3
-put gkt 3 w
-end
-put nvstage 0 43
-if ne mapget get gbmem 3 0 4 1145324612
-put nverr 0 neg long 5
-put nvfault 0 1
+put gkt 1 add get gkt 1 sub monons t0
+w = gksend
+if lt w 0
 ret false
 end
-if ne mapget get gbmem 2 8192 4 6
-put nverr 0 neg long 5
-put nvfault 0 1
-ret false
-end
+gkplog id gx gy gz w
 ret true
 end
 note Open the chip: slots 0 cmd, 1 cbank, 2 qmd, 3 marks, 4 code, 5 arena of asz bytes.
@@ -598,6 +683,9 @@ end
 put gkarg 22 div k 16
 put gkarg 23 mg
 put gkarg 24 neg h2
+put gkps 0 m
+put gkps 1 n
+put gkps 2 k
 put gkna 0 26
 id = add get gkmd 0 mul 2 get gkmd 1
 if beta

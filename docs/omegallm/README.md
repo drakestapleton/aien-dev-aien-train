@@ -339,6 +339,7 @@ $B gacmp CK DATA S                # one step, on-chip f32 Adam vs CPU f64 oadam;
 $B gtrain CK TRAIN UNTIL EVERY    # train with the chip gradient, Adam on the CPU
 $B gtrainf CK TRAIN UNTIL EVERY   # train with weights and Adam state resident on the chip
 $B geval CK HELD W [MERGES]       # eval's forward on the chip in f32; prints eval's E line
+$B gprof CK TRAIN N              # N gtrainf steps, nothing saved; GP id gx gy gz m n k wait_ns per launch of the last step
 ```
 
 Run them only inside a `spark-window`. The checkpoint format is unchanged, so CPU `eval`, `sample` and
@@ -356,6 +357,7 @@ Run them only inside a `spark-window`. The checkpoint format is unchanged, so CP
 | held-out eval of rung-5 steps 2000 and 9000 (CPU `eval`, W 2243 at T 256) | EXERCISED | `../gpu-max/eval2000.txt` 1.789590 nats, 0.667600 bpb; `../gpu-max/eval9000.txt` 1.445466 nats, 0.539226 bpb |
 | CE kernel sum fix: the plain f32 sum of exp over V 4096 ran ~1.04e-5 low; Kahan sum in `grce` | EXERCISED (GB10, non-quiet) | `../geval/plain/gd-*.txt` before, `../geval/gd-*.txt` after; the rung-4 and rung-5 runs above trained with the plain sum |
 | `geval` matches CPU `eval` within 10 µnats | EXERCISED (GB10, non-quiet) | `../geval/ge-night-gtrainf.txt`, `ge-night-gtrain.txt`, `ge-max-2000.txt`, `ge-max-9000.txt`: the CPU E lines exactly, 8.47 s of chip time for the step-9000 eval against 7323 s of CPU; mutant k (plain sum) Δ −11 FAIL; the first build failed the gate (`../geval/plain/`) |
+| k1 kernels: one-warp softmax rows, split-K weight gradients, spin wait; product passes `gcmp2`, `gacmp`, `geval` | EXERCISED (GB10, non-quiet) | `../gpu-k1/`: `geval` of rung 5 `ck9000` and rung 6 `ck30000` give the earlier E lines exactly; mutants s, p FAIL rc 47; 200 steps 1.182× faster than the softmax-only build |
 
 The γ_R gate, the ReLU kink cases that the night shape exposes, the Adam residual, the windows and all
 timings are in `evidence/OMEGALLM/gpu/README.md`. Not QUALIFIED: no quiet-machine timing, one chip, and
