@@ -18,6 +18,10 @@ global ocnt ulong 65536
 global ocnu ulong 256
 global ocnr ulong 256
 global oseps uchar 16
+note v1 (CONTRACT-V1 section 3): the window that the platform's positioned read oprd fills; prep,
+note the bpe commands and the windowed data reads all use it.
+const OPWCAP ulong 2097152
+global opw uchar 2097152
 
 note exit codes of this unit: 2 usage, 20 data file empty or too short for T, 21 data file over
 note 2^25 bytes, 70 I/O.

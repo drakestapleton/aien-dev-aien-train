@@ -247,3 +247,35 @@ exit 21
 end
 end
 
+
+note v1 positioned read (CONTRACT-V1 section 3): read up to n bytes of the file named by argv[ai],
+note from byte pos, into opw[off .. off + n). The file is opened and closed on every call. Returns
+note the bytes read: n, fewer only when the file ends first, 0 at or after its end. Exit 70 on an
+note I/O error, 2 on a bad argument; off + n over len opw traps 3. Each pread pass adds at least one
+note byte or ends, so n + 1 <= 2097153 passes suffice: 3 outer passes of at most 999999 inner ones.
+fn oprd ai ulong pos ulong off ulong n ulong to ulong
+pl = oargp ai
+fd = int fopen oarg 0 pl 0 0
+if lt fd 0
+exit 70
+end
+p = ulong 0
+dn = false
+for o ulong 3
+while and not dn lt p n bound 999999
+r = pread fd opw add off p sub n p long add pos p
+if lt r 0
+exit 70
+end
+if eq r 0
+dn = true
+else
+p = add p ulong r
+end
+end
+end
+if ne fclose fd 0
+exit 70
+end
+ret p
+end
