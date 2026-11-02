@@ -361,6 +361,7 @@ Run them only inside a `spark-window`. The checkpoint format is unchanged, so CP
 | k1 kernels: one-warp softmax rows, split-K weight gradients, spin wait; product passes `gcmp2`, `gacmp`, `geval` | EXERCISED (GB10, non-quiet) | `../gpu-k1/`: `geval` of rung 5 `ck9000` and rung 6 `ck30000` give the earlier E lines exactly; mutants s, p FAIL rc 47; 200 steps 1.182× faster than the softmax-only build |
 | k2: 64×64 f32 GEMM tile (slots 32-39) when m and n are multiples of 64 | EXERCISED (GB10, non-quiet) | `../gpu-k2/`: `gcmp2`, `gacmp`, both `geval` E lines exact; mutant t FAIL rc 47; the checkpoint after 200 steps is bit-identical to k1's; 200 steps 1.061× faster than k1, GEMM wait −17.45% |
 | k3: RMS norm kernels (ids 10, 11) one warp per row, coalesced, single pass | EXERCISED (GB10, non-quiet) | `../gpu-k3/`: `gcmp2`, `gacmp`, both `geval` E lines exact; mutant r FAIL rc 47 (small and max); RMS kernels 2.50× and 2.47× faster in the profile; 200 steps 1.058× faster than k2 in the same window |
+| k4: cross-entropy kernel (id 21) one warp per row, coalesced, no stored e (3 reads + 1 write) | EXERCISED (GB10, non-quiet) | `../gpu-k4/`: `gcmp2`, `gacmp`, both `geval` E lines exact; mutant x FAIL rc 47 (small and max) and `geval` Δ −362083 µnats; `grce` 3.68× faster in the profile; 200 steps 1.041× faster than k3 in the same window |
 
 The γ_R gate, the ReLU kink cases that the night shape exposes, the Adam residual, the windows and all
 timings are in `evidence/OMEGALLM/gpu/README.md`. Not QUALIFIED: no quiet-machine timing, one chip, and

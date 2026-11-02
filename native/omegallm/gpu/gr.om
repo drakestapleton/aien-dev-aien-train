@@ -366,39 +366,54 @@ end
 gkstg 12 34 0 false
 end
 note 21 CE: per row r of logits L (R x V): m, e = exp(l - m), sum; L <- (e/sum - [c = y]) sc;
-note stats[r] = (m, sum, l_y); sc = 1/(T B); args R L y st
-note The sum is compensated (Kahan: R40 carries the lost low part, R41 y, R42 t). A plain sequential
-note f32 sum drops every e below half an ulp of the running sum; at V 4096 that biased the sum low
-note by about 1.04e-5 relative on trained checkpoints (gdiag receipt). Mutant k (OMUTK 0) restores
-note the plain sum. Kernels launch with 72 GPRs (gkgpr in grall); the same sum in R69-R71 hung this
-note kernel (launch wait -110, evidence/OMEGALLM/geval/a1), so it uses the free R40-R42.
+note stats[r] = (m, sum, l_y); sc = 1/(T B); args R*32 L y st. One warp per row (grrrow): lane l
+note holds columns l + 32 u, read as 8 coalesced 128-byte lines per step of 256 columns. Pass 1 takes
+note the lane max, then the warp max. Pass 2 sums e per lane without storing it, then the warp sum
+note of the lane totals. Pass 3 recomputes e with the same FFMA and MUFU (bit-identical to pass 2),
+note scales it and stores it. The lane that owns column y (lane y & 31, the thread that stored it)
+note subtracts sc there and writes stats, so no lane reads another lane's store. l_y is loaded
+note before any store, and the next instruction waits for that load.
+note Each lane's sum is compensated (Kahan: R40 carries the lost low part, R41 y, R42 t) and the
+note lane total is s - c. A plain sequential f32 sum over V 4096 in one thread biased log sum low by
+note about 1.04e-5 relative on trained checkpoints (gdiag receipt). Mutant k (OMUTK 0) keeps the
+note plain per-lane sum. Mutant x (OMUTX 0) skips the lane-1 butterfly step of the warp sum, which
+note gcmp2 and geval must catch. Kernels launch with 72 GPRs (gkgpr in grall); Kahan state in
+note R69-R71 hung this kernel (launch wait -110, evidence/OMEGALLM/geval/a1), so it uses R40-R42.
+note The warp sum overwrites R64 and its scratch R65 (grwred), so R43 keeps m and pass 3 recomputes
+note R65 = -m log2e from it (the same FMUL as pass 2, so the same value).
 const OMUTK ulong 1
+const OMUTX ulong 1
 fn grce to void
 v = uint get grd 0
+v4 = mul v 4
+it = div v 256
 sc = div 1.0f64 f64 mul get grd 1 get grd 5
-grpro
+grrrow
 gkmovi 28 grf 1.4426950408889634f64
 gkmovi 29 grf neg 1.4426950408889634f64
 gkmovi 25 grf sc
-grptr 10 1 4 mul v 4
-grptr 12 3 4 4
+grptr 12 3 8 4
 gkldg 20 12 0 false
-gkimadw 14 20 4 10
+grptr 14 1 8 v4
+gkimadw 14 20 4 14
 gkldg 68 14 0 false
+grrptr 10 1 v4
 gkmovi 64 4286578688
-top = grtop 30 div v 8
-grld8 32 10 true
+top = grtop 30 it
+grldw 32 10 8 true
 for u uint 8
 grfmax 64 64 add 32 u
 end
-gradv 10 32
+gradv 10 1024
 grbot 30 top
+grwred 1 0
+grfadd 43 64 255
 gkfmulf 65 64 29
-grptr 10 1 4 mul v 4
+grrptr 10 1 v4
 gkmovz 66
 gkmovz 40
-top2 = grtop 30 div v 8
-grld8 32 10 true
+top2 = grtop 30 it
+grldw 32 10 8 true
 for u uint 8
 gkffmaf add 32 u add 32 u 28 65
 grmufu add 32 u add 32 u 2048
@@ -413,26 +428,37 @@ grfsub 40 66 41
 grfadd 66 42 255
 end
 end
-grst8 10 32
-gradv 10 32
+gradv 10 1024
 grbot 30 top2
-grmufu 67 66 4096
+grfsub 64 66 40
+if eq OMUTX 0
+grwred 0 1
+else
+grwred 0 0
+end
+grmufu 67 64 4096
 gkfmulf 67 67 25
-grptr 10 1 4 mul v 4
-top3 = grtop 30 div v 8
-grld8 32 10 true
+gkfmulf 65 43 29
+grrptr 10 1 v4
+top3 = grtop 30 it
+grldw 32 10 8 true
 for u uint 8
+gkffmaf add 32 u add 32 u 28 65
+grmufu add 32 u add 32 u 2048
 gkfmulf add 32 u add 32 u 67
 end
-grst8 10 32
-gradv 10 32
+grstw 10 32 8
+gradv 10 1024
 grbot 30 top3
+gkandi 21 20 31
+grisetp 1 9 21 5
+grpexit 1
 gkldg 33 14 0 false
 grfsub 33 33 25
 gkstg 14 33 0 false
-grptr 16 5 4 12
-gkstg 16 64 0 false
-gkstg 16 66 4 true
+grptr 16 5 8 12
+gkstg 16 43 0 false
+gkstg 16 64 4 true
 gkstg 16 68 8 true
 gkexit
 end
@@ -536,8 +562,11 @@ put grd 4 f
 put grd 5 b
 end
 fn grall to bool
-note the warp-per-row RMS kernels hold D/32 columns per lane, and softmax T/32
+note the warp-per-row RMS kernels hold D/32 columns per lane, softmax T/32, and CE steps 256 columns
 if or ne rem get grd 2 32 0 ne rem get grd 1 32 0
+ret false
+end
+if ne rem get grd 0 256 0
 ret false
 end
 for k uint 16

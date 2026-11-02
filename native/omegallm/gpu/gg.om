@@ -518,7 +518,7 @@ x = gga1 11
 w = ggw 0
 v = get og 0
 ggxwt z w x v d false
-r = ggr
+r = mul ggr 32
 ggu 0 r
 ggpt 1 x
 x = gga1 3

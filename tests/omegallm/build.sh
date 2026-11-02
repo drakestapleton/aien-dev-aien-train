@@ -1,6 +1,6 @@
 #!/bin/sh
 # Build ollm (aien-train#52) from native/omegallm/*.om with the pinned seeded omc.
-# Usage: sh tests/omegallm/build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p|t|r | --variant h5|h7]
+# Usage: sh tests/omegallm/build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p|t|r|x | --variant h5|h7]
 # Env: TARGET (aarch64, the default, gb10, x86linux or x86efi), OMC (default ../omega-mv/seed/out/omc
 #      beside this clone for aarch64 and gb10, ../omega-mv-x86/seed/out/omc for x86linux,
 #      ../omega-efi/seed/out/omc for x86efi), OUT (default ../build beside it), CORE (taskset core,
@@ -22,13 +22,15 @@
 # gcmp and gcmp2, mutant h (gr.om OMUTH) sets the on-chip Adam beta1 to 0.8 for gacmp, mutant m
 # (gr.om OMUTM) makes the chip RELUB mask x > 2^-10 while its forward and FP stay unchanged,
 # mutant f (gg.om OMUTF) uploads layer 0's W1 times 1 + 2^-10, a forward error gcmp2's FP check must
-# name, mutant k (gr.om OMUTK) restores the plain sequential f32 sum in the CE kernel, whose bias
-# geval's gate must name, mutant s (gr.om OMUTS) drops the lane-1 butterfly step of the softmax
-# row sum, which gcmp and gcmp2 must catch, mutant p (gg.om OMUTP) drops the last split-K slice
+# name, mutant k (gr.om OMUTK) makes each CE lane's sum a plain sequential f32 sum (a lane of the
+# warp-per-row CE kernel sums V/32 terms, so its effect is reported, not a control), mutant s
+# (gr.om OMUTS) drops the lane-1 butterfly step of the softmax row sum, which gcmp and gcmp2 must
+# catch, mutant p (gg.om OMUTP) drops the last split-K slice
 # of the weight-gradient sum, which gcmp2 must catch, mutant t (gk.om OMUTT) drops one k = 7
 # product per K tile from the first accumulator of every 64x64 GEMM thread, which gcmp2 must catch,
-# and mutant r (gr.om OMUTR) drops the lane-1 butterfly step of the RMS backward row sum
-# sum(da g v), which gcmp2 must catch.
+# mutant r (gr.om OMUTR) drops the lane-1 butterfly step of the RMS backward row sum
+# sum(da g v), which gcmp2 must catch, and mutant x (gr.om OMUTX) drops the lane-1 butterfly step
+# of the CE kernel's warp sum of exp(l - m), which gcmp2 and geval must catch.
 # Mutants (ollm-mut-X, one changed line) plant a defect the checks must catch. Variants (ollm-var-X,
 # two changed lines) set both gcheck steps GCH and GCH2 to 1e-5 (h5) or 1e-7 (h7), the step sizes
 # that the README's GCH section rejects. Both are made by sed on the concatenated copy only, and the
@@ -49,7 +51,7 @@ OUT=${OUT:-$here/../build}
 CORE=${CORE:-6}
 mut= kind=
 if [ $# -ge 1 ]; then
-  { [ "$1" = --mutant ] || [ "$1" = --variant ]; } && [ $# -eq 2 ] || { echo "usage: build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p|t|r | --variant h5|h7]" >&2; exit 2; }
+  { [ "$1" = --mutant ] || [ "$1" = --variant ]; } && [ $# -eq 2 ] || { echo "usage: build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p|t|r|x | --variant h5|h7]" >&2; exit 2; }
   kind=$1 mut=$2
 fi
 got=$(sha256sum "$OMC" | cut -d' ' -f1)
@@ -87,9 +89,10 @@ case "$kind$mut" in
   --mutantp) pat='s/^const OMUTP ulong 1$/const OMUTP ulong 0/' want=1 ;;
   --mutantt) pat='s/^const OMUTT ulong 1$/const OMUTT ulong 0/' want=1 ;;
   --mutantr) pat='s/^const OMUTR ulong 1$/const OMUTR ulong 0/' want=1 ;;
+  --mutantx) pat='s/^const OMUTX ulong 1$/const OMUTX ulong 0/' want=1 ;;
   --varianth5) pat='s/^const GCH f64 0\.000001$/const GCH f64 0.00001/;s/^const GCH2 f64 0\.00000025$/const GCH2 f64 0.00001/' want=2 ;;
   --varianth7) pat='s/^const GCH f64 0\.000001$/const GCH f64 0.0000001/;s/^const GCH2 f64 0\.00000025$/const GCH2 f64 0.0000001/' want=2 ;;
-  *) echo "usage: build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p|t|r | --variant h5|h7]" >&2; exit 2 ;;
+  *) echo "usage: build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p|t|r|x | --variant h5|h7]" >&2; exit 2 ;;
 esac
 if [ -n "$mut" ]; then
   [ "$kind" = --mutant ] && name=ollm-mut-$mut || name=ollm-var-$mut
