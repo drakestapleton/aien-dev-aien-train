@@ -457,7 +457,8 @@ note (2^-10 with alpha 1/2) and every sum stays below 2^11: the chip's f32 resul
 note cases (eight plain kernels, epilogues 1 and 2, cz 1, 2 and 3), each with the operand roles
 note swapped; nz 6, h2 3, padded strides, NaN in every operand word the kernel must not read. Data in
 note the logits buffer (A, B, C, Y at 0, 1, 2, 3 MiB). Prints `GF pass case id k cz ep bad` per case,
-note `GFS bad` and GBFRAG PASS, or GBFRAG FAIL (exit 50).
+note then the eight long-K cases (gbfl, `GFL pass ma mb bad`), `GFS bad` and GBFRAG PASS, or GBFRAG FAIL
+note (exit 50). Needs a logits buffer of at least 4 Mi floats (B 8: 8 Mi).
 note gbcs: 0 ma, 1 mb (1 = K-contiguous), 2 beta, 3 ep, 4 cz, 5 k, 6 m, 7 n, 8 pass, 9 alpha 1/2
 global gbcs uint 10
 global gbfb ulong 1
@@ -470,7 +471,7 @@ exit 2
 end
 ockload 2
 ggopen
-if lt mul ggr get og 0 1048576
+if lt mul ggr get og 0 4194304
 ggdie 3
 end
 put gkbf 0 1
@@ -480,6 +481,11 @@ bad = ulong 0
 for p ulong 2
 for i ulong 13
 bad = add bad gbf1 i p
+end
+end
+for p ulong 2
+for q uint 4
+bad = add bad gbfl p and q 1 shr q 1
 end
 end
 r = nvstop
@@ -524,8 +530,10 @@ if eq i 9
 put gbcs 1 1
 put gbcs 3 2
 end
+note cz 1 needs k = m
 if eq i 10
 put gbcs 4 1
+put gbcs 5 128
 end
 if eq i 11
 put gbcs 0 0
@@ -845,6 +853,124 @@ for j ulong kn
 kk = add lo j
 a = get gbha add ia kk
 s = add s mul a get gbhb add ib kk
+end
+ret s
+end
+
+note long-K case of pass p, operand modes ma, mb: m = n = 64, k = 16384 (512 K tiles), nz 1, beta 0,
+note alpha 1. Operands are zero except kk = 0 mod 29 (565 terms, at least one in every 32-wide K tile),
+note so a dropped, repeated or misplaced K tile changes C; sums stay below 565 5 17/8 < 2^13 in multiples
+note of 2^-9, so the f32 result is exact. Logits buffer: A at 0, B at 6 MiB, C (rows of 72) at 12 MiB,
+note NaN everywhere first; C's padding columns must stay NaN. Prints `GFL pass ma mb bad`.
+fn gbfl p ulong ma uint mb uint to ulong
+for j ulong 10
+put gbcs j 0
+end
+put gbcs 0 ma
+put gbcs 1 mb
+put gbcs 5 16384
+put gbcs 6 64
+put gbcs 7 64
+put gbcs 8 uint p
+b = get gbfb 0
+for i ulong 3162112
+gbput add b mul i 4 2143289344
+end
+gblw 0
+gblw 1
+put gkinv 0 1
+if not gbllch
+ggdie 98
+end
+bad = ulong 0
+for r ulong 64
+bad = add bad gblrow r
+end
+oputc 71
+oputc 70
+oputc 76
+oputc 32
+oputu p
+oputc 32
+oputu ulong ma
+oputc 32
+oputu ulong mb
+oputc 32
+oputu bad
+oputc 10
+ret bad
+end
+
+note operand ab of the long case: nonzero words only at kk = 0 mod 29
+fn gblw ab uint to void
+md = get gbcs ab
+base = add get gbfb 0 mul ulong ab 6291456
+fr = eq get gbcs 8 ab
+for x ulong 64
+gblwr md base x fr
+end
+end
+
+fn gblwr md uint base ulong x ulong fr bool to void
+w = ulong 64
+kd = ulong 16384
+for kk ulong kd
+u = uint 0
+if eq rem kk 29 0
+u = gbwv x kk 0 fr
+end
+o = gbopf md x kk w kd
+gbput add base mul o 4 u
+end
+end
+
+note launch the long case: mode 1 rows of k + 8 floats, mode 0 K rows of 80 floats
+fn gbllch to bool
+d = add gkbase get gbfb 0
+gblopa 0 d
+gblopa 1 add d 6291456
+gkopc add d 12582912 288 4 0 0 f32 1.0f64
+gkopz 0
+ret gkmm 64 64 16384 1 1 false
+end
+
+fn gblopa ab uint p ulong to void
+so = uint 65568
+sk = uint 4
+if eq get gbcs ab 0
+so = 4
+sk = 320
+end
+gkopa ab p so sk 0 0
+end
+
+note row r of the long case: 64 exact values, then 8 padding words that must still be NaN
+fn gblrow r ulong to ulong
+o = add add get gbfb 0 12582912 mul r 288
+bad = ulong 0
+for c ulong 64
+cb = gbw add o mul c 4
+if ne f64 bitcast f32 cb gblref r c
+bad = add bad 1
+end
+end
+for c ulong 8
+if ne gbw add o mul add 64 c 4 2143289344
+bad = add bad 1
+end
+end
+ret bad
+end
+
+note exact reference: sum over kk = 29 j of the bf16-rounded A(r, kk) B(c, kk)
+fn gblref r ulong c ulong to f64
+fa = eq get gbcs 8 0
+fb = eq get gbcs 8 1
+s = 0.0f64
+for j ulong 565
+kk = mul j 29
+a = gbrv gbwv r kk 0 fa
+s = add s mul a gbrv gbwv c kk 0 fb
 end
 ret s
 end

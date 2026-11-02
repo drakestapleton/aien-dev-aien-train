@@ -6,12 +6,25 @@ four planted kernel/reference defects, (c) a BF16 gradient stays within the 4.3 
 the CPU f64 gradient, and (d) every f32 command of the BF16 binary still reproduces the rung-7
 receipts (4.5).
 
-Source: aien-train feat/omega-llm-bf16 e329675 (code), a00bdfe (contract), ed656ae (crumbs).
-Binaries (evidence/OMEGALLM/gpu-bf/build.txt):
-  P   /dev/shm/ollm-bf/build-gb10/ollm-gb10        b74c1afe8be1d69f3b438d577c1e32a3a4d3675ba3a548e1cfcd1df3d6e8f88c
-  Mu  ollm-mut-u-gb10 d5e266f5...  Ml ollm-mut-l-gb10 783f9dc2...
-  Mo  ollm-mut-o-gb10 99eae40d...  Mv ollm-mut-v-gb10 5f083f67...
+Source: aien-train feat/omega-llm-bf16, kernel code e329675 (unchanged), gb.om gate harness amended
+  in the commit that carries this prereg (see Amendment), contract a00bdfe.
+Binaries, rebuilt from that tree with the pinned omc 2c824805...:
+  P   /dev/shm/ollm-bf/build-gb10/ollm-gb10        54fb8233c62a13c0b3bac13a38dd5b583943e9e9097342baaa57fc22db2ceb49
+  Mu  ollm-mut-u-gb10 efc983e9...  Ml ollm-mut-l-gb10 b62ce7f8...
+  Mo  ollm-mut-o-gb10 af048991...  Mv ollm-mut-v-gb10 ef2ddbfc...
   P7  /tmp/gk/r7/gpu2/ollm-gb10 (rung-7 run binary) 1853303e82e9770822e643d0a22e5af9d3c7377a1a8b2c5cbf55ba6774814f0f
+  The amended tree's gpu-dump code_sha256 is f2628fda..., equal to e329675's: no kernel byte changed.
+
+Amendment (before any window ran; the first version is in commit 5f13cb3 and was never executed):
+  a review of the source found gbfrag case 10 asked for cz 1 with k 96 != m 128, which gkczok
+  refuses, so every binary would have stopped at case 10 (ggdie 98, rc 84) and B1/B2 could not
+  hold. Case 10 now uses k = 128. The same review found that no exact check covered long K loops
+  (gbfrag stopped at 4 K tiles; gbcmp's bound at B 64 is about one K tile of sum |ab|). gbfrag now
+  adds eight long-K cases (gbfl): m = n = 64, k = 16384 (512 K tiles), nz 1, both operand modes for
+  A and B, both role passes; operands zero except kk = 0 mod 29, so every K tile contributes, and
+  the f32 result is exact (sums < 565 * 5 * 17/8 = 6003.125 < 2^13 in multiples of 2^-9); C's padding columns must
+  stay NaN. B1 and B2 are amended to match; nothing else in the predictions changed except the
+  field naming in B10-B12.
 Host evidence already taken: slots 27..36 disassemble clean (GPR declared 152 >= need 145, SMEM
   target 17, 16 HMMA.16816.F32.BF16 each); every f32 slot's code and GPR/SMEM bytes equal the base
   273ca2a build; the AArch64 build equals the base (6da13670...).
@@ -29,8 +42,9 @@ Inputs:
      P with P7 on the same input instead of with the k9 receipt.)
 
 Predictions (each a pass/fail line in REPORT.txt):
-B1  gbfrag ckb8 with P: GBFRAG PASS, rc 0, GFS 0 (26 GF lines, all bad 0).
-B2  gbfrag with Mu, Ml, Mo, Mv: each GBFRAG FAIL, rc 50.
+B1  gbfrag ckb8 with P: GBFRAG PASS, rc 0, GFS 0 (26 GF lines and 8 GFL lines, all bad 0).
+B2  gbfrag with Mu, Ml, Mo, Mv: each GBFRAG FAIL, rc 50. The GF/GFL lines with bad > 0 are reported
+    per mutant; Mo must also fail at least one GFL line (a dropped K tile at k = 16384).
 B3  gbcmp ckb8 train.tok 7 with P: GBCMP PASS, rc 0 (gbcmp itself fails on a sample past its bound,
     no BF16 GEMM, or coverage short of epilogues 1 and 2, cz 3, beta false and true). The GBC
     line's gemms, worst_e6 and idmask are reported.
@@ -46,12 +60,13 @@ B9  gtrainf 9200 200 from a copy of r6 ck9000 with P: rc 0 and ck_after
     ec4a8c2125791277047b80dff00c18f4dcbcce0f16f5d0b8028c6cc5d1d1a047 (bit-identical to the v1 and
     rung-7 binaries).
 B10 gcmp2 cks.bin train.dec 3 with P and with P7: both GCMP2 PASS rc 0, and the two GC2 lines are
-    equal in every field except the timing field 14.
+    equal in every token except gpu_ns (the 14th value after GC2).
 B11 gcmp2 ckb8 train.tok 7 with P: GCMP2 PASS rc 0, and its GC2 line equals the rung-7 gate2
     receipt `GC2 15833472 342030 991 122070 425 91553 5 5 267282 2213833 0 8408630 8408630 * 0`
-    in every field except field 14.
+    in every token except gpu_ns (the `*`).
 B12 gacmp ckg.bin train.tok 7 with P: GACMP PASS rc 0, and the GA line equals the rung-7 gate2
-    receipt `GA 15833472 59587 4063468404 14664 132 15259 3147017 2774219` except any timing field.
+    receipt `GA 15833472 59587 4063468404 14664 132 15259 3147017 2774219` in every token except
+    adam_ns (the 7th value after GA, 3147017 there).
 
 Decision: BF16 training (window bf-t1) starts only if B1-B4 and B6-B12 hold and every mutant in B2
 and B5 (Ml, Mo, Mv) fails. A mutant that passes means that gate does not cover its defect; the

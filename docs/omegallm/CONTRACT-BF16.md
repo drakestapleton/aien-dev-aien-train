@@ -66,9 +66,10 @@ Encoding provenance: the instruction words were verified with `nvdisasm -b SM121
 
 ### 4.1 gbfrag (exact)
 
-gbfrag runs thirteen cases: eight plain kernels, epilogues 1 and 2, and cz 1, 2 and 3. Each case
-runs twice, once with the operand roles swapped. The data uses nz 6, h2 3 and padded strides, and
-every operand word the kernel must not read is NaN.
+gbfrag runs thirteen cases: eight plain kernels, epilogues 1 and 2, and cz 1, 2 and 3 (cz 1 and 2
+need k = m, so those cases use k = 128). Each case runs twice, once with the operand roles swapped.
+The data uses nz 6, h2 3 and padded strides, and every operand word the kernel must not read is NaN.
+These cases reach at most four K tiles (k = 128).
 
 - One operand holds integers in [-5, 5].
 - The other holds (n - 2) + j·2^-9, with n < 5 and j < 64.
@@ -78,6 +79,14 @@ below 2^11, so the f32 accumulation is exact. The reference applies bf16 RNE to 
 the chip result must equal it element by element. The fractional values need more than eight
 significand bits, so a kernel that skips the rounding or rounds toward zero differs from the
 reference.
+
+Eight long-K cases (`GFL pass ma mb bad`) then cover the K loop: m = n = 64, k = 16384 (512 K
+tiles), nz 1, beta 0, alpha 1, all four operand-mode pairs, both role passes. Operands are zero
+except at kk ≡ 0 (mod 29), 565 terms, at least one in every 32-wide K tile, so a dropped, repeated
+or misplaced tile changes C. Sums stay below 565·5·17/8 < 2^13 (`565*5*17/8 -> 48025/8 = 6003.125`,
+Wolfram) in multiples of 2^-9, so the f32 result
+is exact. The logits buffer is NaN-filled first (A at 0, B at 6 MiB, C at 12 MiB, at least 4 Mi
+floats needed), and C's eight padding columns per row must still be NaN afterwards.
 
 ### 4.2 gbcmp (sampled, every BF16 GEMM of a step)
 
@@ -97,7 +106,13 @@ Fused epilogues are checked exactly:
 - Epilogue 2: C is +0 where M is not > 0.
 
 The gate also fails when no BF16 GEMM ran, or when coverage misses any combination the step uses:
-epilogues 1 and 2, cz 3, and beta false and true.
+epilogues 1 and 2, cz 3, and beta false and true. Which kernel ids ran is printed, not gated;
+gbfrag covers every id.
+
+The bound grows with kn. At B 64 (kn = 16384) it is about one K tile's share of Σ|a·b|
+(`16384*2^-23+2^-22 -> 0.00195336` against `32/16384 -> 0.001953125`), so gbcmp at the training
+shape cannot see a single wrong K tile; at B 8 (kn = 2048) the margin is 64x. Long K loops are
+therefore checked exactly by gbfrag's long-K cases, not by gbcmp.
 
 Because the bf16 rounding is in the reference, gbcmp checks the kernel against the stated
 numerics. It does not measure how far bf16 is from f32. That is the job of 4.3 and 4.4.
@@ -114,8 +129,8 @@ n_c = 10L + 3. n_c counts the BF16 GEMMs on a step's longest dependency chain:
 
 The fail bits are 1 (non-finite), 2 (rho >= tolb), 4 (rel1 >= tolb) and 8 (|dloss| >= tolb·loss).
 At L 8: `u=2^-8; nc=10*8+3; nc*(2u+u^2) -> 42579/65536 = 0.6497039794921875` (Wolfram). The bound
-is loose. gbcmp2 catches gross failures, such as non-finite values, a wrong layout or a dropped K
-tile. It is not a precision claim.
+is loose: it catches gross failures, such as non-finite values or a wrong layout. No mutant shows
+what it catches, and it is not a precision claim.
 
 ### 4.4 Training (decisive)
 
@@ -142,11 +157,12 @@ Each mutant is a build flag (`--mutant X`). Each must fail at least one gate on 
 |---|---|---|---|
 | u | gb.om OMUTU 0 | the reference skips the bf16 rounding | gbfrag (exit 50); gbcmp reported only |
 | l | gk.om OMUTL 0 | A rows of lanes g and g ^ 1 swapped in the LDS layout | gbfrag, gbcmp |
-| o | gk.om OMUTO 0 | one K tile fewer than the tile count | gbfrag, gbcmp |
+| o | gk.om OMUTO 0 | one K tile fewer than the tile count | gbfrag (k ≥ 64 cases, long-K cases), gbcmp |
 | v | gk.om OMUTV 0 | F2FP rounds toward zero instead of to nearest even | gbfrag, gbcmp |
 
 For mutant u, gbcmp is reported only, because the RNE-vs-exact difference per sample can fall
-within the f32 accumulation bound when Σ|a·b| is large.
+within the f32 accumulation bound when Σ|a·b| is large. Mutant o cannot change a GEMM with a single
+K tile (k = 32): the K loop is a do-while and runs once regardless.
 
 ## 6. Host evidence
 
@@ -156,8 +172,10 @@ within the f32 accumulation bound when Σ|a·b| is large.
 - `evidence/OMEGALLM/gpu-bf/f32-identity.txt`: compared with base 273ca2a, gpu-code.bin differs
   only in slots 27..36, and gpu-gpr.bin differs only at register offsets 27..36 and SMEM offsets
   91..100 (the same slots).
-- `evidence/OMEGALLM/gpu-bf/build.txt`: build hashes for the product, the AArch64 CPU build
-  (identical to the base) and the four mutants.
+- `evidence/OMEGALLM/gpu-bf/build.txt`: build hashes at e329675 for the product, the AArch64 CPU
+  build (identical to the base) and the four mutants.
+- `evidence/OMEGALLM/gpu-bf/build-2.txt`: build hashes after the gbfrag amendment (case 10 shape,
+  long-K cases); gpu-dump code_sha256 is unchanged, so no kernel byte differs from e329675.
 
 Chip gates 4.1-4.5 are NOT_RUN until their pre-registered window runs. Their receipts go under
 `evidence/OMEGALLM/gpu-bf/`.

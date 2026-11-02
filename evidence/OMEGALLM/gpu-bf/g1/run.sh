@@ -12,7 +12,7 @@ run() {
   { echo "binary: $(sha256sum $b | cut -c1-64)"; echo "ck: $(sha256sum $c | cut -c1-64)"; echo "cmd: $*"
     s=$(date -u +%s%N)
     case $1 in
-      gbfrag) timeout 300 $b gbfrag $c 2>&1 ;;
+      gbfrag) timeout 900 $b gbfrag $c 2>&1 ;;
       gbcmp|gbcmp2|gcmp2|gacmp) timeout 900 $b $1 $c $D/$2 $3 2>&1 ;;
       geval) timeout 600 $b geval $c $D/held.tok $2 $D/merges4096.bin 2>&1 ;;
       gtrainf) timeout 900 $b gtrainf $c $D/train.tok $2 $3 2>&1 ;;
