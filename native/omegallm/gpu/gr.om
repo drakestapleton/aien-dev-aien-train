@@ -252,6 +252,32 @@ end
 note Mutant s: 1 in the product, 0 in the mutant, whose SOFTF row sum skips the lane-1 butterfly step
 note (each lane then normalizes by half the row), which gcmp and gcmp2 must catch.
 const OMUTS ulong 1
+note Causal chunks (k6): row t (R21) loads 32-column chunk u only if t >= 32 u (P u-1 for u 1..7;
+note chunk 0 and chunks from 8 on stay PT, loaded and masked), and stores chunk u only if
+note t >= 64 floor(u/2). The causal GEMMs read a P or DS row only up to the end of its diagonal tile
+note (32 or 64 columns), so later chunks are neither read nor written and keep stale arena data.
+note Predicates are set before the loads: an ISETP between them would wait on their scoreboard.
+note Mutant w: 1 in the product, 0 in the mutant, whose loads also skip the diagonal chunk (t >= 32 u + 32).
+const OMUTW ulong 1
+fn grcpred n uint off uint to void
+for u uint n
+if and ge u 1 le u 7
+gkisge sub u 1 21 add mul u 32 off
+end
+end
+end
+fn grcp u uint to uint
+if or eq u 0 ge u 8
+ret 7
+end
+ret sub u 1
+end
+fn grcwo to uint
+if eq OMUTW 0
+ret 32
+end
+ret 0
+end
 note 15 SOFTF: causal softmax of row t of score block z in place, zero above t; args T*32 P
 fn grsoftf to void
 tt = uint get grd 1
@@ -261,8 +287,9 @@ gkmovi 27 4286578688
 gkmovi 28 grf 1.4426950408889634f64
 gkmovi 29 grf neg 1.4426950408889634f64
 gkmovi 23 32
+grcpred n grcwo
 for u uint n
-gkldg add 32 u 10 mul u 128 ne u 0
+gkldgp add 32 u 10 mul u 128 ne u 0 grcp u
 end
 gkimadi 20 22 1 255
 gkmovi 64 4286578688
@@ -286,32 +313,35 @@ else
 grwred 0 0
 end
 grmufu 67 64 4096
+grcpred n 0
 for u uint n
 gkfmulf add 32 u add 32 u 67
-gkstg 10 add 32 u mul u 128 ne u 0
+gkstgp 10 add 32 u mul u 128 ne u 0 grcp and u 4294967294
 end
 gkexit
 end
-note 16 SOFTB: ds = p (dp - sum p dp) / sqrt(E) in place over dp; args T*32 P DP. dp above the
-note diagonal (column > t) reads as 0: the causal DP GEMM (gkmm cz 3) skips those tiles, so the
-note buffer holds stale values there, and p (exactly 0 there) times a stale Inf or NaN is NaN.
+note 16 SOFTB: ds = p (dp - sum p dp) / sqrt(E) in place over dp; args T*32 P DP. p and dp above the
+note diagonal (column > t) read as 0: their chunks may be unloaded (k6) or stale (the causal DP GEMM,
+note gkmm cz 3, skips those tiles), and 0 times a stale Inf or NaN is NaN.
 fn grsoftb to void
 tt = uint get grd 1
 n = div tt 32
 e = div get grd 2 get grd 3
 grsrow tt true
 gkmovi 29 grf div 1.0f64 fsqrt f64 e
+grcpred n grcwo
 for u uint n
-gkldg add 32 u 10 mul u 128 ne u 0
+gkldgp add 32 u 10 mul u 128 ne u 0 grcp u
 end
 for u uint n
-gkldg add 48 u 12 mul u 128 true
+gkldgp add 48 u 12 mul u 128 true grcp u
 end
 gkmovi 23 32
 gkimadi 20 22 1 255
 for u uint n
 gkisetp 1 20 21 4
 grfsel add 48 u 255 add 48 u 1
+grfsel add 32 u 255 add 32 u 1
 gkiadd 20 20 23
 end
 gkmovz 64
@@ -319,11 +349,12 @@ for u uint n
 gkffmaf 64 add 32 u add 48 u 64
 end
 grwred 0 0
+grcpred n 0
 for u uint n
 grfsub add 48 u add 48 u 64
 gkfmulf add 48 u add 48 u add 32 u
 gkfmulf add 48 u add 48 u 29
-gkstg 12 add 48 u mul u 128 ne u 0
+gkstgp 12 add 48 u mul u 128 ne u 0 grcp and u 4294967294
 end
 gkexit
 end

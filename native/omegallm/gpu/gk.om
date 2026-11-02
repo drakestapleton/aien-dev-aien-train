@@ -108,8 +108,9 @@ end
 fn gkiadd d uint a uint b uint to void
 gkfx or or 29200 shl d 16 shl a 24 b 134209791
 end
+note ISETP.GE P p = R a >= imm (signed); the destination predicate is word 2 bit 17, as in gkisetp
 fn gkisge p uint a uint imm uint to void
-gkpr or or 30732 shl p 16 shl a 24 imm 66085488
+gkpr or 30732 shl a 24 imm or 66085488 shl p 17
 end
 note ISETP P p = R a cc R b (signed; cc LT 1, EQ 2, LE 3, GT 4, NE 5, GE 6)
 fn gkisetp p uint a uint b uint cc uint to void
@@ -124,11 +125,19 @@ fn gkexitp p uint to void
 gkq or 2381 shl p 12 0 58720256 or gkcw 5 7 7 get gkpend 0 8192
 put gkpend 0 0
 end
+note @P p LDG/STG: the guard predicate is bits 12-15 of word 0 (p 7 = PT, p + 8 negates), so the
+note unguarded forms below are p 7 and keep their words
+fn gkldgp d uint a uint off uint more bool p uint to void
+gkvar or or or 2433 shl p 12 shl d 16 shl a 24 or 4 shl off 8 203299072 more
+end
+fn gkstgp a uint b uint off uint more bool p uint to void
+gkst or or 2438 shl p 12 shl a 24 or b shl off 8 202381572 more
+end
 fn gkldg d uint a uint off uint more bool to void
-gkvar or or 31105 shl d 16 shl a 24 or 4 shl off 8 203299072 more
+gkldgp d a off more 7
 end
 fn gkstg a uint b uint off uint more bool to void
-gkst or 31110 shl a 24 or b shl off 8 202381572 more
+gkstgp a b off more 7
 end
 fn gksts a uint off uint b uint more bool to void
 gkst or 31112 shl a 24 or b shl off 8 134220031 more
