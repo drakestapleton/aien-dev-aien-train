@@ -52,7 +52,7 @@ END {
       exit 1
     }
     oi++
-    if (oi < on && out[oi] ~ /^J [0-9]+$/ && (ri > rn || ref[ri] !~ /^J [0-9]+$/)) {
+    if (oi < on && out[oi] ~ /^J [0-9]+$/) {
       note("extra J line after job " nj)
       exit 1
     }

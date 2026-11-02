@@ -47,3 +47,22 @@ rc=1
 body EQUAL
 EQUAL
 rc=0
+# negative control: OUT.TXT with the final OLLM DONE line removed
+last line is not OLLM DONE 11 ms
+missing J line after job 11
+DIFFERENT
+rc=1
+# negative control: copy of OUT.TXT with CR LF line endings (the job-1 mismatch is a trailing CR)
+banner is not OLLM efi 678
+last line is not OLLM DONE 11 ms
+job 1 line mismatch
+  out: > mathck \OLLM\MATHREF.TXT
+  ref: > mathck \OLLM\MATHREF.TXT
+DIFFERENT
+rc=1
+# negative control: the line "junk after done" appended after OLLM DONE
+last line is not OLLM DONE 11 ms
+extra line before DONE
+body EQUAL
+DIFFERENT
+rc=1

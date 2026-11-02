@@ -1,8 +1,9 @@
 # Omega LLM on the physical iMac (x86efi): EXERCISED on physical hardware (one machine)
 
 Evidence class: **EXERCISED on physical hardware (one machine)**. The UEFI build of `ollm` was
-booted from a USB stick on Drake's Intel iMac. The OUT.TXT body matches the AArch64 reference
-after efi-check.sh strips the banner, J (timing) and DONE lines. TR.BIN, HE.BIN and S.CK match
+booted from a USB stick on Drake's Intel iMac. OUT.TXT is 3346 bytes and `../efi/ref.out`
+is 3237. The OUT.TXT body matches the AArch64 reference after efi-check.sh strips the banner,
+J (timing) and DONE lines. TR.BIN, HE.BIN and S.CK match
 the hashes in `../efi/ref-files.txt`. This covers the 11 commands of `tests/omegallm/efi-job.txt`
 and nothing wider: there was no long training run on the iMac and no second machine.
 
@@ -21,7 +22,7 @@ and nothing wider: there was no long training run on the iMac and no second mach
 
 | Check | Want | Got | Receipt |
 |---|---|---|---|
-| OUT.TXT | banner `OLLM efi 678` first, exactly one `J ms` after each job, `OLLM DONE 11 ms` last. The OUT.TXT body matches the AArch64 reference after efi-check.sh strips the banner, J (timing) and DONE lines | EQUAL, rc 0 | `check.txt`, `OUT.TXT` |
+| OUT.TXT | 3346 bytes; `../efi/ref.out` is 3237. Banner `OLLM efi 678` first, exactly one `J ms` after each job, `OLLM DONE 11 ms` last. The OUT.TXT body matches the AArch64 reference after efi-check.sh strips the banner, J (timing) and DONE lines | EQUAL, rc 0 | `check.txt`, `OUT.TXT` |
 | TR.BIN, HE.BIN, S.CK | sha256 equal to `../efi/ref-files.txt` | all three equal | `files.txt`, `check.txt` |
 | negative control: one byte of OUT.TXT changed | DIFFERENT | DIFFERENT, rc 1 | `check.txt` |
 | negative control: job count 10 instead of 11 | DIFFERENT | DIFFERENT, rc 1 | `check.txt` |
@@ -30,6 +31,9 @@ and nothing wider: there was no long training run on the iMac and no second mach
 | negative control: a second `J` line after the first job | DIFFERENT | DIFFERENT, rc 1 | `check.txt` |
 | negative control: the first `J` line moved before that job's output | DIFFERENT | DIFFERENT, rc 1 | `check.txt` |
 | negative control: `OLLM DONE` not last | DIFFERENT | DIFFERENT, rc 1 | `check.txt` |
+| negative control: OUT.TXT truncated, no `OLLM DONE` line | DIFFERENT | DIFFERENT, rc 1 | `check.txt` |
+| negative control: CR LF line endings | DIFFERENT | DIFFERENT, rc 1 | `check.txt` |
+| negative control: a line after `OLLM DONE` | DIFFERENT | DIFFERENT, rc 1 | `check.txt` |
 | FAT after the firmware's writes | `fsck.vfat -n` clean | rc 0, 14 files; of sectors 0, 1, 6 and 7 (boot, FSInfo and their backups) only FSInfo changed (free count, next free); both FATs equal | `stick.txt` |
 
 ## Job times

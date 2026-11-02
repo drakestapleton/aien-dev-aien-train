@@ -3,13 +3,13 @@
     "generated": {
       "children": [],
       "children_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "compiled_at": "2026-11-01T23:20:04Z",
+      "compiled_at": "2026-11-02T00:46:04Z",
       "compiler": "crumb-compile/1",
       "digest": "sha256:04ff39724efcebf4b9afa3fa3a921941ff954751b969a446ae4f53df26b9f3f1",
       "evidence_files": 0,
       "evidence_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "files": 8,
-      "generated_at_commit": "73f62902719ae6048bd766e9e02e0c2dc919edfd",
+      "generated_at_commit": "fae009c6391b1cbbdee4fb5b2c17358eb6ed072b",
       "source_tree": "sha256:bab671014c8608e933032d99ed79e2df84ea80d98c2e9bfe7632363e4545aa45"
     }
   },
