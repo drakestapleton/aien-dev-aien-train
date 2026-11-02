@@ -60,8 +60,12 @@ rel 1.61e-4 with |Δloss| 7e-6, while the small shape passed at 2.35e-7. The dia
   f32 implementation meets on this shape.
 
 The probe binaries are throwaway builds whose sources are not in the tree; their receipts are kept as
-the record of the diagnosis only. The γ_R gate replaced the ad hoc 1e-4. The kink case is covered by
-these measurements, not by the bound.
+the record of the diagnosis only. The γ_R gate replaced the ad hoc 1e-4. γ_R is a rounding bound and
+cannot cover a kink: a unit whose pre-activation the two paths put on different sides of zero changes
+the gradient by a full term, not by rounding. On this shape the kink error happened to fit under γ_R;
+on the rung-5 shape it does not (`../gpu-max/gc-max.txt`, rel 1.58e-4 against γ_R 1.22e-4). The kink
+case is now checked by `gcmp2`, branch-conditioned parity (`../gpu-max/README.md`), which reruns this
+shape as `../gpu-max/gc2-night-s7.txt`.
 
 ## On-chip Adam gate: `gacmp`
 

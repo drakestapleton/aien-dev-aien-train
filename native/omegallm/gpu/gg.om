@@ -597,6 +597,10 @@ ggpt 4 ggg 0
 ggrun 22 10 ggcd d 64 v 1
 end
 
+note Mutant f: 1 in the product, 0 in the mutant, which uploads layer 0's W1 times 1 + 2^-10 (a
+note forward error on the chip that gcmp2's FP check must name).
+const OMUTF ulong 1
+
 note W[i] as f32 for i in chunk q of P (a loop runs at most 999999 passes)
 fn ggupc q ulong p ulong to void
 h = get gbmem 5
@@ -604,9 +608,21 @@ wo = get gga 0
 i0 = mul q OCH
 for j ulong sub oce q p i0
 i = add i0 j
-x = bitcast uint f32 get ow i
+x = bitcast uint f32 ggupv i
 m = mapset h add wo mul i 4 4 ulong x
 end
+end
+
+note the uploaded value of W[i]: ow[i] in the product
+fn ggupv i ulong to f64
+w = get ow i
+if eq OMUTF 0
+a = opw1 0
+if and ge i a lt i add a mul get og 2 get og 4
+w = mul w 1.0009765625f64
+end
+end
+ret w
 end
 
 note upload the f32 parameters
@@ -968,6 +984,329 @@ oflush
 exit 45
 end
 
+note true when x is finite (every comparison with NaN is false)
+fn ggfin x f64 to bool
+a = x
+if lt a 0.0f64
+a = neg a
+end
+ret le a bitcast f64 ulong 9218868437227405311
+end
+
+note x for printing: 1e6 when x is not finite or above 1e6 (rmic traps past the long range)
+fn ggclp x f64 to f64
+if ggfin x
+if lt x 1000000.0f64
+ret x
+end
+end
+ret 1000000.0f64
+end
+
+note gcmp2 state. ggfs[j] = s_j for the row in flight (F <= 1024, CONTRACT-V1). ggk2: [0] ReLU
+note flips (sign of FP_chip differs from FP_ref), [1] non-finite FP values (chip or reference),
+note [2] layer of the largest rho, [3] non-finite gradient values (chip, K0 or K1).
+note ggk3: [0] rho max, [1] max |FP_ref| at a flip, [2] max |FP_chip - FP_ref|.
+global ggfs f64 1024
+global ggk2 ulong 4
+global ggk3 f64 3
+
+note s_j = sum_k |bn_k| |W1[k F + j]| for row t of layer l (k < D ascending), the magnitude sum of
+note the FP dot product the chip rounds
+fn ggsj l ulong t ulong to void
+d = get og 2
+f = get og 4
+bn = add oabn l mul t d
+w = opw1 l
+for j ulong f
+put ggfs j 0.0f64
+end
+for k ulong d
+a = get oa add bn k
+if lt a 0.0f64
+a = neg a
+end
+ggsjk a add w mul k f f
+end
+end
+
+fn ggsjk a f64 wo ulong f ulong to void
+for j ulong f
+x = get ow add wo j
+if lt x 0.0f64
+x = neg x
+end
+put ggfs j add get ggfs j mul a x
+end
+end
+
+note model.om's ReLU mask hook (ogkm[0] = 1, gcmp2 only): for row t of layer l of the sequence in
+note flight, check every unit's reference FP against the chip's FP (left in the arena by gggrad),
+note then zero dF where the chip's FP is not > 0, the chip RELUB mask (NaN included).
+fn ogmask yo ulong l ulong t ulong to void
+f = get og 4
+xo = add oafp l mul t f
+ggsj l t
+row = add mul get ogkm 1 get og 1 t
+c0 = add sub ggl l 10 get gga 40 mul mul row f 4
+for j ulong f
+c = ggf add c0 mul j 4
+ggk1 get oa add xo j c j l
+if not gt c 0.0f64
+put oa add yo j 0.0f64
+end
+end
+end
+
+note one unit: non-finite count, |FP_chip - FP_ref|, rho = that over s_j (inf when s_j = 0 and the
+note values differ), and the flip count
+fn ggk1 v f64 c f64 j ulong l ulong to void
+if not and ggfin v ggfin c
+put ggk2 1 add get ggk2 1 1
+ret
+end
+dd = sub c v
+if lt dd 0.0f64
+dd = neg dd
+end
+if gt dd get ggk3 2
+put ggk3 2 dd
+end
+ggkr dd get ggfs j l
+ggkfl v c
+end
+
+fn ggkr dd f64 s f64 l ulong to void
+if not gt dd 0.0f64
+ret
+end
+rho = bitcast f64 ulong 9218868437227405312
+if gt s 0.0f64
+rho = div dd s
+end
+if gt rho get ggk3 0
+put ggk3 0 rho
+put ggk2 2 l
+end
+end
+
+fn ggkfl v f64 c f64 to void
+a = gt v 0.0f64
+b = gt c 0.0f64
+if eq a b
+ret
+end
+put ggk2 0 add get ggk2 0 1
+if lt v 0.0f64
+v = neg v
+end
+if gt v get ggk3 1
+put ggk3 1 v
+end
+end
+
+note omv[o + i] = ogr[i] for i < P (the chip gradient at o = 0, K0 at o = P; gcmp2 has no Adam step)
+fn ggstash p ulong o ulong to void
+for q ulong ocn p
+ggstq q p o
+end
+end
+
+fn ggstq q ulong p ulong o ulong to void
+i0 = mul q OCH
+for j ulong sub oce q p i0
+i = add i0 j
+put omv add o i get ogr i
+end
+end
+
+note ggc2: [0] max |G_chip - K0|, [1] max |K0|, [2] max |G_chip - K1| over i < P, with the chip
+note gradient in omv[0, P), K0 in omv[P, 2P) and K1 in ogr[0, P); non-finite values count in ggk2[3]
+global ggc2 f64 3
+fn gg2cmp p ulong to void
+for k ulong 3
+put ggc2 k 0.0f64
+end
+for q ulong ocn p
+i0 = mul q OCH
+for j ulong sub oce q p i0
+gg2c1 add i0 j p
+end
+end
+end
+
+fn gg2c1 i ulong p ulong to void
+c = get omv i
+r0 = get omv add p i
+r1 = get ogr i
+if not and and ggfin c ggfin r0 ggfin r1
+put ggk2 3 add get ggk2 3 1
+ret
+end
+gg2mx 0 sub c r0
+gg2mx 1 r0
+gg2mx 2 sub c r1
+end
+
+fn gg2mx k ulong x f64 to void
+if lt x 0.0f64
+x = neg x
+end
+if gt x get ggc2 k
+put ggc2 k x
+end
+end
+
+note gcmp2 CK DATA S: branch-conditioned parity (evidence/OMEGALLM/gpu-max/README.md). The chip
+note gradient runs first and stays in omv; K0 is the CPU ograd with its own ReLU mask (gcmp's
+note reference), K1 the CPU ograd with the chip's FP sign as the ReLU mask (ogmask), which also checks
+note every FFN pre-activation. Prints `GC2 P rel0_e9 rel1_e9 tolr_e9 rho_e9 tolf_e9 rho_layer flips
+note vflip_e12 fpdiff_e12 nonfinite cpu_loss_micro gpu_loss_micro gpu_ns fails` and GCMP2 PASS, or
+note GCMP2 FAIL (exit 47). rel0 = max|G_chip - K0| / max|K0| (gcmp's rel), rel1 = max|G_chip - K1| /
+note max|K0|; rho = max |FP_chip - FP_ref| / s_j. fails is a bit set: 1 a non-finite FP or gradient
+note value, 2 rho >= tolf = max(D, F, T) 2^-24, 4 rel1 >= tolr = R 2^-24 (gcmp's gamma_R), 8 |chip
+note loss - K0 loss| >= 1e-5.
+fn ggcmp2 to void
+if ne oargc 5
+exit 2
+end
+ockload 2
+odopen 3
+obatch oargu 4
+p = get og 8
+ggopen
+t0 = monons
+lg = gggrad
+t1 = monons
+ggstash p 0
+put og 10 0
+put ogkm 0 0
+l0 = ograd
+ggstash p p
+for k ulong 4
+put ggk2 k 0
+end
+for k ulong 3
+put ggk3 k 0.0f64
+end
+put ogkm 0 1
+put og 10 0
+l1 = ograd
+put ogkm 0 0
+gg2cmp p
+ggc2pr lg l0 sub t1 t0
+end
+
+note the GC2 line and verdict of gcmp2 (lg chip loss, l0 K0 loss, ns chip gradient time)
+fn ggc2pr lg f64 l0 f64 ns long to void
+fl = ggc2fl lg l0
+ggc2ln lg l0 ns fl
+ggtms
+r = nvstop
+ggc2vd eq fl 0
+end
+
+note ggc2[k] / max |K0|, clamped for printing
+fn gg2rl k ulong to f64
+ret ggclp div get ggc2 k get ggc2 1
+end
+
+note tolf = max(D, F, T) 2^-24
+fn gg2tf to f64
+n = fmax f64 get og 2 fmax f64 get og 4 f64 get og 1
+ret div n 16777216.0f64
+end
+
+note tolr = R 2^-24 (gcmp's gamma_R)
+fn gg2tr to f64
+ret div f64 ggr 16777216.0f64
+end
+
+note the gcmp2 fail bits (see ggcmp2)
+fn ggc2fl lg f64 l0 f64 to ulong
+dl = sub lg l0
+if lt dl 0.0f64
+dl = neg dl
+end
+fl = ulong 0
+if ne add get ggk2 1 get ggk2 3 0
+fl = or fl 1
+end
+if not lt ggclp get ggk3 0 gg2tf
+fl = or fl 2
+end
+if not lt gg2rl 2 gg2tr
+fl = or fl 4
+end
+if not lt dl 0.00001f64
+fl = or fl 8
+end
+ret fl
+end
+
+fn ggc2ln lg f64 l0 f64 ns long fl ulong to void
+oputc 71
+oputc 67
+oputc 50
+oputc 32
+oputu get og 8
+gg2pe gg2rl 0
+gg2pe gg2rl 2
+gg2pe gg2tr
+gg2pe ggclp get ggk3 0
+gg2pe gg2tf
+oputc 32
+oputu get ggk2 2
+oputc 32
+oputu get ggk2 0
+oputc 32
+oputl rmic mul ggclp get ggk3 1 1000000.0f64
+oputc 32
+oputl rmic mul ggclp get ggk3 2 1000000.0f64
+oputc 32
+oputu add get ggk2 1 get ggk2 3
+oputc 32
+oputl rmic ggclp l0
+oputc 32
+oputl rmic ggclp lg
+oputc 32
+oputl ns
+oputc 32
+oputu fl
+oputc 10
+end
+
+note " x_e9"
+fn gg2pe x f64 to void
+oputc 32
+oputl rmic mul x 1000.0f64
+end
+
+fn ggc2vd ok bool to void
+oputc 71
+oputc 67
+oputc 77
+oputc 80
+oputc 50
+oputc 32
+if ok
+oputc 80
+oputc 65
+oputc 83
+oputc 83
+oputc 10
+oflush
+ret
+end
+oputc 70
+oputc 65
+oputc 73
+oputc 76
+oputc 10
+oflush
+exit 47
+end
+
 note gtrain CK TRAIN UNTIL EVERY: cmdtrain with the gradient from the GPU (K = 1, no workers); prints
 note `T s+1 loss_micro` at save points like train
 fn ggtrain to void
@@ -1186,8 +1525,8 @@ oflush
 r = nvstop
 end
 
-note gb10 platform main: gcmp, gtrain, gtrainf and gacmp here, every other command through the CPU
-note main (lio.om)
+note gb10 platform main: gcmp, gcmp2, gtrain, gtrainf and gacmp here, every other command through
+note the CPU main (lio.om)
 fn main to int
 if lt oargc 2
 exit 2
@@ -1195,6 +1534,10 @@ end
 w = ocmdw
 if eq w 1886217063
 ggcmp
+ret 0
+end
+if eq w 216634581863
+ggcmp2
 ret 0
 end
 if eq w 121398885512295

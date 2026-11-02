@@ -334,6 +334,7 @@ it; nvdisasm is a read-only oracle (`tests/omegallm/gpu-disasm.sh SLOT...`).
 ```sh
 B=../build/ollm-gb10
 $B gcmp CK DATA S                 # chip gradient vs CPU f64 ograd for batch S; GCMP PASS or exit 45
+$B gcmp2 CK DATA S                # branch-conditioned parity (ReLU flips split out); GCMP2 PASS or exit 47
 $B gacmp CK DATA S                # one step, on-chip f32 Adam vs CPU f64 oadam; GACMP PASS or exit 46
 $B gtrain CK TRAIN UNTIL EVERY    # train with the chip gradient, Adam on the CPU
 $B gtrainf CK TRAIN UNTIL EVERY   # train with weights and Adam state resident on the chip
@@ -349,6 +350,8 @@ Run them only inside a `spark-window`. The checkpoint format is unchanged, so CP
 | `gtrain` 1750→9000 on the v1 night shape | EXERCISED (GB10, non-quiet) | `gtrain1-3.txt`, 0.235-0.248 s/step |
 | `gtrainf` 0→9000, the whole v1 schedule | EXERCISED (GB10, non-quiet) | `gtrainf-0-9000.txt`, 483.8 s, 0.0538 s/step; trajectory within 1.4% of `gtrain` at every shared save point |
 | held-out eval of both step-9000 checkpoints (CPU `eval`, W 4486) | EXERCISED | `eval9000-gtrain.txt` 1.824653 nats, 0.680680 bpb; `eval9000-gtrainf.txt` 1.826877 nats, 0.681510 bpb |
+| rung 5 (V 4096, T 256, D 256, L 8, P 7,409,920, B 64): `gcmp` fails on ReLU branch flips; `gcmp2` passes | EXERCISED (GB10, non-quiet) | `../gpu-max/gc-max.txt` FAIL rc 45; `../gpu-max/gc2-max-s7.txt`, `gc2-max-s11.txt`, `gc2-night-s7.txt`, `gc2-small-s3.txt` PASS; mutants g, m, f FAIL rc 47 |
+| rung 5 `gtrainf` 0→9000 | EXERCISED (GB10, non-quiet) | `../gpu-max/gtrainf-0-250.txt`, `gtrainf-250-9000.txt`: 0.3808 s/step, 43,023 tokens/s; mean batch loss of the last four saves 1.4978 nats |
 
 The γ_R gate, the ReLU kink cases that the night shape exposes, the Adam residual, the windows and all
 timings are in `evidence/OMEGALLM/gpu/README.md`. Not QUALIFIED: no quiet-machine timing, one chip, and

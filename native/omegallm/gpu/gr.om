@@ -306,6 +306,8 @@ grbot 30 top2
 gkexit
 end
 note 17 RELUF y = x > 0 ? x : 0; 18 RELUB dy = x > 0 ? dy : 0; 19 COPY; 20 ZERO; args n then pointers
+note Mutant m: 1 in the product, 0 in the mutant, whose RELUB mask is x > 2^-10 (RELUF unchanged).
+const OMUTM ulong 1
 fn grew kind uint to void
 grpro
 grptr 10 1 4 4
@@ -327,7 +329,12 @@ grfsetp 1 32 255 4
 grfsel 34 32 255 1
 end
 if eq kind 18
+if eq OMUTM 0
+gkmovi 35 grf 0.0009765625f64
+grfsetp 1 32 35 4
+else
 grfsetp 1 32 255 4
+end
 grfsel 34 33 255 1
 end
 if eq kind 19

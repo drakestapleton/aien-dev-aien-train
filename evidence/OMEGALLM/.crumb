@@ -3,14 +3,14 @@
     "generated": {
       "children": [],
       "children_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "compiled_at": "2026-11-02T05:13:41Z",
+      "compiled_at": "2026-11-02T07:56:19Z",
       "compiler": "crumb-compile/1",
-      "digest": "sha256:3cd0b063e9063ae2b076767c261ce6764309382cef49443416b9256e470fa359",
-      "evidence_files": 299,
-      "evidence_root": "sha256:35167a4830cd3b4e561ec57d85195658e41961692603f41124ef2ed65e531b1e",
-      "files": 299,
-      "generated_at_commit": "a8affbc90ca8b992f0cc80b7760110f502a9935b",
-      "source_tree": "sha256:f0bed901c91478f7808d6a66e83be65b6e79b8b945198c36d7ca85fb18827b13"
+      "digest": "sha256:63d87b0307f9868650c3b759080ad76923224a9c8eb20e12dec30ed0b9056893",
+      "evidence_files": 319,
+      "evidence_root": "sha256:a8d973fb51a276a8809a0ad5a7d5e966c5b267a4e62518b9c9fb0b29c6853b06",
+      "files": 319,
+      "generated_at_commit": "57636f22c72c42f5daee8ca6f0c68a76d404539c",
+      "source_tree": "sha256:ecb03543e1e755f5f7d53bac79f732d63395b1356239e3724ab53581f0bed409"
     }
   },
   "name": "omegallm-evidence",
