@@ -3,17 +3,16 @@ note gk.om: general sm_121 launcher and f32 kernel emitters for the Omega LLM.
 note Needs context.om (CUDApp native/nvrm), vector.om and launch.om (CUDApp native/blackwell), vendored
 note unmodified from aien-dev/CUDApp dcba8bb8 (last change 2e242169) into native/omegallm/gpu/.
 note QMD words follow omega_blackwell_qmd.c; control words follow omega_blackwell_codegen_gemm.c.
-note Each kernel id owns a 16 KiB slot of gkcode; gkthr/gkgpr/gksm describe its launch shape.
-global gkcode uchar 524288
+note Each kernel id owns a 16 KiB slot of gkcode (64 slots); gkthr/gkgpr/gksm describe its launch shape.
+global gkcode uchar 1048576
 global gkat ulong 1
 global gkpend uint 1
-global gkthr uint 32
-global gkgpr uint 32
-global gksm uint 32
+global gkthr uint 64
+global gkgpr uint 64
+global gksm uint 64
 global gkarg uint 32
 global gkna uint 1
 global gkmd uint 2
-global gkmut uint 1
 fn gkw v uint to void
 at = get gkat 0
 put gkcode at uchar and v 255
@@ -187,14 +186,11 @@ gklds add 36 mul o 8 95 add 2304 mul add kk 1 144 add 3 o 0
 end
 w = shl uint 1 add 3 s
 ra = add 32 mul s 8
-cut = and and eq get gkmut 0 1 eq kk 15 true
 k = uint 0
 for i uint 4
 for j uint 4
-if or not cut ne k 0
 gkfrag k add ra i add add ra 4 j w
 w = 0
-end
 k = add k 1
 end
 end
@@ -311,26 +307,241 @@ gkstg add 56 mul k 2 add 16 k 0 ne k 0
 end
 gkexit
 end
-note Kernel table: ids 0..7 = gemm (ma + 2 mb + 4 beta); id 8 = gemm mutant (one product dropped).
+note 64x64 GEMM: one 64x64 tile of C per 64-thread block, 8x8 per thread at rows ty*4+i and 32+ty*4+i,
+note columns tx*4+j and 32+tx*4+j (ty = tid>>3, tx = tid&7), K tiles of 8 through shared memory
+note (272-byte k rows, B at 2176). Each C element is still one FFMA chain over k in order, so results
+note equal the 32x32 kernel bit for bit. Registers: R16-79 accumulators; R80-111 load staging, then
+note fragments (set 0 a R80-87 b R88-95 on SB3, set 1 a R96-103 b R104-111 on SB4); R112-127 load
+note addresses; R128/R130 operand pointers, R132/133 STS bases, R134/135 LDS bases, R136 ktiles,
+note R137/138 per-load delta, R139/140 tile step, R141 minus one, later alpha.
+note OMUTT: 1 in the product; 0 in mutant t, whose 64x64 kernels drop the k = 7 product of acc 0.
+const OMUTT ulong 1
+note Mode 0 (O): thread loads outer tid, depths 0..7. Mode 1 (K): outer tid>>3 step 8, depth tid&7.
+fn gkopnd64 mode uint blk uint ab uint to void
+o = add uint 896 mul ab 32
+if eq mode 0
+gkandi 11 0 63
+gkmovz 12
+else
+gkshr 11 0 3
+gkandi 12 0 7
+end
+gkimadi 13 11 4 255
+gkimadi add 132 ab 12 272 13
+gkimadi 13 blk 64 11
+gkldc 14 add o 8 false
+gkldc 15 add o 12 true
+gkimad 13 13 14 255
+gkimad 13 12 15 13
+gkldc 14 add o 16 false
+gkldc 15 add o 20 true
+gkimad 13 6 14 13
+gkimad 13 7 15 13
+gkldc64 10 o
+gkimadw add 128 mul ab 2 13 1 10
+gkldc add 137 ab add o 24 false
+gkldc add 139 ab add o 28 true
+end
+fn gkstep64 kk uint to void
+s = and kk 1
+if lt kk 7
+o = sub 1 s
+d = add 80 mul o 16
+ko = mul add kk 1 272
+gklds d 134 ko add 3 o 0
+gklds add d 4 134 add ko 128 add 3 o 0
+gklds add d 8 135 add 2176 ko add 3 o 0
+gklds add d 12 135 add 2304 ko add 3 o 0
+end
+w = shl uint 1 add 3 s
+ra = add 80 mul s 16
+cut = and eq OMUTT 0 eq kk 7
+for i uint 8
+for j uint 8
+k = add mul i 8 j
+if or not cut ne k 0
+gkffma add 16 k add ra i add add ra 8 j add 16 k w
+w = 0
+end
+end
+end
+end
+note Load round q of a K tile: four A and four B loads (tile loads 4q..4q+3); round 1 advances the
+note operand pointers after its addresses are formed. Round 1 waits only for round 0's address reads.
+fn gkld64 q uint to void
+if gt q 0
+put gkpend 0 2
+end
+l = mul q 4
+for r uint 4
+gkimadw add 112 mul r 2 137 add l r 128
+end
+for r uint 4
+gkimadw add 120 mul r 2 138 add l r 130
+end
+if gt q 0
+gkimadw 128 139 1 128
+gkimadw 130 140 1 130
+end
+for r uint 4
+d = add 80 add l r
+gkldg d add 112 mul r 2 0 ne r 0
+end
+for r uint 4
+d = add 96 add l r
+gkldg d add 120 mul r 2 0 true
+end
+end
+fn gksts64 ma uint mb uint to void
+da = uint 272
+if eq ma 1
+da = 32
+end
+db = uint 272
+if eq mb 1
+db = 32
+end
+for r uint 8
+gksts 132 mul r da add 80 r ne r 0
+end
+for r uint 8
+gksts 133 add 2176 mul r db add 96 r true
+end
+end
+fn gkgemm64 ma uint mb uint beta bool to void
+put gkpend 0 0
+gkldc 1 892 false
+gks2r 0 33 true
+gks2r 2 37 true
+gks2r 3 38 true
+gks2r 5 39 true
+gkq 4278482860 27392 134220288 or gkcw 4 2 7 get gkpend 0 8192
+put gkpend 0 4
+gkldc 8 988 false
+gkldc 9 992 true
+gkimadh 6 5 8 255
+gkimad 7 6 9 5
+gkshr 134 0 3
+gkimadi 134 134 16 255
+gkandi 135 0 7
+gkimadi 135 135 16 255
+gkopnd64 ma 3 0
+gkopnd64 mb 2 1
+gkldc 136 984 false
+gkmovi 141 4294967295
+for i uint 64
+gkmovz add 16 i
+end
+top = div get gkat 0 16
+put gkpend 0 63
+gkld64 0
+gkld64 1
+gksync
+gksts64 ma mb
+gksync
+gklds 80 134 0 3 0
+gklds 84 134 128 3 0
+gklds 88 135 2176 3 0
+gklds 92 135 2304 3 0
+for kk uint 8
+gkstep64 kk
+end
+gkiadd 136 136 141
+gkisge 0 136 1
+gkbra 0 ulong top
+gkepi64 beta
+end
+note Accumulator register of element k (row k>>2, column k&3) of quadrant (rh, ch).
+fn gkacc64 rh uint ch uint k uint to uint
+ret add add 16 mul add mul rh 4 shr k 2 8 add mul ch 4 and k 3
+end
+note One 4x4 quadrant of the 64x64 epilogue: address pairs R80-111 from base R128 (+32 rows R10,
+note +32 columns R11), alpha R141, old C in R112-127 when beta, store.
+fn gkquad64 rh uint ch uint beta bool to void
+qb = uint 128
+if eq rh 1
+gkimadw 130 10 1 128
+qb = 130
+end
+if eq ch 1
+gkimadw 130 11 1 qb
+qb = 130
+end
+for i uint 4
+r0 = add 80 mul i 8
+gkimadw r0 14 i qb
+for j uint 3
+gkimadw add r0 mul add j 1 2 15 add j 1 r0
+end
+end
+if beta
+for k uint 16
+gkldg add 112 k add 80 mul k 2 0 ne k 0
+end
+end
+for k uint 16
+e = gkacc64 rh ch k
+if beta
+gkffmaf e e 141 add 112 k
+else
+gkfmulf e e 141
+end
+end
+for k uint 16
+e = gkacc64 rh ch k
+gkstg add 80 mul k 2 e 0 ne k 0
+end
+end
+note 64x64 epilogue: C base of the thread (R128), quadrant offsets R10/R11, then four quadrants.
+fn gkepi64 beta bool to void
+gkshr 12 0 3
+gkimadi 12 12 4 255
+gkimadi 12 3 64 12
+gkandi 13 0 7
+gkimadi 13 13 4 255
+gkimadi 13 2 64 13
+gkldc 14 968 false
+gkldc 15 972 true
+gkimad 12 12 14 255
+gkimad 12 13 15 12
+gkldc 10 976 false
+gkldc 11 980 true
+gkimad 12 6 10 12
+gkimad 12 7 11 12
+gkldc64 10 960
+gkimadw 128 12 1 10
+gkimadi 10 14 32 255
+gkimadi 11 15 32 255
+gkldc 141 996 false
+for h uint 4
+gkquad64 shr h 1 and h 1 beta
+end
+gkexit
+end
+note Kernel table: ids 0..7 = 32x32 gemm, ids 32..39 = 64x64 gemm (base + ma + 2 mb + 4 beta).
 fn gkslot id uint to void
 put gkat 0 mul ulong id 16384
 end
 fn gkall to bool
-for id uint 9
+for g uint 16
+id = add g mul shr g 3 24
 gkslot id
-if eq id 8
-put gkmut 0 1
-gkgemm 1 0 false
-put gkmut 0 0
+ma = and g 1
+mb = and shr g 1 1
+bt = ne and g 4 0
+if lt g 8
+gkgemm ma mb bt
+put gkgpr id 104
+put gksm id 4608
 else
-gkgemm and id 1 and shr id 1 1 ne and id 4 0
+gkgemm64 ma mb bt
+put gkgpr id 144
+put gksm id 4352
 end
 if gt get gkat 0 mul ulong add id 1 16384
 ret false
 end
 put gkthr id 64
-put gkgpr id 104
-put gksm id 4608
 end
 ret true
 end
@@ -584,7 +795,7 @@ if or eq i 0 eq i 2
 size = 65536
 end
 if eq i 4
-size = 524288
+size = 1048576
 end
 if eq i 5
 size = asz
@@ -603,13 +814,14 @@ if not gkall
 put nverr 0 neg long 7
 ret false
 end
-r = mapwrite get gbmem 4 0 gkcode 0 524288
-ret eq r long 524288
+r = mapwrite get gbmem 4 0 gkcode 0 1048576
+ret eq r long 1048576
 end
 fn gkbase to ulong
 ret mapaddr get gbmem 5
 end
 note GEMM host side. Operand ab (0 = A, 1 = B): device address, outer/depth/batch strides in bytes.
+note Mode 1 (K) when the depth stride is 4; gkmm derives per-load delta and tile step for the tile.
 fn gkopa ab uint ptr ulong so uint sk uint s1 uint s2 uint to void
 o = mul ab 8
 put gkarg o gblo ptr
@@ -619,14 +831,10 @@ put gkarg add o 3 sk
 put gkarg add o 4 s1
 put gkarg add o 5 s2
 md = uint 0
-gd = mul sk 2
 if eq sk 4
 md = 1
-gd = mul so 4
 end
 put gkmd ab md
-put gkarg add o 6 gd
-put gkarg add o 7 mul sk 16
 end
 fn gkopc ptr ulong scm uint scn uint s1 uint s2 uint al f32 to void
 put gkarg 16 gblo ptr
@@ -638,6 +846,7 @@ put gkarg 21 s2
 put gkarg 25 bitcast uint al
 end
 note C[z] = alpha A[z] B[z] (+ C[z] if beta), z = z1 h2 + z2, z < nz; m n multiples of 32, k of 16.
+note m and n both multiples of 64 take the 64x64 kernels (ids 32..39), else the 32x32 ones (ids 0..7).
 fn gkshape m uint n uint k uint nz uint h2 uint to bool
 if ne rem m 32 0
 ret false
@@ -670,19 +879,52 @@ put nverr 0 neg long 33
 end
 ret mg
 end
+note Per-load delta (word 6) and tile step (word 7) of operand ab for tile width t (32 or 64).
+fn gkopt ab uint t uint to void
+o = mul ab 8
+so = get gkarg add o 2
+sk = get gkarg add o 3
+gd = mul sk 2
+st = mul sk 16
+if eq t 64
+gd = sk
+st = mul sk 8
+end
+if eq get gkmd ab 1
+gd = mul so 4
+if eq t 64
+gd = mul so 8
+end
+end
+put gkarg add o 6 gd
+put gkarg add o 7 st
+end
+note Tile width: 64 when m and n are both multiples of 64, else 32.
+fn gktile m uint n uint to uint
+if and eq rem m 64 0 eq rem n 64 0
+ret 64
+end
+ret 32
+end
 fn gkmm m uint n uint k uint nz uint h2 uint beta bool to bool
 if not gkshape m n k nz h2
 put nverr 0 neg long 22
 ret false
 end
 put nverr 0 0
-mg = gkmagic nz h2
+put gkarg 23 gkmagic nz h2
 if ne get nverr 0 0
 ret false
 end
-put gkarg 22 div k 16
-put gkarg 23 mg
 put gkarg 24 neg h2
+t = gktile m n
+gkopt 0 t
+gkopt 1 t
+if eq t 64
+put gkarg 22 div k 8
+else
+put gkarg 22 div k 16
+end
 put gkps 0 m
 put gkps 1 n
 put gkps 2 k
@@ -691,8 +933,8 @@ id = add get gkmd 0 mul 2 get gkmd 1
 if beta
 id = add id 4
 end
-if eq get gkmut 0 2
-id = 8
+if eq t 64
+id = add id 32
 end
-ret gklaunch id div n 32 div m 32 nz
+ret gklaunch id div n t div m t nz
 end

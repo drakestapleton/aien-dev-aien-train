@@ -1,6 +1,6 @@
-note gpu-dump.om: emit the gk and gr kernels for the small parity shape and write the 32-slot code
-note image (16 KiB per slot) to stdout. No GPU is touched. tests/omegallm/gpu-disasm.sh appends this
-note unit to the gb10 sources without gg.om and feeds the slots to nvdisasm.
+note gpu-dump.om: emit the gk and gr kernels for the small parity shape and write the whole 64-slot
+note code image gkcode (16 KiB per slot, 1 MiB) to stdout. No GPU is touched. tests/omegallm/gpu-disasm.sh
+note appends this unit to the gb10 sources without gg.om and feeds the slots to nvdisasm.
 fn main to int
 grset 256 32 64 2 128 2
 if not grall
@@ -9,6 +9,6 @@ end
 if not gkall
 exit 2
 end
-w = write 1 gkcode 0 524288
+w = write 1 gkcode 0 1048576
 exit 0
 end

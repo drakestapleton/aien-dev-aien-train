@@ -1,0 +1,7 @@
+{"window_id": "20261102T133802Z-ff7028", "name": "c2-chk1", "owner": "omp-ollm-c2-chk1", "lease_min": 25, "gb10": "shared", "waited_s": 1, "state": {"utc": "2026-11-02T13:38:03Z", "loadavg": "4.08 4.33 7.62 4/2036 565066", "mem_avail_kB": 108156276, "gpu_util_pct": "0", "gpu_W": "5.14",
+ "gb10_lock_holders": "holds shared pid 564237 (s) (set by a finished flock; processes with /tmp/aien-gb10.lock open now: pid 564215 /bin/sh ~/.local/bin/spark-window _hold 20261102T13); ",
+ "quiet_lock_holders": "",
+ "quiet_waiters": "",
+ "gpu_apps": "",
+ "sensors_row": "1793626682,2026-11-02T07:38:02-06:00,170,5.11,0,4.08,108169280,1,2191", "sensors_row_age_s": 1}
+}
