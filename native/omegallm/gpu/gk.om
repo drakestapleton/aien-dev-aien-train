@@ -145,8 +145,15 @@ end
 fn gklds d uint a uint off uint sb uint wt uint to void
 gkq or or 31108 shl d 16 shl a 24 shl off 8 3072 or gkcw 2 sb 7 wt 8192
 end
-fn gkffma d uint a uint b uint c uint wt uint to void
-gkq or or 29219 shl d 16 shl a 24 b c gkcw 1 7 7 wt
+note FFMA d = a b + c; ru is the operand reuse mask (bit 0 Ra, bit 1 Rb, bit 2 Rc; control bits 122-124).
+note A nonzero mask also sets control bit 109 (word-3 bit 13): nvdisasm decodes .reuse only with it set,
+note and ptxas (CUDA 13 sm_121) emits every .reuse instruction with it set. gkcw never sets it.
+fn gkffma d uint a uint b uint c uint wt uint ru uint to void
+y = uint 0
+if ne ru 0
+y = or shl ru 26 8192
+end
+gkq or or 29219 shl d 16 shl a 24 b c or gkcw 1 7 7 wt y
 end
 fn gkfmulf d uint a uint b uint to void
 gkfx or or 29216 shl d 16 shl a 24 b 4194304
@@ -195,9 +202,11 @@ gkldc add 97 ab add o 24 false
 gkldc add 99 ab add o 28 true
 end
 note One k step of the tile: prefetch k+1 fragments into the other set, then 16 FFMA on set kk&1.
-note Set 0 is a R32-35 b R36-39 on SB3; set 1 is a R40-43 b R44-47 on SB4.
-fn gkfrag k uint a uint b uint w uint to void
-gkffma add 16 k a b add 16 k w
+note Set 0 is a R32-35 b R36-39 on SB3; set 1 is a R40-43 b R44-47 on SB4. Element k (row k>>2,
+note column k&3) accumulates in gkacc32 k; the FFMAs of one row share a and carry gkru.
+fn gkfrag k uint a uint b uint w uint ru uint to void
+c = gkacc32 k
+gkffma c a b c w ru
 end
 fn gkstep kk uint to void
 s = and kk 1
@@ -211,7 +220,7 @@ ra = add 32 mul s 8
 k = uint 0
 for i uint 4
 for j uint 4
-gkfrag k add ra i add add ra 4 j w
+gkfrag k add ra i add add ra 4 j w gkru j 3
 w = 0
 k = add k 1
 end
@@ -338,15 +347,15 @@ for k uint 16
 gkldg add 40 k add 56 mul k 2 0 ne k 0
 end
 for k uint 16
-gkffmaf add 16 k add 16 k 12 add 40 k
+gkffmaf gkacc32 k gkacc32 k 12 add 40 k
 end
 else
 for k uint 16
-gkfmulf add 16 k add 16 k 12
+gkfmulf gkacc32 k gkacc32 k 12
 end
 end
 for k uint 16
-gkstg add 56 mul k 2 add 16 k 0 ne k 0
+gkstg add 56 mul k 2 gkacc32 k 0 ne k 0
 end
 gkexit
 end
@@ -357,8 +366,33 @@ note equal the 32x32 kernel bit for bit. Registers: R16-79 accumulators; R80-111
 note fragments (set 0 a R80-87 b R88-95 on SB3, set 1 a R96-103 b R104-111 on SB4); R112-127 load
 note addresses; R128/R130 operand pointers, R132/133 STS bases, R134/135 LDS bases, R136 ktiles,
 note R137/138 per-load delta, R139/140 tile step, R141 minus one, later alpha.
-note OMUTT: 1 in the product; 0 in mutant t, whose 64x64 kernels drop the k = 7 product of acc 0.
+note OMUTT: 1 in the product; 0 in mutant t, whose 64x64 kernels drop the k = 7 product of the thread's
+note C element (row 0, column 0).
 const OMUTT ulong 1
+note OKREU: 1 sets the Ra reuse bit (control bit 122, with bit 109) on each GEMM FFMA whose successor
+note reads the same a fragment; 0 (variant r0) leaves both clear as k6 did. OKBNK: 1 keeps C column j in
+note accumulator column j xor 1, so the FFMA's b fragment and accumulator differ in the low two index
+note bits (the bank of the published two- and four-bank register-file models; sm_121's is unpublished,
+note so k7 measures it); 0 (variant b0) is k6's map j. Neither changes the FFMA chain of any C
+note element, so all four builds give the same bits.
+const OKREU ulong 1
+const OKBNK ulong 1
+fn gkcol j uint to uint
+if eq OKBNK 1
+ret xor j 1
+end
+ret j
+end
+fn gkacc32 k uint to uint
+ret add add 16 and k 12 gkcol and k 3
+end
+note gkru j last: the reuse operand mask of the FFMA at column j of a run that ends at column last.
+fn gkru j uint last uint to uint
+if and eq OKREU 1 lt j last
+ret 1
+end
+ret 0
+end
 note Mode 0 (O): thread loads outer tid, depths 0..7. Mode 1 (K): outer tid>>3 step 8, depth tid&7.
 fn gkopnd64 mode uint blk uint ab uint to void
 o = add uint 896 mul ab 32
@@ -403,7 +437,9 @@ for i uint 8
 for j uint 8
 k = add mul i 8 j
 if or not cut ne k 0
-gkffma add 16 k add ra i add add ra 8 j add 16 k w
+c = add add 16 mul i 8 gkcol j
+u = gkru j 7
+gkffma c add ra i add add ra 8 j c w u
 w = 0
 end
 end
@@ -495,9 +531,10 @@ gkisge 0 136 1
 gkbra 0 ulong top
 gkepi64 beta
 end
-note Accumulator register of element k (row k>>2, column k&3) of quadrant (rh, ch).
+note Accumulator register of element k (row k>>2, column k&3) of quadrant (rh, ch); columns go
+note through gkcol as in gkstep64.
 fn gkacc64 rh uint ch uint k uint to uint
-ret add add 16 mul add mul rh 4 shr k 2 8 add mul ch 4 and k 3
+ret add add 16 mul add mul rh 4 shr k 2 8 gkcol add mul ch 4 and k 3
 end
 note One 4x4 quadrant of the 64x64 epilogue: address pairs R80-111 from base R128 (+32 rows R10,
 note +32 columns R11), alpha R141, old C in R112-127 when beta, store.

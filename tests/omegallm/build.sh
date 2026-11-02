@@ -1,6 +1,6 @@
 #!/bin/sh
 # Build ollm (aien-train#52) from native/omegallm/*.om with the pinned seeded omc.
-# Usage: sh tests/omegallm/build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p|t|r|x|q|w | --variant h5|h7]
+# Usage: sh tests/omegallm/build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p|t|r|x|q|w | --variant h5|h7|r0|b0]
 # Env: TARGET (aarch64, the default, gb10, x86linux or x86efi), OMC (default ../omega-mv/seed/out/omc
 #      beside this clone for aarch64 and gb10, ../omega-mv-x86/seed/out/omc for x86linux,
 #      ../omega-efi/seed/out/omc for x86efi), OUT (default ../build beside it), CORE (taskset core,
@@ -34,10 +34,12 @@
 # OMUTQ) stops each causal P U and DS K GEMM row tile one K tile before the diagonal block's end,
 # which gcmp2 must catch, and mutant w (gr.om OMUTW) makes both softmax kernels skip loading the
 # diagonal 32-column chunk of each row from chunk 1 on, which gcmp2 must catch.
-# Mutants (ollm-mut-X, one changed line) plant a defect the checks must catch. Variants (ollm-var-X,
-# two changed lines) set both gcheck steps GCH and GCH2 to 1e-5 (h5) or 1e-7 (h7), the step sizes
-# that the README's GCH section rejects. Both are made by sed on the concatenated copy only, and the
-# number of changed lines is checked.
+# Mutants (ollm-mut-X, one changed line) plant a defect the checks must catch. Variants (ollm-var-X)
+# h5 and h7 (two changed lines) set both gcheck steps GCH and GCH2 to 1e-5 (h5) or 1e-7 (h7), the step
+# sizes that the README's GCH section rejects; r0 (gk.om OKREU 0) clears the GEMM FFMA reuse bits and
+# b0 (gk.om OKBNK 0) restores k6's accumulator column map, one changed line each, for attributing k7's
+# GEMM timing. Both are made by sed on the concatenated copy only, and the number of changed lines is
+# checked.
 set -eu
 here=$(cd "$(dirname "$0")/../.." && pwd)
 TARGET=${TARGET:-aarch64}
@@ -54,7 +56,7 @@ OUT=${OUT:-$here/../build}
 CORE=${CORE:-6}
 mut= kind=
 if [ $# -ge 1 ]; then
-  { [ "$1" = --mutant ] || [ "$1" = --variant ]; } && [ $# -eq 2 ] || { echo "usage: build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p|t|r|x|q|w | --variant h5|h7]" >&2; exit 2; }
+  { [ "$1" = --mutant ] || [ "$1" = --variant ]; } && [ $# -eq 2 ] || { echo "usage: build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p|t|r|x|q|w | --variant h5|h7|r0|b0]" >&2; exit 2; }
   kind=$1 mut=$2
 fi
 got=$(sha256sum "$OMC" | cut -d' ' -f1)
@@ -97,7 +99,9 @@ case "$kind$mut" in
   --mutantw) pat='s/^const OMUTW ulong 1$/const OMUTW ulong 0/' want=1 ;;
   --varianth5) pat='s/^const GCH f64 0\.000001$/const GCH f64 0.00001/;s/^const GCH2 f64 0\.00000025$/const GCH2 f64 0.00001/' want=2 ;;
   --varianth7) pat='s/^const GCH f64 0\.000001$/const GCH f64 0.0000001/;s/^const GCH2 f64 0\.00000025$/const GCH2 f64 0.0000001/' want=2 ;;
-  *) echo "usage: build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p|t|r|x|q|w | --variant h5|h7]" >&2; exit 2 ;;
+  --variantr0) pat='s/^const OKREU ulong 1$/const OKREU ulong 0/' want=1 ;;
+  --variantb0) pat='s/^const OKBNK ulong 1$/const OKBNK ulong 0/' want=1 ;;
+  *) echo "usage: build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p|t|r|x|q|w | --variant h5|h7|r0|b0]" >&2; exit 2 ;;
 esac
 if [ -n "$mut" ]; then
   [ "$kind" = --mutant ] && name=ollm-mut-$mut || name=ollm-var-$mut
