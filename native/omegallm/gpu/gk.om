@@ -362,10 +362,14 @@ end
 note 64x64 GEMM: one 64x64 tile of C per 64-thread block, 8x8 per thread at rows ty*4+i and 32+ty*4+i,
 note columns tx*4+j and 32+tx*4+j (ty = tid>>3, tx = tid&7), K tiles of 8 through shared memory
 note (272-byte k rows, B at 2176). Each C element is still one FFMA chain over k in order, so results
-note equal the 32x32 kernel bit for bit. Registers: R16-79 accumulators; R80-111 load staging, then
-note fragments (set 0 a R80-87 b R88-95 on SB3, set 1 a R96-103 b R104-111 on SB4); R112-127 load
-note addresses; R128/R130 operand pointers, R132/133 STS bases, R134/135 LDS bases, R136 ktiles,
-note R137/138 per-load delta, R139/140 tile step, R141 minus one, later alpha.
+note equal the 32x32 kernel bit for bit. The K loop is software pipelined (k8): two 4352-byte shared
+note buffers; each tile first issues the global loads of the next tile (guarded by P1 = ktiles left
+note >= 2) into staging registers, runs its 64 FFMA steps from the current buffer, then stores the
+note staging into the other buffer behind one barrier. Registers: R16-79 accumulators; R80-111
+note fragments (set 0 a R80-87 b R88-95 on SB3, set 1 a R96-103 b R104-111 on SB4), later epilogue
+note addresses; R112-127 load addresses, later old C; R128/R130 operand pointers, R132/133 STS bases,
+note R134/135 LDS bases, R136 ktiles, R137/138 per-load delta, R139/140 tile step, R141 minus one,
+note later alpha; R142-149 A staging, R150-157 B staging; R158 buffer step (+4352 or -4352).
 note OMUTT: 1 in the product; 0 in mutant t, whose 64x64 kernels drop the k = 7 product of the thread's
 note C element (row 0, column 0).
 const OMUTT ulong 1
@@ -435,9 +439,10 @@ end
 end
 end
 end
-note Load round q of a K tile: four A and four B loads (tile loads 4q..4q+3); round 1 advances the
-note operand pointers after its addresses are formed. Round 1 waits only for round 0's address reads.
-fn gkld64 q uint to void
+note Load round q of a K tile into staging under predicate p (7 = PT): four A and four B loads (tile
+note loads 4q..4q+3); round 1 advances the operand pointers after its addresses are formed. Round 1
+note waits only for round 0's address reads.
+fn gkld64 q uint p uint to void
 if gt q 0
 put gkpend 0 2
 end
@@ -453,12 +458,10 @@ gkimadw 128 139 1 128
 gkimadw 130 140 1 130
 end
 for r uint 4
-d = add 80 add l r
-gkldg d add 112 mul r 2 0 ne r 0
+gkldgp add 142 add l r add 112 mul r 2 0 ne r 0 p
 end
 for r uint 4
-d = add 96 add l r
-gkldg d add 120 mul r 2 0 true
+gkldgp add 150 add l r add 120 mul r 2 0 true p
 end
 end
 fn gksts64 ma uint mb uint to void
@@ -471,10 +474,10 @@ if eq mb 1
 db = 32
 end
 for r uint 8
-gksts 132 mul r da add 80 r ne r 0
+gksts 132 mul r da add 142 r ne r 0
 end
 for r uint 8
-gksts 133 add 2176 mul r db add 96 r true
+gksts 133 add 2176 mul r db add 150 r true
 end
 end
 fn gkgemm64 ma uint mb uint beta bool to void
@@ -502,20 +505,32 @@ gkmovi 141 4294967295
 for i uint 64
 gkmovz add 16 i
 end
-top = div get gkat 0 16
 put gkpend 0 63
-gkld64 0
-gkld64 1
-gksync
+gkld64 0 7
+gkld64 1 7
 gksts64 ma mb
 gksync
+gkmovi 158 4352
+gkiadd 132 132 158
+gkiadd 133 133 158
+top = div get gkat 0 16
+gkisge 1 136 2
 gklds 80 134 0 3 0
 gklds 84 134 128 3 0
 gklds 88 135 2176 3 0
 gklds 92 135 2304 3 0
+gkld64 0 1
+gkld64 1 1
 for kk uint 8
 gkstep64 kk
 end
+gksts64 ma mb
+gksync
+gkiadd 134 134 158
+gkiadd 135 135 158
+gkimad 158 158 141 255
+gkiadd 132 132 158
+gkiadd 133 133 158
 gkiadd 136 136 141
 gkisge 0 136 1
 gkbra 0 ulong top
@@ -588,13 +603,24 @@ gkquad64 shr h 1 and h 1 beta
 end
 gkexit
 end
-note Kernel table: ids 0..7 = 32x32 gemm, ids 32..39 = 64x64 gemm (base + ma + 2 mb + 4 beta).
+note Kernel table: ids 0..7 = 32x32 gemm (one 16 KiB slot each), ids 40, 42, ..., 54 = 64x64 gemm
+note (40 + 2 (ma + 2 mb + 4 beta), two slots each: the pipelined K loop does not fit in one).
+note gkgpr must be at least the highest GPR the kernel touches + 3: the hardware burns 2 GPRs of the
+note QMD count for the program counter (Mesa NAK sm70.rs hw_reserved_gprs), so R(n-2) and R(n-1) are
+note outside the allocation and a kernel using them hangs (launch wait -110). The 64x64 kernels use
+note R158 (buffer step), so 160 hung (evidence/OMEGALLM/gpu-k8 attempt 1); 168 is the next multiple of 8.
+note tests/omegallm/gpu-disasm.sh checks this rule per slot.
 fn gkslot id uint to void
 put gkat 0 mul ulong id 16384
 end
 fn gkall to bool
 for g uint 16
-id = add g mul shr g 3 24
+id = g
+ns = uint 1
+if ge g 8
+id = add 40 mul sub g 8 2
+ns = 2
+end
 gkslot id
 ma = and g 1
 mb = and shr g 1 1
@@ -605,10 +631,10 @@ put gkgpr id 104
 put gksm id 4608
 else
 gkgemm64 ma mb bt
-put gkgpr id 144
-put gksm id 4352
+put gkgpr id 168
+put gksm id 8704
 end
-if gt get gkat 0 mul ulong add id 1 16384
+if gt get gkat 0 mul ulong add id ns 16384
 ret false
 end
 put gkthr id 64
@@ -657,6 +683,29 @@ e = add cb add 896 mul ulong get gkna 0 4
 put gbcb 212 gbhi e
 put gbcb 213 gblo e
 end
+note QMD word 36 (QMDV05_00 bits 1152-1180): SHARED_MEMORY_SIZE_SHIFTED7, then the MIN (32 KiB, hw 9),
+note MAX (100 KiB, hw 26) and TARGET SM shared-memory configs, hw value = KiB / 4 + 1 from the GB10
+note carveouts 0 8 16 32 64 100. TARGET is the smallest carveout that holds the kernel's shared memory
+note times its register-limited blocks per SM, 65536 / (gkgpr * gkthr). Mesa NAK qmd.rs
+note gv100_get_hw_smem_sizes sizes TARGET the same way from warp-limited workgroups; the register limit is
+note the tighter bound here. A fixed 32 KiB TARGET under-sized the 32x32 GEMM (9 blocks * 4608 B) and the
+note pipelined 64x64 GEMM (6 * 8704 B): under it the pipelined kernel was 1.12x slower than the k7b one,
+note under this rule 0.91x (evidence/OMEGALLM/gpu-k8). Only ids with gkthr set may call this.
+fn gksmw id uint to uint
+sm = div add get gksm id 127 128
+if lt sm 8
+sm = 8
+end
+need = mul mul div 65536 mul get gkgpr id get gkthr id sm 128
+tg = uint 9
+if gt need 32768
+tg = 17
+end
+if gt need 65536
+tg = 26
+end
+ret or or 3426304 shl tg 23 sm
+end
 fn gkqmd id uint gx uint gy uint gz uint to void
 gkqq
 code = add mapaddr get gbmem 4 mul ulong id 16384
@@ -665,11 +714,7 @@ put gbq1 33 or uint and shr code 36 2097151 20971520
 put gbq1 59 gblo shr code 8
 put gbq1 34 or get gkthr id 65536
 put gbq1 35 or or 1 shl get gkgpr id 8 131072
-sm = div add get gksm id 127 128
-if lt sm 8
-sm = 8
-end
-put gbq1 36 or 78923776 sm
+put gbq1 36 gksmw id
 put gbq1 39 gx
 put gbq1 40 gy
 put gbq1 41 gz
@@ -916,7 +961,7 @@ put gkarg 21 s2
 put gkarg 25 bitcast uint al
 end
 note C[z] = alpha A[z] B[z] (+ C[z] if beta), z = z1 h2 + z2, z < nz; m n multiples of 32, k of 16.
-note m and n both multiples of 64 take the 64x64 kernels (ids 32..39), else the 32x32 ones (ids 0..7).
+note m and n both multiples of 64 take the 64x64 kernels (ids 40..54 even), else the 32x32 ones (ids 0..7).
 fn gkshape m uint n uint k uint nz uint h2 uint to bool
 if ne rem m 32 0
 ret false
@@ -1054,7 +1099,7 @@ if beta
 id = add id 4
 end
 if eq t 64
-id = add id 32
+id = add 40 mul id 2
 end
 ret gklaunch id div n t div m t nz
 end
