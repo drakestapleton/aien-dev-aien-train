@@ -1,17 +1,25 @@
 note SPDX-License-Identifier: AGPL-3.0-only
-note omegallm ckpt.om (aien-train#52): checkpoint OLLMCK01 and gradient OLLMGR01 files
-note (CONTRACT section 6). Needs math.om, data.om, model.om, adam.om before it.
-note A file is built in, or read into, the byte image ock: header 112 bytes, then the f64 payload
-note little-endian. The largest file is 112 + 3 P_max 8 with P_max = 217664 (Wolfram:
-note 112 + 3*217664*8 -> 5224048); one spare byte detects an over-long file, so OCKCAP 5224049.
+note omegallm ckpt.om (aien-train#52): checkpoint OLLMCK01 / OLLMCK02 and gradient OLLMGR01 files
+note (CONTRACT section 6, CONTRACT-V1 section 6). Needs math.om, data.om, model.om, adam.om before it.
+note Files are streamed: a save encodes the f64 payload little-endian in chunks of OCKC values into
+note ock, hashes each chunk (FNV-1a 64) and writes it at its file position through the platform
+note unit (ocwopen, ocwput, ocwend; lio.om writes PATH.tmp, fsync, rename; eio.om the file in
+note place), then writes the header at position 0. A load reads the header and then the payload in
+note chunks through oprd into opw, hashing and decoding into the pools in one pass.
+note CK01 header 112 bytes (FNV at 104); CK02 120 bytes (G at 104, FNV at 112); GR01 112 bytes, step
+note field = B, one payload. Largest file at the v1 maxima: 120 + 24 P with P = 7409920 (Wolfram:
+note 120+24*7409920 -> 177838200); a file over OCKCAP = 177838201 bytes is refused with 15 before its
+note header is read, as v0 refused a file over its image (exactly OCKCAP bytes goes to the header
+note checks, then 15).
 note Magic as a little-endian u64 (Wolfram FromDigits[Reverse[ToCharacterCode["OLLMCK01"]],256]
-note -> 3544415659172318287; "OLLMGR01" -> 3544423372933581903).
-note Load refusals (exit codes): 10 file shorter than its header or than 112 + 24 P, 11 bad magic,
-note 12 a shape zero, over the maximum, D mod H != 0, or TOTAL > 999999, 13 P disagrees with the
-note shapes, 14 FNV-1a mismatch, 15 file longer than 112 + 24 P; 70 I/O.
-const OCKCAP ulong 5224049
-global ock uchar 5224049
-global ockn ulong 1
+note -> 3544415659172318287; "OLLMGR01" -> 3544423372933581903; "OLLMCK02" -> 3616473253210246223).
+note Load refusals (exit codes): 10 file shorter than its header or than header + 24 P, 11 bad magic,
+note 12 a shape zero or over the maximum, V < 256, D mod H != 0, TOTAL > 999999, or (CK02) G = 0,
+note G > B or B mod G != 0, 13 P disagrees with the shapes, 14 FNV-1a mismatch, 15 file longer than
+note header + 24 P; 70 I/O.
+const OCKCAP ulong 177838201
+const OCKC ulong 65536
+global ock uchar 524288
 
 fn ocput8 o ulong v ulong to void
 for k ulong 8
@@ -19,6 +27,8 @@ put ock add o k uchar and shr v mul k 8 255
 end
 end
 
+
+note little-endian u64 at ock[o .. o + 8)
 fn ocget8 o ulong to ulong
 v = ulong 0
 for k ulong 8
@@ -27,22 +37,39 @@ end
 ret v
 end
 
-note FNV-1a 64 over ock[112 .. 112 + n): basis cbf29ce484222325, prime 100000001b3
-fn ocfnv n ulong to ulong
-h = ulong 14695981039346656037
-for o ulong 6
-for i ulong 999999
-j = add mul o 999999 i
-if ge j n
-break
-end
-h = mul xor h ulong get ock add 112 j 1099511628211
+note decode m values from ock into ogr[o .. o + m) (a worker's gradient block, lio.om)
+fn ocdecb o ulong m ulong to void
+for j ulong m
+put ogr add o j bitcast f64 ocget8 mul j 8
 end
 end
-ret h
+note little-endian u64 at opw[o .. o + 8)
+fn opw8 o ulong to ulong
+v = ulong 0
+for k ulong 8
+v = or v shl ulong get opw add o k mul k 8
+end
+ret v
 end
 
-note header fields from og; step field st, magic mg
+note FNV-1a 64 step over ock[0 .. n) from state h (basis cbf29ce484222325, prime 100000001b3)
+fn ocfnvk h ulong n ulong to ulong
+x = h
+for i ulong n
+x = mul xor x ulong get ock i 1099511628211
+end
+ret x
+end
+
+fn ocfnvw h ulong n ulong to ulong
+x = h
+for i ulong n
+x = mul xor x ulong get opw i 1099511628211
+end
+ret x
+end
+
+note header fields from og into ock[0 .. 104); magic mg, step field st
 fn ochead mg ulong st ulong to void
 ocput8 0 mg
 for i ulong 7
@@ -55,84 +82,190 @@ ocput8 88 get og 43
 ocput8 96 get og 8
 end
 
-note copy P values from pool offset po into payload block k (block k starts at 112 + 8 P k)
-fn ocpay po ulong k ulong to void
+note encode m values of pool k (0 params, 1 m, 2 v, 3 GRD) from value index i into ock
+fn ocenc k ulong i ulong m ulong to void
+if eq k 0
+for j ulong m
+ocput8 mul j 8 bitcast ulong get ow add i j
+end
+ret
+end
+if eq k 3
+o = add get og 10 i
+for j ulong m
+ocput8 mul j 8 bitcast ulong get ogr add o j
+end
+ret
+end
+o = add get og add 10 k i
+for j ulong m
+ocput8 mul j 8 bitcast ulong get omv add o j
+end
+end
+
+note decode m values from opw into pool k (0 params, 1 m, 2 v) from value index i
+fn ocdec k ulong i ulong m ulong to void
+if eq k 0
+for j ulong m
+put ow add i j bitcast f64 opw8 mul j 8
+end
+ret
+end
+o = add get og add 10 k i
+for j ulong m
+put omv add o j bitcast f64 opw8 mul j 8
+end
+end
+
+note stream pools ks .. ke-1 (ocenc numbering) after a header of hl bytes; returns the FNV-1a
+fn ocbody ks ulong ke ulong hl ulong to ulong
 p = get og 8
-b = add 112 mul mul k p 8
-for i ulong p
-ocput8 add b mul i 8 bitcast ulong get ow add po i
+h = ulong 14695981039346656037
+pos = hl
+nc = div add p sub OCKC 1 OCKC
+for k ulong sub ke ks
+for c ulong nc
+i = mul c OCKC
+m = sub p i
+if gt m OCKC
+m = OCKC
+end
+ocenc add ks k i m
+nb = mul m 8
+h = ocfnvk h nb
+ocwput pos nb
+pos = add pos nb
 end
 end
-
-note payload block k into P values at pool offset po
-fn ocget po ulong k ulong to void
-p = get og 8
-b = add 112 mul mul k p 8
-for i ulong p
-put ow add po i bitcast f64 ocget8 add b mul i 8
-end
-end
-
-note save the image (n payload bytes) to the path in argument ai: header FNV-1a, then the platform
-note unit's ocwrite (lio.om: PATH.tmp, fsync, rename; eio.om: replace the file)
-fn ocsave ai ulong n ulong to void
-ocput8 104 ocfnv n
-ocwrite ai n
+ret h
 end
 
-note write checkpoint: params, m, v
+note write checkpoint (params, m, v) to argv[ai] with the loaded or initialised magic (og 46)
 fn ocksave ai ulong to void
+ocwopen ai
+hl = ulong 112
+if eq get og 46 2
+hl = 120
+end
+h = ocbody 0 3 hl
+if eq hl 120
+ochead 3616473253210246223 get og 41
+ocput8 104 get og 44
+ocput8 112 h
+else
 ochead 3544415659172318287 get og 41
-ocpay 0 0
-ocpay get og 11 1
-ocpay get og 12 2
-ocsave ai mul 24 get og 8
+ocput8 104 h
+end
+ocwput 0 hl
+ocwend ai
 end
 
-note write gradient file: header with step = B, payload grad
+note write gradient file GR01: header with step = B, payload GRD (for either checkpoint magic)
 fn ogrsave ai ulong to void
+ocwopen ai
+h = ocbody 3 4 112
 ochead 3544423372933581903 get og 6
-ocpay get og 10 0
-ocsave ai mul 8 get og 8
+ocput8 104 h
+ocwput 0 112
+ocwend ai
 end
 
-note load the checkpoint named by argv[ai] into og and ow (params, m, v)
+note load the checkpoint named by argv[ai] into og, ow (params) and omv (m, v)
 fn ockload ai ulong to void
-n = ocread ai
+n = ofsz ai
+if gt n OCKCAP
+exit 15
+end
+hn = oprd ai 0 0 120
 if lt n 112
 exit 10
 end
-if ne ocget8 0 3544415659172318287
+mg = opw8 0
+hl = ulong 112
+if eq mg 3616473253210246223
+hl = 120
+put og 46 2
+else
+if ne mg 3544415659172318287
 exit 11
 end
+put og 46 1
+end
+if lt n hl
+exit 10
+end
 for i ulong 7
-put og i ocget8 add 8 mul i 8
+put og i opw8 add 8 mul i 8
 end
 if not ogeom
 exit 12
 end
-put og 40 ocget8 64
-put og 41 ocget8 72
-put og 42 ocget8 80
-put og 43 ocget8 88
+put og 40 opw8 64
+put og 41 opw8 72
+put og 42 opw8 80
+put og 43 opw8 88
 if gt get og 42 999999
 exit 12
 end
+g = ulong 1
+if eq hl 120
+g = opw8 104
+end
+if not ogok2 g
+exit 12
+end
+put og 44 g
+put og 45 1
 p = get og 8
-if ne ocget8 96 p
+if ne opw8 96 p
 exit 13
 end
+hs = opw8 sub hl 8
 pb = mul 24 p
-if lt n add 112 pb
+if lt n add hl pb
 exit 10
 end
-if gt n add 112 pb
+if gt n add hl pb
 exit 15
 end
-if ne ocget8 104 ocfnv pb
+if ne ocklp ai hl p hs 1
 exit 14
 end
-ocget 0 0
-ocget get og 11 1
-ocget get og 12 2
+end
+
+note one pass over the payload at hl: read, hash and decode each chunk; exit 70 on a short read.
+note Returns 1 when the payload FNV equals hs, else 0.
+fn ocklp ai ulong hl ulong p ulong hs ulong to ulong
+h = ulong 14695981039346656037
+nc = div add p sub OCKC 1 OCKC
+pos = hl
+for k ulong 3
+for c ulong nc
+i = mul c OCKC
+m = sub p i
+if gt m OCKC
+m = OCKC
+end
+nb = mul m 8
+if ne oprd ai pos 0 nb nb
+exit 70
+end
+h = ocfnvw h nb
+ocdec k i m
+pos = add pos nb
+end
+end
+if eq h hs
+ret 1
+end
+ret 0
+end
+
+note G against the loaded shapes: 1 <= G <= B and B mod G = 0
+fn ogok2 g ulong to bool
+b = get og 6
+if or eq g 0 gt g b
+ret false
+end
+ret eq rem b g 0
 end

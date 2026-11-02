@@ -1,6 +1,7 @@
 note SPDX-License-Identifier: AGPL-3.0-only
 note omegallm adam.om (aien-train#52): init, global-norm clip, Adam with bias correction, the LR
-note schedule and one training step (CONTRACT section 5). Needs math.om, data.om, model.om.
+note schedule, gradient blocks (CONTRACT-V1 section 5) and one training step (CONTRACT section 5).
+note Needs math.om, data.om, model.om.
 note Exact operation order (agreed with the oracle lane, recorded in CONTRACT section 5):
 note   n = sqrt(sum_i g_i^2) (i ascending); if n > 1: c = 1/n, g_i = g_i c.
 note   b^(s+1) by s+1 repeated multiplications starting from 1.0; bc = 1 - b^(s+1).
@@ -11,15 +12,27 @@ note   lr_s = (lr (s+1))/100 for s < 100, else lr (1 - (0.9 (s-100))/max(1, TOTA
 note Mutant c (bias correction removed): 1 in the product, 0 in the mutant.
 const OMUTC ulong 1
 
+note Mutant d (gradient blocks combined in reverse order, G-1 first): 1 in the product, 0 in the
+note mutant.
+const OMUTD ulong 1
+
+note per-sequence losses of the current batch
+global olos f64 64
+
 note init (CONTRACT section 5): r_i = (splitmix64(S+i) >> 11) 2^-53 (N[2^-53] ->
 note 1.1102230246251565*^-16); w = (2 r - 1) 0.034641016151377546 (N[0.02 Sqrt[3]]); wo and w2
 note times 1/sqrt(2L); gains 1; m = v = 0.
 fn oinit to void
 p = get og 8
 sd = get og 40
-for i ulong p
+for q ulong ocn p
+i = mul q OCH
+ie = oce q p
+while lt i ie bound 999999
 r = mul f64 shr smx add sd i 11 1.1102230246251565e-16
 put ow i mul sub add r r 1.0 0.034641016151377546
+i = add i 1
+end
 end
 d = get og 2
 ri = div 1.0f64 fsqrt f64 mul 2 get og 5
@@ -30,7 +43,18 @@ oiscale opwo l mul d d ri
 oiscale opw2 l mul d get og 4 ri
 end
 oiset get og 33 d 1.0
-ozero get og 11 mul 2 p
+ozerom mul 2 p
+end
+
+fn ozerom n ulong to void
+for q ulong ocn n
+i = mul q OCH
+ie = oce q n
+while lt i ie bound 999999
+put omv i 0.0f64
+i = add i 1
+end
+end
 end
 
 fn oiset o ulong n ulong v f64 to void
@@ -67,18 +91,19 @@ end
 note clip the gradient to global norm 1 and apply one Adam update at step og[41]
 fn oadam to void
 p = get og 8
-g0 = get og 10
 ss = 0.0f64
-for i ulong p
-g = get ow add g0 i
+for q ulong ocn p
+i = mul q OCH
+ie = oce q p
+while lt i ie bound 999999
+g = get ogr i
 ss = add ss mul g g
+i = add i 1
+end
 end
 nr = fsqrt ss
 if gt nr 1.0
-c = div 1.0 nr
-for j ulong p
-put ow add g0 j mul get ow add g0 j c
-end
+oclip div 1.0 nr
 end
 s = get og 41
 lrs = olrs s bitcast f64 get og 43
@@ -91,26 +116,44 @@ end
 put ofs 3 lrs
 put ofs 4 bc1
 put ofs 5 bc2
-for k ulong p
+for q2 ulong ocn p
+k = mul q2 OCH
+ke = oce q2 p
+while lt k ke bound 999999
 oadam1 k
+k = add k 1
+end
+end
+end
+
+note g_i = g_i c for i < P
+fn oclip c f64 to void
+p = get og 8
+for q ulong ocn p
+j = mul q OCH
+je = oce q p
+while lt j je bound 999999
+put ogr j mul get ogr j c
+j = add j 1
+end
 end
 end
 
 note moments of parameter i: m = 0.9 m + (1 - 0.9) g; v = 0.99 v + (1 - 0.99) g^2
 fn oadam1 i ulong to void
-g = get ow add get og 10 i
+g = get ogr add get og 10 i
 mo = add get og 11 i
-m = get ow mo
+m = get omv mo
 m = mul 0.9 m
 a = sub 1.0f64 0.9
 m = add m mul a g
-put ow mo m
+put omv mo m
 vo = add get og 12 i
-v = get ow vo
+v = get omv vo
 v = mul 0.99 v
 a = sub 1.0f64 0.99
 v = add v mul a mul g g
-put ow vo v
+put omv vo v
 oadam2 i m v
 end
 
@@ -125,26 +168,79 @@ w = get ow i
 put ow i sub w u
 end
 
-note one training step at step og[41] on TRAIN (in od0/od1); returns the batch loss at the
-note pre-update parameters and increments the step.
+note one training step at step og[41] on TRAIN; returns the batch loss at the pre-update
+note parameters and increments the step. ogradw (lio.om, eio.om) runs the K workers.
 fn ostep to f64
 s = get og 41
 obatch s
-ls = ograd
+ls = ogradw
 oadam
 put og 41 add s 1
 ret ls
 end
 
-note gradient of the step loss for the batch in obx/oby (no clip, no update); returns the loss
+note gradient of the step loss for the batch in obx/oby (no clip, no update); returns the loss.
+note CONTRACT-V1 section 5: G = og[44] blocks of R = B/G sequences; block j is accumulated from
+note zero for b ascending; GRD = block 0, then GRD[i] = GRD[i] + block j[i] for j ascending.
+note G = 1 is the v0 gradient bit for bit.
 fn ograd to f64
-ozero get og 10 get og 8
+gg = get og 44
+for i ulong gg
+j = i
+if eq OMUTD 0
+j = sub sub gg 1 i
+end
+if eq i 0
+oblkc j 0
+else
+oblkc j get og 8
+ogadd
+end
+end
+ret olsum
+end
+
+note block j into the gradient at ogr[base] (zeroed first); losses into olos
+fn oblkc j ulong base ulong to void
+put og 10 base
+ozerog base get og 8
 bb = get og 6
 sc = div 1.0f64 f64 mul get og 1 bb
-ls = 0.0f64
-for b ulong bb
-ls = add ls ofwd b
+r = div bb get og 44
+b = mul j r
+for i ulong r
+put olos b ofwd b
 obwd b sc
+b = add b 1
+end
+put og 10 0
+end
+
+note GRD[i] = GRD[i] + BLK[i] for i ascending
+fn ogadd to void
+p = get og 8
+for q ulong ocn p
+i = mul q OCH
+ie = oce q p
+while lt i ie bound 999999
+ogadd1 i p
+i = add i 1
+end
+end
+end
+
+note GRD[i] += BLK[i] (BLK at P)
+fn ogadd1 i ulong p ulong to void
+x = get ogr add p i
+put ogr i add get ogr i x
+end
+
+note step loss: sum of olos[b] for b ascending from 0.0, divided by f64 B
+fn olsum to f64
+ls = 0.0f64
+bb = get og 6
+for b ulong bb
+ls = add ls get olos b
 end
 ret div ls f64 bb
 end
@@ -172,7 +268,7 @@ p = get og 8
 for i ulong p
 x = sub f64 rem i 7 3.0
 x = mul x 0.0001
-put ow add get og 10 i x
+put ogr add get og 10 i x
 end
 for k ulong 5
 oadam
@@ -197,7 +293,7 @@ end
 end
 
 fn oadamex j ulong to f64
-g = get ow add get og 10 j
+g = get ogr add get og 10 j
 w = 0.0f64
 for s ulong 5
 w = sub w div mul olrs s bitcast f64 get og 43 g add fabs g 0.00000001

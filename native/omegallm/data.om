@@ -9,8 +9,8 @@ global od1 uchar 16777216
 global odn ulong 1
 global oarg uchar 4100
 global ochk uchar 65536
-global obx uchar 1024
-global oby uchar 1024
+global obx ulong 16384
+global oby ulong 16384
 global owb0 uchar 65536
 global owb1 uchar 65536
 global owbn ulong 2
@@ -245,7 +245,8 @@ oputc 10
 oflush
 end
 
-note Batch for step s (CONTRACT section 4): x and y for b = 0..B-1 into obx/oby (stride T).
+note Batch for step s (CONTRACT section 4): x and y for b = 0..B-1 into obx/oby (stride T); N, the
+note data length in tokens, is odn[0] (odopen).
 note OMUTB is the target offset: 1 in the product, 2 in mutant b (targets shifted by one).
 const OMUTB ulong 1
 fn obatch s ulong to void
@@ -259,11 +260,66 @@ obrow b o
 end
 end
 
+note v1 data file (CONTRACT-V1 section 3): argument ai holds bytes when V = 256 and u16
+note little-endian tokens when V > 256 (og 49 = bytes per token, og 47 = the argument). Sets
+note odn[0] = N tokens; exit 21 on an odd byte length at V > 256, 20 when N < T + 1. Rows are read
+note through oprd when used, so a token >= V is refused (25) only in a row actually read.
+fn odopen ai ulong to void
+w = ulong 1
+if gt get og 0 256
+w = 2
+end
+nb = ofsz ai
+if ne rem nb w 0
+exit 21
+end
+put og 47 ai
+put og 49 w
+put odn 0 div nb w
+if le get odn 0 get og 1
+exit 20
+end
+end
+
+note token k of the window last read by odrow. OMUTE: 1 in the product (u16 little-endian); 0 in
+note mutant e (big-endian), which the referee comparison must catch.
+const OMUTE ulong 1
+fn odtk k ulong to ulong
+if eq get og 49 1
+ret ulong get opw k
+end
+lo = ulong get opw mul k 2
+hi = ulong get opw add mul k 2 1
+if eq OMUTE 0
+ret or shl lo 8 hi
+end
+ret or shl hi 8 lo
+end
+
+note read tokens o .. o + n - 1 (fewer at the end of the file; the rest read as 0) into opw;
+note exit 25 when a token read is >= V
+fn odrow o ulong n ulong to void
+w = get og 49
+nb = mul n w
+for i ulong nb
+put opw i 0
+end
+r = oprd get og 47 mul o w 0 nb
+m = div r w
+v = get og 0
+for k ulong m
+if ge odtk k v
+exit 25
+end
+end
+end
+
 fn obrow b ulong o ulong to void
 tt = get og 1
+odrow o add tt OMUTB
 for t ulong tt
-put obx add mul b tt t uchar odb add o t
-put oby add mul b tt t uchar odb add add o t OMUTB
+put obx add mul b tt t odtk t
+put oby add mul b tt t odtk add t OMUTB
 end
 end
 

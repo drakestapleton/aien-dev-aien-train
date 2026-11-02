@@ -1,7 +1,7 @@
 note SPDX-License-Identifier: AGPL-3.0-only
 note omegallm eio.om (aien-train#52): the UEFI platform unit for `target x86efi`. It replaces lio.om
-note and defines the same functions (oargc, oargr, oflush, ocwrite, ocread, odread, owflush, owopen,
-note owclose, ooffrd, main) with efi words only: efi 1 key, efi 2 stall, efi 10 millisecond clock,
+note and defines the same functions (oargc, oargr, oflush, ocwopen, ocwput, ocwend, ofsz, ogradw,
+note odread, owflush, owopen, owclose, ooffrd, oprd, main) with efi words only: efi 1 key, efi 2 stall, efi 10 millisecond clock,
 note efi 12 file (one open file; ARG bits 0..7 sub, 8..15 volume, 16..63 position; result bit 63 set
 note on error), efi 13 console text. Every file is on the volume the image was loaded from (k = 255).
 note The command lines come from \OLLM\JOB.TXT (CONTRACT section 9): one command per line without the
@@ -170,44 +170,46 @@ put oon 0 0
 end
 end
 
-note write ock[0 .. 112 + n) to the path in argument ai, replacing the file
-fn ocwrite ai ulong n ulong to void
+note v1 checkpoint stream (ckpt.om): create (or empty) the file named by argument ai and keep it
+note open (efi 12 holds one open file; nothing else is opened until ocwend)
+fn ocwopen ai ulong to void
 pl = oargp ai
 r = efi 12 oefa 1 0 oarg 0 pl
 if oeerr r
 exit 70
 end
-tot = add 112 n
-w = efi 12 oefa 3 0 ock 0 tot
-if ne w tot
+end
+
+note write ock[0 .. n) at byte position pos of the open checkpoint file
+fn ocwput pos ulong n ulong to void
+w = efi 12 oefa 3 pos ock 0 n
+if ne w n
 exit 70
 end
+end
+
+note close the checkpoint file (written in place: UEFI has no rename)
+fn ocwend ai ulong to void
 oeclose
 end
 
-note read the file named by argument ai into ock; returns its length; exit 15 when longer than OCKCAP
-fn ocread ai ulong to ulong
-n = oargp ai
-sz = efi 12 oefa 0 0 oarg 0 n
+note size in bytes of the file named by argument ai
+fn ofsz ai ulong to ulong
+pl = oargp ai
+sz = efi 12 oefa 0 0 oarg 0 pl
 if oeerr sz
 exit 70
 end
-if gt sz OCKCAP
-exit 15
-end
-p = ulong 0
-while lt p sz bound 999999
-r = efi 12 oefa 2 p ock p sub sz p
-if or oeerr r eq r 0
-exit 70
-end
-p = add p r
-end
-if ne p sz
-exit 70
-end
 oeclose
-ret p
+ret sz
+end
+
+note gradient of the step loss: one process only, so K > 1 is refused (CONTRACT-V1 section 5.1)
+fn ogradw to f64
+if gt get og 45 1
+exit 29
+end
+ret ograd
 end
 
 note read the file named by argument i into od0/od1; exit 21 when longer than ODCAP
@@ -509,4 +511,18 @@ end
 end
 oeclose
 ret m
+end
+
+note v1 (CONTRACT-V1 section 7): write obm[0 .. n) (bpe.om) to the path in argument ai, in place
+fn obmsave ai ulong n ulong to void
+pl = oargp ai
+r = efi 12 oefa 1 0 oarg 0 pl
+if oeerr r
+exit 70
+end
+w = efi 12 oefa 3 0 obm 0 n
+if ne w n
+exit 70
+end
+oeclose
 end

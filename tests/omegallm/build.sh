@@ -43,7 +43,7 @@ src=$here/native/omegallm
 name=ollm
 {
   [ -z "$lead" ] || printf '%s\n' "$lead"
-  cat "$src/math.om" "$src/data.om" "$src/model.om" "$src/adam.om" "$src/ckpt.om" "$src/cli.om" "$src/$plat"
+  cat "$src/math.om" "$src/data.om" "$src/model.om" "$src/adam.om" "$src/ckpt.om" "$src/cli.om" "$src/bpe.om" "$src/$plat"
 } > "$OUT/ollm.om"
 case "$kind$mut" in
   '') ;;
