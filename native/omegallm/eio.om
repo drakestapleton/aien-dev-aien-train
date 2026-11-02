@@ -480,3 +480,33 @@ oflush
 owait
 ret 0
 end
+
+note v1 positioned read (CONTRACT-V1 section 3), as lio.om: up to n bytes of the file named by
+note argument ai, from byte pos, into opw[off .. off + n); opened and closed on every call (efi 12
+note holds one open file). Returns n, fewer only when the file ends first, 0 at or after its end.
+fn oprd ai ulong pos ulong off ulong n ulong to ulong
+pl = oargp ai
+sz = efi 12 oefa 0 0 oarg 0 pl
+if oeerr sz
+exit 70
+end
+m = ulong 0
+if lt pos sz
+m = sub sz pos
+if gt m n
+m = n
+end
+end
+p = ulong 0
+for o ulong 3
+while lt p m bound 999999
+r = efi 12 oefa 2 add pos p opw add off p sub m p
+if or oeerr r eq r 0
+exit 70
+end
+p = add p r
+end
+end
+oeclose
+ret m
+end
