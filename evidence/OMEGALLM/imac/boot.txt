@@ -1,0 +1,22 @@
+# Boot program on the stick, from the same partition copy as stick.txt (sha256 c504af04413153c8f62d7e51fbdcb69f040e10ff13f60577ecfa8dc6fb40b069)
+$ MTOOLS_SKIP_CHECK=1 mdir -i STICK.img ::/EFI/BOOT
+ Volume in drive : is ALLEN
+ Volume Serial Number is 7B1A-4F5E
+Directory for ::/EFI/BOOT
+
+.            <DIR>     2026-10-25   0:00
+..           <DIR>     2026-10-25   0:00
+BOOTX64  EFI    627712 2026-10-25   0:00
+        3 files             627 712 bytes
+                         49 559 552 bytes free
+
+$ MTOOLS_SKIP_CHECK=1 mcopy -n -i STICK.img ::/EFI/BOOT/BOOTX64.EFI BOOTX64.EFI && sha256sum BOOTX64.EFI
+2474a84245358e8921c41bd5b007ed3b153affa2b6d6328e46a0dc89210d8b7f  BOOTX64.EFI
+$ git checkout b30e185 && TARGET=x86efi OUT=rebuild sh tests/omegallm/build.sh  (omc b4f45121, omega-mv #1015)
+BUILD_OK 2474a84245358e8921c41bd5b007ed3b153affa2b6d6328e46a0dc89210d8b7f rebuild/ollm.efi source_sha256 412f1255411e629d4c33e2a72a31bc35459c59be24ad59210e56aa1381d1b5b6
+$ cmp BOOTX64.EFI rebuild/ollm.efi
+EQUAL rc=0
+# negative control: a copy with the byte at offset 4096 overwritten with 0x01
+$ cmp BOOTX64-MUT.EFI rebuild/ollm.efi
+BOOTX64-MUT.EFI rebuild/ollm.efi differ: char 4097, line 2
+DIFFERENT rc=1
