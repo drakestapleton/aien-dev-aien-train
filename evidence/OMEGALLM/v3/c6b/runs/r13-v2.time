@@ -1,4 +1,4 @@
-	Command being timed: "taskset -c 4 nice -n 19 /tmp/gk/r7/cpu/ollm eval /tmp/gk/r7/run/ck30000.bin /home/drakestapleton/handoffs/omega-llm-20261101/v1-data/held.tok 4 /home/drakestapleton/handoffs/omega-llm-20261101/v1-data/merges4096.bin"
+	Command being timed: "taskset -c 4 nice -n 19 /tmp/gk/r7/cpu/ollm eval /tmp/gk/r7/run/ck30000.bin ~/handoffs/omega-llm-20261101/v1-data/held.tok 4 ~/handoffs/omega-llm-20261101/v1-data/merges4096.bin"
 	User time (seconds): 69.58
 	System time (seconds): 0.56
 	Percent of CPU this job got: 99%
