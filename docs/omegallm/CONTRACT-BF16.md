@@ -177,5 +177,26 @@ K tile (k = 32): the K loop is a do-while and runs once regardless.
 - `evidence/OMEGALLM/gpu-bf/build-2.txt`: build hashes after the gbfrag amendment (case 10 shape,
   long-K cases); gpu-dump code_sha256 is unchanged, so no kernel byte differs from e329675.
 
-Chip gates 4.1-4.5 are NOT_RUN until their pre-registered window runs. Their receipts go under
-`evidence/OMEGALLM/gpu-bf/`.
+Chip gates 4.1-4.5 ran in two pre-registered windows, each EXERCISED on one GB10 (non-quiet):
+
+- bf-g1 (`evidence/OMEGALLM/gpu-bf/g1/REPORT.txt`): B1-B12 PASS. Mutants l, o and v fail both
+  gbfrag and gbcmp. Mutant u fails gbfrag; gbcmp only reports it.
+- bf-t1 (`evidence/OMEGALLM/gpu-bf/t1/REPORT.txt`): T1-T3 PASS. E 2000 is 1749889, within the 4.4
+  bound of 1765719, and the 250→2000 leg took 367.6 s against 434.2 s for f32.
+
+## 7. Adoption
+
+Drake approved adopting BF16 for training on 2026-11-03, after bf-t1 met the 4.4 rule. From then
+on, long training runs use `gtrainb`. The rest of the contract does not change:
+
+- `gtrainf` and every f32 command keep their exact behaviour.
+- `geval` stays on the f32 kernels, so held-out numbers stay comparable across f32 and BF16 runs.
+- The CPU `eval` of a final checkpoint must still print the chip `geval` line, since both evaluate
+  in f32.
+
+What adoption gives up: a `gtrainb` step no longer matches the f64 CPU step bitwise. For BF16
+runs, gbfrag and gbcmp check the kernels against the bf16 numerics instead, and gbcmp2 is the
+heuristic step check of 4.3. A binary used for `gtrainb` runs must pass 4.1-4.5 on the chip first.
+
+Adoption is not a quality claim. 4.4 compares step 2000 only. The first long `gtrainb` run carries
+its own pre-registration and compares its final value with the f32 run on the same schedule.
