@@ -36,7 +36,7 @@ not flattened.
 | P2 stop rule: step-2000 E < 1797226 | E 2000 2243 1756935 655418 | PASS |
 | P3 below rung 6 at 250, 2000, 9000, 30000 | table above | PASS (4/4) |
 | P4 chip geval curve strictly decreasing | 12 points, each below the last | PASS |
-| P5 CPU `eval` of ck30000 within 10 µnats of the chip | `run/eval30000.txt` | NOT_RUN at this commit (running on host core 9) |
+| P5 CPU `eval` of ck30000 within 10 µnats of the chip | `run/eval30000.txt`: E 30000 2243 1254741 468077, rc 0 (bin 6da13670…, ck 378d5a2d…, core 9, nice 19, 15,370.9 s non-quiet) | PASS (Δ 0, identical line) |
 | P6 summed `gtrainf` wall 250→30000 < 11,219 s | 7,110.6 s (modeled 7,930.6 s) | PASS |
 
 Timing (wall clock between the ns stamps around each `gtrainf` in `run/train.txt`, includes
