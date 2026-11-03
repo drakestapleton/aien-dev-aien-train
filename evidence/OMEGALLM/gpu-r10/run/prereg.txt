@@ -1,0 +1,50 @@
+Rung 10 pre-registration (2026-11-03, UTC), written before any rung-10 window opens
+
+Question: on rung 8's 60000-step schedule, does BF16 training (gtrainb, CONTRACT-BF16 section 7)
+reach the same held-out loss as f32 training (gtrainf)? Rung 9 answered this for rung 7's
+30000-step schedule (E 30000 1251860 against f32 1254741). Rung 10 runs twice as many BF16 steps,
+so any drift from BF16 rounding has longer to build up.
+
+Binary: /tmp/gk/r10/ollm-gb10 54fb8233c62a13c0b3bac13a38dd5b583943e9e9097342baaa57fc22db2ceb49.
+This is a copy of the rung-9 and bf-t1 binary (gpu-bf/build-2.txt, aien-train
+feat/omega-llm-bf16; no source change after f28e6ad).
+Input: ck.bin = /tmp/gk/r8/ckL0.bin e02c6234ddb0fb21fee3dfa6dd975bd20b960e2d439c99290559dd95ed71954e
+(rung 8's start: ollm init ckL0.bin 4096 256 384 12 1536 8 64 1 60000 3000 16). The data is rung
+7's and rung 8's: train.tok, held.tok, merges4096.bin under ~/handoffs/omega-llm-20261101/v1-data.
+Procedure: drive.sh and leg.sh in this directory. Each leg runs in its own spark-window. A leg runs
+gtrainb to the next stop and then gevals the saved checkpoint. Stops are 250, then every +3000,
+clipped at 2000, 9000, 15500, 30000 and 60000. Rung 8 lost a leg mid-window (infra-note.txt there)
+and resumed from T 15500, so its eval points after 15000 are 18500, 21500, 24500 and 27500. The 15500
+stop makes rung 10's eval points rung 8's 22 points plus 15500:
+250 2000 5000 8000 9000 12000 15000 15500 18500 21500 24500 27500 30000 33000 ... 60000.
+The only change from rung 8 is gtrainb in place of gtrainf. Batches derive from (seed, step), so leg
+boundaries do not change what is trained.
+Scripts are rung 9's with the paths, names, milestones, final step and stop-rule bound changed. One
+defect was also fixed: drive.sh line 5 now reads windows.txt via cat, so the first iteration no
+longer prints "cannot open windows.txt", which was harmless in rungs 8 and 9.
+Windows: --lease 22, --gb10 shared, --quiet none. All timings are non-quiet.
+
+Reference, rung 8 f32 (aien-train evidence/OMEGALLM/gpu-r8/run/geval.txt):
+E 2000 2243 1755511 654887; E 60000 2243 1206290 450002. Its summed gtrainf wall for 250->60000 is
+14,688.1-14,864.0 s, including two infrastructure events. Undisturbed legs ran at 0.24471 s/step.
+
+Predictions:
+R1 (decisive) chip E at 60000 <= 1212321 µnats, i.e. within +0.5% of rung 8.
+   Wolfram: Floor[1206290*1.005] -> 1212321. This is the tolerance rung 9's Q1 used.
+R2 stop rule: chip E at 2000 <= 1764288 (Wolfram Floor[1755511*1.005] -> 1764288). If it fails,
+   drive.sh exits 5 and R1 is not claimed.
+R3 the chip geval curve is strictly decreasing over all 23 points.
+R4 a CPU eval of ck60000 (/tmp/gk/r7/cpu/ollm 6da13670..., eval CK held.tok 2243 merges4096.bin,
+   one core, nice 19) is within 10 µnats of the chip E 60000.
+R5 summed gtrainb wall 250->60000 < 14,688.1 s (the lower end of rung 8's range). The ns stamps
+   around each gtrainb in train.txt include checkpoint load and save. MODELED from rung 9's measured
+   rate: Wolfram 59750*5740.261483375/29750 -> 11528.76 s.
+Reported, not gated: E at each of the 22 shared steps against rung 8, and E at 15500, which rung 8
+did not evaluate.
+Not run: a seed spread for either arm. A gap of a few tenths of a percent therefore shows neither
+arm is better.
+
+Failures are reported as failures. No leg is rerun to replace a receipt. An infrastructure kill
+(not a gtrainb failure) is resumed from the last checkpoint, disclosed, and counted in R5, as in
+rung 8.
+Status labels: EXERCISED on one GB10 at most. Not QUALIFIED.
