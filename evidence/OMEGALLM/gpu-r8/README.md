@@ -43,7 +43,7 @@ above) and 42000. The last leg (57000→60000) still gained 5,383 µnats, the sm
 | P1 final E at 60000 < 1254741 | `run/geval.txt`: E 60000 2243 1206290 450002 | PASS (−48,451 µnats) |
 | P2 stop rule: E at 2000 < 1797226 | E 2000 2243 1755511 | PASS |
 | P3 chip geval curve strictly decreasing | 22 points; Wolfram `And@@Thread[Differences[ev]<0] -> True` | PASS |
-| P4 CPU `eval` of ck60000 within 10 µnats of the chip | `run/eval60000.txt` | NOT_RUN at this commit (running on host core 8 since 01:48:30Z, about 10-11 h) |
+| P4 CPU `eval` of ck60000 within 10 µnats of the chip | `run/eval60000.txt`: `E 60000 2243 1206290 450002`, rc 0 (bin 6da13670…, ck 45a73a3a…, core 8, nice 19, 11,520.1 s non-quiet) | PASS (Δ 0, identical line) |
 | P5 summed `gtrainf` wall 250→60000 < 15,709 s | 14,688.1-14,864.0 s | PASS |
 
 P5 (WolframLanguageEvaluator over the ns stamps around each `gtrainf` in `run/train.txt`): the 22
