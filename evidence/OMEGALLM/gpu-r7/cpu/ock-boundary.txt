@@ -1,0 +1,20 @@
+# 2026-11-04, host CPU (spark), core 7, nice 19. Tree 45ea064f94b8f8f7af9c8721eab4e373429e6228 (feat/omega-llm-v2); binary = gpu-r7 build.txt cpu/ollm. OCKCAP 380003449 boundary (ckpt.om ockload).
+# D = ~/handoffs/omega-llm-20261101/v1-data (held.tok, merges4096.bin as in run/leg.sh)
+bin_sha256 6da1367091f03d900a1abcc365082758646fa41eb370b261721550a9d744c2f6
+cmd: ollm init ck.bin 4096 256 384 12 1536 8 64 1 30000 3000 16
+I 15833472
+rc=0
+ck.bin size 380003448 sha256 fc8835feae77a7ee93b59807337d51c72dd5df277b48fd93f011e5c592c5ac86
+== ck.bin size 380003448: /usr/bin/time -v ollm eval ck.bin D/held.tok 1 D/merges4096.bin
+E 0 1 8416208 3083688
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:05.70
+	Maximum resident set size (kbytes): 528960
+rc=0
+== p1.bin size 380003449: /usr/bin/time -v ollm eval p1.bin D/held.tok 1 D/merges4096.bin
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:00.00
+	Maximum resident set size (kbytes): 1296
+rc=15
+== p2.bin size 380003450: /usr/bin/time -v ollm eval p2.bin D/held.tok 1 D/merges4096.bin
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:00.00
+	Maximum resident set size (kbytes): 1296
+rc=15
