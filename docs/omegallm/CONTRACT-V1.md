@@ -123,6 +123,14 @@ ascending b (§5). The checkpoint after any number of steps must be byte-identic
 K > 1 needs process creation (`fork`, `pipefds`, `waitpid`), so it is a platform-unit service:
 `lio.om` provides it; `eio.om` refuses K > 1 with exit 29.
 
+Cost when G/K > 1 (not a correctness matter; noted 2026-11-04 from reading `lio.om`, not measured).
+A worker writes each block to its pipe as soon as it is computed, and the pipe holds far less than
+one block (8·P bytes), so the worker cannot start its next block until the parent reads the
+previous one; the parent first computes its own G/K blocks, then reads the workers in ascending w.
+With per = G/K and transfer time ignored, a step then takes about per + (K − 1)(per − 1)
+block-times instead of per: 3 for G = 4, K = 2; for G = 20, K = 1, 2, 4, 5, 10, 20 give 20, 19,
+17, 16, 11, 1. Use K = G (per = 1, the rung-3 setting G = K = 20) for full parallelism.
+
 ## 6. Checkpoint `OLLMCK02`
 
 | Offset | Field |

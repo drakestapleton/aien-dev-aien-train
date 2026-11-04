@@ -10,6 +10,32 @@ parameters:
 The normative spec is [CONTRACT.md](CONTRACT.md). The receipts are under
 `evidence/OMEGALLM/core/` (the `.om` lane) and `evidence/OMEGALLM/oracle/` (the Python-stdlib referee).
 
+## v1 (aien-train#54)
+
+v1 adds a byte-pair tokenizer in `.om` (`bpe.om`, concatenated between `ckpt.om` and `cli.om`),
+shapes up to V 4096, T 256, D 256, L 8, B 64, gradient blocks G and K worker processes with
+byte-identical results for every valid K, and the `OLLMCK02` checkpoint. The spec is
+[CONTRACT-V1.md](CONTRACT-V1.md); v0 commands and files keep their bytes.
+
+```sh
+ollm bpefit TEXT MERGES V [MAXBYTES]   # fit merges: M V types chunks fitbytes
+ollm bpeenc MERGES V TEXT TOKS         # encode to u16 tokens: K bytes tokens
+ollm bpedec MERGES TOKS OUT            # decode: D tokens bytes
+ollm init CK V T D H F L B SEED TOTAL LRMICRO [G]
+ollm train CK TOKS UNTIL EVERY [K]     # K worker processes, G mod K = 0 (Linux only)
+ollm eval CK HELD W MERGES             # MERGES required when V > 256
+ollm sample CK SEED N TEMPMILLI PROMPT MERGES
+```
+
+| What | Status | Receipt |
+|---|---|---|
+| rung 3: config b (V4096 T128 D192 H6 F768 L4 B40, G = K = 20, P 2,582,208), 9000 steps | EXERCISED, 2026-11-02, 41,814 s on the Grace CPU; held-out `E 9000 4486 1823975 680427` (0.680427 bpb over 0.99988 of `held.tok`) | `evidence/OMEGALLM/v1/` |
+| v0 receipt suite on the v1 binary b9b4e02d, aarch64 | EXERCISED, 48/48 PASS (2026-11-04) | `evidence/OMEGALLM/v1/checks/core-aarch64/` |
+| v1 referee checks, mutants d and e, K = 1/2/4 and config-a K = 1/4 identity | EXERCISED (2026-11-04) | `evidence/OMEGALLM/v1/checks/reruns.txt` |
+
+v0's 1.463036 bpb scores 4096 × 64 bytes, 0.11803 of the same held text; v1's 0.680427 scores
+nearly all of it, so the two are not measured on the same positions.
+
 ## Status
 
 Evidence for every row is in `evidence/OMEGALLM/core/summary.tsv` (48/48 as expected). Every receipt
@@ -41,7 +67,7 @@ names the binary and source sha256 it ran; `core-receipts.sh` builds all six bin
 | the v0 run, 20000 steps (`tests/omegallm/v0-run.sh`) | EXERCISED: 2026-11-01T15:24:54Z to 19:23:57Z on core 9, binary a9b5f3ec, unit `Result=success`; held-out 1.463036 bpb at W=4096 | `evidence/OMEGALLM/v0/run/` (see "v0 result") |
 | a9b5f3ec and b729cc35 compute the same v0 run | EXERCISED | `evidence/OMEGALLM/v0/equiv-a9b5f3ec-b729cc35.txt`: same `E 2000` line from the run's step-2000 checkpoint, byte-identical checkpoint after 10 more steps; control `equiv-control-mut-b.txt` differs |
 | `ollm` as an x86-64 Linux program (`TARGET=x86linux`, omega-mv main `ba5559d9`) | EXERCISED, EMULATED (qemu-x86_64 8.2.2 user mode) | `evidence/OMEGALLM/x86/`: the whole receipt suite, 48/48 PASS, every receipt equal to the AArch64 one apart from hashes, paths and wall time; the v0 checkpoint's final eval `E 20000 4096 1014099 1463036` reproduced |
-| `ollm` as a UEFI application (`TARGET=x86efi`, compiler from draft omega-mv#1015) | EXERCISED, EMULATED (QEMU 8.2.2 TCG + OVMF) | `evidence/OMEGALLM/efi/`: the 11 commands of `tests/omegallm/efi-job.txt` read from `\OLLM\JOB.TXT`; the OUT.TXT body matches the AArch64 reference after efi-check.sh strips the banner, J (timing) and DONE lines; TR.BIN, HE.BIN and S.CK written on the FAT volume identical; mutant b differs at byte 375; corrupted checkpoint, 65535- and 65536-byte job controls pass |
+| `ollm` as a UEFI application (`TARGET=x86efi`, compiler from omega-mv #1015, merged as main `d3d1b1bc`) | EXERCISED, EMULATED (QEMU 8.2.2 TCG + OVMF) | `evidence/OMEGALLM/efi/`: the 11 commands of `tests/omegallm/efi-job.txt` read from `\OLLM\JOB.TXT`; the OUT.TXT body matches the AArch64 reference after efi-check.sh strips the banner, J (timing) and DONE lines; TR.BIN, HE.BIN and S.CK written on the FAT volume identical; mutant b differs at byte 375; corrupted checkpoint, 65535- and 65536-byte job controls pass |
 | the same image on one physical machine (names iMac18,3 and Core i5-7500 are from earlier aienux evidence; this run does not record them) | EXERCISED on physical hardware (one machine) | `evidence/OMEGALLM/imac/`: the OUT.TXT body matches the AArch64 reference after efi-check.sh strips the banner, J (timing) and DONE lines; TR.BIN, HE.BIN and S.CK identical, `OLLM DONE 11 186521`; negative controls in `check.txt` DIFFERENT; FAT clean after the firmware's writes |
 
 b729cc35 differs from a9b5f3ec only in bounds handling. The source diff shows it: the concatenated
@@ -79,7 +105,8 @@ The build script does four things:
    - x86linux: `be8c51301307555254fc59e351d281aae1aa096d91521777e33a41c8b446448a`
      (omega-mv main `ba5559d9`, `../omega-mv-x86`);
    - x86efi: `b4f45121f6c6d5d8a6ed0f5c4f3934b7cc4bec369bfa89523699bd33928f9b55`
-     (draft omega-mv#1015, commit `5ce9ecaa`, `../omega-efi`; main's omc refuses `target x86efi`).
+     (omega-mv main `d3d1b1bc`, PR #1015 merged 2026-11-04, `../omega-efi`; the receipts were
+     built from #1015's commit `5ce9ecaa`, an ancestor, with this same omc).
 2. It concatenates `math.om data.om model.om adam.om ckpt.om bpe.om cli.om` and the platform unit
    (`lio.om` for Linux, `eio.om` for UEFI; CONTRACT §9). The x86 targets put the line
    `target x86linux` or `target x86efi` first.
@@ -164,8 +191,10 @@ at W=256 and a saved checkpoint. Chunking does not change the result, because re
 bit-identical (`resume-cmp.txt`). After the last chunk it runs one eval at W=4096 and writes three
 samples at TEMPMILLI 800 and one argmax sample, each 400 bytes after the prompt "Once upon a time".
 
-The run directory holds `v0-run.sh` copied as `run.sh` (same sha256, `4898aae5…`), the binary as
-`ollm`, `train.bin` and `held.bin`. It was started with
+The run directory holds `v0-run.sh` copied as `run.sh` (sha256 `4898aae5…`), the binary as
+`ollm`, `train.bin` and `held.bin`. On 2026-11-04 a four-line usage comment (lines 2-5) was added
+to `tests/omegallm/v0-run.sh`; `sed 2,5d tests/omegallm/v0-run.sh | sha256sum` still gives
+`4898aae5…`, so the run's `run.sh` is the script without that comment. It was started with
 
 ```sh
 systemd-run --user --unit=ollm-v0 --collect -p CPUAffinity=9 -p Nice=19 -p MemoryMax=1G \

@@ -20,10 +20,12 @@ wall 6720 s.
 | Check | Result |
 |---|---|
 | `core/summary.tsv` rows | 48, all PASS; receipt names, exit codes and expected codes equal `../core/summary.tsv` |
-| Receipt files compared with `../core/` | 44 of 44 equal after dropping the `target:`, `binary:`, `source:` and `wall_ns=` lines and mapping `build-rx/`→`build/`, `scratch-x86/work`→`scratch-core/work` |
+| Receipt files compared with `../core/` (`compare-core.txt`, added 2026-11-04) | 44 of 44 EQUAL, 0 different, after dropping the `target:`, `binary:`, `source:`, `wall_ns=` and `host_cpu:` lines and mapping `build-rx/`→`build/`, `scratch-x86/work`→`scratch-core/work` (the `$` command lines are kept) |
 
 So the x86-64 build prints the same losses, gradients, checkpoint hashes, samples and refusals as the
-AArch64 build, bit for bit, including the three mutants (rejected) and the two step-size variants (rc 40).
+AArch64 build, bit for bit, including the mutants and the two step-size variants (rc 40). Mutants a
+and c are rejected (rc 40, rc 41); mutant b passes `gcheck` (rc 0) as designed: it is killed only by
+the oracle's `xgrad`, which was not run on x86.
 
 Rerun from the clone's parent:
 

@@ -1,4 +1,8 @@
 #!/bin/sh
+# Usage: copy this script into a run directory first, beside ollm, train.bin and held.bin, and run
+# it there (sh <run dir>/run.sh). It cds to its own directory and writes every checkpoint, eval and
+# sample there, so run in place it would write into tests/omegallm. Lines 2-5 (this header) were
+# added 2026-11-04; the v0 run's run.sh (sha256 4898aae5…) is this file without them.
 set -eu
 cd "$(dirname "$0")"
 sha256sum ollm train.bin held.bin > shas.txt
