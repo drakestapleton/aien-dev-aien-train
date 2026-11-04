@@ -4,12 +4,13 @@
 #   DATA (env) = TinyStoriesV2-GPT4-valid.txt; WORK (env) = scratch dir for derived .bin files.
 #   Paths are logged exactly as given; pass relative ones so committed receipts name no private paths.
 #   The oracle's temporary checkpoints go under WORK/LABEL/tmp (OLLM_TMP) for the same reason.
+#   CORE (env, default 8) = the taskset core every check runs on.
 # Writes OUTDIR/LABEL/{CHECK.json,CHECK.log,summary.tsv}. Exit 0 only if every check passed.
 set -u
 BIN=$1 LABEL=$2 OUT=$3/$2 MODE=${4:-}
 ORACLE="$(dirname "$0")/oracle.py"
 : "${DATA:?set DATA to TinyStoriesV2-GPT4-valid.txt}" "${WORK:?set WORK to a scratch dir}"
-RUN="taskset -c 8 nice -n 19"
+RUN="taskset -c ${CORE:-8} nice -n 19"
 export PYTHONDONTWRITEBYTECODE=1 OLLM_TMP="$WORK/$2/tmp"
 mkdir -p "$OUT" "$WORK/$LABEL"
 SUM="$OUT/summary.tsv"
