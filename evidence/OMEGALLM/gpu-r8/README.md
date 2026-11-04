@@ -6,8 +6,9 @@ asks whether doubling the schedule, with nothing else changed, lowers held-out l
 no code change: the same chip binary trains it. The held-out measure is the same: chip `geval` of
 `held.tok`, W 2243 windows at T 256, `merges4096.bin`.
 
-Status: EXERCISED on one GB10. Not QUALIFIED, not MERGED. All 24 windows were opened
-`--gb10 shared --quiet none`; `spark-window` printed "quiet machine" for each, but the quiet lock was
+Status: EXERCISED on one GB10. Not QUALIFIED. All 24 windows were opened
+`--gb10 shared --quiet none`; `spark-window` printed "quiet machine" for 23 of them (`run/windows-log.txt`;
+the 24th, t9, was closed by hand after its leg was killed, see Infrastructure), but the quiet lock was
 not taken and host CPU jobs ran beside it, so timings are labelled non-quiet (last close,
 `run/close.json`: load average 4.61).
 
@@ -36,7 +37,12 @@ there against 0.1 for rung 7. It passes rung 7's final value between steps 39000
 above) and 42000. The last leg (57000→60000) still gained 5,383 µnats, the smallest step of the curve
 (`Max[Differences[ev]] -> -5383`).
 
-## Pre-registered predictions (`run/prereg.txt`, written and hashed before the first window)
+## Pre-registered predictions (`run/prereg.txt`)
+
+`run/prereg.txt` and `run/prereg.sha256` were written locally before the first window: the run
+directory's `prereg.txt` has mtime 2026-11-02T20:56:25Z, 7 s before window 20261102T205632Z (t1)
+opened. They were first committed in f41d814, with the evidence, after the run. The file mtime is the
+only timing evidence; there is no commit or other receipt from before the run.
 
 | prediction | receipt | result |
 |---|---|---|
@@ -70,6 +76,21 @@ larger shape at equal chip time was not run.
   `run/leg.sh` trains 0→250, then 3000-step legs that stop exactly at 2000, 9000, 30000 and 60000, then
   runs `geval` of the saved checkpoint. `run/prereg.sha256` covers `prereg.txt` only; the scripts
   were not hashed before the first window and are committed as they ran.
+- `run/leg.sh` does not check the `geval` exit code or the `cp ck.bin ckN.bin` result. This had no
+  effect here: all 22 `geval` blocks in `run/geval.txt` end `rc=0`, and the hashes of ck2000, ck9000,
+  ck30000 and ck60000 in `run/checkpoints.sha256` equal the `step=N ck=` hashes `leg.sh` recorded in
+  `run/geval.txt` before each `geval`.
+- `run/leg.sh` line 3 contains the absolute data path under the operator's home directory. The file is
+  committed as it ran, so the path was not rewritten.
+- `run/drive.sh` touches and removes `/tmp/aien-q36-live-down-for-tests` around each window. The
+  marker is legacy from earlier lanes; nothing in this run reads it, and it is harmless.
+- There is no `run/drive.out` receipt. The first driver ran with its output not kept; the relaunched
+  driver's `drive.out` (mtime 22:45:29Z) is 0 bytes, so nothing was committed.
+- P4 driver: `run/cpu-eval.sh` is `/tmp/gk/cpu-eval.sh` copied verbatim (mtime 2026-11-02T23:03:05Z,
+  before the eval started at 2026-11-03T01:48:30Z, so it was not edited after producing
+  `run/eval60000.txt`). `sh cpu-eval.sh ck60000.bin eval60000.txt 8` writes the cmd, binary and
+  checkpoint sha256, start/end stamps and rc around the `ollm eval` output. It also holds an
+  absolute home path.
 - Checkpoints stay outside the repository (380,003,448 bytes each); hashes in `run/checkpoints.sha256`.
 - Window logs: `run/windows.txt` (one line per window), `run/windows-log.txt` (all 24 `win-*.txt`,
   home prefix replaced with `~/`).
