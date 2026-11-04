@@ -7,8 +7,8 @@ note unit (ocwopen, ocwput, ocwend; lio.om writes PATH.tmp, fsync, rename; eio.o
 note place), then writes the header at position 0. A load reads the header and then the payload in
 note chunks through oprd into opw, hashing and decoding into the pools in one pass.
 note CK01 header 112 bytes (FNV at 104); CK02 120 bytes (G at 104, FNV at 112); GR01 112 bytes, step
-note field = B, one payload. Largest file at the v2 maxima: 120 + 24 P with P = 15833472 (Wolfram:
-note 120+24*15833472 -> 380003448); a file over OCKCAP = 380003449 bytes is refused with 15 before its
+note field = B, one payload. Largest file at the v3 maxima: 120 + 24 P with P = 29995392 (Wolfram:
+note 120+24*29995392 -> 719889528); a file over OCKCAP = 719889529 bytes is refused with 15 before its
 note header is read, as v0 refused a file over its image (exactly OCKCAP bytes goes to the header
 note checks, then 15).
 note Magic as a little-endian u64 (Wolfram FromDigits[Reverse[ToCharacterCode["OLLMCK01"]],256]
@@ -17,7 +17,7 @@ note Load refusals (exit codes): 10 file shorter than its header or than header 
 note 12 a shape zero or over the maximum, V < 256, D mod H != 0, TOTAL > 999999, or (CK02) G = 0,
 note G > B or B mod G != 0, 13 P disagrees with the shapes, 14 FNV-1a mismatch, 15 file longer than
 note header + 24 P; 70 I/O.
-const OCKCAP ulong 380003449
+const OCKCAP ulong 719889529
 const OCKC ulong 65536
 global ock uchar 524288
 
@@ -82,16 +82,19 @@ ocput8 88 get og 43
 ocput8 96 get og 8
 end
 
-note encode m values of pool k (0 params, 1 m, 2 v, 3 GRD) from value index i into ock
+note encode m values of pool k (0 params, 1 m, 2 v, 3 GRD, 4 BLK) from value index i into ock
 fn ocenc k ulong i ulong m ulong to void
 if eq k 0
 for j ulong m
-ocput8 mul j 8 bitcast ulong get ow add i j
+ocput8 mul j 8 bitcast ulong owg add i j
 end
 ret
 end
-if eq k 3
+if ge k 3
 o = add get og 10 i
+if eq k 4
+o = add get og 8 i
+end
 for j ulong m
 ocput8 mul j 8 bitcast ulong ogrg add o j
 end
@@ -107,7 +110,7 @@ note decode m values from opw into pool k (0 params, 1 m, 2 v) from value index 
 fn ocdec k ulong i ulong m ulong to void
 if eq k 0
 for j ulong m
-put ow add i j bitcast f64 opw8 mul j 8
+owp add i j bitcast f64 opw8 mul j 8
 end
 ret
 end

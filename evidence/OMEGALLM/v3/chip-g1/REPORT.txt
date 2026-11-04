@@ -1,0 +1,41 @@
+v3-g1 chip gate report (window 20261104T130054Z-4f1b28, 2026-11-04 13:00Z-13:38Z UTC,
+spark-window --gb10 shared --quiet none --lease 75; open rc 0, run rc 0; BOARD STARTING/DONE lines
+in ~/handoffs/BOARD.md). Pre-registration: prereg.txt (sha256 in prereg.sha256, checked by
+window.sh before the window opened). Binaries and inputs are the ones prereg.txt names. Timings are
+non-quiet (spark-window's "quiet machine" verdict covers GPU contention only).
+
+Verdict: every predicted line holds. Every gated mutant fails as predicted. Chip side of PR #60 is
+ready for merge per the prereg decision rule.
+
+F1 PASS  F1-t250-v2.txt: rc 0, `T 250 2818417`, ck_after 1ab162bf8d2e06e5...b7094 (= gpu-r7/gate1).
+F2 PASS  F2-ge-v2-250.txt: `E 250 2243 2773849 1034774`, rc 0.
+F3 PASS  F3-ga-v2-250.txt: GACMP PASS rc 0; `GA 15833472 59587 4063468404 14664 132 15259 2988077
+         2774219` equals the prediction except adam_ns (2988077).
+F4 PASS  F4-t200-v1.txt: rc 0, ck_after ec4a8c2125791277...1a047.
+F5 PASS  F5-c2-v2max.txt: GCMP2 PASS rc 0; GC2 equals the rung-7 gate2 line except gpu_ns (774415867).
+F6 PASS  F6-ge-r7-30000.txt: `E 30000 2243 1254741 468077`, rc 0.
+F7 PASS  F7-ge-r6-30000.txt: `E 30000 2243 1338156 499194`, rc 0.
+F8 PASS  F8-c2-small-P.txt and F8-c2-small-P7.txt: both GCMP2 PASS rc 0; both GC2 lines are
+         `GC2 84288 223 223 15259 255 7629 1 0 0 225502 0 5549843 5549843 * 0`, equal to gpu-bf/g1
+         and to each other except gpu_ns (4931142 P, 3766385 P7).
+L1 PASS  L1-c2-l16b8-P.txt: GCMP2 PASS rc 0, first field 29995392, fails 0. Reported:
+         `GC2 29995392 179235 783 122070 458 91553 4 14 441241 2486567 0 8438240 8438240 1466812801 0`
+         (field 3 is rel1 in e-9 units, as gpu-r7/gate2/REPORT.txt H2 reads it: 783 < tolr 122070;
+         last field fails 0; losses 8438240 8438240).
+L2 PASS  L2-c2-l16b8-R.txt (Mr): GCMP2 FAIL rc 47, fails 4 (rel1 80554357 >= tolr 122070), as
+         rung-7 gate 2's Mr (fails=4 in gpu-r7/gate2/gc2-v2max-s7-R.txt).
+L3 PASS  L3-ga-l16-P.txt: GACMP PASS rc 0, first field 29995392.
+L4 PASS  L4-bcmp-l16-P.txt: GBCMP PASS rc 0 (`GBC 259 0 39306 128177930240 9 7 3`).
+B1 PASS  B1-frag-P.txt: GBFRAG PASS rc 0, GFS 0, 26 GF and 8 GFL lines all bad 0.
+B2 PASS  Mu GFS 3466061, Ml 3514996, Mo 2389504, Mv 3464000: each GBFRAG FAIL rc 50.
+         Mn: GBFRAG FAIL rc 50, 26 GF lines bad 1, 8 GFL lines bad 0, GFS 26 (B2-frag-*.txt).
+B3 PASS  B3-bcmp-b8-P.txt: GBCMP PASS rc 0; `GBC 131 0 25881 128177930240 9 7 3`, equal to gpu-bf/g1.
+B4 PASS  B4-bcmp-L0-P.txt: GBCMP PASS rc 0; `GBC 131 0 38231 128177930240 9 7 3`, equal to gpu-bf/g1.
+B5 PASS  Ml, Mo, Mv: each GBCMP FAIL rc 48 (B5-bcmp-b8-{l,o,v}.txt). GBC lines equal gpu-bf/g1's.
+         Mu (reported, not gated): GBCMP FAIL rc 48, `GBC 131 5748 505518729 ...`, equal to gpu-bf/g1.
+B6 PASS  B6-bc2-b8-P.txt: GBCMP2 PASS rc 0, `GB2 8 83 649703979 999915797 5619462 2882274 23327`
+         (tolb_e9 649703979); GC2 and GB2 equal gpu-bf/g1 except gpu_ns.
+
+Labels: EXERCISED on one GB10 (the Spark), integrated build e18dee7a... from feat/omega-llm-v3 b42a068.
+This is also the chip run of the BF16 pad-check (gpu-bf/fix-pad, PR #58): mutant n is caught (B2) and
+the product passes (B1). Nothing was rerun.

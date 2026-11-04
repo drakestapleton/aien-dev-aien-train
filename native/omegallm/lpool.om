@@ -1,0 +1,13 @@
+note SPDX-License-Identifier: AGPL-3.0-only
+note omegallm lpool.om (aien-train#52, CONTRACT-V3 section 2): the bank-B pools of the Linux targets
+note (aarch64, gb10, x86linux), concatenated after data.om and before model.om; eio targets use
+note epool.om. Sizes at the CONTRACT-V3 maxima (V 4096, T 256, D 384, H 16, F 1536, L 16), Wolfram:
+note  oww parameters of layers LA .. L-1: (16 - 7) LSTR = 9 1770240 -> 15932160 (LA = 7)
+note  ogb BLK values past OGC: P - OGC = 29995392 - 15833472 -> 14161920
+note  oab activations of layers LAA .. L-1: (16 - 6) ASTR = 10 1573376 -> 15733760 (LAA = 6)
+const OWWN ulong 15932160
+global oww f64 15932160
+const OGBN ulong 14161920
+global ogb f64 14161920
+const OABN ulong 15733760
+global oab f64 15733760

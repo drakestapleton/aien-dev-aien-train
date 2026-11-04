@@ -488,14 +488,14 @@ end
 
 note central difference (L(p+h) - L(p-h))/((p+h) - (p-h)) at parameter i; restores p
 fn ogcnum i ulong h f64 to f64
-p0 = get ow i
+p0 = owg i
 pp = add p0 h
 pm = sub p0 h
-put ow i pp
+owp i pp
 lp = oloss
-put ow i pm
+owp i pm
 lm = oloss
-put ow i p0
+owp i p0
 ret div sub lp lm sub pp pm
 end
 
@@ -507,7 +507,7 @@ end
 note one gradient check at parameter i; updates og[50] count, og[51] max rel bits, og[52] worst
 note index, og[53] retries at GCH2
 fn ogc1 i ulong to void
-g = get ogr i
+g = ocsg i
 num = ogcnum i GCH
 rel = ogcrel num g
 if gt rel GCTOL
