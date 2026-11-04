@@ -79,7 +79,7 @@ def run_batch(core, ck, mode, prefixes, path):
     inp = path + ".in"
     with open(inp, "w") as f:
         f.write("".join(prefixes))
-    r = subprocess.run(["taskset", "-c", "10-14", "nice", "-n", "19", "ionice", "-c3",
+    r = subprocess.run(["taskset", "-c", os.environ.get("AIEN_TEST_CPUS") or "0-9,15-19", "nice", "-n", "19", "ionice", "-c3",
                         core, "batch", ck, mode, inp, path], capture_output=True, text=True)
     if r.returncode != 0:
         raise SystemExit("core batch %s %s rc=%d %s" % (ck, mode, r.returncode, r.stderr))
