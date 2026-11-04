@@ -1,0 +1,4 @@
+core 5 midr_el1 0x00000000410fd851
+core 5 cpuinfo_max_freq_khz 3900000
+CPU MODELNAME      MAXMHZ
+  5 Cortex-X925 3900.0000

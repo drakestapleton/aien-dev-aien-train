@@ -7,8 +7,10 @@
 #      default 6).
 # Each target has its own pinned omc: aarch64 is omega-mv e5b32567 (the v0 pin); x86linux is
 # omega-mv main ba5559d9, whose omc has the x86-64 Linux backend with SSE2 floats (docs/X86-LINUX.md);
-# x86efi is omega-mv draft PR #1015 (branch feat/x86efi-main, commit 5ce9ecaa, docs/X86-EFI.md),
-# whose omc adds the UEFI x86-64 backend with efi 12 (files) and efi 13 (console).
+# x86efi is omega-mv main d3d1b1bc (PR #1015, merged 2026-11-04; docs/X86-EFI.md), whose omc adds the
+# UEFI x86-64 backend with efi 12 (files) and efi 13 (console). The receipts in evidence/OMEGALLM/efi
+# and imac were built with the same omc b4f45121 from #1015's commit 5ce9ecaa, an ancestor of d3d1b1bc
+# (evidence/OMEGALLM/efi/repin-d3d1b1bc.txt).
 # For x86linux and x86efi the concatenated source starts with the opt-in line `target x86linux` or
 # `target x86efi`; every later line is the same as the aarch64 source except the platform unit, which
 # is lio.om on Linux and eio.om on UEFI (CONTRACT §9). The x86efi output is ollm.efi, a PE32+ EFI

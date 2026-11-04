@@ -1,0 +1,170 @@
+date 2026-11-04T12:52:04Z host spark-b87b core 5
+clone 18d834309f6f820c2968fe074983df84be30a166
+omc 2c82480596bbdc50cda9626866209ef662d5834f278f839ff4ce0250c495029f
+--- build
+BUILD_OK b9b4e02d80e589227716c6e069529b6ea941cd1bdab5f3a9ea2dcc606b79997b fixv1/s1/build/ollm source_sha256 12530a53eb77824f0b199e00e87475f427e1f5de152bf4499eb54cf97627e83f
+rc=0
+BUILD_OK 26d97693a9e1a9672808aaf17c090c595635642f48d50b259ebf28a8631ef364 fixv1/s1/build/ollm-mut-d source_sha256 4d44a595cfb1d88151a98db69ffab0d9f0a1d57f2370d708ecf784a714ef598e
+rc=0
+BUILD_OK ecd3e0705baff8afdc874e0c64085f41ee11431f2b5e2e32d6cb75f6ef680a0f fixv1/s1/build/ollm-mut-e source_sha256 412fd928fb301a8ded7a954d26448a52099286520d4bf6323a88f7deac816916
+rc=0
+BUILD_OK 52f5684fe2a600f0221337925233343cede03883bc81dcbbc32b40123a4dac1b fixv1/s1/v0build/ollm source_sha256 076871af4be89d59f2fbe2e1bdb99c30277a622b0c0b1504db1edabbe6e31e19
+rc=0 (v0 reference, base e08443c)
+--- oracle
+v1-oracle: bin=fixv1/s1/build/ollm mutant=none core=5
+PASS referee-selftest-v1
+PASS prep (exit 0, files checked)
+PASS fit512 (exit 0, files checked)
+PASS fit300-maxbytes (exit 0, files checked)
+PASS fit-tie (exit 0, files checked)
+PASS fit-tie-kat (smallest a, then smallest b)
+PASS fit-out-of-pairs (exit 28, files checked)
+PASS fit-maxbytes-no-0 (exit 21, files checked)
+PASS fit-edge (exit 0, files checked)
+PASS enc512-train (exit 0, files checked)
+PASS enc512-held (exit 0, files checked)
+PASS enc300-train (exit 0, files checked)
+PASS enc300-held (exit 0, files checked)
+PASS enc-edge (exit 0, files checked)
+PASS dec512-train (exit 0, files checked)
+PASS roundtrip (decode(encode(train)) == train)
+PASS enc-altered-pair (exit 0, files checked)
+PASS altered-pair-changes-tokens (byte 689, line 12)
+PASS merges-hash-26 (exit 26, files checked)
+PASS v-over-merges-27 (exit 27, files checked)
+PASS bpeenc-v256-27 (exit 27, files checked)
+PASS odd-token-file-21 (exit 21)
+PASS token-over-v-25 (exit 25)
+PASS init-ck02-g2 (exit 0, files checked)
+PASS init-ck01 (exit 0, files checked)
+PASS init-ck02-g4 (exit 0, files checked)
+PASS init-g3-12 (exit 12, files checked)
+PASS limit-12 [4097 8 16 2 32 2 4] (exit 12, files checked)
+PASS limit-12 [300 257 16 2 32 2 4] (exit 12, files checked)
+PASS limit-12 [300 8 258 2 32 2 4] (exit 12, files checked)
+PASS limit-12 [300 8 34 17 32 2 4] (exit 12, files checked)
+PASS limit-12 [300 8 16 2 1025 2 4] (exit 12, files checked)
+PASS limit-12 [300 8 16 2 32 9 4] (exit 12, files checked)
+PASS limit-12 [300 8 16 2 32 2 65] (exit 12, files checked)
+PASS grad-g2 (max relerr grad=2.276e-13 )
+PASS grad-g4 (max relerr grad=2.572e-13 )
+PASS train-chain-20 (T lines exact, ck within rtol at every step)
+PASS workers-k1-k2 (K=1, K=2 and the 20-call chain byte-identical)
+PASS workers-tlines (T lines = referee)
+PASS bad-k3-29 (exit 29)
+PASS bad-k0-29 (exit 29)
+PASS eval-w4-bpb (exit 0)
+PASS eval-no-merges-2 (exit 2)
+PASS eval-w-23 (exit 23)
+PASS sample-t0 (exit 0)
+PASS sample-t800 (exit 0)
+PASS sample-no-merges-2 (exit 2)
+PASS data-odd-21 (exit 21)
+PASS data-short-20 (exit 20)
+PASS data-token-25 (exit 25, files checked)
+PASS data-lazy (max relerr grad=2.010e-13 )
+PASS offs-22 (exit 22)
+PASS offs-size-21 (exit 21)
+PASS v0-v1-ck01 (init and 20 steps byte-identical, T lines equal)
+SUMMARY pass=54 fail=0 not_run=0
+--- mut-e
+rc=1 (want 1)
+v1-oracle: bin=fixv1/s1/build/ollm-mut-e mutant=none core=5
+PASS referee-selftest-v1
+PASS prep (exit 0, files checked)
+PASS fit512 (exit 0, files checked)
+PASS fit300-maxbytes (exit 0, files checked)
+PASS fit-tie (exit 0, files checked)
+PASS fit-tie-kat (smallest a, then smallest b)
+PASS fit-out-of-pairs (exit 28, files checked)
+PASS fit-maxbytes-no-0 (exit 21, files checked)
+PASS fit-edge (exit 0, files checked)
+PASS enc512-train (exit 0, files checked)
+PASS enc512-held (exit 0, files checked)
+PASS enc300-train (exit 0, files checked)
+PASS enc300-held (exit 0, files checked)
+PASS enc-edge (exit 0, files checked)
+PASS dec512-train (exit 0, files checked)
+PASS roundtrip (decode(encode(train)) == train)
+PASS enc-altered-pair (exit 0, files checked)
+PASS altered-pair-changes-tokens (byte 689, line 12)
+PASS merges-hash-26 (exit 26, files checked)
+PASS v-over-merges-27 (exit 27, files checked)
+PASS bpeenc-v256-27 (exit 27, files checked)
+PASS odd-token-file-21 (exit 21)
+PASS token-over-v-25 (exit 25)
+PASS init-ck02-g2 (exit 0, files checked)
+PASS init-ck01 (exit 0, files checked)
+PASS init-ck02-g4 (exit 0, files checked)
+PASS init-g3-12 (exit 12, files checked)
+PASS limit-12 [4097 8 16 2 32 2 4] (exit 12, files checked)
+PASS limit-12 [300 257 16 2 32 2 4] (exit 12, files checked)
+PASS limit-12 [300 8 258 2 32 2 4] (exit 12, files checked)
+PASS limit-12 [300 8 34 17 32 2 4] (exit 12, files checked)
+PASS limit-12 [300 8 16 2 1025 2 4] (exit 12, files checked)
+PASS limit-12 [300 8 16 2 32 9 4] (exit 12, files checked)
+PASS limit-12 [300 8 16 2 32 2 65] (exit 12, files checked)
+FAIL grad-g2 (exit 25)
+FAIL grad-g4 (exit 25)
+FAIL train-chain-20 (step 1: got '' rc 25, want 'T 1 5671449')
+FAIL workers-k1-k2 (exit 25 25)
+FAIL workers-tlines (got '' want 'T 5 5709638;T 10 5680561;T 15 5665714;T 20 5647460;')
+PASS bad-k3-29 (exit 29)
+PASS bad-k0-29 (exit 29)
+cp: cannot stat 'fixv1/s1/vo-e/bin/c20.ck': No such file or directory
+cp: cannot stat 'fixv1/s1/vo-e/bin/c20.ck': No such file or directory
+FAIL eval-w4-bpb (referee exit 1, want 0: FileNotFoundError: [Errno 2] No such file or directory: 'b20.ck')
+FAIL eval-no-merges-2 (referee exit 1, want 2: FileNotFoundError: [Errno 2] No such file or directory: 'b20.ck')
+FAIL eval-w-23 (referee exit 1, want 23: FileNotFoundError: [Errno 2] No such file or directory: 'b20.ck')
+FAIL sample-t0 (referee exit 1, want 0: FileNotFoundError: [Errno 2] No such file or directory: 'b20.ck')
+FAIL sample-t800 (referee exit 1, want 0: FileNotFoundError: [Errno 2] No such file or directory: 'b20.ck')
+FAIL sample-no-merges-2 (referee exit 1, want 2: FileNotFoundError: [Errno 2] No such file or directory: 'b20.ck')
+PASS data-odd-21 (exit 21)
+PASS data-short-20 (exit 20)
+PASS data-token-25 (exit 25, files checked)
+FAIL data-lazy (exit 25)
+PASS offs-22 (exit 22)
+PASS offs-size-21 (exit 21)
+PASS v0-v1-ck01 (init and 20 steps byte-identical, T lines equal)
+SUMMARY pass=42 fail=12 not_run=0
+--- kgroup (want: K=2 and K=4 EQUAL to K=1)
+5554b41ad118fc8e736835cc8a796d1181f3f3ce46476a23836a859fde02abe5  fixv1/s1/vo/ref/train300.tok
+I 9104
+init rc=0
+T 5 5709638
+train K=1 rc=0
+T 5 5709638
+train K=2 rc=0
+T 5 5709638
+train K=4 rc=0
+fa09f5626b288a9f7e386969d0557cfe04f80de00d07f38eb33c6d254df5dcab  fixv1/s1/k/i4.ck
+e1df7ad3a23ea65e5bf41ba687a7da77f252011879d1b5efdfccc52dfea21a5d  fixv1/s1/k/k1.ck
+e1df7ad3a23ea65e5bf41ba687a7da77f252011879d1b5efdfccc52dfea21a5d  fixv1/s1/k/k2.ck
+e1df7ad3a23ea65e5bf41ba687a7da77f252011879d1b5efdfccc52dfea21a5d  fixv1/s1/k/k4.ck
+EQUAL fixv1/s1/k/k1.ck fixv1/s1/k/k2.ck
+EQUAL fixv1/s1/k/k1.ck fixv1/s1/k/k4.ck
+--- mut-d (want: K=1 vs K=2 DIFFERENT)
+T 5 5709638
+mut-d train K=1 rc=0
+T 5 5709638
+mut-d train K=2 rc=0
+186bcab960ad64a1bd852ef2982d399c15ae5231510d77d38fb6c4025de36c8a  fixv1/s1/k/d1.ck
+e1df7ad3a23ea65e5bf41ba687a7da77f252011879d1b5efdfccc52dfea21a5d  fixv1/s1/k/d2.ck
+fixv1/s1/k/d1.ck fixv1/s1/k/d2.ck differ: byte 113, line 1
+DIFFERENT fixv1/s1/k/d1.ck fixv1/s1/k/d2.ck
+--- config-a (want: K=4 EQUAL to K=1)
+23a8dcb6415c93b70a3a3bb2ab04f5334faa340b2d08dbb1cfb73a45bd6eb4b0  v1-data/train.tok
+I 1328256
+init rc=0
+T 2 8314221
+train K=1 rc=0
+wall_s=19
+T 2 8314221
+train K=4 rc=0
+wall_s=20
+7fbaaf09f1e928282f3aa9b23f700a34b91cef8432f919b154d9f5977d43c102  fixv1/s1/a/a.ck
+1ec5df1faa66eb086e21864cdb6b91b6dfdf998d94b057664a35e591ee727302  fixv1/s1/a/a.k1.ck
+1ec5df1faa66eb086e21864cdb6b91b6dfdf998d94b057664a35e591ee727302  fixv1/s1/a/a.k4.ck
+EQUAL fixv1/s1/a/a.k1.ck fixv1/s1/a/a.k4.ck
+end 2026-11-04T12:53:06Z
+rc=0
