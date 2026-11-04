@@ -4,7 +4,9 @@
 # Usage: sh tests/omegallm/efi-check.sh OUT.TXT REF JOBS BYTES
 # Order required:
 #   1. first line is exactly `OLLM efi BYTES` (BYTES is the JOB.TXT size)
-#   2. each reference job, in order, then exactly one `J <ms>` line
+#   2. each reference job, in order, then exactly one `J <ms>` line; a `> ` line holding only
+#      spaces and tabs (a JOB.TXT line with no tokens: eio.om main echoes it and runs nothing) has
+#      no J line and is not counted in JOBS
 #   3. last line is `OLLM DONE JOBS <ms>`
 # A reference job is the lines from one `> ` line up to the next. Those lines are compared with
 # REF as they stand. A line shaped like `J n` or `OLLM DONE a b` inside a job is part of that
@@ -31,7 +33,8 @@ END {
   nj = 0
   while (ri <= rn) {
     if (ref[ri] !~ /^> /) { note("reference line " ri " does not start a job"); exit 1 }
-    nj++
+    blank = (ref[ri] ~ /^> [ \t]*$/)
+    if (!blank) nj++
     while (ri <= rn) {
       if (oi >= on) { note("OUT ended during job " nj); exit 1 }
       if (out[oi] != ref[ri]) {
@@ -45,6 +48,7 @@ END {
       ri++
       if (ri <= rn && ref[ri] ~ /^> /) break
     }
+    if (blank) continue
     if (oi >= on) { note("missing J line after job " nj); exit 1 }
     if (out[oi] !~ /^J [0-9]+$/) {
       note("expected one J line after job " nj)
