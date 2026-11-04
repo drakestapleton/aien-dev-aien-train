@@ -1,0 +1,5 @@
+  ck params max relerr 1.179e-13
+  ck m max relerr 2.297e-13
+  ck v max relerr 4.113e-14
+PASS ck (header exact, rtol 1e-09)
+rc=0

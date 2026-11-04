@@ -1,7 +1,7 @@
 note SPDX-License-Identifier: AGPL-3.0-only
 note omegallm eio.om (aien-train#52): the UEFI platform unit for `target x86efi`. It replaces lio.om
 note and defines the same functions (oargc, oargr, oflush, ocwopen, ocwput, ocwend, ofsz, ogradw,
-note odread, owflush, owopen, owclose, ooffrd, oprd, obmsave, main) with efi words only: efi 1 key, efi 2 stall, efi 10 millisecond clock,
+note ocsinit, ocsg, ocsp, odread, owflush, owopen, owclose, ooffrd, oprd, obmsave, main) with efi words only: efi 1 key, efi 2 stall, efi 10 millisecond clock,
 note efi 12 file (one open file; ARG bits 0..7 sub, 8..15 volume, 16..63 position; result bit 63 set
 note on error), efi 13 console text. Every file is on the volume the image was loaded from (k = 255).
 note The command lines come from \OLLM\JOB.TXT (CONTRACT section 9): one command per line without the
@@ -210,6 +210,43 @@ if gt get og 45 1
 exit 29
 end
 ret ograd
+end
+
+note cold store (CONTRACT-V3 section 2): GRD and the Adam moments, 3 P values, in three globals of
+note OCSB = 15833472 values (the x86efi limit is the v2 bank-A capacity; one global holds at most
+note 16777216 values)
+const OCSB ulong 15833472
+global ocs0 f64 15833472
+global ocs1 f64 15833472
+global ocs2 f64 15833472
+
+note capacity of the cold store in f64 values
+fn ocsinit to ulong
+ret mul 3 OCSB
+end
+
+fn ocsg i ulong to f64
+if lt i OCSB
+ret get ocs0 i
+end
+j = sub i OCSB
+if lt j OCSB
+ret get ocs1 j
+end
+ret get ocs2 sub j OCSB
+end
+
+fn ocsp i ulong v f64 to void
+if lt i OCSB
+put ocs0 i v
+ret
+end
+j = sub i OCSB
+if lt j OCSB
+put ocs1 j v
+else
+put ocs2 sub j OCSB v
+end
 end
 
 note read the file named by argument i into od0/od1; exit 21 when longer than ODCAP
