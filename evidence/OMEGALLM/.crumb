@@ -3,17 +3,17 @@
     "generated": {
       "children": [],
       "children_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "compiled_at": "2026-11-04T13:51:44Z",
+      "compiled_at": "2026-11-04T14:36:44Z",
       "compiler": "crumb-compile/1",
-      "digest": "sha256:90dae7e3dfc22ec3bf153e658d6523ceaae6db38e646b3c9f61e64dc3139aaaa",
-      "evidence_files": 273,
-      "evidence_root": "sha256:ec9bffa27ad299c0448d5324b95a92605f60b52e4b34b3917c2dc376bb0dde9f",
-      "files": 273,
-      "generated_at_commit": "0a53de62d1f29822f7770022992418b531e6fecb",
-      "source_tree": "sha256:f19036ae22e6e03fb4a6e419940ec91bd303a789551ea76e15fe831b9d5019ce"
+      "digest": "sha256:1f59cdb583c4464715b8b02b95d020c8af34185b43811cefab0728b6c2a30ba0",
+      "evidence_files": 415,
+      "evidence_root": "sha256:b6da66ebd42d835f8126aa946669fb9dec2fecdd40479a8cd432997c79c34f8b",
+      "files": 415,
+      "generated_at_commit": "27a428240244230e20e87b74d071d801310dc13d",
+      "source_tree": "sha256:bdc619f961a20434c7ef5423c38452f48e7a449f7c2688e42232d5a8587cc05f"
     }
   },
   "name": "omegallm-evidence",
-  "purpose": "Receipts for Omega LLM v0: core/ (.om lane runs on GB10 Grace) and oracle/ (referee cross-checks)",
+  "purpose": "Receipts for Omega LLM v0 and v1: core/ (.om lane runs on GB10 Grace), oracle/ (referee cross-checks), v1/ (rung-3 run and v1 checks)",
   "schema_version": "1.0.0"
 }
