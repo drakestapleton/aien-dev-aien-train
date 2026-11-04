@@ -51,7 +51,7 @@ ret 2
 end
 aa = oargu 4
 ss = oargu 5
-if or or lt aa 800 gt aa 1200 or lt ss 800 gt ss 1200
+if or or lt aa 500 gt aa 1200 or lt ss 800 gt ss 1200
 ret 51
 end
 weempty

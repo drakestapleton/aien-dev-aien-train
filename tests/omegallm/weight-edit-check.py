@@ -31,7 +31,7 @@ with tempfile.TemporaryDirectory(prefix='weight-edit-check-') as tmp:
     oldb, oldh, oldv = values(old)
     newb, newh, newv = values(new)
     p, d = newh[12], newh[3]
-    for alpha, gain in [(900, 1000), (1100, 1000), (1000, 950), (1050, 1100)]:
+    for alpha, gain in [(500, 1000), (900, 1000), (1100, 1000), (1000, 950), (1050, 1100)]:
         out = r/f'a{alpha}-g{gain}.ck'
         run(tool, old, new, out, alpha, gain)
         b, h, v = values(out)
@@ -46,14 +46,15 @@ with tempfile.TemporaryDirectory(prefix='weight-edit-check-') as tmp:
     run(tool, old, new, new, 1100, 1000, expected=52)
     assert new.read_bytes() == newb
     run(tool, old, new, r/'bad-range.ck', 1201, 1000, expected=51)
+    run(tool, old, new, r/'bad-low-range.ck', 499, 1000, expected=51)
     corrupt = bytearray(oldb)
     corrupt[-1] ^= 1
     (r/'corrupt.ck').write_bytes(corrupt)
     run(tool, r/'corrupt.ck', new, r/'bad-hash.ck', 1000, 1000, expected=14)
     run(ollm, 'init', r/'wrong.ck', 256, 8, 16, 2, 32, 1, 2, 1, 10, 3000, 1)
     run(tool, r/'wrong.ck', new, r/'bad-shape.ck', 1000, 1000, expected=53)
-    assert not any((r/name).exists() for name in ('bad-range.ck','bad-hash.ck','bad-shape.ck'))
+    assert not any((r/name).exists() for name in ('bad-range.ck','bad-low-range.ck','bad-hash.ck','bad-shape.ck'))
     assert old.read_bytes() == oldb
-    print(json.dumps({'identity': 'PASS', 'four_weight_reference_cases': 'PASS',
+    print(json.dumps({'identity': 'PASS', 'five_weight_reference_cases': 'PASS',
                       'checksum_loads': 'PASS', 'optimizer_bytes_preserved': 'PASS',
                       'overwrite_range_hash_shape_refusals': 'PASS', 'originals_unchanged': 'PASS'}))
