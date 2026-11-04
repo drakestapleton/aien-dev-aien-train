@@ -6,8 +6,8 @@ note gkbf 1), gbcmp (sampled check of every BF16 GEMM of one step, exit 48), gbc
 note with the BF16 bound, exit 49) and gbfrag (exact check of all ten kernels on fixed data, exit 50).
 note Concatenated before gg.om: it calls gg.om functions but uses none of gg.om's globals.
 
-note OMUTU: 1 in the product; 0 in mutant u, whose reference skips the bf16 rounding (gbfrag and gbcmp
-note must then fail).
+note OMUTU: 1 in the product; 0 in mutant u, whose reference skips the bf16 rounding (gbfrag must then
+note fail; gbcmp only reports it, CONTRACT-BF16 section 5).
 const OMUTU ulong 1
 
 note bf16 round to nearest even of the f32 bits u, as f32 bits (NaN unchanged)
@@ -455,8 +455,9 @@ note element against a reference built from the bf16-rounded operands. One opera
 note [-5, 5], the other values (n - 2) + j 2^-9 (n < 5, j < 64), so every product is a multiple of 2^-9
 note (2^-10 with alpha 1/2) and every sum stays below 2^11: the chip's f32 result is exact. Thirteen
 note cases (eight plain kernels, epilogues 1 and 2, cz 1, 2 and 3), each with the operand roles
-note swapped; nz 6, h2 3, padded strides, NaN in every operand word the kernel must not read. Data in
-note the logits buffer (A, B, C, Y at 0, 1, 2, 3 MiB). Prints `GF pass case id k cz ep bad` per case,
+note swapped; nz 6, h2 3, padded strides, NaN in every operand word the kernel must not read and in the
+note eight padding columns of every C row (and of Y / M with a fused epilogue), which must still be NaN
+note afterwards. Data in the logits buffer (A, B, C, Y at 0, 1, 2, 3 MiB). Prints `GF pass case id k cz ep bad` per case,
 note then the eight long-K cases (gbfl, `GFL pass ma mb bad`), `GFS bad` and GBFRAG PASS, or GBFRAG FAIL
 note (exit 50). Needs a logits buffer of at least 4 Mi floats (B 8: 8 Mi).
 note gbcs: 0 ma, 1 mb (1 = K-contiguous), 2 beta, 3 ep, 4 cz, 5 k, 6 m, 7 n, 8 pass, 9 alpha 1/2
@@ -696,7 +697,8 @@ end
 ret bitcast uint f32 sub f64 rem add add r mul c 3 z 3 1.0f64
 end
 
-note C (old values) and Y: 77 for epilogue 1, M for epilogue 2; C rows of n + 8
+note C (old values) and Y: 77 for epilogue 1, M for epilogue 2; C rows of n + 8, whose 8 padding columns
+note (and Y's / M's with a fused epilogue) are NaN
 fn gbwc to void
 m = ulong get gbcs 6
 zs = mul m add ulong get gbcs 7 8
@@ -719,6 +721,13 @@ gbput add oc 1048576 bitcast uint f32 77.0f64
 end
 if eq ep 2
 gbput add oc 1048576 gbmv z r c
+end
+end
+for c ulong 8
+op = add o mul add n c 4
+gbput op 2143289344
+if ne ep 0
+gbput add op 1048576 2143289344
 end
 end
 end
@@ -764,7 +773,7 @@ bt = eq get gbcs 2 1
 ret gkmm m n k 6 3 bt
 end
 
-note mismatches over every C element of the case (and Y for epilogue 1)
+note mismatches over every C element of the case (and Y for epilogue 1), plus padding words no longer NaN
 fn gbfcmp to ulong
 bad = ulong 0
 for z ulong 6
@@ -791,6 +800,17 @@ bad = ulong 0
 for c ulong n
 if not gbfel z r c add o mul c 4
 bad = add bad 1
+end
+end
+for c ulong 8
+op = add o mul add n c 4
+if ne gbw op 2143289344
+bad = add bad 1
+end
+if ne get gbcs 3 0
+if ne gbw add op 1048576 2143289344
+bad = add bad 1
+end
 end
 end
 ret bad

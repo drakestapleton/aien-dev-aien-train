@@ -5,9 +5,9 @@ This contract adds a BF16 tensor-core GEMM path to the GB10 build (`TARGET=gb10`
 product and the Python referee do not change. The BF16 path is opt-in, and every existing command
 keeps its exact behaviour.
 
-Compatibility rule: every f32 kernel slot (0..26) keeps its exact code and register bytes. The
-AArch64 build is byte-identical to the base 273ca2a build. Host evidence for both statements is
-in `evidence/OMEGALLM/gpu-bf/` (`f32-identity.txt`, `build.txt`).
+Compatibility rule: every kernel slot except the new BF16 slots 27..36 keeps its exact code and
+register bytes. The AArch64 build is byte-identical to the base 273ca2a build. Host evidence for both
+statements is in `evidence/OMEGALLM/gpu-bf/` (`f32-identity.txt`, `build.txt`).
 
 ## 1. Numerics
 
@@ -79,6 +79,14 @@ below 2^11, so the f32 accumulation is exact. The reference applies bf16 RNE to 
 the chip result must equal it element by element. The fractional values need more than eight
 significand bits, so a kernel that skips the rounding or rounds toward zero differs from the
 reference.
+
+Every C row has eight padding columns after column n - 1 (row stride n + 8). Before each case
+gbfrag writes NaN into them, and into the same columns of Y (epilogue 1) or M (epilogue 2). After
+the launch, every padding word that is no longer NaN counts as a mismatch, so a store outside
+columns 0..n-1 of its row, such as a wrong column offset, fails the case. The BF16 dispatch takes
+only m and n that are multiples of 64 (`gk.om` gktile), so these cases have no partial tiles. This
+check was added after bf-g1 (2026-11-04, `evidence/OMEGALLM/gpu-bf/fix-pad/`); its chip run is
+NOT_RUN until the integrator's pre-registered window.
 
 Eight long-K cases (`GFL pass ma mb bad`) then cover the K loop: m = n = 64, k = 16384 (512 K
 tiles), nz 1, beta 0, alpha 1, all four operand-mode pairs, both role passes. Operands are zero
@@ -176,11 +184,16 @@ K tile (k = 32): the K loop is a do-while and runs once regardless.
   build (identical to the base) and the four mutants.
 - `evidence/OMEGALLM/gpu-bf/build-2.txt`: build hashes after the gbfrag amendment (case 10 shape,
   long-K cases); gpu-dump code_sha256 is unchanged, so no kernel byte differs from e329675.
+- `evidence/OMEGALLM/gpu-bf/fix-pad/`: the C padding check of 4.1 (2026-11-04). gpu-dump
+  code_sha256 and gpu-gpr.bin are unchanged, so no kernel byte differs; new build hashes; chip
+  commands and expected results for its pending run.
 
-Chip gates 4.1-4.5 ran in two pre-registered windows, each EXERCISED on one GB10 (non-quiet):
+Chip gates 4.1-4.5 ran in two pre-registered windows, each EXERCISED on one GB10 (non-quiet),
+before the padding check existed:
 
 - bf-g1 (`evidence/OMEGALLM/gpu-bf/g1/REPORT.txt`): B1-B12 PASS. Mutants l, o and v fail both
-  gbfrag and gbcmp. Mutant u fails gbfrag; gbcmp only reports it.
+  gbfrag and gbcmp. Mutant u fails gbfrag; gbcmp only reports it (u failed both; gbcmp is not
+  required to catch u).
 - bf-t1 (`evidence/OMEGALLM/gpu-bf/t1/REPORT.txt`): T1-T3 PASS. E 2000 is 1749889, within the 4.4
   bound of 1765719, and the 250→2000 leg took 367.6 s against 434.2 s for f32.
 

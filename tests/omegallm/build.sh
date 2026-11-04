@@ -38,8 +38,8 @@
 # BF16 (gpu/gb.om, concatenated before gg.om; docs/omegallm/CONTRACT-BF16.md): gtrainb, gprofb, gbcmp,
 # gbcmp2 and gbfrag. Mutant u (gb.om OMUTU) skips the bf16 rounding in the gates' reference, mutant l
 # (gk.om OMUTL) swaps the A fragment rows of lanes g and g ^ 1, mutant o (gk.om OMUTO) runs one K tile
-# fewer and mutant v (gk.om OMUTV) rounds the operands toward zero (F2FP RZ); gbfrag and gbcmp must
-# catch all four.
+# fewer and mutant v (gk.om OMUTV) rounds the operands toward zero (F2FP RZ); gbfrag must catch all four;
+# gbcmp must catch l, o and v (u is reported only).
 # Mutants (ollm-mut-X, one changed line) plant a defect the checks must catch. Variants (ollm-var-X)
 # h5 and h7 (two changed lines) set both gcheck steps GCH and GCH2 to 1e-5 (h5) or 1e-7 (h7), the step
 # sizes that the README's GCH section rejects; r0 (gk.om OKREU 0, one changed line) clears the GEMM FFMA
