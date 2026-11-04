@@ -2,10 +2,11 @@ note SPDX-License-Identifier: AGPL-3.0-only
 note omegallm model.om (aien-train#52): geometry, forward pass and hand-derived backward pass
 note (CONTRACT sections 1-3, CONTRACT-V1 section 1). Needs math.om and data.om before it.
 note
-note f64 values live in five pools (one omc global holds at most 16777216 elements):
+note f64 values live in seven pools (one omc global holds at most 16777216 elements):
 note  ow  parameters, in the CONTRACT section 2 order from 0
-note  ogr gradient GRD at 0, and the block buffer BLK at P (CONTRACT-V1 section 5)
-note  omv Adam m at 0 and Adam v at P
+note  ogr, ogb  the gradient pool [0, 2 OWN): gradient GRD at 0 and the block buffer BLK at P
+note      (CONTRACT-V1 section 5); index i lives in ogr[i] below OWN and in ogb[i - OWN] from OWN
+note  omv, omw  the Adam pool [0, 2 OWN) split the same way: m at 0, v at P
 note  oa  per-layer activations, final activations and the backward temporaries
 note  opa attention probabilities PA[l][n][t][j] of every layer
 note og slots:
@@ -18,20 +19,64 @@ note  stride) 33 GF 40 seed S 41 step 42 TOTAL 43 lr bits 44 G (gradient blocks)
 note  46 checkpoint magic of the run (1 OLLMCK01, 2 OLLMCK02)
 note Per layer activations (T rows of width D unless noted): HIN, A, Q, K, U, O, HMID, BN, S1[T],
 note S2[T], FP[T][F] (pre-relu), RL[T][F]. Every sum runs over its index ascending.
-note Pool sizes at the CONTRACT-V1 maxima (V 4096, T 256, D 256, H 16, F 1024, L 8), Wolfram:
-note  P = V D + T D + L (4 D^2 + 2 D F + 2 D) + D -> 7409920
-note  ASTR = 8 T D + 2 T + 2 T F -> 1049088; END = L ASTR + 10 T D + T + T V + T F + 4096 -> 10297600
+note Pool sizes at the CONTRACT-V2 maxima (V 4096, T 256, D 384, H 16, F 1536, L 8), Wolfram:
+note  P = V D + T D + L (4 D^2 + 2 D F + 2 D) + D -> 15833472
+note  ASTR = 8 T D + 2 T + 2 T F -> 1573376; END = L ASTR + 10 T D + T + T V + T F + 4096 -> 15016192
 note  PA = L H T T -> 8388608
-note ogeom refuses any layout past a pool.
-const OWN ulong 7409920
-global ow f64 7409920
-const OGN ulong 14819840
-global ogr f64 14819840
-global omv f64 14819840
-const OAN ulong 10297600
-global oa f64 10297600
+note ogeom refuses any layout past a pool. The gradient and Adam pools hold 2 P, past one array at the
+note v2 maxima, so each is two arrays of OWN reached through ogrg/ogrp/ogra and omvg/omvp.
+const OWN ulong 15833472
+global ow f64 15833472
+global ogr f64 15833472
+global ogb f64 15833472
+global omv f64 15833472
+global omw f64 15833472
+const OAN ulong 15016192
+global oa f64 15016192
 const OPAN ulong 8388608
 global opa f64 8388608
+
+note gradient pool element i (i < 2 OWN)
+fn ogrg i ulong to f64
+if lt i OWN
+ret get ogr i
+end
+ret get ogb sub i OWN
+end
+
+fn ogrp i ulong v f64 to void
+if lt i OWN
+put ogr i v
+else
+put ogb sub i OWN v
+end
+end
+
+note gradient pool element i += a
+fn ogra i ulong a f64 to void
+if lt i OWN
+put ogr i add get ogr i a
+else
+j = sub i OWN
+put ogb j add get ogb j a
+end
+end
+
+note Adam pool element i (i < 2 OWN)
+fn omvg i ulong to f64
+if lt i OWN
+ret get omv i
+end
+ret get omw sub i OWN
+end
+
+fn omvp i ulong v f64 to void
+if lt i OWN
+put omv i v
+else
+put omw sub i OWN v
+end
+end
 note TMP holds V logits (sample) or T attention dots
 const OTMP ulong 4096
 
@@ -90,8 +135,8 @@ a = add mul 8 td mul 2 t
 ret add a mul mul 2 t get og 4
 end
 
-note shape limits (CONTRACT-V1 section 1): every shape >= 1, 256 <= V <= 4096, T <= 256,
-note D <= 256, H <= 16, F <= 1024, L <= 8, B <= 64, D mod H = 0
+note shape limits (CONTRACT-V2 section 1): every shape >= 1, 256 <= V <= 4096, T <= 256,
+note D <= 384, H <= 16, F <= 1536, L <= 8, B <= 64, D mod H = 0
 fn ogok to bool
 for i ulong 7
 if eq get og i 0
@@ -101,10 +146,10 @@ end
 if or lt get og 0 256 gt get og 0 4096
 ret false
 end
-if or gt get og 1 256 gt get og 2 256
+if or gt get og 1 256 gt get og 2 384
 ret false
 end
-if or gt get og 3 16 gt get og 4 1024
+if or gt get og 3 16 gt get og 4 1536
 ret false
 end
 if or gt get og 5 8 gt get og 6 64
@@ -375,23 +420,15 @@ note G[gi + j] += xv dy[j] for j < c (elements independent, four per pass)
 fn kger1 xv f64 gi ulong yi ulong c ulong to void
 ye = add yi c
 while le add yi 4 ye bound 999999
-a = mul xv get oa yi
-put ogr gi add get ogr gi a
-a = mul xv get oa add yi 1
-q = add gi 1
-put ogr q add get ogr q a
-a = mul xv get oa add yi 2
-q = add gi 2
-put ogr q add get ogr q a
-a = mul xv get oa add yi 3
-q = add gi 3
-put ogr q add get ogr q a
+ogra gi mul xv get oa yi
+ogra add gi 1 mul xv get oa add yi 1
+ogra add gi 2 mul xv get oa add yi 2
+ogra add gi 3 mul xv get oa add yi 3
 gi = add gi 4
 yi = add yi 4
 end
 while lt yi ye bound 4
-a = mul xv get oa yi
-put ogr gi add get ogr gi a
+ogra gi mul xv get oa yi
 gi = add gi 1
 yi = add yi 1
 end
@@ -406,12 +443,10 @@ put oa q add get oa q v
 end
 end
 
-note y[i] += a x[i]; x in oa, y in ogr
+note y[i] += a x[i]; x in oa, y in the gradient pool
 fn kaxpg yo ulong xo ulong a f64 n ulong to void
 for i ulong n
-q = add yo i
-v = mul a get oa add xo i
-put ogr q add get ogr q v
+ogra add yo i mul a get oa add xo i
 end
 end
 
@@ -427,7 +462,7 @@ for q ulong ocn n
 i = mul q OCH
 ie = oce q n
 while lt i ie bound 999999
-put ogr add o i 0.0f64
+ogrp add o i 0.0f64
 i = add i 1
 end
 end
@@ -495,7 +530,7 @@ fn brms1 vp ulong gp ulong dap ulong dhp ulong ggp ulong to void
 s = get ofs 0
 n = div get oa vp s
 da = get oa dap
-put ogr ggp add get ogr ggp mul da n
+ogra ggp mul da n
 dn = mul da get ow gp
 dn = div sub dn mul n get ofs 1 s
 put oa dhp add get oa dhp dn

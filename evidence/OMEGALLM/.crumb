@@ -3,17 +3,17 @@
     "generated": {
       "children": [],
       "children_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "compiled_at": "2026-11-04T14:37:51Z",
+      "compiled_at": "2026-11-04T14:37:58Z",
       "compiler": "crumb-compile/1",
-      "digest": "sha256:322c87534458f6da2f03e90c75407baf0bf38344110c343c42bcc1aae9d64342",
-      "evidence_files": 816,
-      "evidence_root": "sha256:2ac57610b0c010dc92c6b5bbe2ac8831d32487484eb5153df181c7e8090526ac",
-      "files": 816,
-      "generated_at_commit": "9ca015bd2cc896bbe8b96eab6b6a846522ea70d7",
-      "source_tree": "sha256:cedce3f57909ddf6362e9b58771109ddef10a0b6d14154b529a3e10c7e3cdfc3"
+      "digest": "sha256:03336321ab480cb70e653b50fd761875c8392a6bf4bc7a665bbcd47a27b346bc",
+      "evidence_files": 861,
+      "evidence_root": "sha256:5f24f588d8ce631d1de138a7b3af4f0a7b6703afb480c8197d5dcf85d9f9d199",
+      "files": 861,
+      "generated_at_commit": "57f20e6146fb5ec8afba54a741f6698b858928d2",
+      "source_tree": "sha256:77fa376ab64f122574bc1a4ca8746cb8ed622de7734d7a1a3a94155b632362e8"
     }
   },
   "name": "omegallm-evidence",
-  "purpose": "Receipts for Omega LLM v0: core/ (.om lane runs on GB10 Grace) and oracle/ (referee cross-checks)",
+  "purpose": "Receipts for Omega LLM v0, v1 and v2: v0/, core/ (.om lane runs on GB10 Grace), oracle/ (referee cross-checks), refactor/, x86/, efi/, imac/ (other targets), gpu/, gpu-max/, geval/ (GB10 chip path), gpu-k1..gpu-k9 (kernel rounds), gpu-r6/, gpu-r7/ (training rungs; r7 is the v2 shape)",
   "schema_version": "1.0.0"
 }

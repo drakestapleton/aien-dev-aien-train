@@ -1,0 +1,26 @@
+rung-7 gate window gg-r7g2 (20261102T171554Z-0c245d), binary P2 1853303e..., PR2 360f3bd9...
+prereg.sha256: prereg.txt 8b17e336..., run.sh a66db44a...
+Labels: EXERCISED on one GB10, timings non-quiet.
+
+H1 PASS  gc2-v2max-s7: GCMP2 PASS rc 0. rel1 991e-9 vs tolr 122070e-9 (ratio 0.0081, Wolfram);
+         rho 425e-9 vs tolf 91553e-9; 5 ReLU flips; chip loss = CPU K0 loss = 8408630; 345 s.
+H2 PASS  gc2-v2max-s7-R (mutant r): GCMP2 FAIL rc 47, fails=4 (rel1 43279012e-9 >= tolr).
+H3 PASS  gc2-small-s3: GC2 fields 1-13 and 15 equal the k9 line; gpu_ns 3727518.
+H4 FAIL  ge-v1-0: E 0 2243 8344166 3112761. v2 init 8398671 minus v1 init 8344166 = 54505 micro-nats
+         (Wolfram 0.054505), above the 50000 bound written after G6 missed.
+H5 PASS  ge-v1-30000: E 30000 2243 1338156 499194.
+H6 PASS  t200-v1: ck_after ec4a8c21... (bit-identical to the v1 binary).
+H7 PASS  ga-v2-250: GACMP PASS.
+
+H4 follow-up (host CPU, core 9, nice 19; ../refeval-w1.txt): held window 0 at the v2 init ckL0,
+  Python referee  `oracle.py ollm eval ckL0.bin held.tok 1 merges4096.bin` -> E 0 1 8416208 3083688 (274 s)
+  product         `cpu/ollm eval ckL0.bin held.tok 1 merges4096.bin`       -> E 0 1 8416208 3083688 (5.7 s)
+  The independent referee computes the same init loss as the product at the v2 maximum, the init
+  bytes equal the referee's, and H1 shows chip loss = CPU loss at D 384 / F 1536. The larger excess
+  over ln 4096 (0.0809 at D 384 vs 0.0264 at D 256, Wolfram) is the contract init (uniform, sd 0.02,
+  independent of D) evaluated at a wider model, not a v2 defect. The 50000 bound had no derivation.
+
+Decision (written before the first rung-7 window, disclosed as a departure from the run-start rule):
+  rung 7 starts with P2. Every gate that tests correctness (H1-H3, H5-H7, the referee check) holds;
+  the one miss is a heuristic bound replaced by an exact referee comparison. The proof claim is
+  governed by ../run/prereg.txt (P1-P6), which this decision does not change.

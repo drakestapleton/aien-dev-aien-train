@@ -1,0 +1,8 @@
+== referee (oracle.py ollm eval) ckL0 W=1
+E 0 1 8416208 3083688
+wall 273.75 s maxrss 3705732 kB
+rc=0
+== product cpu/ollm eval ckL0 W=1
+E 0 1 8416208 3083688
+wall 5.71 s maxrss 528960 kB
+rc=0

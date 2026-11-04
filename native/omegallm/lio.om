@@ -202,7 +202,7 @@ exit 70
 end
 end
 
-note worker: blocks j0 .. j0 + n - 1 into GRD (ogr from 0), each sent as it is done, then the
+note worker: blocks j0 .. j0 + n - 1 into GRD (gradient pool from 0), each sent as it is done, then the
 note losses of its sequences
 fn owork fd int j0 ulong n ulong to void
 for t ulong n
@@ -240,7 +240,7 @@ p = add p ulong r
 end
 end
 
-note send GRD (ogr[0 .. P)) in chunks of OCKC values
+note send GRD (gradient pool [0 .. P)) in chunks of OCKC values
 fn osendb fd int to void
 p = get og 8
 nc = div add p sub OCKC 1 OCKC
@@ -255,7 +255,7 @@ owall fd mul m 8
 end
 end
 
-note receive one block into BLK (ogr[P .. 2P))
+note receive one block into BLK (gradient pool [P .. 2P))
 fn orecvb fd int to void
 p = get og 8
 nc = div add p sub OCKC 1 OCKC
