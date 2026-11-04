@@ -86,7 +86,10 @@ the launch, every padding word that is no longer NaN counts as a mismatch, so a 
 columns 0..n-1 of its row, such as a wrong column offset, fails the case. The BF16 dispatch takes
 only m and n that are multiples of 64 (`gk.om` gktile), so these cases have no partial tiles. This
 check was added after bf-g1 (2026-11-04, `evidence/OMEGALLM/gpu-bf/fix-pad/`); its chip run is
-NOT_RUN until the integrator's pre-registered window.
+NOT_RUN until the integrator's pre-registered window. Mutant n (section 5) is its negative control:
+after each short case's launch the host writes 0.0 into C's first padding word (block 0, row 0,
+column n), so gbfrag must report exactly one mismatch per short case (26 `GF` lines with bad 1,
+8 `GFL` lines with bad 0, `GFS 26`) and fail with exit 50.
 
 Eight long-K cases (`GFL pass ma mb bad`) then cover the K loop: m = n = 64, k = 16384 (512 K
 tiles), nz 1, beta 0, alpha 1, all four operand-mode pairs, both role passes. Operands are zero
@@ -167,6 +170,7 @@ Each mutant is a build flag (`--mutant X`). Each must fail at least one gate on 
 | l | gk.om OMUTL 0 | A rows of lanes g and g ^ 1 swapped in the LDS layout | gbfrag, gbcmp |
 | o | gk.om OMUTO 0 | one K tile fewer than the tile count | gbfrag (k ≥ 64 cases, long-K cases), gbcmp |
 | v | gk.om OMUTV 0 | F2FP rounds toward zero instead of to nearest even | gbfrag, gbcmp |
+| n | gb.om OMUTN 0 | host overwrites C's padding word (0, n) with 0.0 after each short case (no kernel change) | gbfrag (padding check only, `GFS 26`) |
 
 For mutant u, gbcmp is reported only, because the RNE-vs-exact difference per sample can fall
 within the f32 accumulation bound when Σ|a·b| is large. Mutant o cannot change a GEMM with a single
@@ -185,8 +189,9 @@ K tile (k = 32): the K loop is a do-while and runs once regardless.
 - `evidence/OMEGALLM/gpu-bf/build-2.txt`: build hashes after the gbfrag amendment (case 10 shape,
   long-K cases); gpu-dump code_sha256 is unchanged, so no kernel byte differs from e329675.
 - `evidence/OMEGALLM/gpu-bf/fix-pad/`: the C padding check of 4.1 (2026-11-04). gpu-dump
-  code_sha256 and gpu-gpr.bin are unchanged, so no kernel byte differs; new build hashes; chip
-  commands and expected results for its pending run.
+  code_sha256 and gpu-gpr.bin are unchanged, so no kernel byte differs; new build hashes
+  (`build.txt` at f5a6941, `build-n.txt` with mutant n); chip commands and expected results for
+  its pending run.
 
 Chip gates 4.1-4.5 ran in two pre-registered windows, each EXERCISED on one GB10 (non-quiet),
 before the padding check existed:

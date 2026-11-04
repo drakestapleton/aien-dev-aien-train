@@ -10,6 +10,11 @@ note OMUTU: 1 in the product; 0 in mutant u, whose reference skips the bf16 roun
 note fail; gbcmp only reports it, CONTRACT-BF16 section 5).
 const OMUTU ulong 1
 
+note OMUTN: 1 in the product; 0 in mutant n, the negative control of gbfrag's padding check: after each
+note short case's launch the host writes 0.0 into C's first padding word (block 0, row 0, column n), so
+note only that check can fail (CONTRACT-BF16 section 4.1).
+const OMUTN ulong 1
+
 note bf16 round to nearest even of the f32 bits u, as f32 bits (NaN unchanged)
 fn gbbf u uint to uint
 if eq OMUTU 0
@@ -560,6 +565,10 @@ gbwc
 put gkinv 0 1
 if not gbflch
 ggdie 98
+end
+if eq OMUTN 0
+n = ulong get gbcs 7
+gbput add gbcro 0 0 mul ulong get gbcs 6 add n 8 mul n 4 0
 end
 b = gbfcmp
 ep = ulong get gbcs 3
