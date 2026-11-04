@@ -46,6 +46,10 @@ if [ -n "$BIN" ]; then
     BIN=$(cd "$(dirname "$BIN")" && pwd)/$(basename "$BIN")
     [ -x "$BIN" ] || { echo "v1-oracle: BIN $BIN is not executable" >&2; exit 2; }
 fi
+if [ -n "$V0BIN" ]; then
+    V0BIN=$(cd "$(dirname "$V0BIN")" && pwd)/$(basename "$V0BIN")
+    [ -x "$V0BIN" ] || { echo "v1-oracle: V0BIN $V0BIN is not executable" >&2; exit 2; }
+fi
 echo "v1-oracle: bin=${BIN:-none} mutant=${MUTANT:-none} core=$CORE"
 
 pass=0 fail=0 notrun=0

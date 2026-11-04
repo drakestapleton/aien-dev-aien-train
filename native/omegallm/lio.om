@@ -2,7 +2,7 @@ note SPDX-License-Identifier: AGPL-3.0-only
 note omegallm lio.om (aien-train#52): the Linux platform unit, the only unit that uses host words.
 note It is concatenated last for targets aarch64 and x86linux; eio.om replaces it for x86efi. Both
 note define the same functions: oargc, oargr, oflush, ocwopen, ocwput, ocwend, ofsz, ogradw, odread,
-note owflush, owopen, owclose, ooffrd, oprd and main. Every other unit is free of host words.
+note owflush, owopen, owclose, ooffrd, oprd, obmsave and main. Every other unit is free of host words.
 global owfd int 2
 global opth uchar 2100
 global opk uchar 4200
