@@ -18,3 +18,7 @@ copied here. NOT_RUN on the integrated tree, because the CPU bytes are unchanged
 `..` stand: check 2 (v2-max train steps), c5 one train step at the v3 maximum (1:40:28), c6b eval
 timing, the x86linux/x86efi builds and core-receipts.sh. v1-oracle.sh was started on core 0 but is not
 recorded here.
+
+Note 2026-11-04: that v1-oracle.sh run finished at 12:59:55Z on core 0 with the integrated aarch64
+build 5e20559a...: `SUMMARY pass=56 fail=0 not_run=1` rc 0 (`v1-oracle.txt`). The NOT_RUN item is
+v0-v1-ck01, which needs V0BIN and was not given. The chip gates of this build are in `../chip-g1/`.
