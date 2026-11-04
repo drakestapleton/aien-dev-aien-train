@@ -14,6 +14,11 @@ E lines agree on step and W and |loss_micro_gpu − loss_micro_cpu| < 10 (1e-5 n
 tolerance). Negative control: a mutant on the same checkpoint counts as discriminating only if its
 |Δ| ≥ 10. A repeat run must print the same E line. The gate was not changed at any point.
 
+`geval` has no loss gate: whenever it completes it exits 0 (non-zero only when an argument check, a
+load or the chip fails, e.g. exit 84 in `a1/`). The 10 µnat gate is the E-line comparison
+against CPU `eval`, applied by the reviewer. The mutant receipts `ge-max-9000-mut-k.txt` and
+`ge-night-gtrainf-mut-k.txt` have rc=0 and FAIL by that comparison (Δ −11).
+
 ## First attempt: FAIL (`plain/`, windows gg-ev1 20261102T070800Z-3bc294, gg-ev2 20261102T071111Z-32d026)
 
 | checkpoint | chip E line | CPU E line | Δ µnats |
@@ -56,7 +61,7 @@ unused R40-R42 (source of this tree).
 |---|---|---|
 | P1 gdiag \|d log Σ\| and \|Σp − 1\| < 1000 ×1e9 | `gd-night.txt` 5120 −341 −257 65 −19 3 84; `gd-max.txt` 16384 −180 −124 33 −23 1 56 | PASS |
 | P2 night `gtrainf` and `gtrain` \|Δ\| < 10 | `ge-night-gtrainf.txt` E 9000 4486 1826877 681510 (Δ 0); `ge-night-gtrain.txt` E 9000 4486 1824653 680680 (Δ 0) | PASS |
-| P3 mutant k \|Δ\| ≥ 10 | `ge-night-gtrainf-mut-k.txt` E 9000 4486 1826866 681506 (Δ −11) | PASS: discriminates |
+| P3 mutant k \|Δ\| ≥ 10 | `ge-night-gtrainf-mut-k.txt` E 9000 4486 1826866 681506 (Δ −11, rc=0) | PASS: discriminates |
 | P4 gcmp2 max s7, night s7, small s3 PASS; mutants g m f FAIL rc 47 | `gc2-*.txt` | PASS |
 | P5 gacmp ck250 s7 PASS; mutant h FAIL rc 46 | `ga-max.txt`, `ga-max-mut-h.txt` | PASS |
 | P6 max ck9000 repeat, same E line | `ge-max-9000.txt`, `ge-max-9000-rep.txt`: E 9000 2243 1445466 539226 both | PASS |
@@ -85,7 +90,7 @@ this tree's CPU `ollm` bfd92d15…) finished after gg-ev4. Gate: |chip − CPU| 
 | checkpoint | CPU E (µnats, µbpb) | chip, Kahan (this tree) | chip, plain sum (`plain/`) | mutant k |
 |---|---|---|---|---|
 | rung-5 step 2000 | 1789590 667600 | 1789590 667600 (Δ 0), PASS | 1789579 667596 (Δ −11), FAIL | — |
-| rung-5 step 9000 | 1445466 539226 | 1445466 539226 (Δ 0, twice), PASS | 1445455 539222 (Δ −11), FAIL | 1445455 (Δ −11), FAIL |
+| rung-5 step 9000 | 1445466 539226 | 1445466 539226 (Δ 0, twice), PASS | 1445455 539222 (Δ −11), FAIL | 1445455 (Δ −11, rc=0, `ge-max-9000-mut-k.txt`), FAIL |
 
 The CPU evals ran 5812 s (step 2000, core 5) and 7323 s (step 9000, core 7) at nice 19 beside the
 night run; the chip's GE for the same work was 8.52 s and 8.47 s, 682× and 865× less
