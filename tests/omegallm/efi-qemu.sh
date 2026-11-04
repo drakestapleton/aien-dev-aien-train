@@ -3,7 +3,9 @@
 # application to print `OLLM DONE`, press Enter for it (it waits for a key), and copy \OLLM back
 # from the copy with mtools. EMULATED evidence only: this is not the iMac.
 # Usage: sh tests/omegallm/efi-qemu.sh IMG OUTDIR [SECONDS]
-# Env: CORES (taskset list, default 6), OVMF_CODE / OVMF_VARS (default /usr/share/OVMF/*_4M.fd).
+# Env: CORES (taskset list, default 6), OVMF_CODE / OVMF_VARS (default /usr/share/OVMF/*_4M.fd),
+# QEMU_MACHINE (default q35), QEMU_CPU (default max), QEMU_SMBIOS (when set, one `-smbios` argument,
+# e.g. `file=t1.bin`; efi-ident.sh uses these three for the identity-line edge cases).
 # Writes OUTDIR/serial.log (the console: OVMF copies ConOut to the serial port) and OUTDIR/vol/, a
 # copy of every file in \OLLM after the run (OUT.TXT and what the jobs wrote, e.g. TR.BIN, S.CK),
 # with one `vol: SHA256 NAME` line each. Prints `done=1 seconds=S` when OLLM DONE was seen, `done=0`
@@ -15,6 +17,8 @@ set -u
 [ $# -ge 2 ] || { echo "usage: efi-qemu.sh IMG OUTDIR [SECONDS]" >&2; exit 2; }
 IMG=$1 OUT=$2 LIM=${3:-2700}
 CORES=${CORES:-6}
+MACH=${QEMU_MACHINE:-q35}
+CPU=${QEMU_CPU:-max}
 CODE=${OVMF_CODE:-/usr/share/OVMF/OVMF_CODE_4M.fd}
 VARS=${OVMF_VARS:-/usr/share/OVMF/OVMF_VARS_4M.fd}
 mkdir -p "$OUT"
@@ -24,7 +28,9 @@ cp "$VARS" "$OUT/vars.fd"
 echo "qemu: $(qemu-system-x86_64 --version | head -1)"
 echo "ovmf: $(sha256sum "$CODE" | cut -d' ' -f1) $(basename "$CODE")"
 echo "image: $(sha256sum "$IMG" | cut -d' ' -f1)"
-taskset -c "$CORES" nice -n 19 qemu-system-x86_64 -machine q35 -cpu max -m 2048 -smp 1 \
+set -- -machine "$MACH" -cpu "$CPU"
+[ -z "${QEMU_SMBIOS:-}" ] || set -- "$@" -smbios "$QEMU_SMBIOS"
+taskset -c "$CORES" nice -n 19 qemu-system-x86_64 "$@" -m 2048 -smp 1 \
   -display none -vga std -nic none \
   -drive if=pflash,format=raw,readonly=on,file="$CODE" \
   -drive if=pflash,format=raw,file="$OUT/vars.fd" \
@@ -39,6 +45,8 @@ while [ "$t" -lt "$LIM" ]; do
   sleep 1
   t=$((t + 1))
   if grep -aq 'OLLM DONE' "$OUT/serial.log" 2> /dev/null; then done=1; break; fi
+  # the application returned an error status (a refusal or a trap): OVMF reports it and moves on
+  grep -aq 'failed to start' "$OUT/serial.log" 2> /dev/null && break
   kill -0 "$qp" 2> /dev/null || break
 done
 if [ "$done" = 1 ]; then

@@ -1,0 +1,6 @@
+OLLM efi 7
+M cpu=QEMU TCG CPU version 2.5+ fw=Ubuntu distribution of EDK II fwrev=00010000 smbios=OmegaTest/-/???????
+> adamck
+A 5 3cd046ce38e38e38 0
+J 110
+OLLM DONE 1 112

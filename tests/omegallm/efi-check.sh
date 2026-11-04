@@ -4,7 +4,7 @@
 # Usage: sh tests/omegallm/efi-check.sh OUT.TXT REF JOBS BYTES
 # Order required:
 #   1. first line is exactly `OLLM efi BYTES` (BYTES is the JOB.TXT size)
-#   2. second line is the identity line `M cpu=... fw=... fwrev=XXXXXXXX smbios=.../.../...`
+#   2. second line is the identity line `ID cpu=... fw=... fwrev=XXXXXXXX smbios=.../.../...`
 #      (8 lowercase hex digits; its text depends on the machine, so only its shape is checked)
 #   3. each reference job, in order, then exactly one `J <ms>` line
 #   4. last line is `OLLM DONE JOBS <ms>`
@@ -27,7 +27,7 @@ END {
   if (on < 1) { note("empty OUT.TXT"); exit 1 }
   banner = "OLLM efi " bytes
   if (out[1] != banner) note("banner is not " banner)
-  if (on < 2 || out[2] !~ /^M cpu=.* fw=.* fwrev=([0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]|-) smbios=[^\/]*\/[^\/]*\/.*$/) note("second line is not the M identity line")
+  if (on < 2 || out[2] !~ /^ID cpu=.* fw=.* fwrev=([0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]|-) smbios=[^\/]*\/[^\/]*\/.*$/) note("second line is not the ID identity line")
   if (out[on] !~ ("^OLLM DONE " jobs " [0-9]+$")) note("last line is not OLLM DONE " jobs " ms")
   ri = 1
   oi = 3

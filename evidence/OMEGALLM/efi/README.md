@@ -58,3 +58,13 @@ No other byte of the receipts was changed.
 | sgdisk 1.0.10 | checks the partition table (oracle, read-only) | none needed |
 | QEMU 8.2.2, OVMF 2024.02-2ubuntu0.10 (`OVMF_CODE_4M.fd` `ad23261d…b083`) | emulator and firmware (verification oracle) | none; the physical run is [`../imac/`](../imac/) (EXERCISED on physical hardware (one machine)) |
 | sh, coreutils (`sha256sum`, `cmp`, `tr`) | glue and comparison (oracle) | none needed |
+
+## Note (2026-11-04): identity line prefix
+
+`main/OUT.TXT` and the other OUT.TXT files here predate the identity line. Their checks
+(`check.txt`) were made at aien-train `e08443c` with the `efi-check.sh` of that commit, which
+expects no identity line. From `07e332d` the second OUT.TXT line is an identity line: `M ...` at
+`07e332d`, `ID ...` from the bounds fix of aien-train#55 (so it shares no prefix with mathck's
+`M e`/`M l` lines). The current `efi-check.sh` requires that line, so it does not accept these
+historical files; recheck them with `git show e08443c:tests/omegallm/efi-check.sh`. Nothing in this
+directory was changed. The fresh EMULATED run with the identity line is `../efi-ident/20261104/`.

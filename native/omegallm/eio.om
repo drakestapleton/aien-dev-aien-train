@@ -5,8 +5,8 @@ note owclose, ooffrd, main) with efi words only: efi 1 key, efi 2 stall, efi 10 
 note efi 12 file (one open file; ARG bits 0..7 sub, 8..15 volume, 16..63 position; result bit 63 set
 note on error), efi 13 console text, efi 14 machine identity (CPUID, SystemTable FirmwareVendor and
 note FirmwareRevision, SMBIOS structure table). Every file is on the volume the image was loaded
-note from (k = 255). After the banner main prints the identity line `M cpu=... fw=... fwrev=...
-note smbios=.../.../...` (CONTRACT section 9); it never reads the SMBIOS serial number or UUID.
+note from (k = 255). After the banner main prints the identity line `ID cpu=... fw=... fwrev=...
+note smbios=.../.../...` (CONTRACT section 9); it never prints the SMBIOS serial number or UUID.
 note The command lines come from \OLLM\JOB.TXT (CONTRACT section 9): one command per line without the
 note program name, tokens split on space or tab, a token in double quotes may hold spaces, empty lines
 note and lines starting with # are skipped. Each job's line is echoed as `> line`, its output follows
@@ -443,6 +443,13 @@ end
 ret v
 end
 
+note true when brand byte i is padding (32 or 0); and/or evaluate both sides, so the trim loops in
+note oidcpu test the index in the while and the byte inside the body: oidb[48] is never read
+fn oidbl i ulong to bool
+v = ulong get oidb i
+ret or eq v 32 eq v 0
+end
+
 note the CPUID brand string (leaves 0x80000002..4) without leading or trailing spaces and NULs, or -
 fn oidcpu to void
 ok = oidq 2147483648
@@ -464,11 +471,17 @@ put oidb add mul j 16 k get oidc k
 end
 end
 s = ulong 0
-while and lt s 48 or eq ulong get oidb s 32 eq ulong get oidb s 0 bound 49
+while lt s 48 bound 48
+if not oidbl s
+break
+end
 s = add s 1
 end
 e = ulong 48
-while and gt e s or eq ulong get oidb sub e 1 32 eq ulong get oidb sub e 1 0 bound 49
+while gt e s bound 48
+if not oidbl sub e 1
+break
+end
 e = sub e 1
 end
 if eq e s
@@ -508,12 +521,14 @@ end
 end
 end
 
-note true when oids[q] and oids[q+1] are both 0 (the end of a structure's strings)
+note true when oids[q] and oids[q+1] are both 0 (the end of a structure's strings); callers keep q+1 < t
 fn oidz q ulong to bool
 ret and eq ulong get oids q 0 eq ulong get oids add q 1 0
 end
 
-note SMBIOS string number n of the structure at p (table length t), or - when n is 0 or absent
+note SMBIOS string number n of the structure at p (table length t), or - when n is 0, when the
+note structure's string set ends first (a string never starts with 0: that 0 ends the set), or when
+note the string's NUL lies at or past t. Every read is below t, so the walk never leaves the structure.
 fn oidstr p ulong n ulong t ulong to void
 if eq n 0
 oputc 45
@@ -521,33 +536,54 @@ ret
 end
 q = add p ulong get oids add p 1
 c = ulong 1
-while and lt q t lt c n bound 65537
+while lt q t bound 65536
 if eq ulong get oids q 0
-c = add c 1
-end
-q = add q 1
-end
-if or ge q t eq ulong get oids q 0
 oputc 45
 ret
 end
-while and lt q t ne ulong get oids q 0 bound 65537
+if eq c n
+e = q
+while lt e t bound 65536
+if eq ulong get oids e 0
+break
+end
+e = add e 1
+end
+if ge e t
+oputc 45
+ret
+end
+while lt q e bound 65536
 oidp ulong get oids q
 q = add q 1
 end
+ret
+end
+while lt q t bound 65536
+if eq ulong get oids q 0
+break
+end
+q = add q 1
+end
+q = add q 1
+c = add c 1
+end
+oputc 45
 end
 
-note field i (0 Manufacturer, 1 Product Name, 2 Version) of the type 1 structure at p, length ln
+note field i (0 Manufacturer, 1 Product Name, 2 Version) of the type 1 structure at p, length ln;
+note - when the field lies outside the formatted area or at or past t
 fn oidf p ulong ln ulong i ulong t ulong to void
-if lt add 4 i ln
-oidstr p ulong get oids add add p 4 i t
+k = add add p 4 i
+if and lt add 4 i ln lt k t
+oidstr p ulong get oids k t
 else
 oputc 45
 end
 end
 
 note SMBIOS type 1 Manufacturer/Product Name/Version, each - when missing; the serial number (offset
-note 7) and the UUID (8..23) are never read
+note 7) and the UUID (8..23) are never printed
 fn oidsm to void
 t = efi 14 3 oids 0 65536
 p = ulong 0
@@ -569,7 +605,10 @@ if or eq ty 127 lt ln 4
 break
 end
 q = add p ln
-while and lt add q 1 t not oidz q bound 65537
+while lt add q 1 t bound 65536
+if oidz q
+break
+end
 q = add q 1
 end
 p = add q 2
@@ -581,9 +620,10 @@ oputc 47
 oputc 45
 end
 
-note the identity line: M cpu=... fw=... fwrev=... smbios=.../.../...
+note the identity line: ID cpu=... fw=... fwrev=... smbios=.../.../... (ID, not M: mathck prints M e/M l)
 fn oident to void
-oputc 77
+oputc 73
+oputc 68
 oputc 32
 oputc 99
 oputc 112

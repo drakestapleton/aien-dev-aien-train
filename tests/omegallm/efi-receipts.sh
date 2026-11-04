@@ -41,7 +41,7 @@ row() { # name want got
 	if [ "$2" = "$3" ]; then v=PASS; else v=FAIL; fail=1; fi
 	printf '%s\t%s\t%s\t%s\n' "$1" "$2" "$3" "$v" >> "$E/summary.tsv"
 }
-body() { grep -avEx 'OLLM efi [0-9]+|M cpu=.* fw=.* fwrev=([0-9a-f]{8}|-) smbios=.*|J [0-9]+|OLLM DONE [0-9]+ [0-9]+' "$1"; }
+body() { grep -avEx 'OLLM efi [0-9]+|ID cpu=.* fw=.* fwrev=([0-9a-f]{8}|-) smbios=.*|J [0-9]+|OLLM DONE [0-9]+ [0-9]+' "$1"; }
 printf 'name\twant\tgot\tverdict\n' > "$E/summary.tsv"
 
 # 0. tools and builds (the reference is the aarch64 build; build.sh checks each omc against its pin)

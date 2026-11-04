@@ -1,0 +1,7 @@
+omc 3ad9f10f64309e7acf8a725082b28e23a2a4aeb07e98322fb4dc0fcd8fc93194 (omega-mv feat/x86efi-ident seed/out/omc), TARGET=x86efi, core 9, nice 19
+old: git archive 07e332db8a42d5fe747892d0851deabfcd195db0 (aien-train#55 head before the bounds fix), tests/omegallm/build.sh
+BUILD_OK cee4f9ae397b1b12a46fe8865c517b0fecafeb845843f118b2953ba0b1b6404d at-old/build/ollm.efi source_sha256 61a10a545bc792924d01e5410dbb43ee16b404b9d0d3cd5b9bfb02c6f0cf5e72
+new: working tree of this commit (eio.om bounds fix), tests/omegallm/build.sh
+BUILD_OK 0b0ad56e106a87e96dabdb231853ff56b7217e91b1e0a252e469f69dae9f76c5 at-new/build/ollm.efi source_sha256 ce01bd605b61158fb7fdd7e2550ecc2ca61ef7aa147efbc84107c6c694df80a0
+stick: EFI/BOOT/BOOTX64.EFI copied out of the iMac stick image aien-imac-ollm-ident-d99d83e2.img (handoff scratch imac-run/, not in the repository)
+cee4f9ae397b1b12a46fe8865c517b0fecafeb845843f118b2953ba0b1b6404d  stick-BOOTX64.EFI

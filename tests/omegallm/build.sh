@@ -7,7 +7,8 @@
 #      default 6).
 # Each target has its own pinned omc: aarch64 is omega-mv e5b32567 (the v0 pin); x86linux is
 # omega-mv main ba5559d9, whose omc has the x86-64 Linux backend with SSE2 floats (docs/X86-LINUX.md);
-# x86efi is omega-mv branch feat/x86efi-ident (draft PR #1015's feat/x86efi-main plus efi 14, docs/X86-EFI.md),
+# x86efi is omega-mv PR #1022 commit ab572d8f2840a284f1230347c1a7d1406b33733e (branch feat/x86efi-ident:
+# omega-mv main d3d1b1bc, where PR #1015's x86efi backend merged, plus efi 14, docs/X86-EFI.md),
 # whose omc adds the UEFI x86-64 backend with efi 12 (files), efi 13 (console) and efi 14 (identity).
 # For x86linux and x86efi the concatenated source starts with the opt-in line `target x86linux` or
 # `target x86efi`; every later line is the same as the aarch64 source except the platform unit, which

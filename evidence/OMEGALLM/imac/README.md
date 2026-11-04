@@ -78,3 +78,11 @@ not known. The readback therefore copies the raw partition instead of mounting i
 `678` is the byte size of `tests/omegallm/efi-job.txt`. The same checker on the emulated
 `../efi/main/OUT.TXT` also returns EQUAL (`check.txt`). That file is the existing receipt, not a
 new boot. `STICK.img` is the partition copy; it is not in the repository (99597824 bytes, sha256 above).
+
+## Note (2026-11-04): identity line prefix
+
+`OUT.TXT` here was written by the build of `e08443c`, before the identity line, and the check above
+was made with the `efi-check.sh` of that commit. From aien-train#55 the second OUT.TXT line is the
+identity line (`ID ...`), which the current `efi-check.sh` requires, so recheck this file with
+`git show e08443c:tests/omegallm/efi-check.sh`. Nothing in this directory was changed. No physical
+run of the identity build (`cee4f9ae…404d` at `07e332d`, or the bounds-fixed build) is recorded.
