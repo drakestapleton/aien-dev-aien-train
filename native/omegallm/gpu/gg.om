@@ -1282,12 +1282,17 @@ gg2cmp p
 ggc2pr lg l0 sub t1 t0
 end
 
-note the GC2 line and verdict of gcmp2 (lg chip loss, l0 K0 loss, ns chip gradient time)
+note the GC2 line and verdict of gcmp2 (lg chip loss, l0 K0 loss, ns chip gradient time); gbcmp2
+note (gkbf 1) takes gb.om's verdict
 fn ggc2pr lg f64 l0 f64 ns long to void
 fl = ggc2fl lg l0
 ggc2ln lg l0 ns fl
 ggtms
 r = nvstop
+if eq get gkbf 0 1
+gbc2vd lg l0 fl
+ret
+end
 ggc2vd eq fl 0
 end
 
@@ -1307,8 +1312,11 @@ fn gg2tr to f64
 ret div f64 ggr 16777216.0f64
 end
 
-note the gcmp2 fail bits (see ggcmp2)
+note the gcmp2 fail bits (see ggcmp2); gb.om's BF16 bits under gkbf 1
 fn ggc2fl lg f64 l0 f64 to ulong
+if eq get gkbf 0 1
+ret gbc2fl lg l0 get ggk3 0 add get ggk2 1 get ggk2 3
+end
 dl = sub lg l0
 if lt dl 0.0f64
 dl = neg dl
@@ -1868,8 +1876,9 @@ end
 ret add s 1.0f64
 end
 
-note gb10 platform main: gcmp, gcmp2, gtrain, gtrainf, gacmp, geval and gdiag here, every other
-note command through the CPU main (lio.om)
+note gb10 platform main: gcmp, gcmp2, gtrain, gtrainf, gacmp, geval, gdiag and gprof here, the BF16
+note commands gtrainb, gprofb, gbcmp, gbcmp2 and gbfrag in gb.om, every other command through the CPU
+note main (lio.om)
 fn main to int
 if lt oargc 2
 exit 2
@@ -1905,6 +1914,26 @@ ret 0
 end
 if eq w 439956435047
 ggprof
+ret 0
+end
+if eq w 27705946603156583
+gbtrain
+ret 0
+end
+if eq w 108192095957095
+gbprof
+ret 0
+end
+if eq w 482871566951
+gbcmp
+ret 0
+end
+if eq w 55458452955751
+gbcmp2
+ret 0
+end
+if eq w 113668228801127
+gbfrag
 ret 0
 end
 ret ocpumain
