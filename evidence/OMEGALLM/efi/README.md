@@ -14,7 +14,7 @@ mathck, adamck, prep, base, init, gcheck, train 20, eval S.CK, eval CK 64, two s
 
 | Item | Value |
 |---|---|
-| Compiler | omc `b4f45121f6c6d5d8a6ed0f5c4f3934b7cc4bec369bfa89523699bd33928f9b55`, omega-mv draft PR [#1015](https://github.com/aien-dev/omega-mv/pull/1015) commit `5ce9ecaa7b2034d5a7b4502403591d5c2489c06d` (not merged; main's omc refuses `target x86efi` with error 25) |
+| Compiler | omc `b4f45121f6c6d5d8a6ed0f5c4f3934b7cc4bec369bfa89523699bd33928f9b55`, omega-mv PR [#1015](https://github.com/aien-dev/omega-mv/pull/1015) commit `5ce9ecaa7b2034d5a7b4502403591d5c2489c06d`. 2026-11-04: omega-mv #1015 merged at `d3d1b1bc`; same omc `b4f45121`. The omc built from `d3d1b1bc` (`5ce9ecaa` is its ancestor) builds the same `ollm.efi` and `ollm-mut-b.efi` bytes (`repin-d3d1b1bc.txt`) |
 | `ollm.efi` | sha256 `2474a842…8d7f`, source sha256 `412f1255…b5b6` (`build.txt`) |
 | Reference | AArch64 Linux `ollm` `52f5684f…ac1b` from the same tree, omc `2c824805…` (omega-mv `e5b32567`), run by `efi-ref.sh` on core 7 (`ref.out`, `ref-files.txt`) |
 | Image | `ollm.img` sha256 `2b9a420a93486a4d37ed78141a45861427090535502243ecbb67fa4008b6c162`, 100663296 bytes, GPT, one EF00 partition, FAT label ALLEN (`image.txt`) |
