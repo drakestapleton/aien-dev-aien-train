@@ -7,7 +7,7 @@ the same init checkpoint, data, seed, schedule and legs, and with `gtrainb` in p
 Held-out loss is measured as in rung 7: chip `geval` of `held.tok`, W 2243 windows at T 256,
 `merges4096.bin`. `geval` runs on the f32 kernels in both rungs.
 
-Status: EXERCISED on one GB10. It is not QUALIFIED and not MERGED. All 12 windows were opened with
+Status: EXERCISED on one GB10. It is not QUALIFIED. All 12 windows were opened with
 `--gb10 shared --quiet none`, so timings are labelled non-quiet (last close, `run/close.json`: load
 average 1.41).
 
@@ -43,7 +43,7 @@ better. Seed-to-seed spread was not measured, so this run does not show that BF1
 ## Pre-registered predictions (`run/prereg.txt`, committed at 8deb268 before the first window)
 
 `run/prereg.sha256` covers `prereg.txt`, `drive.sh` and `leg.sh`, and was checked against the
-committed copies before launch.
+committed copies before launch. That check is unreceipted: no `sha256sum -c` output was kept.
 
 | prediction | receipt | result |
 |---|---|---|
@@ -83,6 +83,16 @@ Only the f32 held-out measure is compared.
   the board. `run/leg.sh` trains 0→250, then runs 3000-step legs that stop exactly at 2000, 9000 and
   30000, and runs `geval` on the saved checkpoint after each leg. Both scripts are rung 8's, with the
   binary, `gtrainb`, the milestones and the stop rule changed.
+- `run/leg.sh` does not check the `geval` exit code or the `cp ck.bin ckN.bin` result. This had no
+  effect here: all 12 `geval` blocks in `run/geval.txt` end `rc=0`, and the hashes of ck2000, ck9000
+  and ck30000 in `run/checkpoints.sha256` equal the `step=N ck=` hashes recorded in `run/geval.txt`.
+- `run/leg.sh` line 3 contains the absolute data path under the operator's home directory. The file
+  is sha-covered by `run/prereg.sha256`, so it is committed verbatim with the path.
+- Q5 driver: `run/cpu-eval.sh` is `/tmp/gk/cpu-eval.sh` copied verbatim; it is byte-identical to the
+  copy on rung 8 (#59). Its mtime (2026-11-02T23:03:05Z) precedes this eval's start
+  (2026-11-03T14:15:25Z), so `run/eval30000.txt` was produced by this content. It writes the cmd,
+  binary and checkpoint sha256, start/end stamps and rc around the `ollm eval` output, and holds an
+  absolute home path.
 - Checkpoints stay outside the repository; their hashes are in `run/checkpoints.sha256`.
 - Window logs: `run/windows.txt` has one line per window. `run/windows-log.txt` holds all 12
   `win-*.txt` files with the home prefix replaced by `~/`.
