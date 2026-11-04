@@ -1,0 +1,101 @@
+note SPDX-License-Identifier: AGPL-3.0-only
+note Experimental inference checkpoint editor. Concatenate after the normal CPU units with
+note lio main renamed. Args OLD CURRENT NEW ALPHA_MILLI GAIN_MILLI. NEW must not exist.
+note Weights become old + alpha * (current - old); final RMS gain is then scaled by gain.
+note Preserve CURRENT metadata and optimizer state for provenance, not for continued training.
+note Do not resume these edited checkpoints without a separate optimizer-state decision.
+global wesh ulong 9
+
+fn weempty to void
+n = oargp 3
+fd = int fopen oarg 0 n 0 0
+if ge fd 0
+r = fclose fd
+exit 52
+end
+if ne fd -2
+exit 70
+end
+end
+
+fn weone i ulong a f64 s f64 to void
+v = owg i
+v = add v mul sub a 1.0 sub v ogrg i
+if ge i get og 33
+v = mul v s
+end
+if or ne v v gt fabs v 1000000.0
+exit 54
+end
+owp i v
+end
+
+fn wemix a f64 s f64 to void
+p = get og 8
+nc = div add p 65535 65536
+for c ulong nc
+st = mul c 65536
+en = add st 65536
+if gt en p
+en = p
+end
+for j ulong sub en st
+weone add st j a s
+end
+end
+end
+
+fn main to int
+if ne oargc 6
+ret 2
+end
+aa = oargu 4
+ss = oargu 5
+if or or lt aa 800 gt aa 1200 or lt ss 800 gt ss 1200
+ret 51
+end
+weempty
+ockload 1
+for i ulong 7
+put wesh i get og i
+end
+put wesh 7 get og 40
+put wesh 8 get og 41
+p = get og 8
+nc = div add p 65535 65536
+for c ulong nc
+st = mul c 65536
+en = add st 65536
+if gt en p
+en = p
+end
+for j ulong sub en st
+i = add st j
+ogrp i owg i
+end
+end
+ockload 2
+for i ulong 7
+if ne get wesh i get og i
+ret 53
+end
+end
+if ne get wesh 7 get og 40
+ret 53
+end
+if gt get wesh 8 get og 41
+ret 53
+end
+wemix div f64 aa 1000.0 div f64 ss 1000.0
+ocksave 3
+oputc 87
+oputc 32
+oputu get og 8
+oputc 32
+oputu aa
+oputc 32
+oputu ss
+oputc 10
+oflush
+ret 0
+end
