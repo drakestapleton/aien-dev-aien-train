@@ -1,0 +1,1005 @@
+note SPDX-License-Identifier: AGPL-3.0-only
+note gb.om: ollm BF16 tensor-core path, commands and gates (docs/omegallm/CONTRACT-BF16.md). With gkbf 1,
+note gk.om runs every 64x64 gkmm on kernels 27..36 (HMMA.16816.F32.BF16; the kernel rounds both operands
+note to bf16 RN with F2FP and accumulates in f32). Commands: gtrainb and gprofb (gtrainf and gprof with
+note gkbf 1), gbcmp (sampled check of every BF16 GEMM of one step, exit 48), gbcmp2 (gcmp2's step parity
+note with the BF16 bound, exit 49) and gbfrag (exact check of all ten kernels on fixed data, exit 50).
+note Concatenated before gg.om: it calls gg.om functions but uses none of gg.om's globals.
+
+note OMUTU: 1 in the product; 0 in mutant u, whose reference skips the bf16 rounding (gbfrag must then
+note fail; gbcmp only reports it, CONTRACT-BF16 section 5).
+const OMUTU ulong 1
+
+note OMUTN: 1 in the product; 0 in mutant n, the negative control of gbfrag's padding check: after each
+note short case's launch the host writes 0.0 into C's first padding word (block 0, row 0, column n), so
+note only that check can fail (CONTRACT-BF16 section 4.1).
+const OMUTN ulong 1
+
+note bf16 round to nearest even of the f32 bits u, as f32 bits (NaN unchanged)
+fn gbbf u uint to uint
+if eq OMUTU 0
+ret u
+end
+if and eq and shr u 23 255 255 ne and u 8388607 0
+ret u
+end
+v = add add u 32767 and shr u 16 1
+ret and v 4294901760
+end
+
+note f32 bits x rounded to bf16, as f64
+fn gbrv x uint to f64
+ret f64 bitcast f32 gbbf x
+end
+
+fn gbabs x f64 to f64
+if lt x 0.0f64
+ret neg x
+end
+ret x
+end
+
+note arena word at host byte offset o (offset from gkbase)
+fn gbw o ulong to uint
+ret uint mapget get gbmem 5 o 4
+end
+
+fn gbput o ulong x uint to void
+m = mapset get gbmem 5 o 4 ulong x
+end
+
+note host byte offset of the device address held in arg words w, w + 1
+fn gbhp w uint to ulong
+lo = ulong get gkarg w
+hi = ulong get gkarg add w 1
+ret sub or lo shl hi 32 gkbase
+end
+
+note batch offset z1 s1 + z2 s2 (z = z1 h2 + z2) with s1, s2 in arg words w, w + 1
+fn gbzo z uint h2 uint w uint to ulong
+a = mul ulong div z h2 ulong get gkarg w
+ret add a mul ulong rem z h2 ulong get gkarg add w 1
+end
+
+note verdict line GBCMP (c 48), GBCMP2 (49) or GBFRAG (50): PASS, or FAIL and exit c
+fn gbvd c ulong ok bool to void
+oputc 71
+oputc 66
+if eq c 50
+oputc 70
+oputc 82
+oputc 65
+oputc 71
+else
+oputc 67
+oputc 77
+oputc 80
+if eq c 49
+oputc 50
+end
+end
+oputc 32
+if ok
+oputc 80
+oputc 65
+oputc 83
+oputc 83
+oputc 10
+oflush
+ret
+end
+oputc 70
+oputc 65
+oputc 73
+oputc 76
+oputc 10
+oflush
+if eq c 48
+exit 48
+end
+if eq c 49
+exit 49
+end
+exit 50
+end
+
+note gbcmp state. gbst: 0 BF16 GEMMs checked, 1 samples past their bound, 2 kernel id mask, 3 cz mask,
+note 4 ep mask, 5 beta mask, 6 the sample generator. gbmx[0]: the worst |chip - ref| / bound. gbsp: the
+note 66 sampled (z, r, c) of the launch in flight, gbold the old C there (beta), gbacc the reference sums.
+global gbst ulong 8
+global gbmx f64 1
+global gbsp uint 198
+global gbold f64 66
+global gbacc f64 3
+
+note next value in [0, n) of the sample generator (31-bit LCG)
+fn gbrnd n uint to uint
+s = rem add mul get gbst 6 1103515245 12345 2147483648
+put gbst 6 s
+ret uint rem shr s 8 ulong n
+end
+
+note host byte offset at sample i in C (w 16) or in the epilogue's Y / M (w 30, C's strides)
+fn gbco i ulong w uint to ulong
+o = mul i 3
+z = get gbsp o
+b = add gbhp w gbzo z get gkbp 4 20
+b = add b mul ulong get gbsp add o 1 ulong get gkarg 18
+ret add b mul ulong get gbsp add o 2 ulong get gkarg 19
+end
+
+note gkmm's hook before a checked BF16 launch (gkbp = m n k nz h2 beta ep cz): 64 random (z, r, c)
+note and the corners (0, 0, 0), (nz - 1, m - 1, n - 1); with cz 3 a position in a block above the
+note diagonal (not computed) is mirrored below it. Keeps the old C when beta.
+fn gbpre to void
+for i ulong 66
+gbpre1 i
+end
+end
+
+note one sample i of gbpre
+fn gbpre1 i ulong to void
+z = gbrnd get gkbp 3
+r = gbrnd get gkbp 0
+c = gbrnd get gkbp 1
+if eq i 64
+z = 0
+r = 0
+c = 0
+end
+if eq i 65
+z = sub get gkbp 3 1
+r = sub get gkbp 0 1
+c = sub get gkbp 1 1
+end
+if eq get gkbp 7 3
+if gt div c 64 div r 64
+t = r
+r = c
+c = t
+end
+end
+o = mul i 3
+put gbsp o z
+put gbsp add o 1 r
+put gbsp add o 2 c
+put gbold i 0.0f64
+if eq get gkbp 5 1
+put gbold i f64 bitcast f32 gbw gbco i 16
+end
+end
+
+note reference sums of sample i over the K range the kernel reads (cz 1: k < (r / 64 + 1) 64,
+note cz 2: k >= (r / 64) 64): gbacc 0 sum a b, 1 sum |a b|, 2 the term count; a, b rounded to bf16
+fn gbref i ulong to void
+r = ulong get gbsp add mul i 3 1
+k = ulong get gkbp 2
+lo = ulong 0
+hi = mul add div r 64 1 64
+cz = get gkbp 7
+if eq cz 1
+if lt hi k
+k = hi
+end
+end
+if eq cz 2
+lo = mul div r 64 64
+end
+gbdot gbsa i 0 gbsa i 1 lo sub k lo
+end
+
+note host address of sample i's A row (w 0) or B column (w 1) at k = 0
+fn gbsa i ulong w uint to ulong
+o = mul i 3
+z = get gbsp o
+h2 = get gkbp 4
+g = mul w 8
+x = ulong get gbsp add o ulong add w 1
+p = add gbhp g gbzo z h2 add g 4
+ret add p mul x ulong get gkarg add g 2
+end
+
+fn gbdot pa ulong pb ulong lo ulong kn ulong to void
+ka = ulong get gkarg 3
+kb = ulong get gkarg 11
+s = 0.0f64
+sa = 0.0f64
+for j ulong kn
+kk = add lo j
+p = mul gbrv gbw add pa mul kk ka gbrv gbw add pb mul kk kb
+s = add s p
+sa = add sa gbabs p
+end
+put gbacc 0 s
+put gbacc 1 sa
+put gbacc 2 f64 kn
+end
+
+note d / b, 0 when both are 0; 1e9 when d > b with b = 0 or the ratio non-finite or past 1e9
+fn gbrat d f64 b f64 to f64
+if le d b
+if gt b 0.0f64
+ret div d b
+end
+ret 0.0f64
+end
+if gt b 0.0f64
+q = div d b
+if lt q 1000000000.0f64
+ret q
+end
+end
+ret 1000000000.0f64
+end
+
+note |chip - ref| / bound at sample i, bound (kn 2^-23 + 2^-22)(|alpha| sum |a b| + |old C|); 1e9
+note for a wrong epilogue (ep 2: C must be +0 where M is not > 0; ep 1: Y = C when C > 0, else +0)
+fn gbchk i ulong to f64
+co = gbco i 16
+cb = gbw co
+ep = get gkbp 6
+if eq ep 2
+if not gt f64 bitcast f32 gbw gbco i 30 0.0f64
+if eq cb 0
+ret 0.0f64
+end
+ret 1000000000.0f64
+end
+end
+if eq ep 1
+w = uint 0
+if gt f64 bitcast f32 cb 0.0f64
+w = cb
+end
+if ne gbw gbco i 30 w
+ret 1000000000.0f64
+end
+end
+gbref i
+al = f64 bitcast f32 get gkarg 25
+old = get gbold i
+d = gbabs sub f64 bitcast f32 cb add mul al get gbacc 0 old
+e = add div get gbacc 2 8388608.0f64 div 1.0f64 4194304.0f64
+ret gbrat d mul e add mul gbabs al get gbacc 1 gbabs old
+end
+
+note kernel id of the launch in flight (gk.om gkmmb)
+fn gbid to ulong
+ep = ulong get gkbp 6
+if ne ep 0
+ret add 34 ep
+end
+id = add 27 ulong get gkmd 0
+id = add id mul 2 ulong get gkmd 1
+ret add id mul 4 ulong get gkbp 5
+end
+
+note gkmm's hook after a checked BF16 launch: check the samples, print
+note `GB id m n k nz h2 beta ep cz worst_e6 bad`; true (the step goes on, gbcmp gives the verdict)
+fn gbpost to bool
+bad = ulong 0
+mr = 0.0f64
+for i ulong 66
+q = gbchk i
+if gt q 1.0f64
+bad = add bad 1
+end
+if gt q mr
+mr = q
+end
+end
+gbnote bad mr
+ret true
+end
+
+fn gbnote bad ulong mr f64 to void
+id = gbid
+put gbst 0 add get gbst 0 1
+put gbst 1 add get gbst 1 bad
+put gbst 2 or get gbst 2 shl ulong 1 id
+put gbst 3 or get gbst 3 shl ulong 1 ulong get gkbp 7
+put gbst 4 or get gbst 4 shl ulong 1 ulong get gkbp 6
+put gbst 5 or get gbst 5 shl ulong 1 ulong get gkbp 5
+if gt mr get gbmx 0
+put gbmx 0 mr
+end
+oputc 71
+oputc 66
+oputc 32
+oputu id
+for j ulong 8
+oputc 32
+oputu ulong get gkbp j
+end
+oputc 32
+oputl rmic mr
+oputc 32
+oputu bad
+oputc 10
+end
+
+note gbcmp CK DATA S: one gtrainf step's gradient pass (gggrad, no Adam) with gkbf 1 and gkbck 1, so
+note gk.om checks every BF16 launch (gbpre, gbpost). Prints the GB lines, `GBC gemms bad worst_e6
+note idmask czmask epmask betamask` and GBCMP PASS, or GBCMP FAIL (exit 48): a sample past its bound,
+note no BF16 GEMM, or coverage short of the step's BF16 combinations (epilogues 1 and 2, cz 3, beta
+note false and true).
+fn gbcmp to void
+if ne oargc 5
+exit 2
+end
+ockload 2
+odopen 3
+obatch oargu 4
+put og 10 0
+put gbst 6 12345
+put gkbf 0 1
+put gkbck 0 1
+ggopen
+l = gggrad
+put gkbck 0 0
+r = nvstop
+oputc 71
+oputc 66
+oputc 67
+for j ulong 2
+oputc 32
+oputu get gbst j
+end
+oputc 32
+oputl rmic get gbmx 0
+for j ulong 4
+oputc 32
+oputu get gbst add j 2
+end
+oputc 10
+ok = and eq get gbst 1 0 gt get gbst 0 0
+cv = eq and get gbst 4 6 6
+cv = and cv ne and get gbst 3 8 0
+cv = and cv eq get gbst 5 3
+gbvd 48 and ok cv
+end
+
+note gbcmp2 bound: tolb = n_c (2u + u^2), u = 2^-8, n_c = 10 L + 3 BF16 GEMMs on a step's longest
+note dependency chain (per layer forward QKV, S, WO, W1, W2; backward dF, dA of W1, dN, DP, dA of QKV;
+note plus the logits, dlogits to dH and the last weight gradient); a first-order normwise heuristic
+fn gbtolb to f64
+nc = f64 add mul 10 get og 5 3
+ret mul nc add div 1.0f64 128.0f64 div 1.0f64 65536.0f64
+end
+
+note gcmp2's fail bits under gkbf 1: 1 non-finite, 2 rho >= tolb, 4 rel1 >= tolb, 8 |dloss| >= tolb loss
+fn gbc2fl lg f64 l0 f64 rho f64 nf ulong to ulong
+tb = gbtolb
+fl = ulong 0
+if ne nf 0
+fl = or fl 1
+end
+if not lt ggclp rho tb
+fl = or fl 2
+end
+if not lt gg2rl 2 tb
+fl = or fl 4
+end
+if not lt gbabs sub lg l0 mul tb gbabs l0
+fl = or fl 8
+end
+ret fl
+end
+
+note cosine of the chip gradient (omv[0, p)) and K0 (omv[p, 2p))
+global gbcq f64 3
+fn gbcos p ulong to f64
+for k ulong 3
+put gbcq k 0.0f64
+end
+for q ulong ocn p
+i0 = mul q OCH
+for j ulong sub oce q p i0
+gbcq1 add i0 j p
+end
+end
+d = fsqrt mul get gbcq 1 get gbcq 2
+if gt d 0.0f64
+ret ggclp div get gbcq 0 d
+end
+ret 0.0f64
+end
+
+fn gbcq1 i ulong p ulong to void
+x = omvg i
+y = omvg add p i
+put gbcq 0 add get gbcq 0 mul x y
+put gbcq 1 add get gbcq 1 mul x x
+put gbcq 2 add get gbcq 2 mul y y
+end
+
+note gbcmp2's line `GB2 L n_c tolb_e9 cos_e9 rel0_e9 rel1_e9 dlossrel_e9` and verdict (exit 49)
+fn gbc2vd lg f64 l0 f64 fl ulong to void
+cs = gbcos get og 8
+oputc 71
+oputc 66
+oputc 50
+oputc 32
+oputu get og 5
+oputc 32
+oputu add mul 10 get og 5 3
+oputc 32
+oputl rmic mul gbtolb 1000.0f64
+oputc 32
+oputl rmic mul cs 1000.0f64
+oputc 32
+oputl rmic mul gg2rl 0 1000.0f64
+oputc 32
+oputl rmic mul gg2rl 2 1000.0f64
+oputc 32
+oputl rmic mul ggclp div gbabs sub lg l0 gbabs l0 1000.0f64
+oputc 10
+gbvd 49 eq fl 0
+end
+
+note gbcmp2 CK DATA S: gcmp2 with gkbf 1 (gg.om ggc2fl and ggc2pr branch to gbc2fl and gbc2vd)
+fn gbcmp2 to void
+put gkbf 0 1
+ggcmp2
+end
+
+note gtrainb: gtrainf with gkbf 1 (geval stays f32)
+fn gbtrain to void
+put gkbf 0 1
+ggtrainf
+end
+
+note gprofb: gprof with gkbf 1
+fn gbprof to void
+put gkbf 0 1
+ggprof
+end
+
+note gbfrag CK: every BF16 kernel (ids 27..36) on fixed data with exact f32 sums, compared element by
+note element against a reference built from the bf16-rounded operands. One operand holds integers in
+note [-5, 5], the other values (n - 2) + j 2^-9 (n < 5, j < 64), so every product is a multiple of 2^-9
+note (2^-10 with alpha 1/2) and every sum stays below 2^11: the chip's f32 result is exact. Thirteen
+note cases (eight plain kernels, epilogues 1 and 2, cz 1, 2 and 3), each with the operand roles
+note swapped; nz 6, h2 3, padded strides, NaN in every operand word the kernel must not read and in the
+note eight padding columns of every C row (and of Y / M with a fused epilogue), which must still be NaN
+note afterwards. Data in the logits buffer (A, B, C, Y at 0, 1, 2, 3 MiB). Prints `GF pass case id k cz ep bad` per case,
+note then the eight long-K cases (gbfl, `GFL pass ma mb bad`), `GFS bad` and GBFRAG PASS, or GBFRAG FAIL
+note (exit 50). Needs a logits buffer of at least 4 Mi floats (B 8: 8 Mi).
+note gbcs: 0 ma, 1 mb (1 = K-contiguous), 2 beta, 3 ep, 4 cz, 5 k, 6 m, 7 n, 8 pass, 9 alpha 1/2
+global gbcs uint 10
+global gbfb ulong 1
+global gbha f64 98304
+global gbhb f64 147456
+
+fn gbfrag to void
+if ne oargc 3
+exit 2
+end
+ockload 2
+ggopen
+if lt mul ggr get og 0 4194304
+ggdie 3
+end
+put gkbf 0 1
+put gkbck 0 0
+put gbfb 0 sub gga1 11 gkbase
+bad = ulong 0
+for p ulong 2
+for i ulong 13
+bad = add bad gbf1 i p
+end
+end
+for p ulong 2
+for q uint 4
+bad = add bad gbfl p and q 1 shr q 1
+end
+end
+r = nvstop
+oputc 71
+oputc 70
+oputc 83
+oputc 32
+oputu bad
+oputc 10
+gbvd 50 eq bad 0
+end
+
+note case i of pass p into gbcs
+fn gbcase i ulong p ulong to void
+for j ulong 10
+put gbcs j 0
+end
+put gbcs 8 uint p
+put gbcs 6 128
+put gbcs 7 192
+put gbcs 5 128
+if eq rem i 3 0
+put gbcs 5 32
+end
+if eq rem i 3 1
+put gbcs 5 96
+put gbcs 9 1
+end
+if lt i 8
+put gbcs 0 uint and i 1
+put gbcs 1 uint and shr i 1 1
+put gbcs 2 uint and shr i 2 1
+ret
+end
+put gbcs 9 0
+put gbcs 0 1
+if eq i 8
+put gbcs 3 1
+put gbcs 5 96
+end
+if eq i 9
+put gbcs 1 1
+put gbcs 3 2
+end
+note cz 1 needs k = m
+if eq i 10
+put gbcs 4 1
+put gbcs 5 128
+end
+if eq i 11
+put gbcs 0 0
+put gbcs 2 1
+put gbcs 4 2
+end
+if eq i 12
+put gbcs 1 1
+put gbcs 4 3
+put gbcs 5 32
+put gbcs 7 128
+put gbcs 9 1
+end
+end
+
+note one case: write the data, launch, compare; the mismatch count
+fn gbf1 i ulong p ulong to ulong
+gbcase i p
+gbnan
+gbwop 0
+gbwop 1
+gbwc
+put gkinv 0 1
+if not gbflch
+ggdie 98
+end
+if eq OMUTN 0
+n = ulong get gbcs 7
+gbput add gbcro 0 0 mul ulong get gbcs 6 add n 8 mul n 4 0
+end
+b = gbfcmp
+ep = ulong get gbcs 3
+id = add 27 ulong get gbcs 0
+id = add id mul 2 ulong get gbcs 1
+id = add id mul 4 ulong get gbcs 2
+if ne ep 0
+id = add 34 ep
+end
+oputc 71
+oputc 70
+oputc 32
+oputu p
+oputc 32
+oputu i
+oputc 32
+oputu id
+oputc 32
+oputu ulong get gbcs 5
+oputc 32
+oputu ulong get gbcs 4
+oputc 32
+oputu ep
+oputc 32
+oputu b
+oputc 10
+ret b
+end
+
+note NaN in every A and B word (2 MiB)
+fn gbnan to void
+b = get gbfb 0
+for i ulong 524288
+gbput add b mul i 4 2143289344
+end
+end
+
+note operand layout in floats: mode 1 rows of k + 8, mode 0 rows of w + 16 (w = m for A, n for B);
+note batch z at (z / 3)(3 zs + 64) + (z % 3) zs
+fn gbzs md uint w ulong kd ulong to ulong
+if eq md 1
+ret mul w add kd 8
+end
+ret mul kd add w 16
+end
+
+fn gbzof z ulong zs ulong to ulong
+ret add mul div z 3 add mul zs 3 64 mul rem z 3 zs
+end
+
+fn gbopf md uint x ulong kk ulong w ulong kd ulong to ulong
+if eq md 1
+ret add mul x add kd 8 kk
+end
+ret add x mul kk add w 16
+end
+
+note the fractional value (n - 2) + j 2^-9 and the integer value at (x, kk, z)
+fn gbfr x ulong kk ulong z ulong to f64
+s = add mul x 7 mul kk 3
+s = add s mul z 5
+a = sub f64 rem s 5 2.0f64
+s = add mul x 13 mul kk 11
+s = add s mul z 3
+b = f64 rem s 64
+ret add a div b 512.0f64
+end
+
+fn gbint x ulong kk ulong z ulong to f64
+s = add mul x 5 mul kk 7
+s = add s mul z 3
+ret sub f64 rem s 11 5.0f64
+end
+
+note write operand ab (0 A, 1 B) for z < 6, x < m (A) or n (B), kk < k; keep the bf16-rounded
+note values in gbha / gbhb (index (z rows + x) 128 + kk). Pass 0: A fractional, B integer; pass 1 swapped.
+fn gbwop ab uint to void
+md = get gbcs ab
+k = ulong get gbcs 5
+w = ulong get gbcs add 6 ab
+zs = gbzs md w k
+base = add get gbfb 0 mul ulong ab 1048576
+fr = eq get gbcs 8 ab
+for z ulong 6
+for x ulong w
+gbwrow ab z x base zs fr
+end
+end
+end
+
+fn gbwrow ab uint z ulong x ulong base ulong zs ulong fr bool to void
+zb = add base mul gbzof z zs 4
+t = add 128 mul 64 ulong ab
+hi = mul add mul z t x 128
+k = ulong get gbcs 5
+for kk ulong k
+gbwel ab zb x kk gbwv x kk z fr hi
+end
+end
+
+note operand value at (x, kk, z) as f32 bits: fractional when fr, else integer
+fn gbwv x ulong kk ulong z ulong fr bool to uint
+v = gbint x kk z
+if fr
+v = gbfr x kk z
+end
+ret bitcast uint f32 v
+end
+
+note store bits u of operand ab at (x, kk) of the z block at zb; keep its bf16 value at gbha / gbhb hi + kk
+fn gbwel ab uint zb ulong x ulong kk ulong u uint hi ulong to void
+md = get gbcs ab
+w = ulong get gbcs add 6 ab
+o = gbopf md x kk w ulong get gbcs 5
+gbput add zb mul o 4 u
+if eq ab 0
+put gbha add hi kk gbrv u
+else
+put gbhb add hi kk gbrv u
+end
+end
+
+note old C ((3 r + 5 c + z) mod 17) - 8, and the epilogue-2 mask M: NaN when (5 r + c) mod 13 = 0,
+note else ((r + 3 c + z) mod 3) - 1, as f32 bits
+fn gbold3 z ulong r ulong c ulong to f64
+s = add mul r 3 mul c 5
+s = add s z
+ret sub f64 rem s 17 8.0f64
+end
+
+fn gbmv z ulong r ulong c ulong to uint
+if eq rem add mul r 5 c 13 0
+ret 2143289344
+end
+ret bitcast uint f32 sub f64 rem add add r mul c 3 z 3 1.0f64
+end
+
+note C (old values) and Y: 77 for epilogue 1, M for epilogue 2; C rows of n + 8, whose 8 padding columns
+note (and Y's / M's with a fused epilogue) are NaN
+fn gbwc to void
+m = ulong get gbcs 6
+zs = mul m add ulong get gbcs 7 8
+for z ulong 6
+for r ulong m
+gbwcr z r zs
+end
+end
+end
+
+fn gbwcr z ulong r ulong zs ulong to void
+n = ulong get gbcs 7
+ep = get gbcs 3
+o = gbcro z r zs
+for c ulong n
+oc = add o mul c 4
+gbput oc bitcast uint f32 gbold3 z r c
+if eq ep 1
+gbput add oc 1048576 bitcast uint f32 77.0f64
+end
+if eq ep 2
+gbput add oc 1048576 gbmv z r c
+end
+end
+for c ulong 8
+op = add o mul add n c 4
+gbput op 2143289344
+if ne ep 0
+gbput add op 1048576 2143289344
+end
+end
+end
+
+note operand ab's gkopa for the case at device address p
+fn gbfopa ab uint p ulong to void
+md = get gbcs ab
+k = get gbcs 5
+w = get gbcs add 6 ab
+zs = uint gbzs md ulong w ulong k
+so = mul add k 8 4
+sk = uint 4
+if eq md 0
+so = 4
+sk = mul add w 16 4
+end
+gkopa ab p so sk mul add mul zs 3 64 4 mul zs 4
+end
+
+fn gbflch to bool
+d = add gkbase get gbfb 0
+gbfopa 0 d
+gbfopa 1 add d 1048576
+n = get gbcs 7
+zc = mul get gbcs 6 add n 8
+al = 1.0f64
+if eq get gbcs 9 1
+al = 0.5f64
+end
+sm = mul add n 8 4
+s1 = mul add mul zc 3 64 4
+s2 = mul zc 4
+gkopc add d 2097152 sm 4 s1 s2 f32 al
+if ne get gbcs 3 0
+gkope get gbcs 3 add d 3145728
+end
+if ne get gbcs 4 0
+gkopz get gbcs 4
+end
+m = get gbcs 6
+k = get gbcs 5
+bt = eq get gbcs 2 1
+ret gkmm m n k 6 3 bt
+end
+
+note mismatches over every C element of the case (and Y for epilogue 1), plus padding words no longer NaN
+fn gbfcmp to ulong
+bad = ulong 0
+for z ulong 6
+for r ulong ulong get gbcs 6
+bad = add bad gbfrow z r
+end
+end
+ret bad
+end
+
+note host byte offset of C row r of block z (row stride n + 8 f32)
+fn gbcro z ulong r ulong zs ulong to ulong
+n = ulong get gbcs 7
+b = add get gbfb 0 2097152
+b = add b mul gbzof z zs 4
+ret add b mul mul r add n 8 4
+end
+
+fn gbfrow z ulong r ulong to ulong
+n = ulong get gbcs 7
+zs = mul ulong get gbcs 6 add n 8
+o = gbcro z r zs
+bad = ulong 0
+for c ulong n
+if not gbfel z r c add o mul c 4
+bad = add bad 1
+end
+end
+for c ulong 8
+op = add o mul add n c 4
+if ne gbw op 2143289344
+bad = add bad 1
+end
+if ne get gbcs 3 0
+if ne gbw add op 1048576 2143289344
+bad = add bad 1
+end
+end
+end
+ret bad
+end
+
+note element (z, r, c) at host offset oc: cz 3 blocks above the diagonal keep the old C; epilogue 2
+note gives +0 where M is not > 0; else C equals the exact reference; epilogue 1 Y = C when C > 0, else +0
+fn gbfel z ulong r ulong c ulong oc ulong to bool
+cb = gbw oc
+old = gbold3 z r c
+if and eq get gbcs 4 3 gt div c 64 div r 64
+ret eq cb bitcast uint f32 old
+end
+ep = get gbcs 3
+if eq ep 2
+if not gt f64 bitcast f32 gbmv z r c 0.0f64
+ret eq cb 0
+end
+end
+s = gbfref z r c
+if eq get gbcs 2 1
+s = add s old
+end
+if ne f64 bitcast f32 cb s
+ret false
+end
+if eq ep 1
+w = uint 0
+if gt s 0.0f64
+w = cb
+end
+ret eq gbw add oc 1048576 w
+end
+ret true
+end
+
+note exact reference alpha sum a b over the K range the kernel reads (bf16-rounded operands)
+fn gbfref z ulong r ulong c ulong to f64
+k = ulong get gbcs 5
+lo = ulong 0
+hi = mul add div r 64 1 64
+cz = get gbcs 4
+if and eq cz 1 lt hi k
+k = hi
+end
+if eq cz 2
+lo = mul div r 64 64
+end
+ia = mul add mul z 128 r 128
+s = gbfdot ia mul add mul z 192 c 128 lo sub k lo
+if eq get gbcs 9 1
+s = mul s 0.5f64
+end
+ret s
+end
+
+fn gbfdot ia ulong ib ulong lo ulong kn ulong to f64
+s = 0.0f64
+for j ulong kn
+kk = add lo j
+a = get gbha add ia kk
+s = add s mul a get gbhb add ib kk
+end
+ret s
+end
+
+note long-K case of pass p, operand modes ma, mb: m = n = 64, k = 16384 (512 K tiles), nz 1, beta 0,
+note alpha 1. Operands are zero except kk = 0 mod 29 (565 terms, at least one in every 32-wide K tile),
+note so a dropped, repeated or misplaced K tile changes C; sums stay below 565 5 17/8 < 2^13 in multiples
+note of 2^-9, so the f32 result is exact. Logits buffer: A at 0, B at 6 MiB, C (rows of 72) at 12 MiB,
+note NaN everywhere first; C's padding columns must stay NaN. Prints `GFL pass ma mb bad`.
+fn gbfl p ulong ma uint mb uint to ulong
+for j ulong 10
+put gbcs j 0
+end
+put gbcs 0 ma
+put gbcs 1 mb
+put gbcs 5 16384
+put gbcs 6 64
+put gbcs 7 64
+put gbcs 8 uint p
+b = get gbfb 0
+for i ulong 3162112
+gbput add b mul i 4 2143289344
+end
+gblw 0
+gblw 1
+put gkinv 0 1
+if not gbllch
+ggdie 98
+end
+bad = ulong 0
+for r ulong 64
+bad = add bad gblrow r
+end
+oputc 71
+oputc 70
+oputc 76
+oputc 32
+oputu p
+oputc 32
+oputu ulong ma
+oputc 32
+oputu ulong mb
+oputc 32
+oputu bad
+oputc 10
+ret bad
+end
+
+note operand ab of the long case: nonzero words only at kk = 0 mod 29
+fn gblw ab uint to void
+md = get gbcs ab
+base = add get gbfb 0 mul ulong ab 6291456
+fr = eq get gbcs 8 ab
+for x ulong 64
+gblwr md base x fr
+end
+end
+
+fn gblwr md uint base ulong x ulong fr bool to void
+w = ulong 64
+kd = ulong 16384
+for kk ulong kd
+u = uint 0
+if eq rem kk 29 0
+u = gbwv x kk 0 fr
+end
+o = gbopf md x kk w kd
+gbput add base mul o 4 u
+end
+end
+
+note launch the long case: mode 1 rows of k + 8 floats, mode 0 K rows of 80 floats
+fn gbllch to bool
+d = add gkbase get gbfb 0
+gblopa 0 d
+gblopa 1 add d 6291456
+gkopc add d 12582912 288 4 0 0 f32 1.0f64
+gkopz 0
+ret gkmm 64 64 16384 1 1 false
+end
+
+fn gblopa ab uint p ulong to void
+so = uint 65568
+sk = uint 4
+if eq get gbcs ab 0
+so = 4
+sk = 320
+end
+gkopa ab p so sk 0 0
+end
+
+note row r of the long case: 64 exact values, then 8 padding words that must still be NaN
+fn gblrow r ulong to ulong
+o = add add get gbfb 0 12582912 mul r 288
+bad = ulong 0
+for c ulong 64
+cb = gbw add o mul c 4
+if ne f64 bitcast f32 cb gblref r c
+bad = add bad 1
+end
+end
+for c ulong 8
+if ne gbw add o mul add 64 c 4 2143289344
+bad = add bad 1
+end
+end
+ret bad
+end
+
+note exact reference: sum over kk = 29 j of the bf16-rounded A(r, kk) B(c, kk)
+fn gblref r ulong c ulong to f64
+fa = eq get gbcs 8 0
+fb = eq get gbcs 8 1
+s = 0.0f64
+for j ulong 565
+kk = mul j 29
+a = gbrv gbwv r kk 0 fa
+s = add s mul a gbrv gbwv c kk 0 fb
+end
+ret s
+end

@@ -1,0 +1,9 @@
+check 6 follow-up, written before any c6b run (2026-11-02, after the first c6 measurement).
+First measurement (c6, 3 reps alternating v2,v3 on core 4, non-quiet): mean ratio 1.06666 (over 5%),
+median ratio 1.04583 (under 5%). CONTRACT-V3 check 6 names no statistic, so c6 is INCONCLUSIVE and is
+reported as measured; it is not replaced.
+Follow-up design: rung-7 ck30000, eval W 4 (held.tok, merges4096.bin), core 4, nice 19, 5 ABBA blocks
+(v2 v3 v3 v2), 20 runs, wall from /usr/bin/time -v. Statistic fixed here: ratio of medians
+Median(v3 walls)/Median(v2 walls); check 6 PASS iff <= 1.05. The mean ratio is reported beside it.
+All E lines must equal 'E 30000 4 1371037 498023'. Machine stays non-quiet (rung-8 chip legs, CPU eval on
+core 9, other host jobs); timings are labelled non-quiet.

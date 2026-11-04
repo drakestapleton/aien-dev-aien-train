@@ -1,0 +1,35 @@
+BF16 lane build receipt fix-pad (aien-train feat/omega-llm-bf16 f5a6941059025ebe15b033c6b983f8a6413c93da, 2026-11-04 UTC)
+change: gbfrag now fills C's eight padding columns per row (and Y's or M's with epilogue 1 or 2)
+  with NaN before each of its 26 short cases and counts every padding word that is no longer NaN
+  as a mismatch (gb.om gbwcr, gbfrow). Host gate code only.
+compiler: omega-mv seed/out/omc sha256 2c82480596bbdc50cda9626866209ef662d5834f278f839ff4ce0250c495029f
+command: OMC=<omc> TARGET=gb10 OUT=<dir> CORE=3 sh tests/omegallm/build.sh [--mutant X]
+host: DGX Spark GB10 (aarch64), core 3 at nice 19; build only, nothing run on the chip
+
+product gb10   ollm-gb10          3c794661080b7ceb1be4a45204695686538c4c99a548c70d8bbdc1f873c28ffb
+               source ollm.om     39310def7393766353dd6cdae06feeb7155bcb0082bcf5604a51f4db70f5e5b6
+mutant u       ollm-mut-u-gb10    e045c7a7c61ef77ff86caacdc212baea1ed9b4aad09f1750308b5a75af12d54f
+               source             7323a21b2b40e95797d294b2cc2ab98cf53855e4cd72c40cdd41f4288c2e152e
+mutant l       ollm-mut-l-gb10    c7c027a58c57b84246d5e033dcc40d805a1303439095184e543751009bd7c1bc
+               source             d80d76e6da8326f93fcad600e0f751c0f8b6a453087e07a091bc23174d66e983
+mutant o       ollm-mut-o-gb10    333dead883aabd43b164169cba24e138b474253b13b0eef252c5b2b6f95080a9
+               source             59902bbcd9b226a003d05973d9c115d2e92ee477d7059ea51a56a792d1396ffd
+mutant v       ollm-mut-v-gb10    4d5f997e2aac9cfc82a5774cd4336c71d6abb2826a37e5d4e4597766986d7c4c
+               source             a7f0ad9d3048f6bdd6d491cf333d01723be5160295ec58aa829a6209aee09dd3
+All five builds rc 0 from the working tree; the product build was repeated from
+`git archive f5a6941` and gave the same binary and source sha256.
+
+control: the same command on `git archive a82fc1a` (the parent) rebuilt
+  ollm-gb10 54fb8233c62a13c0b3bac13a38dd5b583943e9e9097342baaa57fc22db2ceb49
+  source    dfaaf2467e7dab7aa532db4af9a27e524bb58ed56a5bef7bb88cf6b0767fe459
+  equal to build-2.txt, so the pinned omc and the procedure reproduce the windows' binary.
+
+kernel bytes: OMC=<omc> OUT=<dir> CORE=3 sh tests/omegallm/gpu-disasm.sh 0 1 ... 36 40 42 ... 58
+  run on both trees (slot list as in disasm-identity.txt), rc 0 for both.
+  a82fc1a DUMP b4a15af838f845b8625d52f1cc856f0a8987f43a41e61a927d8fe964f05f610f source_sha256 03750edd3ecdfd4d976c6707fa88ca5ea77b03de3c1665f6d71aa108e24d1eb1 code_sha256 f2628fdad32cc0d56f4a10729edefc17057ea398b254f255ed85422f71f7c887
+  f5a6941 DUMP 9be00f0db8937f47ac9f91110444d2e1e36285f78d00bdb9fe08648cc51ecc52 source_sha256 10244bc9106a83897280f2b15347715ca2f69ed21060d58e795a60453a2b61c2 code_sha256 f2628fdad32cc0d56f4a10729edefc17057ea398b254f255ed85422f71f7c887
+  gpu-code.bin  both f2628fdad32cc0d56f4a10729edefc17057ea398b254f255ed85422f71f7c887 (cmp: identical)
+  gpu-gpr.bin   both 506ac68484cd57fd7a823f29cc0485e3d444414867d9a092d7d8ed125359f777 (cmp: identical)
+  Every SLOT, GPR and SMEM line of the two summaries is identical (diff: only the DUMP line);
+  the f5a6941 lines are in disasm-identity.txt. No kernel byte changed; code_sha256 is also the
+  value of build-2.txt and e329675.

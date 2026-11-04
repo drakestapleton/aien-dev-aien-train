@@ -1,0 +1,7 @@
+{"window_id": "20261102T161059Z-25de8f", "name": "k8c", "owner": "omp-ollm-k8c", "lease_min": 25, "gb10": "shared", "waited_s": 1, "state": {"utc": "2026-11-02T16:11:00Z", "loadavg": "2.15 2.26 2.34 3/1948 2268610", "mem_avail_kB": 108732496, "gpu_util_pct": "0", "gpu_W": "4.91",
+ "gb10_lock_holders": "holds shared pid 2268241 (s) (set by a finished flock; processes with /tmp/aien-gb10.lock open now: pid 2268224 /bin/sh ~/.local/bin/spark-window _hold 20261102T16); ",
+ "quiet_lock_holders": "",
+ "quiet_waiters": "",
+ "gpu_apps": "",
+ "sensors_row": "1793635859,2026-11-02T10:10:59-06:00,160,4.95,0,2.15,108713576,1,3517", "sensors_row_age_s": 1}
+}

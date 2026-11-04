@@ -1,0 +1,50 @@
+k7 pre-registration (written before window open, 2026-11-02)
+Change under test: register-bank remap and Ra operand reuse in the GEMM inner loops (gk.om 32x32
+ids 0-7, 64x64 ids 32-39). Order note: the k6 README named fusion next and the k7 plan named the 128x128
+retile; both are deferred because a cheaper defect sits under them: k6 FFMAs never set a reuse bit, and
+in every k-step FFMA the b fragment (R36+j / R88+j / R104+j) and the accumulator (R16+4i+j / R16+8i+j)
+share their low two register-index bits, so Rb and Rc collide in the published two- and four-bank
+register-file models. sm_121's bank model is unpublished; this window measures it.
+ OKBNK 1: C column j lives in accumulator column j xor 1 (gkcol), in the k loop and in both epilogues
+   (gkacc32, gkacc64), so b and accumulator differ in the low two bits on every k-loop FFMA.
+ OKREU 1: gkffma takes a reuse mask ru; the FFMAs of one row run carry Ra reuse (control bit 122) on
+   j < last (3 of 4 in 32x32, 7 of 8 in 64x64), so each run's last FFMA releases it.
+ Control bit 109: nvdisasm (CUDA 13.0 V13.0.88, -b SM121) decodes .reuse only when bit 109 (word-3
+   bit 13) is also set, and ptxas 13.0 sm_121 emits all 49 .reuse instructions of a register-blocked
+   probe kernel (/tmp/gk/k7/ru/r.cu) with it set (155 of 175 non-reuse instructions also set it). gkcw
+   never sets it, so every k1-k6 instruction carries bit 109 clear. k7 sets it only on reuse FFMAs.
+   Variant r0 therefore removes reuse and bit 109 together; the attribution is to the pair.
+Exactness argument [INFERENCE until the run]: the remap renames registers and reuse/bit 109 are issue
+hints; each C element's FFMA chain (operands, order, rounding) is unchanged from K6. K7, R0 and B0 are
+predicted BIT-IDENTICAL to K6 on every output.
+Variants (build.sh): r0 = OKREU 0 (remap only), b0 = OKBNK 0 (reuse only). Mutant t (OMUTT 0) kept:
+it drops the k = 7 product of the thread's C element (row 0, column 0), now in register R17.
+Static checks before the window (gpu-disasm.sh + nvdisasm, omc e5b32567, max shape 4096 256 256 8 1024 8):
+ both-off scratch copy (OKREU 0, OKBNK 0): code_sha256 9646adef... equal to K6 sources at HEAD 099fa9e
+   (cmp of the full 64-slot image: equal), so the two switches are the whole change.
+ product slots 0-7, 32-39: 6464 FFMA (as K6), 5120 with .reuse = 8 x 192 + 8 x 448; each .reuse FFMA is
+   followed by an FFMA reading the same Ra (5120 of 5120); the only FFMAs with b >= R32 and accumulator in
+   the same low-two-bit bank are the 64 alpha/beta epilogue FFMAs (R141 x acc + old C), none in a k loop.
+Binaries (omc e5b32567, sources /tmp/wt-gpu HEAD 099fa9e + uncommitted gk.om/build.sh):
+ K7 /tmp/gk/k7/bin/ollm-gb10            53ff5f71  product
+ R0 /tmp/gk/k7/bin/ollm-var-r0-gb10     34c04e99  variant r0
+ B0 /tmp/gk/k7/bin/ollm-var-b0-gb10     c37449e6  variant b0
+ KT /tmp/gk/k7/bin/ollm-mut-t-gb10      eb53ebe2  mutant t
+ K6 /tmp/gk/k6/bin/ollm-gb10            e49491c5  k6 product, base in the same window
+Expectations (tolerances unchanged). GC2 field 14 (gpu_ns) and GA field 7 (adam_ns) are wall timings and
+are exempt from equality; every other field must equal the k6 receipts:
+ K7 gc2-small-s3: rc 0, GC2 84288 177 177 3815 211 7629 1 0 0 194221 0 5529261 5529261 * 0
+ K7 gc2-max-s7:   rc 0, GC2 7409920 159783 758 122070 450 61035 6 3 358192 1557866 0 8339291 8339291 * 0
+ K7 ga-max:       rc 0, GACMP PASS, GA 7409920 59554 4021923359 14807 125 15259 * 2841667
+ K7 geval r5 ck9000: E 9000 2243 1445466 539226; r6 ck30000: E 30000 2243 1338156 499194.
+ KT gc2-max-s7: GCMP2 FAIL rc 47 (the control). KT gc2-small-s3: report only (k2 caught it there too).
+ t200 from r6 ck9000, K6 then K7: both rc 0, T 9200 1508182, ck_after ec4a8c21... for both.
+ gprof K6 (before and after), K7, R0, B0: the decision metric is GPU wait summed over ids 0-7 and 32-39.
+   K6 reference from the k6 window (prof-K6.txt): ids 0-1 16781655 ns, ids 32-39 93969823 ns,
+   all ids 161079860 ns. No numeric speedup is predicted: the sm_121 bank model and reuse-cache
+   behaviour are unpublished, so only the direction is pre-registered [INFERENCE, not a gate]:
+   K7 GEMM wait below both K6 runs. R0 and B0 attribute the change; if K7 is not below K6 (outside the
+   K6a/K6b spread), k7 records a null result and the change is reverted rather than committed as speed.
+ Speed is non-quiet.
+A FAIL of any product gate, a mutant t pass, or a K7/K6 checkpoint mismatch is kept as a receipt and
+stops the commit.

@@ -1,0 +1,366 @@
+5926,5928c5926,5928
+< note 23 batch magic, 24 minus level-2 count, 25 alpha bits, 26-28 causal (gkczx, gkczk). beta true
+< note adds the old C.
+< fn gkgemm ma uint mb uint beta bool to void
+---
+> note 23 batch magic, 24 minus level-2 count, 25 alpha bits, 26-28 causal (gkczx, gkczk), 30/31 the
+> note fused epilogue's second pointer (gkope). beta true adds the old C; ep is the fused epilogue.
+> fn gkgemm ma uint mb uint beta bool ep uint to void
+5993c5993
+< gkepi beta
+---
+> gkepi beta ep
+5996c5996,5999
+< fn gkepi beta bool to void
+---
+> note Fused epilogue ep (gkope, beta false): 1 also stores Y = C > 0 ? C : 0 at the second pointer
+> note (words 30/31, base R90), the FFN ReLU forward; 2 loads M at the second pointer's same offsets
+> note into R40-55 and stores M > 0 ? C : 0, the FFN ReLU backward mask (NaN M gives 0).
+> fn gkepi beta bool ep uint to void
+6013,6017c6016,6024
+< for i uint 4
+< r0 = add 56 mul i 8
+< gkimadw r0 14 i 88
+< for j uint 3
+< gkimadw add r0 mul add j 1 2 15 add j 1 r0
+---
+> if ne ep 0
+> gkldc64 10 1016
+> gkimadw 90 12 1 10
+> end
+> gkldc 12 996 false
+> if eq ep 2
+> gkadr32 90
+> for k uint 16
+> gkldg add 40 k add 56 mul k 2 0 ne k 0
+6020c6027
+< gkldc 12 996 false
+---
+> gkadr32 88
+6032a6040,6045
+> if eq ep 2
+> t = gkthm 92
+> for k uint 16
+> gkepm add 16 k add 40 k t
+> end
+> end
+6035a6049,6057
+> if eq ep 1
+> for k uint 16
+> gkepm add 16 k add 16 k 255
+> end
+> gkadr32 90
+> for k uint 16
+> gkstg add 56 mul k 2 add 16 k 0 ne k 0
+> end
+> end
+6037a6060,6086
+> note Address pairs R56-87 of the thread's 4x4 block (row stride R14, column stride R15) from base b.
+> fn gkadr32 b uint to void
+> for i uint 4
+> r0 = add 56 mul i 8
+> gkimadw r0 14 i b
+> for j uint 3
+> gkimadw add r0 mul add j 1 2 15 add j 1 r0
+> end
+> end
+> end
+> note Fused epilogue select: P2 = R m > R t, R e = P2 ? R e : 0 (FSETP.GT, FSEL; gr.om's encoders,
+> note verified against nvdisasm there). t is RZ (255) except under mutant m.
+> fn gkepm e uint m uint t uint to void
+> grfsetp 2 m t 4
+> grfsel e e 255 2
+> end
+> note Mutant m: 1 in the product, 0 in the mutant, whose fused backward mask (ep 2) is M > 2^-10 (the
+> note forward and its stored FP unchanged). gkthm loads that threshold into R r and returns the
+> note mask's compare register: RZ (255) in the product, r in the mutant.
+> const OMUTM ulong 1
+> fn gkthm r uint to uint
+> if eq OMUTM 0
+> gkmovi r grf 0.0009765625f64
+> ret r
+> end
+> ret 255
+> end
+6159c6208
+< fn gkgemm64 ma uint mb uint beta bool to void
+---
+> fn gkgemm64 ma uint mb uint beta bool ep uint to void
+6213c6262
+< gkepi64 beta
+---
+> gkepi64 beta ep
+6220,6235c6269,6275
+< note +32 columns R11), alpha R141, old C in R112-127 when beta, store.
+< fn gkquad64 rh uint ch uint beta bool to void
+< qb = uint 128
+< if eq rh 1
+< gkimadw 130 10 1 128
+< qb = 130
+< end
+< if eq ch 1
+< gkimadw 130 11 1 qb
+< qb = 130
+< end
+< for i uint 4
+< r0 = add 80 mul i 8
+< gkimadw r0 14 i qb
+< for j uint 3
+< gkimadw add r0 mul add j 1 2 15 add j 1 r0
+---
+> note +32 columns R11), alpha R141, old C in R112-127 when beta, store. Fused epilogue ep as in gkepi,
+> note second base R142 (quadrant base R144); ep 2 loads M into R112-127 (beta is false there).
+> fn gkquad64 rh uint ch uint beta bool ep uint to void
+> if eq ep 2
+> gkqadr rh ch 142 144
+> for k uint 16
+> gkldg add 112 k add 80 mul k 2 0 ne k 0
+6237a6278
+> gkqadr rh ch 128 130
+6250a6292,6297
+> if eq ep 2
+> t = gkthm 140
+> for k uint 16
+> gkepm gkacc64 rh ch k add 112 k t
+> end
+> end
+6254a6302,6329
+> if eq ep 1
+> for k uint 16
+> e = gkacc64 rh ch k
+> gkepm e e 255
+> end
+> gkqadr rh ch 142 144
+> for k uint 16
+> e = gkacc64 rh ch k
+> gkstg add 80 mul k 2 e 0 ne k 0
+> end
+> end
+> end
+> note Address pairs R80-111 of quadrant (rh, ch) from thread base b (quadrant base in R t when moved).
+> fn gkqadr rh uint ch uint b uint t uint to void
+> qb = b
+> if eq rh 1
+> gkimadw t 10 1 b
+> qb = t
+> end
+> if eq ch 1
+> gkimadw t 11 1 qb
+> qb = t
+> end
+> for i uint 4
+> r0 = add 80 mul i 8
+> gkimadw r0 14 i qb
+> for j uint 3
+> gkimadw add r0 mul add j 1 2 15 add j 1 r0
+6256,6257c6331,6335
+< note 64x64 epilogue: C base of the thread (R128), quadrant offsets R10/R11, then four quadrants.
+< fn gkepi64 beta bool to void
+---
+> end
+> end
+> note 64x64 epilogue: C base of the thread (R128), second base R142 when fused, quadrant offsets
+> note R10/R11, then four quadrants.
+> fn gkepi64 beta bool ep uint to void
+6273a6352,6355
+> if ne ep 0
+> gkldc64 10 1016
+> gkimadw 142 12 1 10
+> end
+6278c6360
+< gkquad64 shr h 1 and h 1 beta
+---
+> gkquad64 shr h 1 and h 1 beta ep
+6283c6365,6367
+< note (40 + 2 (ma + 2 mb + 4 beta), two slots each: the pipelined K loop does not fit in one).
+---
+> note (40 + 2 (ma + 2 mb + 4 beta), two slots each: the pipelined K loop does not fit in one). Fused
+> note epilogue kernels (gkope, beta false): 25 (32x32) and 56 (64x64) ep 1 with ma 1 mb 0 (the FFN W1
+> note forward, ggxw), 26 and 58 ep 2 with ma 1 mb 1 (the FFN dF backward, ggxwt).
+6293c6377
+< for g uint 16
+---
+> for g uint 20
+6295c6379,6389
+< ns = uint 1
+---
+> ma = and g 1
+> mb = and shr g 1 1
+> bt = ne and g 4 0
+> ep = uint 0
+> if ge g 16
+> ep = add and g 1 1
+> ma = 1
+> mb = sub ep 1
+> bt = false
+> end
+> big = and ge g 8 and ne g 16 ne g 17
+6298d6391
+< ns = 2
+6299a6393,6406
+> if ge g 16
+> id = add 24 ep
+> end
+> if ge g 18
+> id = add 54 mul ep 2
+> end
+> if not gkemit id ma mb bt ep big
+> ret false
+> end
+> end
+> ret true
+> end
+> note Emit one GEMM kernel into slot id (two slots when big, the 64x64 kernel); false on overflow.
+> fn gkemit id uint ma uint mb uint bt bool ep uint big bool to bool
+6301,6309c6408,6410
+< ma = and g 1
+< mb = and shr g 1 1
+< bt = ne and g 4 0
+< if lt g 8
+< gkgemm ma mb bt
+< put gkgpr id 104
+< put gksm id 4608
+< else
+< gkgemm64 ma mb bt
+---
+> ns = uint 1
+> if big
+> gkgemm64 ma mb bt ep
+6311a6413,6417
+> ns = 2
+> else
+> gkgemm ma mb bt ep
+> put gkgpr id 104
+> put gksm id 4608
+6317d6422
+< end
+6368c6473,6474
+< note pipelined 64x64 GEMM (6 * 8704 B) (evidence/OMEGALLM/gpu-k8). Only ids with gkthr set may call this.
+---
+> note pipelined 64x64 GEMM (6 * 8704 B): under it the pipelined kernel was 1.12x slower than the k7b one,
+> note under this rule 0.91x (evidence/OMEGALLM/gpu-k8). Only ids with gkthr set may call this.
+6750a6857,6878
+> note Fused epilogue ep for the next gkmm, which consumes it (see gkepi): 1 also stores
+> note Y = C > 0 ? C : 0 at y, 2 stores M > 0 ? C : 0 with M read at y; y has C's strides. ep 1 needs
+> note operand modes ma 1 mb 0 and ep 2 ma 1 mb 1 (the only fused kernels, gkall), both beta false.
+> global gkep uint 1
+> fn gkope ep uint y ulong to void
+> put gkep 0 ep
+> put gkarg 30 gblo y
+> put gkarg 31 gbhi y
+> end
+> note true when fused epilogue ep may run with the pending operand modes and beta
+> fn gkepok ep uint beta bool to bool
+> if eq ep 0
+> ret true
+> end
+> if or gt ep 2 beta
+> ret false
+> end
+> if ne get gkmd 0 1
+> ret false
+> end
+> ret eq get gkmd 1 sub ep 1
+> end
+6751a6880,6886
+> ep = get gkep 0
+> put gkep 0 0
+> if not gkepok ep beta
+> put gkcz 0 0
+> put nverr 0 neg long 22
+> ret false
+> end
+6770a6906,6917
+> id = gkmmid t beta ep
+> ret gklaunch id div n t div m t nz
+> end
+> note kernel id of a gkmm (gkall's table) for tile t, beta and fused epilogue ep; sets the arg count
+> fn gkmmid t uint beta bool ep uint to uint
+> if ne ep 0
+> put gkna 0 32
+> if eq t 64
+> ret add 54 mul ep 2
+> end
+> ret add 24 ep
+> end
+6779c6926
+< ret gklaunch id div n t div m t nz
+---
+> ret id
+7141,7143c7288,7289
+< note 17 RELUF y = x > 0 ? x : 0; 18 RELUB dy = x > 0 ? dy : 0; 19 COPY; 20 ZERO; args n then pointers
+< note Mutant m: 1 in the product, 0 in the mutant, whose RELUB mask is x > 2^-10 (RELUF unchanged).
+< const OMUTM ulong 1
+---
+> note 19 COPY y = x; 20 ZERO; args n then pointers. The FFN ReLU forward and backward mask are fused
+> note into the GEMM epilogue (gk.om gkepi, kernels 25/26/56/58), so slots 17/18 stay empty.
+7150,7154d7295
+< grew2 kind
+< end
+< gkexit
+< end
+< fn grew2 kind uint to void
+7157,7173d7297
+< if eq kind 18
+< gkldg 33 12 0 true
+< end
+< if eq kind 17
+< grfsetp 1 32 255 4
+< grfsel 34 32 255 1
+< end
+< if eq kind 18
+< if eq OMUTM 0
+< gkmovi 35 grf 0.0009765625f64
+< grfsetp 1 32 35 4
+< else
+< grfsetp 1 32 255 4
+< end
+< grfsel 34 33 255 1
+< end
+< if eq kind 19
+7174a7299
+> gkstg 12 34 0 false
+7176c7301
+< gkstg 12 34 0 false
+---
+> gkexit
+7365c7490
+< note emit slots 9..22 for dims V T D H F B; false when a kernel overflows its 16 KiB slot
+---
+> note emit slots 9..24 (12, 17 and 18 empty) for dims V T D H F B; false when a kernel overflows its 16 KiB slot
+7406c7531
+< if and ge id 17 le id 20
+---
+> if and ge id 19 le id 20
+7430c7555
+< note open the chip with gk slots 0..8 and row slots 9..22 for the given dims, arena asz bytes
+---
+> note open the chip with the row slots 9..24 for the given dims, then gkopen's GEMM slots, arena asz bytes
+7738c7863
+< note 17 RELUF, 18 RELUB, 19 COPY (x into y), 20 ZERO (x) over n elements
+---
+> note 19 COPY (x into y), 20 ZERO (x) over n elements (the FFN ReLU is fused into the GEMMs, gkope)
+7914a8040,8041
+> y = ggl l 11
+> gkope 1 y
+7916,7917c8043
+< x = ggl l 11
+< ggew 17 mul ggr f fp x
+---
+> x = y
+7971c8097,8098
+< note layer l FFN backward: DH holds d out on entry, d hm on exit
+---
+> note layer l FFN backward: DH holds d out on entry, d hm on exit. The dF GEMM's fused epilogue (gkope 2)
+> note applies the ReLU mask FP > 0; the forward W1 GEMM (ggffn, gkope 1) stores both FP and Y.
+7979d8105
+< ggxwt dh w df f d false
+7981c8107,8108
+< ggew 18 mul ggr f x df
+---
+> gkope 2 x
+> ggxwt dh w df f d false
+8563c8690
+< note then zero dF where the chip's FP is not > 0, the chip RELUB mask (NaN included).
+---
+> note then zero dF where the chip's FP is not > 0, the chip's fused dF mask (gkope 2; NaN included).

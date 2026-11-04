@@ -1,0 +1,46 @@
+k5 pre-registration (written before window open, 2026-11-02)
+Change under test: causal attention. The six attention GEMMs skip work that only meets the causal
+zeros of P (and of DS, whose zeros come from P). gg.om ggbh m n k bt cz sets a causal mode with gk.om
+gkopz before ggmm; gkmm reads and clears it (gkczarg) and writes arg words 22/26/27/28:
+ mode 3 (S = Q K^T in ggatt, DP = DO U^T in ggbatt, m == n): word 28 X = 0, so a block exits when
+   R2 (ctaid.x, column tile) > R3 (ctaid.y, row tile) + X. Dense X = 2^30.
+ mode 1 (o = P U, DQ = DS K, k == m): K-tile count kn = R3*ka + word22 with ka = pt (K tiles per
+   row tile) and word22 = pt, so row tile r reads K tiles 0 .. (r+1)pt-1.
+ mode 2 (DU = P^T DO, DK = DS^T Q, k == m): ka = -pt, kc = pt, so row tile r starts at K tile r*pt
+   (pointers advance r*kc tiles) and reads the rest.
+ Dense (no gkopz): ka 0, kc 0, X 2^30, kn = word22 = all K tiles, as before.
+gr.om grsoftb (id 16) zeroes dp for columns > t (ISETP.GT.U32 col, t; FSEL RZ) because the DP tiles
+above the diagonal are no longer written and hold stale data (p * stale Inf/NaN would be NaN).
+The ISETP/IMAD.WIDE.U32-register/predicated-EXIT encoders moved from gr.om to gk.om (gkisetp,
+gkimadwr, gkexitp); slots that only use them are byte-identical to k4 (see static checks).
+Exactness argument [INFERENCE until the run]: every skipped FFMA term is +-0 (P above the diagonal is
+exactly +0 from softf's FSEL -inf; DS there is (dp - s) * 0 * c). Mode 1 drops a tail of +-0 terms
+after the real terms; mode 2 drops a head of +-0 terms from a +0 accumulator, which under RN stays
++0 (+0 + -0 = +0), identical to the zeroed start. Mode 3 tiles are only read through softf's -inf
+mask (S) or the new dp mask (DP). The softb row sum s = sum p*dp sees +0 instead of +-0 terms from a
++0 start. So K5 is predicted BIT-IDENTICAL to K4 on every output.
+New build-time mutant q (gk.om OMUTQ 0): mode 1 word22 = pt - 1, so each row tile stops one K tile
+short. Host-only: its device code is byte-identical to the product (code_sha256 5840a49b both).
+Static checks done before the window (gpu-disasm.sh, nvdisasm, omc e5b32567): the k5 dump (code
+5840a49b) differs from the k4 dump (7f45d37b) only in slots 0-7, 16 and 32-39. GEMM prologue: LDC
+R12 c[0x3f0]; IADD3 R12 = R12 + R3; ISETP.GT.U32 P0 R2 R12; @P0 EXIT; then LDC kn/ka/kc
+(0x3d8/0x3e8/0x3ec), IMAD kn = R3*ka + kn, IMAD R13 = R3*kc, IMAD.WIDE.U32 A/B pointers += R13 *
+tile step (R99/R100, R139/R140 in the 64 tile), after the step registers are loaded. Slot 16 gains
+MOV R23 32; IMAD.MOV R20 = lane; per u ISETP.GT.U32 P1 R20 R21; FSEL R48 RZ R48 P1; IADD3 R20 += R23.
+Binaries (omc e5b32567, sources /tmp/wt-gpu HEAD 9a5225a4 + uncommitted gk.om/gr.om/gg.om/build.sh):
+ K5 /tmp/gk/k5/bin/ollm-gb10            5c38d237  product
+ KQ /tmp/gk/k5/bin/ollm-mut-q-gb10      18791a82  mutant q
+ K4 /tmp/gk/k4/bin/ollm-gb10            72289c19  k4 product (9a5225a4), base in the same window
+Expectations (tolerances unchanged):
+ K5: gc2-small-s3, gc2-max-s7, ga-max rc 0.
+ KQ: gc2-max-s7 FAIL (rc nonzero, gradient/forward compare outside tolerance). gc2-small-s3: the
+   small shape is one 32-row tile, so pt - 1 drops half of its K -> FAIL expected too.
+ K5 geval r5 ck9000: E 9000 2243 1445466 539226 exactly (k4 value; also |E - 1445466| < 10, the
+   gate). K5 geval r6 ck30000: E 30000 2243 1338156 499194 exactly (k4 value).
+ gprof K4 and K5 in this window: K5 lower wait in ids 35, 1, 0. Modeled saving [INFERENCE, not a
+   gate]: WolframLanguageEvaluator 13.876*6/16 + (12.580+11.728)*7/16 -> 15.83825 ms per step,
+   0.0881 of the k4 179.84 ms profile (S/DP keep 10 of 16 blocks; modes 1/2 keep 36 of 64 tile
+   pairs = 9/16). Ids 16/15 unchanged in work.
+ t200 from r6 ck9000, K4 then K5: both rc 0, both T 9200 1508182, ck_after byte-equal to each other
+   and to the k4 window's ec4a8c21. K5 wall_ns below K4's in this window. Speed is non-quiet.
+A FAIL of any product gate, or a K5/K4 checkpoint mismatch, is kept as a receipt and stops the commit.

@@ -1,0 +1,25 @@
+note gpu-dump.om: emit the gk and gr kernels for the small parity shape and write the whole 64-slot
+note code image gkcode (16 KiB per slot, 1 MiB) to stdout and a 128-byte table to stderr: bytes 0..63
+note the declared GPR counts gkgpr, bytes 64..127 the QMD TARGET_SM_CONFIG field of gksmw (hw value,
+note 0 for an id with no kernel), one byte per kernel id. No GPU is touched. tests/omegallm/gpu-disasm.sh
+note appends this unit to the gb10 sources (gg.om's main renamed ggmain), feeds the slots to nvdisasm
+note and checks each slot's gkgpr.
+global gdgpr uchar 128
+fn main to int
+grset 256 32 64 2 128 2
+if not grall
+exit 3
+end
+if not gkall
+exit 2
+end
+w = write 1 gkcode 0 1048576
+for i ulong 64
+put gdgpr i uchar get gkgpr i
+if ne get gkthr i 0
+put gdgpr add i 64 uchar and shr gksmw uint i 23 63
+end
+end
+w = write 2 gdgpr 0 128
+exit 0
+end

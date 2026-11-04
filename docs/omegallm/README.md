@@ -10,6 +10,32 @@ parameters:
 The normative spec is [CONTRACT.md](CONTRACT.md). The receipts are under
 `evidence/OMEGALLM/core/` (the `.om` lane) and `evidence/OMEGALLM/oracle/` (the Python-stdlib referee).
 
+## v1 (aien-train#54)
+
+v1 adds a byte-pair tokenizer in `.om` (`bpe.om`, concatenated between `ckpt.om` and `cli.om`),
+shapes up to V 4096, T 256, D 256, L 8, B 64, gradient blocks G and K worker processes with
+byte-identical results for every valid K, and the `OLLMCK02` checkpoint. The spec is
+[CONTRACT-V1.md](CONTRACT-V1.md); v0 commands and files keep their bytes.
+
+```sh
+ollm bpefit TEXT MERGES V [MAXBYTES]   # fit merges: M V types chunks fitbytes
+ollm bpeenc MERGES V TEXT TOKS         # encode to u16 tokens: K bytes tokens
+ollm bpedec MERGES TOKS OUT            # decode: D tokens bytes
+ollm init CK V T D H F L B SEED TOTAL LRMICRO [G]
+ollm train CK TOKS UNTIL EVERY [K]     # K worker processes, G mod K = 0 (Linux only)
+ollm eval CK HELD W MERGES             # MERGES required when V > 256
+ollm sample CK SEED N TEMPMILLI PROMPT MERGES
+```
+
+| What | Status | Receipt |
+|---|---|---|
+| rung 3: config b (V4096 T128 D192 H6 F768 L4 B40, G = K = 20, P 2,582,208), 9000 steps | EXERCISED, 2026-11-02, 41,814 s on the Grace CPU; held-out `E 9000 4486 1823975 680427` (0.680427 bpb over 0.99988 of `held.tok`) | `evidence/OMEGALLM/v1/` |
+| v0 receipt suite on the v1 binary b9b4e02d, aarch64 | EXERCISED, 48/48 PASS (2026-11-04) | `evidence/OMEGALLM/v1/checks/core-aarch64/` |
+| v1 referee checks, mutants d and e, K = 1/2/4 and config-a K = 1/4 identity | EXERCISED (2026-11-04) | `evidence/OMEGALLM/v1/checks/reruns.txt` |
+
+v0's 1.463036 bpb scores 4096 × 64 bytes, 0.11803 of the same held text; v1's 0.680427 scores
+nearly all of it, so the two are not measured on the same positions.
+
 ## Status
 
 Evidence for every row is in `evidence/OMEGALLM/core/summary.tsv` (48/48 as expected). Every receipt
@@ -64,8 +90,13 @@ against `frozen/ollm` and the copied checkpoint, and the unit's start time and c
 sh tests/omegallm/build.sh               # -> ../build/ollm (AArch64 Linux)
 sh tests/omegallm/build.sh --mutant a    # also b, c: -> ../build/ollm-mut-X
 sh tests/omegallm/build.sh --variant h5  # also h7: -> ../build/ollm-var-hX
+sh tests/omegallm/build.sh --variant bx  # small bank-A capacities (CONTRACT-V3 check 3): -> ../build/ollm-var-bx
+sh tests/omegallm/build.sh --mutant y    # bx plus the wrong bank-B layer (four lines): -> ../build/ollm-mut-y
 TARGET=x86linux sh tests/omegallm/build.sh   # x86-64 Linux ELF
 TARGET=x86efi sh tests/omegallm/build.sh     # -> ../build/ollm.efi, a UEFI x86-64 application
+TARGET=gb10 sh tests/omegallm/build.sh       # -> ../build/ollm-gb10, CPU ollm plus the GB10 GPU commands
+TARGET=gb10 sh tests/omegallm/build.sh --mutant g   # also h, m, f, k, s, p, t, r, x, q, w: -> ../build/ollm-mut-X-gb10
+TARGET=gb10 sh tests/omegallm/build.sh --variant r0  # GEMM FFMAs without reuse: -> ../build/ollm-var-r0-gb10
 ```
 
 The build script does four things:
@@ -78,12 +109,14 @@ The build script does four things:
    - x86efi: `b4f45121f6c6d5d8a6ed0f5c4f3934b7cc4bec369bfa89523699bd33928f9b55`
      (omega-mv main `d3d1b1bc`, PR #1015 merged 2026-11-04, `../omega-efi`; the receipts were
      built from #1015's commit `5ce9ecaa`, an ancestor, with this same omc).
-2. It concatenates `math.om data.om model.om adam.om ckpt.om cli.om` and the platform unit
+2. It concatenates `math.om data.om`, the pool unit (`lpool.om` on Linux, `epool.om` on UEFI;
+   CONTRACT-V3 §2), `model.om adam.om ckpt.om bpe.om cli.om` and the platform unit
    (`lio.om` for Linux, `eio.om` for UEFI; CONTRACT §9). The x86 targets put the line
    `target x86linux` or `target x86efi` first.
-3. For a mutant, it changes exactly one line of the concatenated copy (`OMUTA`, `OMUTB`, `OMUTC`).
-   A variant sets both gcheck steps `GCH` and `GCH2` to 1e-5 (h5) or 1e-7 (h7) and must change
-   exactly those two lines; any other count stops the build with exit 4.
+3. For a mutant, it changes exactly one line of the concatenated copy (`OMUTA`, `OMUTB`, `OMUTC`;
+   mutant y changes four: bx's three capacities and `OMUTY`). A variant sets both gcheck steps `GCH`
+   and `GCH2` to 1e-5 (h5) or 1e-7 (h7) and must change exactly those two lines (bx: the three
+   bank-A capacities); any other count stops the build with exit 4.
 4. It compiles under `taskset -c $CORE nice -n 19` and prints
    `BUILD_OK <bin sha256> <path> source_sha256 <sha>`.
 
@@ -306,6 +339,11 @@ Every query is WolframLanguageEvaluator, 2026-11-01.
   `{112+24*217664, 112+24*119104}` → {5224048, 2858608} B for the largest shape and v0.
   `OCKCAP` is 5224048 + 1: the spare byte lets a read detect a file longer than any checkpoint
   (exit 15). `init-max.txt` records the 5224048 B file.
+  v2 (2026-11-04 note, CONTRACT-V2): the v2 maximum (V 4096, T 256, D 384, H 12, F 1536, L 8,
+  P 15,833,472) has a 120-byte header (`OLLMCK02`), so a checkpoint is `120+24*15833472` →
+  380003448 B and `OCKCAP` is 380003449. `../../evidence/OMEGALLM/gpu-r7/cpu/ock-boundary.txt`: the
+  380003448 B file loads, the file plus one or two bytes exits 15. The pool and the numbers above
+  are the v0/v1 sizing; the v2 storage split is in CONTRACT-V2 §2.
 - **adamck under mutant c (adam.om).** Without bias correction the step-s update is the corrected
   one times `r[s_]:=(1-(9/10)^(s+1))/Sqrt[1-(99/100)^(s+1)]`; `Table[r[s],{s,0,4}]` → {1, 1.346874,
   1.572475, 1.732455, 1.849790}. With adamck's warmup lr `lr[s_]:=(1/1000)(s+1)/100`, epsilon
@@ -321,3 +359,60 @@ Every query is WolframLanguageEvaluator, 2026-11-01.
   `mut-c-adamck.txt`, `A 5 3fe473698d936acd 639088417544678` (maxrel × 1e15), to 14 significant
   digits: WolframLanguageEvaluator decodes the bits to 0.6390884175446786, |Δ| → 1.143e-15, f64
   rounding of the sum.
+
+## GB10 GPU training (rung 4)
+
+`TARGET=gb10` builds `ollm-gb10`: the aarch64 `ollm` with its `fn main` renamed `ocpumain` and
+`native/omegallm/gpu/` appended. `gk.om` (f32 GEMMs: 32×32 tiles as ids 0-7 plus the fused-epilogue
+ids 25/26; 64×64 tiles as the even ids 40-54 plus the fused-epilogue ids 56/58, two slots each) and
+`gr.om` (slots 9-24, with 12, 17 and 18 empty: embedding, RMS norm, column sums, causal softmax,
+copy/zero, CE, the embedding-gradient CSR gather, the SQN sum of squares and ADAM) emit
+SASS for sm_121 into a code image; `gg.om` plans
+an arena, uploads, launches and reads back through `context.om`/`vector.om`/`launch.om`, vendored from
+aien-dev/CUDApp dcba8bb8, on the raw NVIDIA driver. No CUDA runtime or toolkit is used to build or run
+it; nvdisasm is a read-only oracle (`tests/omegallm/gpu-disasm.sh SLOT...`).
+The `evidence/OMEGALLM/gpu-k*/run.sh` files are as-run window receipts with machine-local paths; the
+reusable entry points are `tests/omegallm/build.sh` and `tests/omegallm/gpu-disasm.sh`.
+
+```sh
+B=../build/ollm-gb10
+$B gcmp CK DATA S                 # chip gradient vs CPU f64 ograd for batch S; GCMP PASS or exit 45
+$B gcmp2 CK DATA S                # branch-conditioned parity (ReLU flips split out); GCMP2 PASS or exit 47
+$B gacmp CK DATA S                # one step, on-chip f32 Adam vs CPU f64 oadam; GACMP PASS or exit 46
+$B gtrain CK TRAIN UNTIL EVERY    # train with the chip gradient, Adam on the CPU
+$B gtrainf CK TRAIN UNTIL EVERY   # train with weights and Adam state resident on the chip
+$B geval CK HELD W [MERGES]       # eval's forward on the chip in f32; prints eval's E line
+$B gprof CK TRAIN N              # N gtrainf steps, nothing saved; GP id gx gy gz m n k wait_ns per launch of the last step
+```
+
+Run them only inside a `spark-window`. The checkpoint format is unchanged, so CPU `eval`, `sample` and
+`train` read what `gtrain`/`gtrainf` write.
+
+| What | Status | Receipt (`evidence/OMEGALLM/gpu/`) |
+|---|---|---|
+| chip gradient matches the CPU f64 gradient within γ_R = R·2^-24 | EXERCISED (GB10, non-quiet) | `gc-small.txt` rel 2.35e-7, `gc-night.txt` rel 1.614e-4 < 3.05e-4; mutant g FAIL rc 45 on both |
+| on-chip Adam matches `oadam` above f32 weight rounding (resid < 2^-16) | EXERCISED (GB10, non-quiet) | `ga-small.txt` resid 2.34e-7, `ga-night.txt` resid 1.28e-7; mutant h FAIL rc 46 on the night checkpoint (step 1000); on the step-0 checkpoint mutant h is invisible by construction |
+| `gtrain` 1750→9000 on the v1 night shape | EXERCISED (GB10, non-quiet) | `gtrain1-3.txt`, 0.235-0.248 s/step |
+| `gtrainf` 0→9000, the whole v1 schedule | EXERCISED (GB10, non-quiet) | `gtrainf-0-9000.txt`, 483.8 s, 0.0538 s/step; trajectory within 1.14% of `gtrain` at every shared save point |
+| held-out eval of both step-9000 checkpoints (CPU `eval`, W 4486) | EXERCISED | `eval9000-gtrain.txt` 1.824653 nats, 0.680680 bpb; `eval9000-gtrainf.txt` 1.826877 nats, 0.681510 bpb |
+| rung 5 (V 4096, T 256, D 256, L 8, P 7,409,920, B 64): `gcmp` fails on ReLU branch flips; `gcmp2` passes | EXERCISED (GB10, non-quiet) | `../gpu-max/gc-max.txt` FAIL rc 45; `../gpu-max/gc2-max-s7.txt`, `gc2-max-s11.txt`, `gc2-night-s7.txt`, `gc2-small-s3.txt` PASS; mutants g, m, f FAIL rc 47 |
+| rung 5 `gtrainf` 0→9000 | EXERCISED (GB10, non-quiet) | `../gpu-max/gtrainf-0-250.txt`, `gtrainf-250-9000.txt`: 0.3808 s/step, 43,023 tokens/s; mean batch loss of the last four saves 1.4978 nats |
+| held-out eval of rung-5 steps 2000 and 9000 (CPU `eval`, W 2243 at T 256) | EXERCISED | `../gpu-max/eval2000.txt` 1.789590 nats, 0.667600 bpb; `../gpu-max/eval9000.txt` 1.445466 nats, 0.539226 bpb |
+| CE kernel sum fix: the plain f32 sum of exp over V 4096 ran ~1.04e-5 low; Kahan sum in `grce` | EXERCISED (GB10, non-quiet) | `../geval/plain/gd-*.txt` before, `../geval/gd-*.txt` after; the rung-4 and rung-5 runs above trained with the plain sum |
+| `geval` matches CPU `eval` within 10 µnats | EXERCISED (GB10, non-quiet) | `../geval/ge-night-gtrainf.txt`, `ge-night-gtrain.txt`, `ge-max-2000.txt`, `ge-max-9000.txt`: the CPU E lines exactly, 8.47 s of chip time for the step-9000 eval against 7323 s of CPU; mutant k (plain sum) Δ −11 FAIL; the first build failed the gate (`../geval/plain/`). `geval` has no loss gate and exits 0 whenever it completes (the mutant k receipts too); the 10 µnat gate is the E-line comparison against CPU `eval`, applied by the reviewer |
+| rung 6 `gtrainf` 0→30000 at the rung-5 shape in 18 spark-windows, `geval` after every leg | EXERCISED (GB10, non-quiet) | `../gpu-r6/`: every leg and `geval` rc 0; 0.37712 s/step, 43,445 tokens/s; held-out loss fell at every leg to E 30000 2243 1338156 499194 (1.338156 nats, 0.499194 bpb); CPU `eval` of `ck30000` gives the same E line (`eval30000.txt`) |
+| k1 kernels: one-warp softmax rows, split-K weight gradients, spin wait; product passes `gcmp2`, `gacmp`, `geval` | EXERCISED (GB10, non-quiet) | `../gpu-k1/`: `geval` of rung 5 `ck9000` and rung 6 `ck30000` give the earlier E lines exactly; mutants s, p FAIL rc 47; 200 steps 1.182× faster than the softmax-only build |
+| k2: 64×64 f32 GEMM tile (slots 32-39) when m and n are multiples of 64 | EXERCISED (GB10, non-quiet) | `../gpu-k2/`: `gcmp2`, `gacmp`, both `geval` E lines exact; mutant t FAIL rc 47; the checkpoint after 200 steps is bit-identical to k1's; 200 steps 1.061× faster than k1, GEMM wait −17.45% |
+| k3: RMS norm kernels (ids 10, 11) one warp per row, coalesced, single pass | EXERCISED (GB10, non-quiet) | `../gpu-k3/`: `gcmp2`, `gacmp`, both `geval` E lines exact; mutant r FAIL rc 47 (small and max); RMS kernels 2.50× and 2.47× faster in the profile; 200 steps 1.058× faster than k2 in the same window |
+| k4: cross-entropy kernel (id 21) one warp per row, coalesced, no stored e (3 reads + 1 write) | EXERCISED (GB10, non-quiet) | `../gpu-k4/`: `gcmp2`, `gacmp`, both `geval` E lines exact; mutant x FAIL rc 47 (small and max) and `geval` Δ −362083 µnats; `grce` 3.68× faster in the profile; 200 steps 1.041× faster than k3 in the same window |
+| k5: causal attention GEMMs (ids 0, 1, 35 at batch 512) skip blocks and K tiles above the diagonal via arg words; `grsoftb` masks dp above it | EXERCISED (GB10, non-quiet) | `../gpu-k5/`: `gcmp2`, `gacmp`, both `geval` E lines exact; mutant q FAIL rc 47 (small and max); the checkpoint after 200 steps is bit-identical to k4's; the three attention GEMMs 1.35×, 1.52×, 1.42× faster in the profile; 200 steps 1.059× faster than k4 in the same window |
+| k6: softmax kernels (ids 15, 16) load and store only the causal chunks of each row (predicated `LDG`/`STG`); `gkisge` predicate-field fix | EXERCISED (GB10, non-quiet) | `../gpu-k6/`: `gcmp2`, `gacmp`, both `geval` E lines exact; mutant w FAIL rc 47 (max; at the small shape its code equals the product's); the checkpoint after 200 steps is bit-identical to k5's; `grsoftf` 1.64× and `grsoftb` 1.68× faster in the profile; 200 steps 1.053× faster than k5 in the same window |
+| k7: GEMM FFMAs (ids 0-7, 32-39) carry Ra operand reuse with control bit 109; accumulator columns remapped (j xor 1) off the b registers' banks | EXERCISED (GB10, non-quiet) | `../gpu-k7/`: `gcmp2`, `gacmp`, both `geval` E lines exact; mutant t FAIL rc 47 (small and max); the checkpoint after 200 steps is bit-identical to k6's; 64×64 GEMM wait 0.918× of k6's in the profile, all from reuse (remap-only variant r0 0.989×, inside the k6 spread); 200 steps 1.034× faster than k6 in the same window |
+| k7b: the accumulator remap removed (`OKBNK`, `gkcol`, variant b0); Ra reuse with bit 109 kept, GPU code byte-equal to k7's reuse-only variant | EXERCISED (GB10, non-quiet) | `../gpu-k7b/`: `gcmp2`, `gacmp`, both `geval` E lines exact; mutant t FAIL rc 47 (small and max); the checkpoint after 200 steps is bit-identical to k6's and k7's; GEMM wait 0.955× of k6's over three rotated profile rounds (k7 0.934×, max k7b below min k6); 200 steps 1.0457× faster than k6 and equal to k7 (1.0003) in the same window |
+| k8: 64×64 GEMM K loop double-buffered (ids 40-54, two slots each, `gkgpr` 168); QMD word 36 TARGET sized per kernel by `gksmw` (Mesa NAK policy); `gpu-disasm.sh` GPR guard (`gkgpr` ≥ highest GPR + 3) | EXERCISED (GB10, non-quiet) | `../gpu-k8/`: three windows kept. a1 hung (R158 under `gkgpr` 160); a2 bit-identical but 1.12× slower GEMM wait (NULL); a3 (new prereg): `gcmp2`, `gacmp`, both `geval` E lines exact, mutant t FAIL rc 47 (small and max), the checkpoint after 200 steps bit-identical to k7b's; 64×64 wait 0.913× of k7b's kernel under the same TARGET rule (max k8 below min k7b every round); GEMM wait 0.914×, 200 steps 0.969× of k7b's wall in the same window |
+| k9: ReLU fused into the FFN GEMM epilogues (ep 1 ids 25/56 store FP and relu(FP); ep 2 ids 26/58 mask dF by FP > 0); `gr.om` RELUF/RELUB (ids 17/18) removed; `gkope` arms the next `gkmm`, `gkepok` refuses any other combination (-22); mutant m moves to the ep 2 threshold | EXERCISED (GB10, non-quiet) | `../gpu-k9/`: `gcmp2` (small, max, and an odd shape F = 96 on the 32×32 ids 25/26), `gacmp`, both `geval` E lines exact; mutant t FAIL rc 47 (small and max), mutant m FAIL rc 47 (small, max, odd); the checkpoint after 200 steps bit-identical to k8's; 48 fewer launches per profile (3 steps); summed GPU wait 0.924× of k8's (144.56 → 133.54 ms/step, max k9 below min k8 every round); 200 steps 0.942× of k8's wall in the same window |
+| rung 7: the v2 shape (D 384, F 1536, H 12, P 15,833,472) `gtrainf` 0→30000 on rung 6's data, seed and schedule in 12 spark-windows, `geval` after every leg | EXERCISED (GB10, non-quiet) | `../gpu-r7/`: every leg and `geval` rc 0; chip `geval` E 30000 2243 1254741 468077 (1.254741 nats, rung 6 1.338156); CPU `eval` of `ck30000` (P5) prints the identical E line (`run/eval30000.txt`) |
+
+The γ_R gate, the ReLU kink cases that the night shape exposes, the Adam residual, the windows and all
+timings are in `evidence/OMEGALLM/gpu/README.md`. Not QUALIFIED: no quiet-machine timing, one chip, and
+a bitwise comparison with the CPU path is not expected (f32 against f64).

@@ -1,0 +1,17 @@
+host_cpu: core 8 (Cortex-X925)
+52f5684fe2a600f0221337925233343cede03883bc81dcbbc32b40123a4dac1b  v1-oracle-out/v0bin/ollm
+b9b4e02d80e589227716c6e069529b6ea941cd1bdab5f3a9ea2dcc606b79997b  scratch-model/a64/ollm
+5caf3c915336df95e7740caada021c5d2c3a7b771b8ca9453f55839dcfde0cea  scratch-model/eq/v0.ck
+101b41c6d9396e353d4027759252fd8c1c5ec26ae8bec8834af2c9ae07d62fef  data/train.bin
+729e0a4a8854934ee6000ead2b367494c6b4c9eb52d554f81d6f7f44403338ed  data/held.bin
+$ taskset -c 8 nice -n 19 v1-oracle-out/v0bin/ollm eval scratch-model/eq/v0.ck data/held.bin 256
+rc=0 E 0 256 5538940 7991001
+$ taskset -c 8 nice -n 19 v1-oracle-out/v0bin/ollm train scratch-model/eq/w/old.ck data/train.bin 3 3
+rc=0 T 3 5493648
+$ taskset -c 8 nice -n 19 scratch-model/a64/ollm eval scratch-model/eq/v0.ck data/held.bin 256
+rc=0 E 0 256 5538940 7991001
+$ taskset -c 8 nice -n 19 scratch-model/a64/ollm train scratch-model/eq/w/new.ck data/train.bin 3 3
+rc=0 T 3 5493648
+eval lines equal
+checkpoints after step 3 equal: c3e1cb4b81656e5c70c4f14789082b650283f31f433e2dfcfc7ada1a44b11e1d
+verdict EQUAL

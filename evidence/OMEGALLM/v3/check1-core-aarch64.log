@@ -1,0 +1,55 @@
+BUILD_OK 5e20559a9db131b8859fc15c67ac69b598884485ee452d7456d6444e606af149 build/ollm source_sha256 927181770dbffc29a6ccda4631ca350ef80b6708f7787e8edace5a88be8b99be
+BUILD_OK 6df21b3def35fda2f4d03a70b31fb564a2b41cf23244eb359b461e0acc285dd9 build/ollm-mut-a source_sha256 3347c209a17e604373a39bd5ad3b2b40cfac020aa6b91c55cd84c1a1ae2783c3
+BUILD_OK 6daeefdda42d8b2f0b7db90aab2964fc8592a70a4976ab507e66a884e53efb0d build/ollm-mut-b source_sha256 ea9c04c2e05993051d97b834ebb5a88e897ad354a59871e8497bae802bc6d57a
+BUILD_OK 627857491c71c3af7dff6bf4eb155844937f635ed727fa2abbb3292370d6f2e7 build/ollm-mut-c source_sha256 4388750e06bd6f264e83551c76a60aeb711c2a84086f66e82b4dea7ff93b1579
+BUILD_OK 79e439c7ccb4f3bbf9eac4ff02c71e6cee9fb5d5a85a7ac5f34562d5612e398a build/ollm-var-h5 source_sha256 fd5d19afc1f841600ed2a09404c076211647a6486850f6187e7e3670daa608fa
+BUILD_OK 025bc2f9d828b14559a15d1872da26cdb818a8546c88551db1b943f88b495e1d build/ollm-var-h7 source_sha256 4970bb8c6a0c58d0ae5b839e41a68276ccb5894c8e495fc5b85c419513e6573e
+prep rc=0 expect=0 PASS
+prep value 'P 27630 24867 2763 19883834 2220914' PASS
+base rc=0 expect=0 PASS
+base value 'B 4415645 3295113' PASS
+init-v0 rc=0 expect=0 PASS
+init-v0 value 'I 119104' PASS
+train-v0-50 rc=0 expect=0 PASS
+train-v0-50 value 'T 50 3110411' PASS
+resume-init-a rc=0 expect=0 PASS
+resume-init-b rc=0 expect=0 PASS
+resume-a-0-40 rc=0 expect=0 PASS
+resume-b-0-20 rc=0 expect=0 PASS
+resume-b-20-40 rc=0 expect=0 PASS
+refuse-flip-payload rc=14 expect=14 PASS
+refuse-flip-magic rc=11 expect=11 PASS
+refuse-truncated rc=10 expect=10 PASS
+refuse-shape rc=12 expect=12 PASS
+refuse-count rc=13 expect=13 PASS
+refuse-long rc=15 expect=15 PASS
+init-max rc=0 expect=0 PASS
+init-max value 'I 217664' PASS
+eval-max rc=0 expect=0 PASS
+refuse-eval-hugew rc=23 expect=23 PASS
+refuse-grad-hugeoff rc=22 expect=22 PASS
+eval-edge-w3 rc=0 expect=0 PASS
+refuse-eval-edge-w4 rc=23 expect=23 PASS
+grad-edge-o128 rc=0 expect=0 PASS
+refuse-grad-edge-o129 rc=22 expect=22 PASS
+eval-v0 rc=0 expect=0 PASS
+eval-v0 value 'E 50 256 3049318 4399237' PASS
+sample-v0-argmax rc=0 expect=0 PASS
+sample-v0-t800 rc=0 expect=0 PASS
+init-small rc=0 expect=0 PASS
+gcheck rc=0 expect=0 PASS
+init-v0-g0 rc=0 expect=0 PASS
+gcheck-v0-init rc=0 expect=0 PASS
+gcheck-v0-step50 rc=0 expect=0 PASS
+adamck rc=0 expect=0 PASS
+mathck rc=0 expect=0 PASS
+mut-a-gcheck rc=40 expect=40 PASS
+mut-a-gcheck-v0 rc=40 expect=40 PASS
+mut-c-adamck rc=41 expect=41 PASS
+mut-b-gcheck rc=0 expect=0 PASS
+var-h5-gcheck-v0-init rc=40 expect=40 PASS
+var-h5-gcheck-v0-step50 rc=40 expect=40 PASS
+var-h7-gcheck-v0-init rc=40 expect=40 PASS
+var-h7-gcheck-v0-step50 rc=40 expect=40 PASS
+summary: /dev/shm/ollm-v3/ev-core/summary.tsv
+rc=0

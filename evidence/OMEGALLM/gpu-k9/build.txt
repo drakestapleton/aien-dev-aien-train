@@ -1,0 +1,12 @@
+omc 2c82480596bbdc50cda9626866209ef662d5834f278f839ff4ce0250c495029f (omega-mv e5b32567)
+# this commit's tree: TARGET=gb10 sh tests/omegallm/build.sh [--mutant t|m], CORE=8, rebuilt after the window
+# into a fresh OUT. The binaries equal the window's P, PT and PM byte for byte; only the source sha256 moved,
+# because one gk.om note gained the measured figures after the window (notes do not reach the binary).
+BUILD_OK 89ce710720c2ed8392fc4fcc8be494d1d0815b8e986ca52342a04541be63d395 ollm-gb10 source_sha256 3b50deede52c2dfa90f2fc7fbc77e1a91d74c7bb59a7f03687185c4b8bb76ea4
+BUILD_OK 2ce7fd6ee54bb2046ba87c0634a3092834e1eb84b900a7ac725f81d466e1efc8 ollm-mut-t-gb10 source_sha256 d63d8f6988d53f153350bea437833b40a135b7dcb67ae092d8c4b6920de1be04
+BUILD_OK 73d45399b9b934d67abd0e68330a48fdde52c1eeeb35b48d68571c8731b254b3 ollm-mut-m-gb10 source_sha256 b62808a8a22ec60dc3a9f0ab970b07bbc85fa1425fb55fcabcfb53aab6a591a8
+# window arms, built before the window (CORE=7):
+#  P  BUILD_OK 89ce710720c2ed8392fc4fcc8be494d1d0815b8e986ca52342a04541be63d395 ollm-gb10 source_sha256 fc8a1e2e45663b92c80521a6f0173cf8a4766ca1c33c8f8d1d80b9cfcd0954e8
+#  PT BUILD_OK 2ce7fd6ee54bb2046ba87c0634a3092834e1eb84b900a7ac725f81d466e1efc8 ollm-mut-t-gb10 source_sha256 4106e2cbb13f9c3cf366648a4fb666027e4399fd857cb17f4454e73181f30abf
+#  PM BUILD_OK 73d45399b9b934d67abd0e68330a48fdde52c1eeeb35b48d68571c8731b254b3 ollm-mut-m-gb10 source_sha256 a4103a7dd23252df80ada11112a17b5d7bea41ebcdbeabfb6e37a3f59ae3feea
+#  Q  k8 product 0b7015830d6fcd32a5f051f8be1c891a7e6a9bc661db79b70ef79ea7b144f598 (../gpu-k8/build.txt)

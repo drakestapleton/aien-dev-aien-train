@@ -4,7 +4,8 @@ note (lio.om or eio.om) follows it and holds main.
 note Command words are matched as little-endian u64 packings of their bytes (Wolfram
 note FromDigits[Reverse[ToCharacterCode[w]],256]): prep 1885696624, init 1953066601,
 note grad 1684107879, train 474214396532, eval 1818326629, base 1702060386, sample 111516417089907,
-note gcheck 118074647274343, mathck 118074698391917, adamck 118074781033569.
+note gcheck 118074647274343, mathck 118074698391917, adamck 118074781033569; v1: bpefit
+note 127996038312034, bpeenc 109325798699106, bpedec 109287127216226 (bpe.om).
 note Exit codes: 0 ok; 2 usage; 10-15 checkpoint refusals (ckpt.om); 20 data file shorter than
 note T + 1 bytes; 21 data over 2^25 bytes or OFFS not exactly 8 B bytes; 22 an OFFS offset with
 note o + T >= N; 23 eval W = 0 or W T + 1 > M; 24 prep story over 999999 bytes; 40 gcheck over
@@ -27,6 +28,18 @@ fn ocmd to int
 w = ocmdw
 if eq w 1885696624
 cmdprep
+ret 0
+end
+if eq w 127996038312034
+cmdbpfit
+ret 0
+end
+if eq w 109325798699106
+cmdbpenc
+ret 0
+end
+if eq w 109287127216226
+cmdbpdec
 ret 0
 end
 if eq w 1953066601
@@ -68,9 +81,11 @@ end
 exit 2
 end
 
-note init CK V T D H F L B SEED TOTAL LRMICRO; lr = f64(LRMICRO)/1000000.0
+note init CK V T D H F L B SEED TOTAL LRMICRO [G]; lr = f64(LRMICRO)/1000000.0. Without G the file
+note is OLLMCK01 (G = 1); with G it is OLLMCK02 (CONTRACT-V1 section 6).
 fn cmdinit to void
-if ne oargc 13
+na = oargc
+if and ne na 13 ne na 14
 exit 2
 end
 for i ulong 7
@@ -84,6 +99,16 @@ tt = oargu 11
 if gt tt 999999
 exit 12
 end
+g = ulong 1
+put og 46 1
+if eq na 14
+g = oargu 13
+put og 46 2
+end
+if not ogok2 g
+exit 12
+end
+put og 44 g
 put og 42 tt
 put og 43 bitcast ulong div f64 oargu 12 1000000.0
 put og 41 0
@@ -96,12 +121,6 @@ oputc 10
 oflush
 end
 
-fn odneed to void
-if le get odn 0 get og 1
-exit 20
-end
-end
-
 note little-endian u64 at ochk[o..o+8)
 fn ochk64 o ulong to ulong
 v = ulong 0
@@ -112,30 +131,31 @@ end
 ret v
 end
 
-note load batch row b from offset ochk[b]; exit 22 when the window o..o+T passes the end of DATA.
-note Written as o >= N - T (after N > T) so that an offset near 2^64 cannot wrap o + T.
+note row b from offset ochk[b] (checked by ooffok)
 fn ooffrow b ulong to void
-o = ochk64 mul b 8
-n = get odn 0
-tt = get og 1
-if le n tt
-exit 22
-end
-if ge o sub n tt
-exit 22
-end
-obrow b o
+obrow b ochk64 mul b 8
 end
 
-note grad CK DATA OFFS OUT
+note exit 22 when any offset has o >= N - T (written so that an offset near 2^64 cannot wrap)
+fn ooffok to void
+n = get odn 0
+tt = get og 1
+for b ulong get og 6
+if ge ochk64 mul b 8 sub n tt
+exit 22
+end
+end
+end
+
+note grad CK DATA OFFS OUT: the gradient of CONTRACT-V1 section 5 (G blocks, K = 1)
 fn cmdgrad to void
 if ne oargc 6
 exit 2
 end
 ockload 2
-nd = odread 3
-odneed
+odopen 3
 ooffrd 4
+ooffok
 for b ulong get og 6
 ooffrow b
 end
@@ -150,20 +170,33 @@ oputc 10
 oflush
 end
 
-note train CK TRAIN UNTIL EVERY: steps step .. min(UNTIL, TOTAL)-1; after step s, when
+note train CK TRAIN UNTIL EVERY [K]: steps step .. min(UNTIL, TOTAL)-1; after step s, when
 note (s+1) mod EVERY = 0 or s+1 is the end, save CK and print `T s+1 loss_micro(step s)`.
+note K worker processes (CONTRACT-V1 section 5.1): K < 1, K > G or G mod K != 0 is exit 29.
 fn cmdtrain to void
-if ne oargc 6
+na = oargc
+if and ne na 6 ne na 7
 exit 2
 end
 ockload 2
-nd = odread 3
-odneed
+odopen 3
 un = oargu 4
 ev = oargu 5
 if eq ev 0
 exit 2
 end
+k = ulong 1
+if eq na 7
+k = oargu 6
+end
+gg = get og 44
+if or eq k 0 gt k gg
+exit 29
+end
+if ne rem gg k 0
+exit 29
+end
+put og 45 k
 en = get og 42
 if lt un en
 en = un
@@ -184,31 +217,47 @@ end
 end
 end
 
-note eval CK HELD W: windows at 0, T, .., (W-1)T; prints `E step W loss_micro bpb_micro`
+note eval CK HELD W [MERGES]: windows at 0, T, .., (W-1)T; prints `E step W loss_micro bpb_micro`.
+note V > 256 needs MERGES (else exit 2); bpb = ((loss/ln2) f64(W T))/f64(nbytes) with nbytes the
+note decoded length of the W T targets (CONTRACT-V1 section 7.1); V = 256 keeps loss/ln2.
 fn cmdeval to void
-if ne oargc 5
+na = oargc
+if and ne na 5 ne na 6
 exit 2
 end
 ockload 2
-m = odread 3
 ww = oargu 4
-tt = get og 1
-note W T + 1 > M, tested as W > (M - 1) / T so that a huge W cannot wrap W T
-if eq ww 0
-exit 23
+v = get og 0
+if gt v 256
+if eq na 5
+exit 2
 end
-if eq m 0
+obload 5 v
+end
+odopen 3
+tt = get og 1
+m = get odn 0
+note W T + 1 > N, tested as W > (N - 1) / T so that a huge W cannot wrap W T
+if eq ww 0
 exit 23
 end
 if gt ww div sub m 1 tt
 exit 23
 end
 ls = 0.0f64
+nb = ulong 0
 for w ulong ww
 obrow 0 mul w tt
 ls = add ls ofwd 0
+if gt v 256
+nb = add nb oevnb tt
+end
 end
 lo = div ls f64 ww
+bp = div lo 0.6931471805599453
+if gt v 256
+bp = div mul bp f64 mul ww tt f64 nb
+end
 oputc 69
 oputc 32
 oputu get og 41
@@ -217,34 +266,45 @@ oputu ww
 oputc 32
 oputl rmic lo
 oputc 32
-oputl rmic div lo 0.6931471805599453
+oputl rmic bp
 oputc 10
 oflush
 end
 
-note append byte c to the context window obx[0 .. CT), keeping the last T bytes
+note decoded bytes of the targets oby[0 .. n)
+fn oevnb n ulong to ulong
+s = ulong 0
+for t ulong n
+s = add s obtlen get oby t
+end
+ret s
+end
+
+note append token c to the context window obx[0 .. CT), keeping the last T tokens
 fn ocpush c ulong to void
 cn = get og 9
 tt = get og 1
 if lt cn tt
-put obx cn uchar c
+put obx cn c
 put og 9 add cn 1
 else
 for i ulong sub tt 1
 put obx i get obx add i 1
 end
-put obx sub tt 1 uchar c
+put obx sub tt 1 c
 end
 end
 
-note sample CK SEED N TEMPMILLI PROMPT. Context = byte 0, then PROMPT; the model reads the last T
-note context bytes at positions 0..; the next byte comes from the logits at the last position.
+note sample CK SEED N TEMPMILLI PROMPT [MERGES]. Context = token 0, then PROMPT (bytes when V = 256,
+note its encoding when V > 256, CONTRACT-V1 section 7.2); the model reads the last T context tokens
+note at positions 0..; the next token comes from the logits at the last position.
 note TEMPMILLI 0: argmax (lowest index on ties), no draw. Otherwise softmax(logits/(TEMPMILLI/1000))
 note and u = (splitmix64 stream out >> 11) 2^-53 with state = SEED, out = mix(state += GOLD);
-note the byte is the smallest c with u < p[0] + .. + p[c], else the last c with p[c] > 0.
-note A generated byte 0 ends the output and is not written.
+note the token is the smallest c with u < p[0] + .. + p[c], else the last c with p[c] > 0.
+note A generated token 0 ends the output and is not written; another writes its decoded bytes.
 fn cmdsamp to void
-if ne oargc 7
+na = oargc
+if and ne na 7 ne na 8
 exit 2
 end
 ockload 2
@@ -254,14 +314,30 @@ if gt nn 999999
 exit 2
 end
 tm = oargu 5
+v = get og 0
+put og 9 0
+ocpush 0
+if gt v 256
+if eq na 7
+exit 2
+end
+r = oargr 6
+if or lt r 0 gt r 4000
+exit 2
+end
+obload 7 v
+np = obprompt 6
+for i ulong np
+ocpush get obtk i
+end
+else
 r = oargr 6
 if or lt r 0 gt r 4096
 exit 2
 end
-put og 9 0
-ocpush 0
 for i ulong ulong r
 ocpush ulong get oarg i
+end
 end
 for g ulong nn
 lf = ofwd 0
@@ -276,29 +352,30 @@ end
 if eq c 0
 break
 end
+if gt v 256
+obtput c
+else
 oputc c
+end
 ocpush c
 end
 oflush
 end
 
-note logits of the last context position into TMP[0..V)
+note logits of the last context position into TMP[0..V) (oa)
 fn olast to void
 d = get og 2
 z = add get og 17 mul sub get og 9 1 d
-tm = get og 27
-for c ulong get og 0
-put ow add tm c fdot z mul c d d
-end
+klogit z get og 27 get og 0 d
 end
 
 fn oargmax to ulong
 tm = get og 27
 b = ulong 0
-bv = get ow tm
+bv = get oa tm
 for c ulong get og 0
-if gt get ow add tm c bv
-bv = get ow add tm c
+if gt get oa add tm c bv
+bv = get oa add tm c
 b = c
 end
 end
@@ -310,8 +387,8 @@ tm = get og 27
 v = get og 0
 m = bitcast f64 ulong 18442240474082181120
 for c ulong v
-x = div get ow add tm c tau
-put ow add tm c x
+x = div get oa add tm c tau
+put oa add tm c x
 m = fmax m x
 end
 sm = osoft tm v m
@@ -319,7 +396,7 @@ u = mul f64 shr smx st 11 1.1102230246251565e-16
 acc = 0.0f64
 la = ulong 0
 for k ulong v
-pk = get ow add tm k
+pk = get oa add tm k
 acc = add acc pk
 if lt u acc
 ret k
@@ -352,8 +429,7 @@ if ne oargc 4
 exit 2
 end
 ockload 2
-nd = odread 3
-odneed
+odopen 3
 obatch get og 41
 ls = ograd
 d = get og 2
@@ -412,14 +488,14 @@ end
 
 note central difference (L(p+h) - L(p-h))/((p+h) - (p-h)) at parameter i; restores p
 fn ogcnum i ulong h f64 to f64
-p0 = get ow i
+p0 = owg i
 pp = add p0 h
 pm = sub p0 h
-put ow i pp
+owp i pp
 lp = oloss
-put ow i pm
+owp i pm
 lm = oloss
-put ow i p0
+owp i p0
 ret div sub lp lm sub pp pm
 end
 
@@ -431,7 +507,7 @@ end
 note one gradient check at parameter i; updates og[50] count, og[51] max rel bits, og[52] worst
 note index, og[53] retries at GCH2
 fn ogc1 i ulong to void
-g = get ow add get og 10 i
+g = ocsg i
 num = ogcnum i GCH
 rel = ogcrel num g
 if gt rel GCTOL

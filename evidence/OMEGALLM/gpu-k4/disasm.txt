@@ -1,0 +1,12 @@
+# OMC=<pinned omc> sh tests/omegallm/gpu-disasm.sh 21 (this commit's tree), then the SHFL.BFLY, MUFU.EX2, MUFU.RCP and EXIT counts of the nvdisasm -b SM121 listing
+DUMP 2e495c37b5ba07a4693bf26e5a86a4743e8d7083435800d99fb4a8e178d9ee23 source_sha256 55d8c6b2f865d558adc359431af96330a3a48e8fb0dc05256016beac0b6aa4fe code_sha256 7f45d37b94c7743a6d153faed53884f02c323d0cad3c1c34c796459bec3a1d05
+SLOT 21 bytes 3360 sha256 12c4e07face1030392a2b2877fd423a3a655dfd5a7561f21ee9a5f241754b467
+COUNT slot 21 SHFL.BFLY 10 (5 FMNMX max, 5 FADD sum) MUFU.EX2 16 MUFU.RCP 1 EXIT 3
+# EXITs: out-of-range row guard, lanes other than y&31 after pass 3, end. Pass 3 recomputes R65 = R43*R29 (FMUL at 0x0940) after the sum, whose SHFL scratch is R65
+# slot-by-slot byte compare of gpu-code.bin (64 slots of 16384 B) against the parent commit 1d241c38's dump (code_sha256 f588fd37..., ../gpu-k3/disasm.txt):
+DIFFER 21
+# mutant x: the same dump with gr.om OMUTX 0 (the line build.sh --mutant x changes)
+SLOT 21 bytes 3328 sha256 f0a9b67e904a9f41095ba1edbd5dfda212b61af03322f3c962cdd06b4caacb5d
+COUNT mutant-x slot 21 SHFL.BFLY 9: max 0x10 0x8 0x4 0x2 0x1, sum 0x10 0x8 0x4 0x2 (lane-1 sum step missing)
+# slot-by-slot compare, mutant x dump against this dump:
+DIFFER 21

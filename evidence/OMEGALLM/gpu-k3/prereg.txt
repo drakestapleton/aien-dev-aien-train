@@ -1,0 +1,25 @@
+k3 pre-registration (written before window open, 2026-11-02)
+Change under test: gr.om RMS kernels 10 (RMSF) and 11 (RMSB) run one warp per row instead of one
+thread per row: lane l holds columns l + 32u (u < D/32) in registers, so every warp load/store is one
+coalesced 128-byte line; RMSF reads v once (k2 read it twice), RMSB fuses its two passes and reads
+v, g, da, dh once. Row sums are per-lane FFMA chains then a 16-8-4-2-1 SHFL.BFLY butterfly (grwred),
+so results are NOT bit-identical to k2; every elementwise op keeps k2's order. gg.om launches
+R*32 threads (arg 0 = R*32). grall refuses D or T not a multiple of 32. New build-time mutant r
+(gr.om OMUTR 0): RMSB's row sum sum(da g v) skips the lane-1 butterfly step.
+Static checks done before the window (gpu-disasm.sh, nvdisasm -b SM121): the k3 dump differs from the
+k2 (ea0f078) dump only in slots 10 and 11; slot 10 has 5 SHFL.BFLY and one MUFU.RSQ, slot 11 has 5
+SHFL.BFLY; mutant r slot 11 has 4 (0x10 0x8 0x4 0x2, lane-1 step missing).
+Binaries (omc e5b32567, sources /tmp/wt-gpu HEAD ea0f078 + uncommitted gr.om/gg.om/build.sh):
+ K3 /tmp/gk/k3/bin/ollm-gb10            836d3be1  product
+ KR /tmp/gk/k3/bin/ollm-mut-r-gb10      fcd3fe11  mutant r
+ C2 /tmp/gk/c2/out/ollm-gb10            44ea8a17  k2 product (ea0f078), timing base in the same window
+Expectations (tolerances unchanged):
+ K3: gc2-small-s3, gc2-max-s7, ga-max rc 0
+ KR: gc2-max-s7 and gc2-small-s3 FAIL rc 47
+ K3 geval r5 ck9000: |E - 1445466| < 10 (CPU eval value, the geval gate); r6 ck30000 E reported
+   against C2's chip value 1338156 (CPU eval of ck30000 still running), same |d| < 10 expected.
+ gprof K3: ids 10 and 11 launched with gx = R*32/64; their wait_ns reported against k2 prof-C2
+   (10: 6.022 ms, 11: 16.338 ms over 17 launches each); no expectation on the number.
+ t200 from r6 ck9000, C2 then K3: both rc 0; K3 T 9200 loss reported against C2 (not expected equal:
+   reduction order changed); K3 wall_ns expected below C2's in the same window. Speed is non-quiet.
+A FAIL of any product gate is kept as a receipt and stops the commit.
