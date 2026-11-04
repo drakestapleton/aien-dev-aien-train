@@ -1,0 +1,425 @@
+6278c6278
+< note gr.om: row and elementwise SM121 kernels for the ollm GPU step (slots 9..22), emitted after
+---
+> note gr.om: row and elementwise SM121 kernels for the ollm GPU step (slots 9..24), emitted after
+6696a6697,6758
+> note 23 SQN: out[c] = sum over i in [512 c, 512 c + 512) of g[i]^2 (f32); args nchunk g out. The
+> note gradient buffer is padded with zeros to a multiple of 512 (ggplan, ggbwd), so no tail guard.
+> fn grsqn to void
+> grpro
+> grptr 10 1 4 2048
+> gkmovz 64
+> top = grtop 30 64
+> grld8 32 10 true
+> for u uint 8
+> gkffmaf 64 add 32 u add 32 u 64
+> end
+> gradv 10 32
+> grbot 30 top
+> grptr 12 3 4 4
+> gkstg 12 64 0 false
+> gkexit
+> end
+> note OMUTH: 1 in the product; 0 in mutant h (beta1 0.8 on chip), which gacmp must catch.
+> const OMUTH ulong 1
+> note 24 ADAM (f32, on chip): g = g c; m = b1 m + (1 - b1) g; v = b2 v + (1 - b2) g^2;
+> note w -= lrb m / (sqrt(v ibc2) + 1e-8), the f32 image of og.om oadam1/oadam2 with lrb = lr/bc1 and
+> note ibc2 = 1/bc2 from the host. Args P w m v g c lrb ibc2 (slots 0, 2-9, 10, 11, 12).
+> fn gradam to void
+> grpro
+> b1 = 0.9f64
+> if eq OMUTH 0
+> b1 = 0.8f64
+> end
+> gkmovi 24 grf b1
+> gkmovi 25 grf sub 1.0f64 0.9
+> gkmovi 27 grf 0.99f64
+> gkmovi 28 grf sub 1.0f64 0.99
+> gkmovi 29 grf 0.00000001f64
+> grptr 10 1 4 4
+> grptr 12 3 4 4
+> grptr 14 5 4 4
+> grptr 16 7 4 4
+> gkldc 64 grarg 10 false
+> gkldc 65 grarg 11 true
+> gkldc 66 grarg 12 true
+> gkldg 32 16 0 true
+> gkldg 33 12 0 true
+> gkldg 34 14 0 true
+> gkldg 35 10 0 true
+> gkfmulf 32 32 64
+> gkfmulf 33 33 24
+> gkffmaf 33 32 25 33
+> gkfmulf 36 32 32
+> gkfmulf 34 34 27
+> gkffmaf 34 36 28 34
+> gkfmulf 37 34 66
+> grmufu 38 37 8192
+> grfadd 38 38 29
+> grmufu 39 38 4096
+> gkfmulf 40 33 65
+> gkfmulf 40 40 39
+> grfsub 35 35 40
+> gkstg 10 35 0 false
+> gkstg 12 33 0 true
+> gkstg 14 34 0 true
+> gkexit
+> end
+6707c6769
+< for k uint 14
+---
+> for k uint 16
+6739a6802,6807
+> if eq id 23
+> grsqn
+> end
+> if eq id 24
+> gradam
+> end
+6803a6872,6876
+> note P rounded up to the SQN chunk of 512; the gradient buffer is that long and zeroed to it
+> fn ggp5 to ulong
+> ret mul ggcd get og 8 512 512
+> end
+> 
+6833c6906
+< ggput 1 get og 8
+---
+> ggput 1 ggp5
+6853a6927,6929
+> ggput 21 get og 8
+> ggput 22 get og 8
+> ggput 23 div ggp5 512
+7320c7396
+< ggew 20 get og 8 gga1 1 gga1 1
+---
+> ggew 20 ggp5 gga1 1 gga1 1
+7360,7361c7436,7437
+< note upload the f32 parameters, the batch tokens and the CSR of x (rows sorted by token)
+< fn ggup to void
+---
+> note upload the f32 parameters
+> fn ggupw to void
+7365a7442,7446
+> put gkinv 0 1
+> end
+> 
+> note upload the batch tokens and the CSR of x (rows sorted by token)
+> fn ggupb to void
+7370a7452,7504
+> note n values omv[s + j] as f32 to arena byte offset o + 4 j, and back (one chunk of an Adam moment)
+> fn ggupmc s ulong o ulong n ulong to void
+> h = get gbmem 5
+> for j ulong n
+> x = bitcast uint f32 get omv add s j
+> m = mapset h add o mul j 4 4 ulong x
+> end
+> end
+> 
+> fn ggdnmc s ulong o ulong n ulong to void
+> h = get gbmem 5
+> for j ulong n
+> x = uint mapget h add o mul j 4 4
+> put omv add s j f64 bitcast f32 x
+> end
+> end
+> 
+> note chip parameters of chunk q back into ow as f64
+> fn ggdnwc q ulong p ulong to void
+> h = get gbmem 5
+> o = get gga 0
+> i0 = mul q OCH
+> for j ulong sub oce q p i0
+> i = add i0 j
+> x = uint mapget h add o mul i 4 4
+> put ow i f64 bitcast f32 x
+> end
+> end
+> 
+> note optimizer state (ow, omv) to the chip as f32 (m in gga 21, v in gga 22), and back
+> fn ggupst to void
+> ggupw
+> p = get og 8
+> for q ulong ocn p
+> i0 = mul q OCH
+> n = sub oce q p i0
+> ggupmc add get og 11 i0 add get gga 21 mul i0 4 n
+> ggupmc add get og 12 i0 add get gga 22 mul i0 4 n
+> end
+> put gkinv 0 1
+> end
+> 
+> fn ggdnst to void
+> p = get og 8
+> for q ulong ocn p
+> ggdnwc q p
+> i0 = mul q OCH
+> n = sub oce q p i0
+> ggdnmc add get og 11 i0 add get gga 21 mul i0 4 n
+> ggdnmc add get og 12 i0 add get gga 22 mul i0 4 n
+> end
+> end
+> 
+7460,7461c7594,7596
+< note the step loss and gradient (into ogr[0..P)) for the batch in obx/oby; ggopen first
+< note phase wall times of the last gggrad (ns): 0 upload, 1 forward, 2 backward, 3 download, 4 loss
+---
+> note the step loss and gradient for the batch in obx/oby; ggopen first. full: upload the f32
+> note parameters first and download the gradient into ogr[0..P) after; otherwise both stay on chip.
+> note phase wall times (ns): 0 upload, 1 forward, 2 backward, 3 download, 4 loss, 5 on-chip Adam
+7463c7598
+< fn gggrad to f64
+---
+> fn ggpass full bool to f64
+7465c7600,7603
+< ggup
+---
+> if full
+> ggupw
+> end
+> ggupb
+7473a7612
+> if full
+7474a7614
+> end
+7482a7623,7666
+> fn gggrad to f64
+> ret ggpass true
+> end
+> 
+> note clip and Adam on chip at step og[41], the f32 image of oadam: SQN partial sums of g^2, the
+> note norm, clip factor, schedule and bias corrections on the host in f64, then ADAM over P
+> fn ggadam to void
+> p = get og 8
+> nc = div ggp5 512
+> ggu 0 nc
+> ggpt 1 gga1 1
+> ggpt 2 gga1 23
+> ggrun 23 6 ggcd nc 64 1 1
+> h = get gbmem 5
+> so = get gga 23
+> ss = 0.0f64
+> for c ulong nc
+> x = uint mapget h add so mul c 4 4
+> ss = add ss f64 bitcast f32 x
+> end
+> nr = fsqrt ss
+> cl = 1.0f64
+> if gt nr 1.0
+> cl = div 1.0 nr
+> end
+> s = get og 41
+> lrs = olrs s bitcast f64 get og 43
+> bc1 = sub 1.0 opowb 0.9 s
+> bc2 = sub 1.0 opowb 0.99 s
+> if eq OMUTC 0
+> bc1 = 1.0f64
+> bc2 = 1.0f64
+> end
+> ggu 0 p
+> ggpt 1 gga1 0
+> ggpt 2 gga1 21
+> ggpt 3 gga1 22
+> ggpt 4 gga1 1
+> ggu 10 ulong grf cl
+> ggu 11 ulong grf div lrs bc1
+> ggu 12 ulong grf div 1.0f64 bc2
+> ggrun 24 13 ggcd p 64 1 1
+> end
+> 
+7486c7670
+< for i ulong 5
+---
+> for i ulong 6
+7651c7835,8014
+< note gb10 platform main: gcmp and gtrain here, every other command through the CPU main (lio.om)
+---
+> note ogr[P + i] = ow[i], the f64 parameter before the step
+> fn ggkw q ulong p ulong to void
+> i0 = mul q OCH
+> for j ulong sub oce q p i0
+> i = add i0 j
+> put ogr add p i get ow i
+> end
+> end
+> 
+> note ogr[i] = chip parameter i as f64
+> fn ggdw q ulong p ulong to void
+> h = get gbmem 5
+> wo = get gga 0
+> i0 = mul q OCH
+> for j ulong sub oce q p i0
+> i = add i0 j
+> x = uint mapget h add wo mul i 4 4
+> put ogr i f64 bitcast f32 x
+> end
+> end
+> 
+> note over i < P with w0 = ogr[P + i], c = ow[i] (CPU f64 result), g = ogr[i] (chip f32 result):
+> note u = c - w0, d = (g - f32(w0)) - u; ggam 0 max |d|, 1 max |u|, 2 max (|d| - 2^-24 |c|), the part
+> note of d above the half-ulp rounding of the f32 master weight
+> global ggam f64 3
+> fn ggad1 i ulong p ulong to void
+> w0 = get ogr add p i
+> c = get ow i
+> u = sub c w0
+> g = sub get ogr i f64 f32 w0
+> d = fabs sub g u
+> u = fabs u
+> e = sub d mul fabs c 0.000000059604644775390625f64
+> if gt d get ggam 0
+> put ggam 0 d
+> end
+> if gt u get ggam 1
+> put ggam 1 u
+> end
+> if gt e get ggam 2
+> put ggam 2 e
+> end
+> end
+> 
+> fn ggadc q ulong p ulong to void
+> i0 = mul q OCH
+> for j ulong sub oce q p i0
+> ggad1 add i0 j p
+> end
+> end
+> 
+> note gacmp CK DATA S: one step from CK on batch S with the chip gradient, Adam on the CPU (oadam, f64)
+> note and on the chip (ggadam, f32); prints `GA P maxd_e12 maxu_e12 rel_e9 resid_e9 tol_e9 adam_ns
+> note loss_micro` and GACMP PASS (resid = max(|d| - 2^-24 |c|) / max |u| < tol = 2^-16) or GACMP FAIL
+> note (exit 46)
+> fn ggacmp to void
+> if ne oargc 5
+> exit 2
+> end
+> ockload 2
+> odopen 3
+> obatch oargu 4
+> put og 10 0
+> p = get og 8
+> ggopen
+> ggupst
+> lg = ggpass true
+> for q ulong ocn p
+> ggkw q p
+> end
+> oadam
+> t0 = monons
+> ggadam
+> t1 = monons
+> for q2 ulong ocn p
+> ggdw q2 p
+> end
+> for k ulong 3
+> put ggam k 0.0f64
+> end
+> for q3 ulong ocn p
+> ggadc q3 p
+> end
+> mu = get ggam 1
+> rel = div get ggam 0 mu
+> res = div get ggam 2 mu
+> tol = div 1.0f64 65536.0f64
+> oputc 71
+> oputc 65
+> oputc 32
+> oputu p
+> oputc 32
+> oputl rmic mul get ggam 0 1000000.0f64
+> oputc 32
+> oputl rmic mul mu 1000000.0f64
+> oputc 32
+> oputl rmic mul rel 1000.0f64
+> oputc 32
+> oputl rmic mul res 1000.0f64
+> oputc 32
+> oputl rmic mul tol 1000.0f64
+> oputc 32
+> oputl sub t1 t0
+> oputc 32
+> oputl rmic lg
+> oputc 10
+> r = nvstop
+> oputc 71
+> oputc 65
+> oputc 67
+> oputc 77
+> oputc 80
+> oputc 32
+> if lt res tol
+> oputc 80
+> oputc 65
+> oputc 83
+> oputc 83
+> oputc 10
+> oflush
+> ret
+> end
+> oputc 70
+> oputc 65
+> oputc 73
+> oputc 76
+> oputc 10
+> oflush
+> exit 46
+> end
+> 
+> note gtrainf CK TRAIN UNTIL EVERY: gtrain with the parameters and Adam state resident on the chip in
+> note f32 (ggadam); only the batch goes up each step. At save points the state comes back to f64 for
+> note ocksave and `T s+1 loss_micro` is printed; GT at the end has the last step's phase times.
+> fn ggtrainf to void
+> if ne oargc 6
+> exit 2
+> end
+> ockload 2
+> odopen 3
+> un = oargu 4
+> ev = oargu 5
+> if eq ev 0
+> exit 2
+> end
+> en = get og 42
+> if lt un en
+> en = un
+> end
+> ggopen
+> ggupst
+> while lt get og 41 en bound 999999
+> s = get og 41
+> obatch s
+> put og 10 0
+> ls = ggpass false
+> t = monons
+> ggadam
+> put ggtm 5 sub monons t
+> s1 = add s 1
+> put og 41 s1
+> if or eq rem s1 ev 0 eq s1 en
+> ggdnst
+> ocksave 2
+> oputc 84
+> oputc 32
+> oputu s1
+> oputc 32
+> oputl rmic ls
+> oputc 10
+> oflush
+> end
+> end
+> ggtms
+> oflush
+> r = nvstop
+> end
+> 
+> note gb10 platform main: gcmp, gtrain, gtrainf and gacmp here, every other command through the CPU
+> note main (lio.om)
+7664a8028,8035
+> if eq w 28831846509999207
+> ggtrainf
+> ret 0
+> end
+> if eq w 482871566695
+> ggacmp
+> ret 0
+> end

@@ -1,0 +1,11 @@
+receipt: init-small
+host_cpu: core 6 (Cortex-X925)
+target: x86linux EMULATED: qemu-x86_64 version 8.2.2 (Debian 1:8.2.2+ds-0ubuntu1.18), binfmt flags PO
+binary: ollm sha256 49b15b591658d7d32b5e9e3d51a27e3ccac921bee90276b991737772412ec228
+source: ollm.om sha256 b99725463daf8c4e7e5580fc24a29fce536ae43e41b932e729cbb5f3fc74cd39
+$ taskset -c 6 nice -n 19 build-rx/ollm init scratch-x86/work/s.ck 256 8 16 2 32 2 2 52 200 1000
+--- output
+I 8400
+--- end
+rc=0 expect=0
+wall_ns=23821727

@@ -1,0 +1,55 @@
+BUILD_OK 5163c1fb204b2f60b074875759df292187d55b263a5193323d190c2a4c6e0895 ../fixv1/x86/build/ollm source_sha256 0fb3487218ff49d74acbbcdf48a123e0598c44b283664eb2ddf3a591c49575e4
+BUILD_OK 728695371da3792eb9e9b29fd3d1fb4524d56b766c9b3ad9a870edf76ddb4869 ../fixv1/x86/build/ollm-mut-a source_sha256 db36481694dab00ef7f4c2effb8328ee8f383efe052803ff2415d0f82eb798d1
+BUILD_OK 925272b0c8edeaaa3c398941165d1e92ecd7a5c225d377b124ee6cfe1ffc6d74 ../fixv1/x86/build/ollm-mut-b source_sha256 240935d8d52daaad68696257bdca807ff0681663730917fb3d3de6c8a69e672b
+BUILD_OK 42ba14558d4b652eae2f238fe63e7721e3fb1c2638096e82e52ac96a42939097 ../fixv1/x86/build/ollm-mut-c source_sha256 c9238eaf89f3af453a236ae65cb32814ab61664162bd5430d86148606a9cc182
+BUILD_OK ac9dd851c7a32cb75bc29962fc300a6b17484b0c71f6d48ffc279a8bfe21bcd6 ../fixv1/x86/build/ollm-var-h5 source_sha256 0c1a287f2a94e340351ec8c66412a1aa26fe2be7611f4d864fca7497266c862c
+BUILD_OK 4c27e8cd2526a223415c7a3725f069316383bd3e148a4eb02f0f149b7a3b095c ../fixv1/x86/build/ollm-var-h7 source_sha256 4f897f137c8cf5134f59e1f7e15a183a2f3cbc2ed28608cfe91ff3e77b558116
+prep rc=0 expect=0 PASS
+prep value 'P 27630 24867 2763 19883834 2220914' PASS
+base rc=0 expect=0 PASS
+base value 'B 4415645 3295113' PASS
+init-v0 rc=0 expect=0 PASS
+init-v0 value 'I 119104' PASS
+train-v0-50 rc=0 expect=0 PASS
+train-v0-50 value 'T 50 3110411' PASS
+resume-init-a rc=0 expect=0 PASS
+resume-init-b rc=0 expect=0 PASS
+resume-a-0-40 rc=0 expect=0 PASS
+resume-b-0-20 rc=0 expect=0 PASS
+resume-b-20-40 rc=0 expect=0 PASS
+refuse-flip-payload rc=14 expect=14 PASS
+refuse-flip-magic rc=11 expect=11 PASS
+refuse-truncated rc=10 expect=10 PASS
+refuse-shape rc=12 expect=12 PASS
+refuse-count rc=13 expect=13 PASS
+refuse-long rc=15 expect=15 PASS
+init-max rc=0 expect=0 PASS
+init-max value 'I 217664' PASS
+eval-max rc=0 expect=0 PASS
+refuse-eval-hugew rc=23 expect=23 PASS
+refuse-grad-hugeoff rc=22 expect=22 PASS
+eval-edge-w3 rc=0 expect=0 PASS
+refuse-eval-edge-w4 rc=23 expect=23 PASS
+grad-edge-o128 rc=0 expect=0 PASS
+refuse-grad-edge-o129 rc=22 expect=22 PASS
+eval-v0 rc=0 expect=0 PASS
+eval-v0 value 'E 50 256 3049318 4399237' PASS
+sample-v0-argmax rc=0 expect=0 PASS
+sample-v0-t800 rc=0 expect=0 PASS
+init-small rc=0 expect=0 PASS
+gcheck rc=0 expect=0 PASS
+init-v0-g0 rc=0 expect=0 PASS
+gcheck-v0-init rc=0 expect=0 PASS
+gcheck-v0-step50 rc=0 expect=0 PASS
+adamck rc=0 expect=0 PASS
+mathck rc=0 expect=0 PASS
+mut-a-gcheck rc=40 expect=40 PASS
+mut-a-gcheck-v0 rc=40 expect=40 PASS
+mut-c-adamck rc=41 expect=41 PASS
+mut-b-gcheck rc=0 expect=0 PASS
+var-h5-gcheck-v0-init rc=40 expect=40 PASS
+var-h5-gcheck-v0-step50 rc=40 expect=40 PASS
+var-h7-gcheck-v0-init rc=40 expect=40 PASS
+var-h7-gcheck-v0-step50 rc=40 expect=40 PASS
+summary: v1/evidence/OMEGALLM/v1/checks/core-x86linux/summary.tsv
+rc=0

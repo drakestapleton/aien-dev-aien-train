@@ -1,0 +1,16 @@
+check 5 (v3 max init vs referee), aarch64 5e20559a..., core 1 (product) / core 2 (referee), nice 19, EXERCISED
+$ ollm init ck0.ck 4096 256 384 12 1536 16 64 1 30000 3000 16
+I 29995392
+rc=0
+	User time (seconds): 6.90
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:07.52
+	Maximum resident set size (kbytes): 703520
+$ python3 tests/omegallm/oracle.py ollm init ref.ck <same args>
+I 29995392
+rc=0
+	User time (seconds): 96.54
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 1:44.28
+	Maximum resident set size (kbytes): 3071476
+cmp ck0.ck ref.ck: equal (719889528 B, sha256 3612c260c850417bba47434c0f5c988bb343ee3e4029ba038a41f618fb12e17d)
+v2 binary 6da13670... init at the same shape:
+rc=12

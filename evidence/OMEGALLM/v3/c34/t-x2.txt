@@ -1,0 +1,3 @@
+$ b-bx/ollm-var-bx train x2.ck ~/handoffs/omega-llm-20261101/data/train.bin 5 5
+T 5 5539913
+rc=0

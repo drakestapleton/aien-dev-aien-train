@@ -1,0 +1,6 @@
+qemu: QEMU emulator version 8.2.2 (Debian 1:8.2.2+ds-0ubuntu1.18)
+ovmf: ad23261d43116abc3747d59a7837fbf578c9586a8993f4eeba064cd07eccb083 OVMF_CODE_4M.fd
+image: 1872bcf2d45716235d69a611ade219a3c43243dda699db0b535031fad48e0e18
+done=1 seconds=4
+vol: 84fad3237cc415c0920c96f53d80caea781ab21568455fcfa1e0ab26389c951a JOB.TXT
+vol: 66c9f71e5b44bdee4f19b6f4b80c3d3e3ba8a89a6fbd13fe45e561795f4ba9c4 OUT.TXT

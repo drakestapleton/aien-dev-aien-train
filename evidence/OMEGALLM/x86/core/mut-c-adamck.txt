@@ -1,0 +1,11 @@
+receipt: mut-c-adamck
+host_cpu: core 6 (Cortex-X925)
+target: x86linux EMULATED: qemu-x86_64 version 8.2.2 (Debian 1:8.2.2+ds-0ubuntu1.18), binfmt flags PO
+binary: ollm-mut-c sha256 cd197778d01c7e27773327407c8eb304eddca6854daac2f9998d4cd1b83f7ec4
+source: ollm-mut-c.om sha256 ed793253d4e79bac1af04de39c9aab1508e5833a09a4c5c573128102899ac436
+$ taskset -c 6 nice -n 19 build-rx/ollm-mut-c adamck
+--- output
+A 5 3fe473698d936acd 639088417544678
+--- end
+rc=41 expect=41
+wall_ns=30588913

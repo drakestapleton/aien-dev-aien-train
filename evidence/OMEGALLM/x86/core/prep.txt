@@ -1,0 +1,13 @@
+receipt: prep
+host_cpu: core 6 (Cortex-X925)
+target: x86linux EMULATED: qemu-x86_64 version 8.2.2 (Debian 1:8.2.2+ds-0ubuntu1.18), binfmt flags PO
+binary: ollm sha256 49b15b591658d7d32b5e9e3d51a27e3ccac921bee90276b991737772412ec228
+source: ollm.om sha256 b99725463daf8c4e7e5580fc24a29fce536ae43e41b932e729cbb5f3fc74cd39
+$ taskset -c 6 nice -n 19 build-rx/ollm prep data/TinyStoriesV2-GPT4-valid.txt data/train.bin data/held.bin
+--- output
+P 27630 24867 2763 19883834 2220914
+--- end
+rc=0 expect=0
+wall_ns=3060134874
+101b41c6d9396e353d4027759252fd8c1c5ec26ae8bec8834af2c9ae07d62fef  data/train.bin
+729e0a4a8854934ee6000ead2b367494c6b4c9eb52d554f81d6f7f44403338ed  data/held.bin

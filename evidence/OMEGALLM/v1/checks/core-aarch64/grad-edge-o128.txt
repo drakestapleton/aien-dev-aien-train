@@ -1,0 +1,10 @@
+receipt: grad-edge-o128
+host_cpu: core 5 (Cortex-X925)
+binary: ollm sha256 b9b4e02d80e589227716c6e069529b6ea941cd1bdab5f3a9ea2dcc606b79997b
+source: ollm.om sha256 9281bb19e196c227d19553a101dbb3a6c228249f1d8d8e8de30f0d3f495c52c4
+$ taskset -c 5 nice -n 19 ../fixv1/a64/build/ollm grad ../fixv1/a64/work/ra.ck ../fixv1/a64/work/train-193.bin ../fixv1/a64/work/offs-128.bin ../fixv1/a64/work/e128.gr
+--- output
+G 4009de4aaaf5fcb1 3233541
+--- end
+rc=0 expect=0
+wall_ns=447599389

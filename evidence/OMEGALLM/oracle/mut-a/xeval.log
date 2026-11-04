@@ -1,0 +1,7 @@
+$ taskset -c 8 nice -n 19 python3 aien-train/tests/omegallm/oracle.py xeval --ollm build/ollm-mut-a --held scratch-oracle/work/mut-a/oracle-held.bin --receipt aien-train/evidence/OMEGALLM/oracle/mut-a/xeval.json
+$ build/ollm-mut-a eval scratch-oracle/work/mut-a/tmp/tmppgv5sqt4/ck scratch-oracle/work/mut-a/oracle-held.bin 4
+  rc=0 0.01s stdout='E 5 4 6285327 9067810\n'
+PASS rc 0
+PASS stdout
+XEVAL PASS
+rc=0

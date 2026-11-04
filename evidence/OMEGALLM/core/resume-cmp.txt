@@ -1,0 +1,4 @@
+$ cmp scratch-core/work/ra.ck scratch-core/work/rb.ck
+rc=0 expect=0
+9503e3e0d177bb498a7e700d03359c2c7203634bf098ff0f899aa87a2f14feef  scratch-core/work/ra.ck
+9503e3e0d177bb498a7e700d03359c2c7203634bf098ff0f899aa87a2f14feef  scratch-core/work/rb.ck

@@ -1,0 +1,12 @@
+$ taskset -c 8 nice -n 19 python3 aien-train/tests/omegallm/oracle.py xinit --ollm build/ollm-mut-b --receipt aien-train/evidence/OMEGALLM/oracle/mut-b/xinit.json
+$ build/ollm-mut-b init scratch-oracle/work/mut-b/tmp/tmp6t65z8br/ck 256 8 16 2 32 2 2 42 50 3000
+  rc=0 0.01s stdout='I 8400\n'
+PASS rc 0
+PASS stdout 'I P'
+PASS params bit-identical
+PASS m, v zero
+PASS header
+PASS lr bits = 3000/1e6
+PASS whole file sha256 identical
+XINIT PASS
+rc=0

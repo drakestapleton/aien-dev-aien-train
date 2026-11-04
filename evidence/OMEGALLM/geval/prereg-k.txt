@@ -1,0 +1,20 @@
+prereg-k written 2026-11-02T07:20:59Z, before window gg-ev3. The geval gate of prereg.txt is unchanged.
+Diagnosis (gd-night.txt, gd-max.txt, scratch gdiag, binary 03e80b54): mean over rows x1e9 of
+dm dly dlogsum dloss (sum_p_chip - 1) d(ly-m): night -341 -257 -10447 -10531 10514 84;
+max -180 -124 -10401 -10457 10435 56. The chip's f32 sum of exp is low by ~1.04e-5 relative;
+the rest of the loss error is ~1e-7. Cause: sequential f32 sum drops terms below half an ulp of
+the running sum. Fix: Kahan sum in grce (gr.om OMUTK 1); mutant k restores the plain sum.
+Predictions for product f671ba7a:
+ P1 gdiag night and max: |dlogsum| < 1000 and |sum_p - 1| < 1000 (x1e9).
+ P2 geval night gtrainf vs CPU 1826877 and night gtrain vs CPU 1824653: |d| < 10 micro-nats (gate).
+ P3 mutant k geval night gtrainf: |d| >= 10 (the control discriminates).
+ P4 gcmp2 max s7 / night s7 / small s3 PASS; mutants g m f FAIL rc 47 at max s7.
+ P5 gacmp ck250 s7 PASS; mutant h FAIL rc 46.
+ P6 geval max ck9000 repeat prints the same E line.
+
+Addendum 2026-11-02T07:24:46Z after window gg-ev3 (20261102T072103Z-3376a7), receipts in a1/:
+product f671ba7a (Kahan in R69-R71) died in kernel 21 (CE) on every run: GX 121 -110 (launch
+timeout), rc 84; so did mutant f (also Kahan). Mutant k 5b4a9b87 (plain sum, R69 only zeroed) ran: E 9000 4486 1826866 681506 and
+E 9000 2243 1445455 539222, the gg-ev1 values. Kernels are launched with 72 GPRs; no existing gr
+kernel used a register above R68. Change: Kahan moved to R40-R42 (unused in grce), source c9e6d01e,
+product 576bf296. Predictions P1-P6 unchanged; additionally P7: no rc 84.

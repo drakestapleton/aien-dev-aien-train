@@ -1,0 +1,8 @@
+Static check of mutant t (OMUTT 0) at aien-train 574e78a, slot 32 (64x64 GEMM), 2026-11-02.
+Product: git archive HEAD tree. Mutant: same tree with gk.om 'const OMUTT ulong 1' -> 'const OMUTT ulong 0' (the build.sh --mutant t substitution).
+Command: OMC=<omc 2c824805...> OUT=<dir> SHAPE="<shape>" sh tests/omegallm/gpu-disasm.sh 32; counts are grep -c FFMA and grep -c 'FFMA.*reuse' over the listing.
+
+product shape "256 32 64 2 128 2": SLOT 32 bytes 15040 sha256 453c12fd07f805f88aa599cbe8eb28723803da375bed3103534202ca2f60f1e4 FFMA 512 reuse 448
+mutant-t shape "256 32 64 2 128 2": SLOT 32 bytes 15024 sha256 10f87fbeca4e59fc2ad0c70dac70fda00a7b6a042b9de381e02c3fa9a75cc2d6 FFMA 511 reuse 447
+product shape "4096 256 256 8 1024 8": SLOT 32 bytes 15040 sha256 453c12fd07f805f88aa599cbe8eb28723803da375bed3103534202ca2f60f1e4 FFMA 512 reuse 448
+mutant-t shape "4096 256 256 8 1024 8": SLOT 32 bytes 15024 sha256 10f87fbeca4e59fc2ad0c70dac70fda00a7b6a042b9de381e02c3fa9a75cc2d6 FFMA 511 reuse 447

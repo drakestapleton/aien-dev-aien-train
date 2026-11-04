@@ -1,0 +1,54 @@
+{
+ "check": "xbase",
+ "binary": "build/ollm",
+ "binary_sha256": "b729cc35faa6b3543ff1893c64e8a6feafc224feba7b99f7f13353e1d2179f22",
+ "oracle_sha256": "3edfb60718c1b7c786275e16d4d593cc6418f591be4f30c5a5e17e0555c0d0fa",
+ "started": "2026-11-01T15:59:03Z",
+ "affinity": [
+  8
+ ],
+ "nice": 19,
+ "commands": [
+  {
+   "argv": [
+    "build/ollm",
+    "base",
+    "scratch-oracle/work/real/oracle-train.bin",
+    "scratch-oracle/work/real/oracle-held.bin"
+   ],
+   "rc": 0,
+   "stdout": "B 4415645 3295113\n",
+   "stderr": "",
+   "seconds": 0.295
+  }
+ ],
+ "results": [
+  {
+   "rc": 0,
+   "name": "rc 0",
+   "ok": true
+  },
+  {
+   "got": [
+    "B",
+    "4415645",
+    "3295113"
+   ],
+   "want": [
+    "B",
+    "4415645",
+    "3295113"
+   ],
+   "uni_bpb": 4.415645449094261,
+   "bi_bpb": 3.2951126836573197,
+   "name": "stdout micro values",
+   "ok": true
+  }
+ ],
+ "verdict": "PASS",
+ "data": {
+  "train": "101b41c6d9396e353d4027759252fd8c1c5ec26ae8bec8834af2c9ae07d62fef",
+  "held": "729e0a4a8854934ee6000ead2b367494c6b4c9eb52d554f81d6f7f44403338ed"
+ },
+ "finished": "2026-11-01T15:59:05Z"
+}

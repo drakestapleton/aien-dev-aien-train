@@ -1,0 +1,6 @@
+binary: 66df07bbe4e7672701b77f306eba6acf5ff22dab0ba9e87e6c947b6130c2f74c
+ck: 8e6a879b8c7f2ef467ae5a950529aa016ffd9f22caf2458eb614e435d7650dd8
+cmd: gcmp2 train.dec 3
+GX 99 -110 42 3 0 0 1
+rc=84
+wall_ns=5660834872

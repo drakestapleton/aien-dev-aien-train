@@ -1,0 +1,88 @@
+{
+ "check": "xinit",
+ "binary": "build/ollm-mut-a",
+ "binary_sha256": "69825ec63bde79737483561760b2fa1caabbb019a5019210e84d14ac6f2d93d2",
+ "oracle_sha256": "3edfb60718c1b7c786275e16d4d593cc6418f591be4f30c5a5e17e0555c0d0fa",
+ "started": "2026-11-01T16:00:10Z",
+ "affinity": [
+  8
+ ],
+ "nice": 19,
+ "commands": [
+  {
+   "argv": [
+    "build/ollm-mut-a",
+    "init",
+    "scratch-oracle/work/mut-a/tmp/tmp2v64jsrv/ck",
+    "256",
+    "8",
+    "16",
+    "2",
+    "32",
+    "2",
+    "2",
+    "42",
+    "50",
+    "3000"
+   ],
+   "rc": 0,
+   "stdout": "I 8400\n",
+   "stderr": "",
+   "seconds": 0.007
+  }
+ ],
+ "results": [
+  {
+   "rc": 0,
+   "name": "rc 0",
+   "ok": true
+  },
+  {
+   "stdout": "I 8400\n",
+   "name": "stdout 'I P'",
+   "ok": true
+  },
+  {
+   "ndiff": 0,
+   "first": [],
+   "name": "params bit-identical",
+   "ok": true
+  },
+  {
+   "name": "m, v zero",
+   "ok": true
+  },
+  {
+   "header": {
+    "c": {
+     "V": 256,
+     "T": 8,
+     "D": 16,
+     "H": 2,
+     "F": 32,
+     "L": 2,
+     "B": 2
+    },
+    "seed": 42,
+    "step": 0,
+    "total": 50
+   },
+   "name": "header",
+   "ok": true
+  },
+  {
+   "got": "3f689374bc6a7efa",
+   "ref": "3f689374bc6a7efa",
+   "name": "lr bits = 3000/1e6",
+   "ok": true
+  },
+  {
+   "got": "94aac4e427df3343667b7fea307a81a2591f18899d62f39e5021faf19ce16acd",
+   "ref": "94aac4e427df3343667b7fea307a81a2591f18899d62f39e5021faf19ce16acd",
+   "name": "whole file sha256 identical",
+   "ok": true
+  }
+ ],
+ "verdict": "PASS",
+ "finished": "2026-11-01T16:00:10Z"
+}

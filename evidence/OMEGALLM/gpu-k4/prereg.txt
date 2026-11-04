@@ -1,0 +1,33 @@
+k4 pre-registration (written before window open, 2026-11-02)
+Change under test: gr.om CE kernel 21 (grce) runs one warp per row instead of one thread per row.
+Lane l holds columns l + 32u and reads 8 coalesced 128-byte lines per step of 256 columns (k3 read
+8 consecutive words per thread, 32 rows apart per warp). Pass 1: lane max, then 5-step SHFL.BFLY warp
+max. Pass 2: per-lane Kahan sum of e = ex2(l log2e - m log2e) with no store (k3 stored e), lane total
+s - c, then 5-step warp sum. Pass 3 recomputes e with the same FFMA and MUFU.EX2 as pass 2, scales by
+sc/sum and stores. So one full-row write pass is gone: traffic is 3 reads + 1 write of R x V f32 (k3: 3
+reads + 2 writes). The lane owning column y (y & 31) subtracts sc from L[y] and writes stats; the
+other lanes exit first. The sum order changed (per lane, then tree), so results are NOT
+bit-identical to k3. gg.om launches R*32 threads (arg 0 = R*32). grall refuses V not a multiple of 256.
+New build-time mutant x (gr.om OMUTX 0): the CE warp sum skips the lane-1 butterfly step.
+Mutant k (OMUTK 0) now removes Kahan from each lane's 128-term sum. It is run as an observation
+only. It is NOT a control any more: [INFERENCE] its bias should be far below the 10 µnat gate.
+Static checks done before the window (gpu-disasm.sh, nvdisasm -b SM121): the k4 dump differs from the
+k3 (1d241c38) dump only in slot 21; slot 21 has 10 SHFL.BFLY (5 FMNMX max, 5 FADD sum), pass 3
+recomputes R65 = R43 * R29 after the sum (grwred scratch R65); mutant x slot 21 has 9 SHFL.BFLY, the
+sum steps being 0x10 0x8 0x4 0x2 (lane-1 step missing). No other slot differs.
+Binaries (omc e5b32567, sources /tmp/wt-gpu HEAD 1d241c38 + uncommitted gr.om/gg.om/build.sh):
+ K4 /tmp/gk/k4/bin/ollm-gb10            72289c19  product
+ KX /tmp/gk/k4/bin/ollm-mut-x-gb10      f6a7e8ec  mutant x
+ KK /tmp/gk/k4/bin/ollm-mut-k-gb10      c81e340c  mutant k (observation)
+ K3 /tmp/gk/k3/bin/ollm-gb10            836d3be1  k3 product (1d241c38), timing base in the same window
+Expectations (tolerances unchanged):
+ K4: gc2-small-s3, gc2-max-s7, ga-max rc 0
+ KX: gc2-small-s3 and gc2-max-s7 FAIL rc 47; geval r5 ck9000 |E - 1445466| >= 10
+ K4 geval r5 ck9000: |E - 1445466| < 10 (CPU eval value, the geval gate); r6 ck30000 E against the
+   chip value 1338156 (the ck30000 CPU eval is still running), same |d| < 10 expected.
+ KK geval ck9000 and ck30000: E reported, no expectation, not a gate.
+ gprof K3 and K4 in this window: id 21 wait_ns compared (k3 window prof-K3: GP 21 256 1 1 0 0 0
+   13864116); K4 id 21 launches at gx R*32/64. Expected lower for K4; no number pre-registered.
+ t200 from r6 ck9000, K3 then K4: both rc 0; K4 T 9200 loss reported against K3 (not expected equal:
+   reduction order changed); K4 wall_ns expected below K3's in the same window. Speed is non-quiet.
+A FAIL of any product gate is kept as a receipt and stops the commit.

@@ -1,0 +1,20 @@
+rung 7 (v2 shape) run prereg, written before the first training window opens.
+Training binary P2 /tmp/gk/r7/gpu2/ollm-gb10 1853303e82e9770822e643d0a22e5af9d3c7377a1a8b2c5cbf55ba6774814f0f,
+started only if gate window gg-r7g2 meets its run-start rule (../g2/prereg.txt).
+Start checkpoint ck.bin = /tmp/gk/r7/ckL0.bin fc8835fe... = init 4096 256 384 12 1536 8 64 1 30000 3000 16
+(P 15,833,472; r6 used the same command with D 256, H 8, F 1024, P 7,409,920). Same seed, data,
+LR schedule, batch, 30000 steps. Legs: 0->250, then 3000 steps, stopping exactly at 2000, 9000, 30000;
+chip geval (held.tok, W 2243, merges4096.bin) after every leg.
+
+Baseline (rung 6 chip geval, same held set): 250 2840107, 2000 1797226, 9000 1502144, 30000 1338156.
+
+P1 (the claim) final E at 30000 < 1338156 micro-nats.
+P2 (stop rule) E at 2000 < 1797226; otherwise the run stops (drive.sh exit 5) and P1 is not claimed.
+P3 E at each of 250, 2000, 9000, 30000 is below rung 6's E at the same step.
+P4 the chip geval curve decreases strictly from leg to leg.
+P5 CPU eval of ck30000 with the v2 CPU build (/tmp/gk/r7/cpu/ollm 6da13670..., eval CK held.tok 2243
+   merges4096.bin, one core, nice 19) gives an E line equal to the chip's within 10 micro-nats.
+P6 summed gtrainf wall time 250->30000 < 11,219 s (rung 6's chip time over the same steps);
+   modeled 7,931 s from the gg-r7g rate 0.26658 s/step (Wolfram: 29750*0.266575362084 -> 7930.6).
+   Timings are non-quiet.
+Any failure is reported as a failure; no leg is rerun to replace a failing receipt.

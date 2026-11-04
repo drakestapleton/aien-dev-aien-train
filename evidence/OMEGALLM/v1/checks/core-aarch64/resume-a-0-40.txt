@@ -1,0 +1,10 @@
+receipt: resume-a-0-40
+host_cpu: core 5 (Cortex-X925)
+binary: ollm sha256 b9b4e02d80e589227716c6e069529b6ea941cd1bdab5f3a9ea2dcc606b79997b
+source: ollm.om sha256 9281bb19e196c227d19553a101dbb3a6c228249f1d8d8e8de30f0d3f495c52c4
+$ taskset -c 5 nice -n 19 ../fixv1/a64/build/ollm train ../fixv1/a64/work/ra.ck ../fixv1/a64/data/train.bin 40 40
+--- output
+T 40 3448276
+--- end
+rc=0 expect=0
+wall_ns=17458417669

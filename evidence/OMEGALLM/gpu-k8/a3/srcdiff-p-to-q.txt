@@ -1,0 +1,31 @@
+6361a6362,6383
+> note QMD word 36 (QMDV05_00 bits 1152-1180): SHARED_MEMORY_SIZE_SHIFTED7, then the MIN (32 KiB, hw 9),
+> note MAX (100 KiB, hw 26) and TARGET SM shared-memory configs, hw value = KiB / 4 + 1 from the GB10
+> note carveouts 0 8 16 32 64 100. TARGET is the smallest carveout that holds the kernel's shared memory
+> note times its register-limited blocks per SM, 65536 / (gkgpr * gkthr). Mesa NAK qmd.rs
+> note gv100_get_hw_smem_sizes sizes TARGET the same way from warp-limited workgroups; the register limit is
+> note the tighter bound here. A fixed 32 KiB TARGET under-sized the 32x32 GEMM (9 blocks * 4608 B) and the
+> note pipelined 64x64 GEMM (6 * 8704 B) (evidence/OMEGALLM/gpu-k8). Only ids with gkthr set may call this.
+> fn gksmw id uint to uint
+> sm = div add get gksm id 127 128
+> if lt sm 8
+> sm = 8
+> end
+> need = mul mul div 65536 mul get gkgpr id get gkthr id sm 128
+> tg = uint 9
+> if gt need 32768
+> tg = 17
+> end
+> if gt need 65536
+> tg = 26
+> end
+> ret or or 3426304 shl tg 23 sm
+> end
+6370,6374c6392
+< sm = div add get gksm id 127 128
+< if lt sm 8
+< sm = 8
+< end
+< put gbq1 36 or 78923776 sm
+---
+> put gbq1 36 gksmw id
