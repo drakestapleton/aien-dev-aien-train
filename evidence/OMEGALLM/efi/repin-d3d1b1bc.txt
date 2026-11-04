@@ -1,0 +1,17 @@
+# 2026-11-04, GB10 core 4 (nice 19), aien-train df1fd9a: omc rebuilt from omega-mv main d3d1b1bc (#1015 merged)
+# omega-mv tree from: git -C omega-efi archive d3d1b1bc | tar -x -C <dir>; paths below are relative to the clone parent
+$ git rev-parse d3d1b1bc^{tree} 19ee7e99^{tree}
+9f878ea48e2d1d6e99bf3cba84002e905d4e15f1
+9f878ea48e2d1d6e99bf3cba84002e905d4e15f1
+$ git merge-base --is-ancestor 5ce9ecaa d3d1b1bc; echo rc=$?
+rc=0
+$ (cd <dir> && nice -n 19 taskset -c 4 sh seed/omega-from-seed.sh) | tail -1
+RC=0
+$ sha256sum <dir>/seed/out/omc
+b4f45121f6c6d5d8a6ed0f5c4f3934b7cc4bec369bfa89523699bd33928f9b55
+$ TARGET=x86efi OMC=<dir>/seed/out/omc OUT=build-d3 CORE=4 sh aien-train/tests/omegallm/build.sh [--mutant b]
+2474a84245358e8921c41bd5b007ed3b153affa2b6d6328e46a0dc89210d8b7f build-d3/ollm.efi
+0bf38badd67a3b26d9ea877d9ae7202251ee37b41b3de77b683eb00e52d458ff build-d3/ollm-mut-b.efi
+$ cmp build-d3/ollm.efi <ollm.efi of build.txt, 2474a842…>
+EQUAL rc=0
+EQUAL rc=0 (mut-b)

@@ -1,0 +1,40 @@
+# stick partition copy (sudo sh ollm-readback.sh on the MacBook, 2026-11-01T23:42:48Z): dd of /dev/rdisk4s1
+size 99597824 bytes = GPT partition 1 sectors 2048..196574 of the staged image
+sha256 c504af04413153c8f62d7e51fbdcb69f040e10ff13f60577ecfa8dc6fb40b069
+# same range of the staged image aien-imac-ollm-2474a842.img (2b9a420a...)
+sha256 822936dc137100a8d252d323236a23aeaf296e58875f7f4eb7252c4f1af09343
+# fsck.vfat -n (dosfstools 4.2) on the stick copy
+fsck.fat 4.2 (2021-01-31)
+stick.img: 14 files, 94705/191501 clusters
+fsck rc=0
+# fsck.vfat -n on the staged partition
+fsck.fat 4.2 (2021-01-31)
+staged.img: 10 files, 51130/191501 clusters
+fsck rc=0
+# metadata sectors that differ (cmp -l, 1-based byte, octal): boot 0, backup boot 6 and backup FSInfo 7 equal; FSInfo 1:
+489 123  34
+490  44 172
+491   2   1
+493 274 364
+494 307 161
+495   0   1
+# both FAT copies on the stick equal:
+equal
+# MTOOLS_SKIP_CHECK=1 mdir -i stick.img ::/OLLM
+ Volume in drive : is ALLEN      
+ Volume Serial Number is 7B1A-4F5E
+Directory for ::/OLLM
+
+.            <DIR>     2026-10-31  19:00 
+..           <DIR>     2026-10-31  19:00 
+JOB      TXT       678 2026-10-31  19:00 
+CK       BIN   2858608 2026-10-31  19:00 
+STORIES  TXT  22502601 2026-10-31  19:00 
+MATHREF  TXT    185004 2026-10-31  19:00 
+OUT      TXT      3346 2026-11-01  23:38 
+TR       BIN  19883834 2026-11-01  23:37 
+HE       BIN   2220914 2026-11-01  23:37 
+S        CK     201712 2026-11-01  23:37 
+       10 files          47 856 697 bytes
+                         49 559 552 bytes free
+

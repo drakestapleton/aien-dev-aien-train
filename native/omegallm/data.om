@@ -1,0 +1,284 @@
+note SPDX-License-Identifier: AGPL-3.0-only
+note omegallm data.om (aien-train#52): argument paths, whole-file data reads, prep (CONTRACT
+note section 4), the splitmix64 batch rule and the add-one byte baselines. Needs math.om before it.
+note A data file lives in two byte pools (od0 then od1), 2^25 bytes in all; a byte is read by odb.
+const ODHALF ulong 16777216
+const ODCAP ulong 33554432
+global od0 uchar 16777216
+global od1 uchar 16777216
+global odn ulong 1
+global oarg uchar 4100
+global ochk uchar 65536
+global obx uchar 1024
+global oby uchar 1024
+global owb0 uchar 65536
+global owb1 uchar 65536
+global owbn ulong 2
+global ocnt ulong 65536
+global ocnu ulong 256
+global ocnr ulong 256
+global oseps uchar 16
+
+note exit codes of this unit: 2 usage, 20 data file empty or too short for T, 21 data file over
+note 2^25 bytes, 70 I/O.
+
+note argument i into oarg; returns its length (1 .. 4096) or exits 2.
+fn oargp i ulong to ulong
+r = oargr i
+if or le r 0 gt r 4096
+exit 2
+end
+ret ulong r
+end
+
+note argv[i] as an unsigned decimal of 1 .. 19 digits.
+fn oargu i ulong to ulong
+n = oargp i
+if gt n 19
+exit 2
+end
+v = ulong 0
+for k ulong n
+c = ulong get oarg k
+if or lt c 48 gt c 57
+exit 2
+end
+v = add mul v 10 sub c 48
+end
+ret v
+end
+
+fn odb i ulong to ulong
+if lt i ODHALF
+ret ulong get od0 i
+end
+ret ulong get od1 sub i ODHALF
+end
+
+fn odset i ulong c ulong to void
+if lt i ODHALF
+put od0 i uchar c
+else
+put od1 sub i ODHALF uchar c
+end
+end
+
+note prep output: two buffered writers (k = 0 TRAIN, k = 1 HELD); owopen, owflush and owclose are
+note the platform unit's (lio.om, eio.om).
+fn owbyte k ulong c ulong to void
+n = get owbn k
+if ge n 65536
+owflush k
+n = ulong 0
+end
+if eq k 0
+put owb0 n uchar c
+else
+put owb1 n uchar c
+end
+put owbn k add n 1
+end
+
+note 1 when the separator <|endoftext|> starts at p (p + 13 <= n).
+fn oissep p ulong n ulong to bool
+if gt add p 13 n
+ret false
+end
+for k ulong 13
+if ne odb add p k ulong get oseps k
+ret false
+end
+end
+ret true
+end
+
+fn owsp c ulong to bool
+ret or or eq c 9 eq c 10 or eq c 13 eq c 32
+end
+
+note Emit story [a, e) after trimming whitespace; an empty story is dropped. st[0..4] count
+note stories, train stories, held stories, train bytes, held bytes. A story over 999999 bytes is
+note refused with exit 24 (the TinyStories file is far below; every loop here is then bounded).
+fn ostory a ulong e ulong st edit ulong 8 to void
+if gt sub e a 999999
+exit 24
+end
+lo = a
+hi = e
+while lt lo hi bound 999999
+if not owsp odb lo
+break
+end
+lo = add lo 1
+end
+while gt hi lo bound 999999
+if not owsp odb sub hi 1
+break
+end
+hi = sub hi 1
+end
+if lt lo hi
+k = ulong 0
+if eq rem get st 0 10 9
+k = ulong 1
+end
+put st 0 add get st 0 1
+put st add k 1 add get st add k 1 1
+for i ulong sub hi lo
+owbyte k odb add lo i
+end
+owbyte k 0
+put st add k 3 add add get st add k 3 sub hi lo 1
+end
+end
+
+note `<|endoftext|>` = 60 124 101 110 100 111 102 116 101 120 116 124 62.
+fn oseptab to void
+put oseps 0 60
+put oseps 1 124
+put oseps 2 101
+put oseps 3 110
+put oseps 4 100
+put oseps 5 111
+put oseps 6 102
+put oseps 7 116
+put oseps 8 101
+put oseps 9 120
+put oseps 10 116
+put oseps 11 124
+put oseps 12 62
+end
+
+note prep IN TRAIN HELD. The scan visits each byte once: 64 outer passes of at most 999999
+note inner passes cover the 2^25-byte maximum input.
+fn cmdprep to void
+if ne oargc 5
+exit 2
+end
+oseptab
+n = odread 2
+owopen 0 3
+owopen 1 4
+st = new ulong 8 0
+a = ulong 0
+p = ulong 0
+for o ulong 64
+q = ulong 0
+while and lt p n lt q 999999 bound 999999
+q = add q 1
+if eq odb p 60
+if oissep p n
+ostory a p st
+p = add p 13
+a = p
+continue
+end
+end
+p = add p 1
+end
+end
+ostory a n st
+owclose 0
+owclose 1
+oputc 80
+for i ulong 5
+oputc 32
+oputu get st i
+end
+oputc 10
+oflush
+end
+
+note Batch for step s (CONTRACT section 4): x and y for b = 0..B-1 into obx/oby (stride T).
+note OMUTB is the target offset: 1 in the product, 2 in mutant b (targets shifted by one).
+const OMUTB ulong 1
+fn obatch s ulong to void
+bb = get og 6
+tt = get og 1
+n = get odn 0
+sd = get og 40
+for b ulong bb
+o = rem smx xor sd mul add mul s bb b 11400714819323198485 sub n tt
+obrow b o
+end
+end
+
+fn obrow b ulong o ulong to void
+tt = get og 1
+for t ulong tt
+put obx add mul b tt t uchar odb add o t
+put oby add mul b tt t uchar odb add add o t OMUTB
+end
+end
+
+note base TRAIN HELD (CONTRACT section 7 and agreed reading A5): unigram and bigram add-one
+note counts over all TRAIN bytes and all N-1 adjacent TRAIN pairs; scored on HELD targets 1..M-1.
+fn cmdbase to void
+if ne oargc 4
+exit 2
+end
+n = odread 2
+if lt n 2
+exit 20
+end
+for o ulong 64
+for i ulong 524288
+j = add mul o 524288 i
+if ge j n
+break
+end
+obfit j
+end
+end
+m = odread 3
+if lt m 2
+exit 20
+end
+su = 0.0f64
+sb = 0.0f64
+dn = f64 add n 256
+for o2 ulong 64
+for i2 ulong 524288
+j2 = add mul o2 524288 i2
+if ge j2 m
+break
+end
+if gt j2 0
+su = add su obsu j2 dn
+sb = add sb obsb j2
+end
+end
+end
+fm = f64 sub m 1
+oputc 66
+oputc 32
+oputl rmic div div neg su fm 0.6931471805599453
+oputc 32
+oputl rmic div div neg sb fm 0.6931471805599453
+oputc 10
+oflush
+end
+
+note count TRAIN byte j and the pair (j-1, j)
+fn obfit j ulong to void
+c = odb j
+put ocnu c add get ocnu c 1
+if gt j 0
+pv = odb sub j 1
+q = add mul pv 256 c
+put ocnt q add get ocnt q 1
+put ocnr pv add get ocnr pv 1
+end
+end
+
+note log of the unigram probability (c+1)/(N+256) of HELD byte j
+fn obsu j ulong dn f64 to f64
+ret flog div f64 add get ocnu odb j 1 dn
+end
+
+note log of the bigram probability (c+1)/(row+256) of HELD pair (j-1, j)
+fn obsb j ulong to f64
+pv = odb sub j 1
+q = add mul pv 256 odb j
+ret flog div f64 add get ocnt q 1 f64 add get ocnr pv 256
+end

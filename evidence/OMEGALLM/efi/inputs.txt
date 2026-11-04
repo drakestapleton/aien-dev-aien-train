@@ -1,0 +1,4 @@
+6874bae9a4c1a4e7edcf0e53b86c17817e9cf881fc75ff2368da457b80c0585d  data/TinyStoriesV2-GPT4-valid.txt
+ddf790fc0dd10372746a58fbf8b1754b2e4b3b80c9afbc075df7662d51b8159b  run/v0/ck-20000.bin
+3ecc26a3cdf64d640e098eb057e2adfbe390e78fef20b64d5f83e5fa907e961a  aien-train/tests/omegallm/mathref.txt
+8401538ea39192d22f877130a4ecba35a71396dce935dd08d3cc81b5dd3cb3bf  aien-train/tests/omegallm/efi-job.txt

@@ -1,0 +1,49 @@
+# value-line comparison of core/ (AArch64 b729cc35, committed) and x86/core/ (x86linux 49b15b59, EMULATED), made 2026-11-04 on DGX Spark core 4 (nice 19) from aien-train e08443c
+# all receipt .txt except build.txt and host.txt; excluded lines: those starting target:, binary:, source:, wall_ns=, host_cpu: ($ command lines kept); paths normalised: build-rx/ -> build/, scratch-x86/work -> scratch-core/work
+# per file: first 16 hex of sha256 of the normalised text: grep -avE '^(target:|binary:|source:|wall_ns=|host_cpu:)' F | sed -e 's|build-rx/|build/|g' -e 's|scratch-x86/work|scratch-core/work|g' | sha256sum
+EQUAL adamck.txt 031d66ab48e1fa76
+EQUAL base.txt fc2c02d204c857b2
+EQUAL data-sha256.txt a0f42761a2dc33d1
+EQUAL eval-edge-w3.txt 4132e1ccd2c282da
+EQUAL eval-max.txt e1130c85c603b1a1
+EQUAL eval-v0.txt 7cacf06de47887fa
+EQUAL gcheck.txt 22e3587f745dfc50
+EQUAL gcheck-v0-init.txt 0f6ba5afe192d2f6
+EQUAL gcheck-v0-step50.txt ad8474749f6f9fc4
+EQUAL grad-edge-o128.txt c0051c31d6a70caf
+EQUAL init-max.txt fd4e54bd521c8154
+EQUAL init-small.txt 7af4574ec72fedbf
+EQUAL init-v0-g0.txt 77d7341f69d6120e
+EQUAL init-v0.txt f7c7cbb91b7254b2
+EQUAL mathck.txt 1f4cf5ce7280ac61
+EQUAL mut-a-gcheck.txt ec7df112d54500e9
+EQUAL mut-a-gcheck-v0.txt 5dd1a25d15c45f3e
+EQUAL mut-b-gcheck.txt 4e184ce457926de3
+EQUAL mut-c-adamck.txt fc03d1bf6ca40e51
+EQUAL prep.txt 6726df3061a796c8
+EQUAL refuse-count.txt e87182e09050f5e8
+EQUAL refuse-eval-edge-w4.txt 00c00fa00653d7bb
+EQUAL refuse-eval-hugew.txt fbac1605a9ffbf8e
+EQUAL refuse-flip-diff.txt 0c7560b7f6cf09ce
+EQUAL refuse-flip-magic.txt 3eacebf1f2501b22
+EQUAL refuse-flip-payload.txt 7628c578dd91f903
+EQUAL refuse-grad-edge-o129.txt 42b55ed736c141f2
+EQUAL refuse-grad-hugeoff.txt c7c6eca56f22e1f3
+EQUAL refuse-long.txt 64cd3737d5eb73cd
+EQUAL refuse-shape.txt 74fcb89ef0c33d88
+EQUAL refuse-truncated.txt 20bd3a441c159a92
+EQUAL resume-a-0-40.txt 05043c1a1b419c96
+EQUAL resume-b-0-20.txt 94f6261a7f4f593e
+EQUAL resume-b-20-40.txt dc85fbcb87174e7f
+EQUAL resume-cmp.txt ad13f535b959e6c7
+EQUAL resume-init-a.txt da39f7563e9c69d6
+EQUAL resume-init-b.txt 09c2651648509d74
+EQUAL sample-v0-argmax.txt 8cf40ff2dfeebb57
+EQUAL sample-v0-t800.txt 237aa0f039aed14d
+EQUAL train-v0-50.txt d07a1563490b67e0
+EQUAL var-h5-gcheck-v0-init.txt 76cad6b8fedd6364
+EQUAL var-h5-gcheck-v0-step50.txt 682c602148dddff2
+EQUAL var-h7-gcheck-v0-init.txt e6ab0977fda5c033
+EQUAL var-h7-gcheck-v0-step50.txt d1a3e2edbf7ca291
+compared=44 different=0
+summary: 48 PASS

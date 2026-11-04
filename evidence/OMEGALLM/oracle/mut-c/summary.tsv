@@ -1,0 +1,8 @@
+check	rc	command
+selftest	0	taskset -c 8 nice -n 19 python3 aien-train/tests/omegallm/oracle.py selftest
+xprep	0	taskset -c 8 nice -n 19 python3 aien-train/tests/omegallm/oracle.py xprep --ollm build/ollm-mut-c --data data/TinyStoriesV2-GPT4-valid.txt --outdir scratch-oracle/work/mut-c --receipt aien-train/evidence/OMEGALLM/oracle/mut-c/xprep.json
+xbase	0	taskset -c 8 nice -n 19 python3 aien-train/tests/omegallm/oracle.py xbase --ollm build/ollm-mut-c --train scratch-oracle/work/mut-c/oracle-train.bin --held scratch-oracle/work/mut-c/oracle-held.bin --receipt aien-train/evidence/OMEGALLM/oracle/mut-c/xbase.json
+xinit	0	taskset -c 8 nice -n 19 python3 aien-train/tests/omegallm/oracle.py xinit --ollm build/ollm-mut-c --receipt aien-train/evidence/OMEGALLM/oracle/mut-c/xinit.json
+xgrad	0	taskset -c 8 nice -n 19 python3 aien-train/tests/omegallm/oracle.py xgrad --ollm build/ollm-mut-c --data scratch-oracle/work/mut-c/train64k.bin --receipt aien-train/evidence/OMEGALLM/oracle/mut-c/xgrad.json
+xstep	1	taskset -c 8 nice -n 19 python3 aien-train/tests/omegallm/oracle.py xstep --ollm build/ollm-mut-c --data scratch-oracle/work/mut-c/train64k.bin --receipt aien-train/evidence/OMEGALLM/oracle/mut-c/xstep.json
+xeval	0	taskset -c 8 nice -n 19 python3 aien-train/tests/omegallm/oracle.py xeval --ollm build/ollm-mut-c --held scratch-oracle/work/mut-c/oracle-held.bin --receipt aien-train/evidence/OMEGALLM/oracle/mut-c/xeval.json

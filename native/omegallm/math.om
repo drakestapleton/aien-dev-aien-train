@@ -1,0 +1,186 @@
+note SPDX-License-Identifier: AGPL-3.0-only
+note omegallm math.om (aien-train#52): first-party f64 exp and log, splitmix64, FNV-1a 64,
+note little-endian byte packing and the stdout writer. First unit; see docs/omegallm/README.md.
+note Constants (Wolfram, 2026-11-01):
+note   splitmix64: IntegerString[11400714819323198485,16] -> 9e3779b97f4a7c15,
+note     IntegerString[13787848793156543929,16] -> bf58476d1ce4e5b9,
+note     IntegerString[10723151780598845931,16] -> 94d049bb133111eb.
+note   FNV-1a 64: IntegerString[14695981039346656037,16] -> cbf29ce484222325, prime 100000001b3.
+note   1/ln2: N[1/Log[2]] bits 4609176140021203710 -> 1.4426950408889634.
+note   ln2 hi = 0x3FE62E42FEE00000 (low 21 bits zero, so k*hi is exact for |k| < 2^20)
+note     = 0.6931471803691238; lo = N[Log[2]-hi] -> 1.9082149292705877*^-10.
+note   overflow: N[Log[$MaxMachineNumber]] -> 709.782712893384; underflow to 0 below
+note     N[Log[2^-1075]] -> -745.1332191019412.
+note   1/k! for k=2..13 and 1/(2k+1) for k=1..11: Table[ToString[N[1/k!],InputForm],{k,2,13}],
+note     Table[ToString[N[1/(2k+1)],InputForm],{k,1,11}] (values below).
+note   Taylor remainder of exp at |r| <= ln2/2: N[0.3466^14/14!] -> 4.14*^-18 (degree 13).
+note   atanh series remainder at s <= 3-2Sqrt[2]: N[(3-2Sqrt[2])^2]^11/23 -> 6.25*^-19 (to s^23).
+note   bit patterns: 2^52 = 4503599627370496, +inf 9218868437227405312, -inf 18442240474082181120,
+note     NaN 9221120237041090560, exponent 1023 field 4607182418800017408, 2^54 = 18014398509481984.
+
+const OMOUT ulong 4096
+global oout uchar 4096
+global oon ulong 1
+note og: run geometry shared by all units (slots listed in model.om).
+global og ulong 64
+
+fn smx x ulong to ulong
+z = add x 11400714819323198485
+z = mul xor z shr z 30 13787848793156543929
+z = mul xor z shr z 27 10723151780598845931
+ret xor z shr z 31
+end
+
+note e^x for every f64 x. Cody-Waite reduction x = k ln2 + r with |r| <= ln2/2, then the Taylor
+note polynomial of degree 13 in Horner form, then scaling by 2^k1 * 2^k2 (k1 = k/2) so every
+note intermediate is normal and a subnormal result is rounded once.
+fn fexp x f64 to f64
+if ne x x
+ret x
+end
+if gt x 709.782712893384
+ret bitcast f64 ulong 9218868437227405312
+end
+if lt x -745.1332191019412
+ret 0.0f64
+end
+kf = mul x 1.4426950408889634
+if ge kf 0.0
+kf = add kf 0.5
+else
+kf = sub kf 0.5
+end
+k = long kf
+fk = f64 k
+r = sub sub x mul fk 0.6931471803691238 mul fk 1.9082149292705877e-10
+p = add mul r 1.6059043836821613e-10 2.08767569878681e-9
+p = add mul p r 2.505210838544172e-8
+p = add mul p r 2.755731922398589e-7
+p = add mul p r 2.7557319223985893e-6
+p = add mul p r 0.0000248015873015873
+p = add mul p r 0.0001984126984126984
+p = add mul p r 0.001388888888888889
+p = add mul p r 0.008333333333333333
+p = add mul p r 0.041666666666666664
+p = add mul p r 0.16666666666666666
+p = add mul p r 0.5
+p = add mul p r 1.0
+p = add mul p r 1.0
+k1 = div k 2
+k2 = sub k k1
+s1 = bitcast f64 shl ulong add k1 1023 52
+s2 = bitcast f64 shl ulong add k2 1023 52
+ret mul mul p s1 s2
+end
+
+note natural log for every f64 x: NaN for x < 0 or NaN, -inf for 0, +inf for +inf. x = m 2^e with
+note m in [sqrt(1/2), sqrt 2]; log m = 2 atanh(s), s = (m-1)/(m+1), series to s^23.
+fn flog x f64 to f64
+if ne x x
+ret x
+end
+if lt x 0.0
+ret bitcast f64 ulong 9221120237041090560
+end
+if eq x 0.0
+ret bitcast f64 ulong 18442240474082181120
+end
+b = bitcast ulong x
+if eq b 9218868437227405312
+ret x
+end
+e = long 0
+if lt b 4503599627370496
+b = bitcast ulong mul x 18014398509481984.0
+e = long -54
+end
+e = add e sub long shr b 52 1023
+m = bitcast f64 or and b 4503599627370495 4607182418800017408
+if gt m 1.4142135623730951
+m = mul m 0.5
+e = add e 1
+end
+f = sub m 1.0
+s = div f add f 2.0
+z = mul s s
+q = add mul z 0.043478260869565216 0.047619047619047616
+q = add mul q z 0.05263157894736842
+q = add mul q z 0.058823529411764705
+q = add mul q z 0.06666666666666667
+q = add mul q z 0.07692307692307693
+q = add mul q z 0.09090909090909091
+q = add mul q z 0.1111111111111111
+q = add mul q z 0.14285714285714285
+q = add mul q z 0.2
+q = add mul q z 0.3333333333333333
+q = add mul q z 1.0
+lm = mul add s s q
+fe = f64 e
+ret add mul fe 0.6931471803691238 add lm mul fe 1.9082149292705877e-10
+end
+
+note round(v * 10^6) half away from zero (CONTRACT section 7).
+fn rmic v f64 to long
+x = mul v 1000000.0
+q = long x
+fr = sub x f64 q
+if ge fr 0.5
+q = add q 1
+end
+if le fr -0.5
+q = sub q 1
+end
+ret q
+end
+
+fn oputc c ulong to void
+n = get oon 0
+if ge n OMOUT
+oflush
+n = ulong 0
+end
+put oout n uchar and c 255
+put oon 0 add n 1
+end
+
+fn oputu v ulong to void
+d = new uchar 24 0
+n = ulong 0
+x = v
+while true bound 21
+put d n uchar add rem x 10 48
+n = add n 1
+x = div x 10
+if eq x 0
+break
+end
+end
+for i ulong n
+oputc ulong get d sub sub n 1 i
+end
+end
+
+fn oputl v long to void
+if lt v 0
+oputc 45
+if eq v -9223372036854775808
+oputu 9223372036854775808
+else
+oputu ulong neg v
+end
+else
+oputu ulong v
+end
+end
+
+note 16 lowercase hex digits.
+fn oputx v ulong to void
+for i ulong 16
+h = and shr v mul sub 15 i 4 15
+if lt h 10
+oputc add h 48
+else
+oputc add h 87
+end
+end
+end

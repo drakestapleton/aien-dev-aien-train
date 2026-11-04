@@ -1,0 +1,323 @@
+# Omega LLM v0 (aien-train#52)
+
+Omega LLM v0 is a proof of concept. It is a byte-level, decoder-only transformer with 119,104
+parameters:
+
+- V 256, T 64, D 64, H 4, F 256, L 2, B 16.
+- It is trained from random initialization entirely in seeded `.om` (omc, omega-mv e5b32567).
+- Training runs single-threaded on the DGX Spark Grace CPU, with no GPU.
+
+The normative spec is [CONTRACT.md](CONTRACT.md). The receipts are under
+`evidence/OMEGALLM/core/` (the `.om` lane) and `evidence/OMEGALLM/oracle/` (the Python-stdlib referee).
+
+## Status
+
+Evidence for every row is in `evidence/OMEGALLM/core/summary.tsv` (48/48 as expected). Every receipt
+names the binary and source sha256 it ran; `core-receipts.sh` builds all six binaries first
+(`build.txt`):
+
+- `ollm` b729cc35faa6b3543ff1893c64e8a6feafc224feba7b99f7f13353e1d2179f22, source 47c27b0b;
+- mutants: a 69825ec6, b c7ddea4c, c 41c85250; gcheck step variants: h5 0ba9e2c6, h7 2c1e9b3b.
+
+| What | Status | Receipt (`evidence/OMEGALLM/core/`) |
+|---|---|---|
+| `prep` on TinyStoriesV2-GPT4-valid.txt | EXERCISED | `prep.txt`: `P 27630 24867 2763 19883834 2220914` |
+| `base` unigram/bigram bpb | EXERCISED | `base.txt`: `B 4415645 3295113` (4.415645 / 3.295113 bpb) |
+| `init` v0 | EXERCISED | `init-v0.txt`: `I 119104` |
+| `train`, 50 v0 steps | EXERCISED | `train-v0-50.txt`: loss 5.429638 at step 5 to 3.110411 at step 50 nats; ln 256 = 5.545177 |
+| resume is bit-identical | EXERCISED | `resume-cmp.txt`: steps 0→40 in one run and 0→20→40 in two runs give the same checkpoint; `cmp` rc 0 |
+| checkpoint refusal | EXERCISED | `refuse-truncated.txt` (rc 10), `refuse-flip-magic.txt` (rc 11), `refuse-shape.txt` (D = 0, rc 12), `refuse-count.txt` (P byte changed, rc 13), `refuse-flip-payload.txt` (rc 14), `refuse-long.txt` (one byte appended, rc 15) |
+| largest shape | EXERCISED | `init-max.txt`: `I 217664`, a 5224048-byte checkpoint; `eval-max.txt` (W 2): `E 0 2 5566611 8030922` |
+| overflow refusals | EXERCISED | `refuse-eval-hugew.txt`: W = 2^58 → rc 23; `refuse-grad-hugeoff.txt`: 16 offsets of 2^64 − 1 → rc 22 |
+| `eval` | EXERCISED | `eval-v0.txt`: `E 50 256 3049318 4399237` |
+| `sample` | EXERCISED (runs; output is not cross-checked) | `sample-v0-argmax.txt`, `sample-v0-t800.txt` |
+| gradient self-check (smoke; the gate is the oracle's `xgrad`) | EXERCISED | `gcheck.txt` (small shape) maxrel 3.08146e-4; `gcheck-v0-init.txt` (v0, seed 1) 1.05146e-4; `gcheck-v0-step50.txt` (v0, 50 steps) 5.15267e-4; 76 indices each, 0 retries |
+| gcheck step size | EXERCISED | `var-h5-*` (h = 1e-5) and `var-h7-*` (h = 1e-7) fail with rc 40 on both v0 checkpoints; see "Self-check constants" |
+| Adam self-check (smoke; the gate is the oracle's `xstep`) | EXERCISED | `adamck.txt`: `A 5 3cd046ce38e38e38 0` |
+| exp/log against Wolfram | EXERCISED | `mathck.txt`: exp at most 1 ulp, log at most 2 ulp |
+| mutants a (dK sign), c (no bias correction) | EXERCISED, killed | `mut-a-gcheck.txt` and `mut-a-gcheck-v0.txt` (rc 40, maxrel 2.0), `mut-c-adamck.txt` (rc 41, maxrel 0.639088) |
+| mutant b (targets shifted) | killed by the oracle only | `mut-b-gcheck.txt` passes the self-check, as expected; the kill is in `evidence/OMEGALLM/oracle/` |
+| cross-check against the referee | EXERCISED by the oracle lane, on b729cc35 and the three mutants | `evidence/OMEGALLM/oracle/` and `tests/omegallm/ORACLE.md` |
+| the v0 run, 20000 steps (`tests/omegallm/v0-run.sh`) | EXERCISED: 2026-11-01T15:24:54Z to 19:23:57Z on core 9, binary a9b5f3ec, unit `Result=success`; held-out 1.463036 bpb at W=4096 | `evidence/OMEGALLM/v0/run/` (see "v0 result") |
+| a9b5f3ec and b729cc35 compute the same v0 run | EXERCISED | `evidence/OMEGALLM/v0/equiv-a9b5f3ec-b729cc35.txt`: same `E 2000` line from the run's step-2000 checkpoint, byte-identical checkpoint after 10 more steps; control `equiv-control-mut-b.txt` differs |
+| `ollm` as an x86-64 Linux program (`TARGET=x86linux`, omega-mv main `ba5559d9`) | EXERCISED, EMULATED (qemu-x86_64 8.2.2 user mode) | `evidence/OMEGALLM/x86/`: the whole receipt suite, 48/48 PASS, every receipt equal to the AArch64 one apart from hashes, paths and wall time; the v0 checkpoint's final eval `E 20000 4096 1014099 1463036` reproduced |
+| `ollm` as a UEFI application (`TARGET=x86efi`, compiler from omega-mv #1015, merged as main `d3d1b1bc`) | EXERCISED, EMULATED (QEMU 8.2.2 TCG + OVMF) | `evidence/OMEGALLM/efi/`: the 11 commands of `tests/omegallm/efi-job.txt` read from `\OLLM\JOB.TXT`; the OUT.TXT body matches the AArch64 reference after efi-check.sh strips the banner, J (timing) and DONE lines; TR.BIN, HE.BIN and S.CK written on the FAT volume identical; mutant b differs at byte 375; corrupted checkpoint, 65535- and 65536-byte job controls pass |
+| the same image on one physical machine (names iMac18,3 and Core i5-7500 are from earlier aienux evidence; this run does not record them) | EXERCISED on physical hardware (one machine) | `evidence/OMEGALLM/imac/`: the OUT.TXT body matches the AArch64 reference after efi-check.sh strips the banner, J (timing) and DONE lines; TR.BIN, HE.BIN and S.CK identical, `OLLM DONE 11 186521`; negative controls in `check.txt` DIFFERENT; FAT clean after the firmware's writes |
+
+b729cc35 differs from a9b5f3ec only in bounds handling. The source diff shows it: the concatenated
+source goes from `cb80250d…` (a9b5f3ec, recorded in commit da910097's `init-v0.txt`) to `47c27b0b…`
+(`build.txt`), and the only code changes are `OCKCAP` in `native/omegallm/ckpt.om` and the two range
+checks in `native/omegallm/cli.om` (`ooffrow`, `cmdeval`); the rest are note lines.
+`evidence/OMEGALLM/v0/bounds-ab.txt` (core 7, 20 s timeout) shows the behaviour. On a valid
+largest-shape `init`, a9b5f3ec exits 103 (bounds trap). On `eval` with W = 2^58, where `W·T + 1`
+wraps, it was still running at 20 s and the timeout killed it (rc 124). On a huge `grad` offset it
+exits 103. b729cc35 sizes the checkpoint buffer for the largest shape (`I 217664`, rc 0) and refuses
+the other two with 23 and 22; `eval-edge-w3`/`refuse-eval-edge-w4` and
+`grad-edge-o128`/`refuse-grad-edge-o129` pin the exact boundaries. On in-range inputs the two give
+identical output (the equivalence receipt). `evidence/OMEGALLM/v0/provenance.txt` ties the running
+unit to the compared files: the sha256 of the run directory's `ollm`, `run.sh` and `ck-2000.bin`
+against `frozen/ollm` and the copied checkpoint, and the unit's start time and command line.
+
+## Build
+
+```sh
+sh tests/omegallm/build.sh               # -> ../build/ollm (AArch64 Linux)
+sh tests/omegallm/build.sh --mutant a    # also b, c: -> ../build/ollm-mut-X
+sh tests/omegallm/build.sh --variant h5  # also h7: -> ../build/ollm-var-hX
+TARGET=x86linux sh tests/omegallm/build.sh   # x86-64 Linux ELF
+TARGET=x86efi sh tests/omegallm/build.sh     # -> ../build/ollm.efi, a UEFI x86-64 application
+```
+
+The build script does four things:
+
+1. It checks the sha256 of the target's omc (`OMC`, defaulting to a sibling checkout):
+   - aarch64: `2c82480596bbdc50cda9626866209ef662d5834f278f839ff4ce0250c495029f`
+     (omega-mv `e5b32567`, `../omega-mv`);
+   - x86linux: `be8c51301307555254fc59e351d281aae1aa096d91521777e33a41c8b446448a`
+     (omega-mv main `ba5559d9`, `../omega-mv-x86`);
+   - x86efi: `b4f45121f6c6d5d8a6ed0f5c4f3934b7cc4bec369bfa89523699bd33928f9b55`
+     (omega-mv main `d3d1b1bc`, PR #1015 merged 2026-11-04, `../omega-efi`; the receipts were
+     built from #1015's commit `5ce9ecaa`, an ancestor, with this same omc).
+2. It concatenates `math.om data.om model.om adam.om ckpt.om cli.om` and the platform unit
+   (`lio.om` for Linux, `eio.om` for UEFI; CONTRACT §9). The x86 targets put the line
+   `target x86linux` or `target x86efi` first.
+3. For a mutant, it changes exactly one line of the concatenated copy (`OMUTA`, `OMUTB`, `OMUTC`).
+   A variant sets both gcheck steps `GCH` and `GCH2` to 1e-5 (h5) or 1e-7 (h7) and must change
+   exactly those two lines; any other count stops the build with exit 4.
+4. It compiles under `taskset -c $CORE nice -n 19` and prints
+   `BUILD_OK <bin sha256> <path> source_sha256 <sha>`.
+
+## Run
+
+```sh
+B=../build/ollm; R="taskset -c 6 nice -n 19"
+$R $B prep TinyStoriesV2-GPT4-valid.txt train.bin held.bin
+$R $B base train.bin held.bin
+$R $B init v0.ck 256 64 64 4 256 2 16 SEED TOTAL LRMICRO
+$R $B train v0.ck train.bin UNTIL EVERY
+$R $B eval v0.ck held.bin 256
+$R $B sample v0.ck SEED 200 800 "Once upon a time"
+```
+
+Never commit the data or the `.bin` and `.ck` files. Every receipt in the table can be reproduced
+with `sh tests/omegallm/core-receipts.sh`; set `CORE`, `BUILD`, `DATA` or `WORK` to override the
+defaults. The exit codes are listed in CONTRACT §7.
+
+## iMac
+
+`tests/omegallm/efi-receipts.sh` leaves the boot image at `$WORK/ollm.img` (`scratch-efi/ollm.img`;
+the image of the receipted run is sha256 `2b9a420a93486a4d37ed78141a45861427090535502243ecbb67fa4008b6c162`).
+It is a GPT disk with one EFI system partition, FAT label ALLEN, holding:
+
+- `EFI/BOOT/BOOTX64.EFI`, the `ollm.efi` application;
+- `OLLM/JOB.TXT` (a copy of `tests/omegallm/efi-job.txt`), `OLLM/CK.BIN` (the v0 checkpoint),
+  `OLLM/STORIES.TXT` (TinyStoriesV2-GPT4-valid.txt) and `OLLM/MATHREF.TXT`.
+
+Write it whole to a USB stick and start the Intel iMac from the stick (hold Option at the chime and
+pick "EFI Boot"). `ollm` runs the 11 jobs, shows each job's output on the console and appends it to
+`\OLLM\OUT.TXT`. After the last job the console shows `OLLM DONE 11 <ms>`, and `ollm` waits up to
+300 s for a key before returning to the firmware. A refusal ends the application at once; OUT.TXT
+then ends with that job's output. Copy `OLLM/OUT.TXT` (and `TR.BIN`, `HE.BIN`, `S.CK`) off the stick
+and check them against the Linux reference. `678` is the byte size of `tests/omegallm/efi-job.txt`,
+which the banner must equal:
+
+```sh
+sh tests/omegallm/efi-check.sh OUT.TXT evidence/OMEGALLM/efi/ref.out 11 678
+(cd <copied files> && sha256sum TR.BIN HE.BIN S.CK) | diff - evidence/OMEGALLM/efi/ref-files.txt
+```
+
+Status: EXERCISED on physical hardware (one machine) (`evidence/OMEGALLM/imac/`, run 2026-11-01). Apple's
+firmware ran all 11 jobs and its FAT driver accepted the writes: the OUT.TXT body matches the AArch64
+reference after efi-check.sh strips the banner, J (timing) and DONE lines, the three written files match
+`ref-files.txt`, and `fsck.vfat -n` finds the volume clean. The firmware clock gave 186521 ms in total,
+against 1004245 ms under TCG on one GB10 core. The run itself does not record machine identity.
+Whether the console showed the `efi 13` text was not recorded.
+
+Reading the stick back: after the run, macOS 26 refused to mount the stick's partition, even
+read-only, although a `dd` copy of the same bytes mounts as a file and checks clean. Copy the raw
+partition (`sudo dd if=/dev/rdiskNs1 of=STICK.img bs=1m`) and take the files out with
+`MTOOLS_SKIP_CHECK=1 mcopy -i STICK.img ::/OLLM/OUT.TXT …`.
+
+## Throughput
+
+All timings ran on Spark GB10 Grace core 6. `host.txt` records its `midr_el1` (0x410fd851, Arm part
+0xd85, Cortex-X925) and a 3900 MHz maximum clock. The process ran single-threaded under `nice -n 19`
+on a shared host, so the step time depends on what else runs on that core. Each figure below is one
+run, not a distribution.
+
+- `train-v0-50.txt`: 50 steps took 35.315644994 s wall, including 10 checkpoint saves.
+  - Per step: WolframLanguageEvaluator `35.315644994/50` → 0.70631 s.
+  - Throughput: `50*1024/35.315644994` → 1449.78 training bytes/s.
+- `resume-a-0-40.txt`: 40 steps with one save took 28.143739881 s. Per step: `28.143739881/40` →
+  0.70359 s. `100*(sps-s40)/s40` → 0.39%: this run's per-step time with a save every 5 steps was
+  0.39% above the one-save run. With one sample of each, that is not a measured cost of saving.
+- `gcheck-v0-init.txt`: 44.7 s for 76 indices.
+- A checkpoint is `112+24*119104` → 2,858,608 B.
+
+## The v0 run
+
+`tests/omegallm/v0-run.sh` is the script of the first full run. It is the init line of the receipts
+with seed 1 and TOTAL 20000, trained in 1000-step chunks; each chunk is followed by a held-out eval
+at W=256 and a saved checkpoint. Chunking does not change the result, because resume is
+bit-identical (`resume-cmp.txt`). After the last chunk it runs one eval at W=4096 and writes three
+samples at TEMPMILLI 800 and one argmax sample, each 400 bytes after the prompt "Once upon a time".
+
+The run directory holds `v0-run.sh` copied as `run.sh` (sha256 `4898aae5…`), the binary as
+`ollm`, `train.bin` and `held.bin`. On 2026-11-04 a four-line usage comment (lines 2-5) was added
+to `tests/omegallm/v0-run.sh`; `sed 2,5d tests/omegallm/v0-run.sh | sha256sum` still gives
+`4898aae5…`, so the run's `run.sh` is the script without that comment. It was started with
+
+```sh
+systemd-run --user --unit=ollm-v0 --collect -p CPUAffinity=9 -p Nice=19 -p MemoryMax=1G \
+  /bin/sh <run dir>/run.sh
+```
+
+The unit keeps systemd's default working directory (the home directory); `run.sh` begins with
+`cd "$(dirname "$0")"`, so every file it names is in the run directory. `provenance.txt` records
+the unit's `ExecStart`, `CPUAffinity`, `Nice`, `MemoryMax`, `WorkingDirectory` and start time, and the
+sha256 of the running `ollm`, `run.sh`, `ck-2000.bin` and data against the copies the equivalence
+receipts used.
+
+The running binary is a9b5f3ec, built before the bounds fix. On in-range inputs it gives the same
+output as b729cc35: `evidence/OMEGALLM/v0/equiv-a9b5f3ec-b729cc35.txt` evaluates and trains 10 steps
+from the run's own step-2000 checkpoint with both binaries, and the two checkpoints are byte-equal
+(`equiv-control-mut-b.txt` is the negative control). `bounds-ab.txt` shows where they differ: init at
+the largest shape and the two overflow refusals.
+
+Planned length, WolframLanguageEvaluator with sps = 0.70631 s/step from `train-v0-50.txt`:
+
+- Duration: `20000*sps/3600` → 3.92 h of training on one X925 core at nice 19 on a shared host,
+  plus the evals. (The launch estimate, from an earlier run of the same receipt at 0.70749 s/step,
+  was 3.93 h.)
+- Data seen: `20000*16*64/19883834` → 1.03 passes over the training bytes, in expectation.
+- LRMICRO 3000 is the only learning rate exercised.
+
+## v0 result
+
+All figures below come from `evidence/OMEGALLM/v0/run/` (core 9, Cortex-X925, nice 19, binary
+a9b5f3ec, data `101b41c6…`/`729e0a4a…` in `shas.txt`). Arithmetic is WolframLanguageEvaluator,
+quoted with each result.
+
+- The unit ended `Result=success`, `ExecMainStatus=0` (`unit.txt`). It ran from 15:24:54Z to
+  19:23:57Z, 14343 s: `14343/20000` → 0.717 s/step, including 21 evals and 20 checkpoint copies.
+- Final checkpoint `ck.bin` = `ck-20000.bin`, sha256 `ddf790fc…`, 2,858,608 B (not committed).
+- Held-out loss, first 256 windows (`evals.txt`), bits per byte:
+
+| step | 0 | 1000 | 2000 | 5000 | 10000 | 15000 | 19000 | 20000 |
+|---|---|---|---|---|---|---|---|---|
+| bpb | 7.991001 | 2.163609 | 1.929394 | 1.693245 | 1.563117 | 1.491841 | 1.440312 | 1.432839 |
+
+  Still falling at the end: 19000→20000 is `100*(1.432839-1.440312)/1.440312` → −0.519%,
+  18000→19000 → −0.947%. This run does not show where it stops falling.
+- Final eval (`final-eval.txt`): `E 20000 4096 1014099 1463036`, 1.463036 bpb over 4096 windows,
+  `4096*64/2220914` → 11.8% of the held-out positions (the W=256 series covers 0.74%).
+  `final-eval-b729cc35.txt` recomputes this line from `ck-20000.bin` with the bounds-fixed binary.
+- Against the byte baselines in `base.txt`: `100*(1-1.463036/3.295113)` → 55.6% below bigram,
+  `100*(1-1.463036/4.415645)` → 66.9% below unigram. The baselines score every byte transition of
+  the held-out file, the eval only the first 4096 windows, so this compares different position sets.
+- Training loss of the last step (`train.txt`, one batch): `T 20000 917244` → `0.917244/ln 2` →
+  1.3233 bits per byte. Single-batch values swing (19500: 0.937854, 19750: 1.003060 nats), so the
+  gap to held-out is not measured here.
+- Samples (`sample-*.txt`, 400 bytes after "Once upon a time"; not cross-checked by the oracle):
+  the model writes TinyStories-shaped text with names, quotes and sentence structure, plus misspelled
+  and invented words ("chisting", "spinnat"). The argmax sample falls into a loop ("The bird said, \"I
+  will help you to the park.\"" repeats from about byte 100).
+
+This is a 119,104-parameter byte model trained once with one learning rate on one seed. The run
+shows that the `.om` trainer learns on real data end to end; it does not establish quality against
+any other implementation's training run of the same shape.
+
+## Self-check constants
+
+- `MCTOL 1e-15`: the allowed relative error of first-party `fexp`/`flog` against the correctly rounded
+  Wolfram value.
+  - In ulps: WolframLanguageEvaluator `10.^-15/2.^-52` → 4.50 ulp-equivalents.
+  - Observed (`mathck.txt`): exp 2.70e-16 (`2.70*^-16/2.^-52` → 1.22) and log 3.37e-16 (→ 1.52).
+  - The margin is `10.^-15/3.37*^-16` → 2.97×.
+- `tests/omegallm/mathref.txt` is the reference: 3017 `e` lines and 2122 `l` lines.
+  - Each RBITS value is the round-half-even f64 of a 60-digit Wolfram `Exp`/`Log` at the exact
+    XBITS value. The bits are constructed explicitly, including the subnormal, overflow and zero
+    cases.
+  - The exp grid covers k/1000 on [−1, 1], 1000 points on [−745, 709.78], and the
+    overflow/underflow thresholds.
+  - The log grid covers 1/2 + k/1000 up to 2, 10^k for k = −307..307, the subnormals, the largest
+    f64, and 1 ± 1 ulp.
+- The generator is `tests/omegallm/mathref.wl` (sha256
+  `fd94187c1e267c527f9876bb4dd076e5a0b7487d1ba82149375e09d199f3bf75`). Running it, then evaluating
+  `{StringLength[text], IntegerString[Hash[text,"SHA256"],16,64]}` in WolframLanguageEvaluator,
+  gives 185004 and `3ecc26a3cdf64d640e098eb057e2adfbe390e78fef20b64d5f83e5fa907e961a`. That is the
+  same as `sha256sum tests/omegallm/mathref.txt`, so the committed file is exactly what the generator
+  writes.
+- gcheck takes four indices per tensor instance, drawn by splitmix64, and computes the central
+  difference `(L(p+h)−L(p−h))/((p+h)−(p−h))` against the hand gradient. For each index,
+  `rel = |num−g|/max(|num|,|g|,GCFLOOR)`. GCFLOOR 1e-6 and GCTOL 1e-3 are unchanged.
+- `GCH` was 1e-5. The h5 variant build reproduces that: on the v0 init checkpoint it fails (rc 40)
+  at index 34180, `c 34180 284589607 286581380` (hand gradient and difference, ×1e-12), rel
+  6.950114e-3 (`var-h5-gcheck-v0-init.txt`); at step 50 it fails at index 82501, rel 2.588816e-3.
+  The real build (h = 1e-6) has `c 34180 284589607 284589241` at the same index
+  (`gcheck-v0-init.txt`), so the hand gradient is unchanged and only the difference moved. The
+  oracle's `xgrad-v0` agrees with the hand gradient code to ≤ 3.3e-12 per tensor
+  (`evidence/OMEGALLM/oracle/README.md`). A difference that is wrong while the gradient is right is
+  the signature of `p ± h` moving a ReLU pre-activation across 0, where the loss has a kink: the
+  difference then measures a one-sided slope, not the gradient.
+  - WolframLanguageEvaluator `rel[g_,n_]:=Abs[n-g]/Max[Abs[n],Abs[g],10^6]` on the two lines →
+    6.950113e-3 (h = 1e-5) and 1.286062e-6 (h = 1e-6).
+- `GCH` is now 1e-6. An index over GCTOL is redone once at `GCH2 = 2.5e-7`, and the smaller rel is
+  kept; the `C` line counts these retries. A smaller h narrows the band of pre-activations whose
+  kink it can cross. The cost is more f64 rounding noise in L(p±h)/h.
+  - Roundoff in the difference is about `eps·L/h` with eps = 2^-53 and L ≈ 5.545 (the init loss).
+    WolframLanguageEvaluator `With[{e=2.^-53,L=5.545},{e*L/10.^-6, e*L/(2.5*^-7), e*L/10.^-7}]` →
+    6.16e-10, 2.46e-9, 6.16e-9 absolute. Divided by GCFLOOR 1e-6 that is a worst-case rel of 6.2e-4,
+    2.5e-3 and 6.2e-3 for a gradient at the floor.
+  - The h7 variant build (h = 1e-7) fails on that roundoff, as the bound predicts: v0 init rel
+    1.883774e-3 at index 27146, `c 27146 -6471488 -6483702`; step 50 rel 3.555355e-3 at index 76993
+    (`var-h7-gcheck-v0-*.txt`). The real build has `c 27146 -6471488 -6471712` there; `rel` above →
+    1.883800e-3 and 3.461217e-5.
+  - In the variant builds GCH2 equals GCH, so their retry count is a repeat at the same h, not a
+    second step size.
+  - The h/4 retry can exceed GCTOL from roundoff alone, but it only replaces rel when it is smaller,
+    so it cannot turn a pass into a fail, and a wrong gradient (mutant a, rel 2.0) fails at both step
+    sizes.
+- Observed rels of the real build, all with 0 retries; margin WolframLanguageEvaluator
+  `10.^-3/{3.08146*^-4, 1.05146*^-4, 5.15267*^-4, 4.72375*^-4}` → {3.245, 9.511, 1.941, 2.117}:
+  small shape 3.08146e-4, v0 init 1.05146e-4, v0 at step 50 5.15267e-4, mutant-b small shape
+  4.72375e-4.
+- Mutant a reaches 2.0, with 23 retries on the small shape and 38 at v0. It exits 40 on both.
+- These constants are deterministic per checkpoint, so a pass is reproducible. The 1.94× margin at
+  a trained v0 checkpoint is the tightest; recheck it if the shapes change.
+- gcheck and adamck are smoke checks of the binary against itself. The gate for the gradient and
+  the Adam step is the oracle's `xgrad`/`xstep` (`evidence/OMEGALLM/oracle/`).
+
+## Sizing
+
+Every query is WolframLanguageEvaluator, 2026-11-01.
+
+- **Pool (`OWN` 1400000 f64, model.om).** `geom` transcribes the layout of model.om
+  `ogeom`/`ogeom3`/`oastr`/`ogeom2`:
+
+  ```
+  geom[{v_,t_,d_,h_,f_,l_}]:=Module[{lstr,lay0,gf,p,astr,hf,sf,z,pr,end}, lstr=4 d d+2 d f+2 d; lay0=v d+t d; gf=lay0+l lstr; p=gf+d; astr=8 t d+2 t+h t t+2 t f; hf=4 p+l astr; sf=hf+t d; z=sf+t; pr=z+t d; end=pr+t v+7 t d+t f+256; {p,end}]
+  ```
+
+  `{geom[{256,64,64,4,256,2}], geom[{256,64,64,8,256,4}]}` → {{119104, 710464}, {217664, 1334336}}:
+  P and the pool end for v0 and for the largest shape. Both end below 1400000, and `ogeom` refuses
+  a layout past it (exit 12). `init-max.txt` prints `I 217664`.
+- **Checkpoint buffer (`OCKCAP`, ckpt.om).** A checkpoint is 112 header bytes plus params, m and v:
+  `{112+24*217664, 112+24*119104}` → {5224048, 2858608} B for the largest shape and v0.
+  `OCKCAP` is 5224048 + 1: the spare byte lets a read detect a file longer than any checkpoint
+  (exit 15). `init-max.txt` records the 5224048 B file.
+- **adamck under mutant c (adam.om).** Without bias correction the step-s update is the corrected
+  one times `r[s_]:=(1-(9/10)^(s+1))/Sqrt[1-(99/100)^(s+1)]`; `Table[r[s],{s,0,4}]` → {1, 1.346874,
+  1.572475, 1.732455, 1.849790}. With adamck's warmup lr `lr[s_]:=(1/1000)(s+1)/100`, epsilon
+  `e=10^-8` and its gradients |g| ∈ {1, 2, 3}·1e-4:
+
+  ```
+  mut[g_]:=Sum[lr[s](1-(9/10)^(s+1)) g/(Abs[g] Sqrt[1-(99/100)^(s+1)]+e),{s,0,4}];
+  ref[g_]:=Sum[lr[s] g/(Abs[g]+e),{s,0,4}]; rel[g_]:=Abs[mut[g]-ref[g]]/Abs[ref[g]];
+  N[{rel[10^-4],rel[2 10^-4],rel[3 10^-4]},16]
+  ```
+
+  → {0.6386062690569244, 0.6389678457053756, 0.6390884175446797}. The maximum agrees with
+  `mut-c-adamck.txt`, `A 5 3fe473698d936acd 639088417544678` (maxrel × 1e15), to 14 significant
+  digits: WolframLanguageEvaluator decodes the bits to 0.6390884175446786, |Δ| → 1.143e-15, f64
+  rounding of the sum.

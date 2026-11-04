@@ -1,0 +1,54 @@
+{
+ "check": "xeval",
+ "binary": "build/ollm-mut-c",
+ "binary_sha256": "41c852501c356dcc969ca06cdb367798d36018e2bbb1d896985b453be90bfddb",
+ "oracle_sha256": "3edfb60718c1b7c786275e16d4d593cc6418f591be4f30c5a5e17e0555c0d0fa",
+ "started": "2026-11-01T16:00:20Z",
+ "affinity": [
+  8
+ ],
+ "nice": 19,
+ "commands": [
+  {
+   "argv": [
+    "build/ollm-mut-c",
+    "eval",
+    "scratch-oracle/work/mut-c/tmp/tmp6aypeknl/ck",
+    "scratch-oracle/work/mut-c/oracle-held.bin",
+    "4"
+   ],
+   "rc": 0,
+   "stdout": "E 5 4 6285327 9067810\n",
+   "stderr": "",
+   "seconds": 0.002
+  }
+ ],
+ "results": [
+  {
+   "rc": 0,
+   "name": "rc 0",
+   "ok": true
+  },
+  {
+   "got": [
+    "E",
+    "5",
+    "4",
+    "6285327",
+    "9067810"
+   ],
+   "want": [
+    "E",
+    "5",
+    "4",
+    "6285327",
+    "9067810"
+   ],
+   "loss": 6.285327280062671,
+   "name": "stdout",
+   "ok": true
+  }
+ ],
+ "verdict": "PASS",
+ "finished": "2026-11-01T16:00:20Z"
+}
