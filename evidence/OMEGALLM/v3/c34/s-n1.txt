@@ -1,0 +1,2 @@
+$ b-aarch64/ollm sample n1.ck 7 40 0 Once upon a time
+eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeerc=0

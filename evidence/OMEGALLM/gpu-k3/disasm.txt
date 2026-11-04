@@ -1,0 +1,11 @@
+# OMC=<pinned omc> sh tests/omegallm/gpu-disasm.sh 10 11 (this commit's tree), then per slot the SHFL.BFLY, MUFU.RSQ and EXIT counts of the nvdisasm -b SM121 listing
+DUMP 01e0fae7cba1045e97301c94a569144526b669b09a213b734f987e3147c35541 source_sha256 245e7a531b20907d053aa48380548329b8fd191e6cbccf605dcc429b521c6727 code_sha256 f588fd376bd4058113badca827ba39233ff455df54dc09d9d43fb9eabb5cba92
+SLOT 10 bytes 864 sha256 09f5fb6829eb2f1b13acc046d6ad9b0471828ac1a67ad187656e8d79ed545cbc
+SLOT 11 bytes 1216 sha256 4cc8a7d4a83867b83cc0c42afd7efaf6b51435116b90bb854d9ababfc1206e30
+COUNT slot 10 SHFL.BFLY 5 MUFU.RSQ 1 EXIT 2
+COUNT slot 11 SHFL.BFLY 5 MUFU.RSQ 0 EXIT 2
+# slot-by-slot byte compare of gpu-code.bin (64 slots of 16384 B) against the parent commit ea0f078's dump (code_sha256 01b22fe5...):
+DIFFER 10 11
+# mutant r: the same dump with gr.om OMUTR 0 (the line build.sh --mutant r changes)
+SLOT 11 bytes 1184 sha256 7480ab8e4edb05ffbebafd721cc5b3f79c0d7b34583e1ee007e5fccce10bdff9
+COUNT mutant-r slot 11 SHFL.BFLY 4 masks 0x10 0x8 0x4 0x2 

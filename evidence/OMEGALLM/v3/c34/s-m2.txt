@@ -1,0 +1,2 @@
+$ b-mv/ollm-mut-v sample m2.ck 7 40 0 Once upon a time
+††††††††††††††††††††††††††††††††††††††††rc=0

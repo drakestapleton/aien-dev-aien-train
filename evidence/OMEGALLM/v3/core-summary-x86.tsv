@@ -1,0 +1,49 @@
+receipt	rc	expect	verdict
+prep	0	0	PASS
+prep:value	-	P 27630 24867 2763 19883834 2220914	PASS
+base	0	0	PASS
+base:value	-	B 4415645 3295113	PASS
+init-v0	0	0	PASS
+init-v0:value	-	I 119104	PASS
+train-v0-50	0	0	PASS
+train-v0-50:value	-	T 50 3110411	PASS
+resume-init-a	0	0	PASS
+resume-init-b	0	0	PASS
+resume-a-0-40	0	0	PASS
+resume-b-0-20	0	0	PASS
+resume-b-20-40	0	0	PASS
+resume-cmp	0	0	PASS
+refuse-flip-payload	14	14	PASS
+refuse-flip-magic	11	11	PASS
+refuse-truncated	10	10	PASS
+refuse-shape	12	12	PASS
+refuse-count	13	13	PASS
+refuse-long	15	15	PASS
+init-max	0	0	PASS
+init-max:value	-	I 217664	PASS
+eval-max	0	0	PASS
+refuse-eval-hugew	23	23	PASS
+refuse-grad-hugeoff	22	22	PASS
+eval-edge-w3	0	0	PASS
+refuse-eval-edge-w4	23	23	PASS
+grad-edge-o128	0	0	PASS
+refuse-grad-edge-o129	22	22	PASS
+eval-v0	0	0	PASS
+eval-v0:value	-	E 50 256 3049318 4399237	PASS
+sample-v0-argmax	0	0	PASS
+sample-v0-t800	0	0	PASS
+init-small	0	0	PASS
+gcheck	0	0	PASS
+init-v0-g0	0	0	PASS
+gcheck-v0-init	0	0	PASS
+gcheck-v0-step50	0	0	PASS
+adamck	0	0	PASS
+mathck	0	0	PASS
+mut-a-gcheck	40	40	PASS
+mut-a-gcheck-v0	40	40	PASS
+mut-c-adamck	41	41	PASS
+mut-b-gcheck	0	0	PASS
+var-h5-gcheck-v0-init	40	40	PASS
+var-h5-gcheck-v0-step50	40	40	PASS
+var-h7-gcheck-v0-init	40	40	PASS
+var-h7-gcheck-v0-step50	40	40	PASS

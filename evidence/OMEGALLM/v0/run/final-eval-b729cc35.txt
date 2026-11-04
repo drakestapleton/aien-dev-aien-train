@@ -1,0 +1,9 @@
+receipt: final eval recomputed by the bounds-fixed binary from the run final checkpoint
+host_cpu: core 7 (Cortex-X925), nice 19
+b729cc35faa6b3543ff1893c64e8a6feafc224feba7b99f7f13353e1d2179f22  build/ollm
+ddf790fc0dd10372746a58fbf8b1754b2e4b3b80c9afbc075df7662d51b8159b  run/v0/ck-20000.bin
+729e0a4a8854934ee6000ead2b367494c6b4c9eb52d554f81d6f7f44403338ed  data/held.bin
+$ taskset -c 7 nice -n 19 build/ollm eval run/v0/ck-20000.bin data/held.bin 4096
+E 20000 4096 1014099 1463036
+rc=0 wall_ns=74631855027
+run final-eval.txt: E 20000 4096 1014099 1463036

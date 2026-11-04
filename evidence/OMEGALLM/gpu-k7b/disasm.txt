@@ -1,0 +1,29 @@
+# OMC=<pinned omc> SHAPE="4096 256 256 8 1024 8" sh tests/omegallm/gpu-disasm.sh 0 1 2 3 4 5 6 7 32 33 34 35 36 37 38 39
+# (this commit's tree, max shape), nvdisasm -b SM121; DUMP/SLOT lines below, listing not kept (regenerable).
+# Code comparison, all 64 slots (cmp of gpu-code.bin):
+#   max shape:    k7b code_sha256 cd777d34... = k7 variant b0 (d3d4551 with OKBNK 0), byte-equal
+#   parity shape: k7b code_sha256 9659b361... = k7 variant b0, byte-equal
+#   so the window's P runs exactly the GPU code that k7's B0 ran; the binaries differ (50dcd16e vs c37449e6)
+#   [INFERENCE: in the embedded source text, not the device code].
+# Switch check: this tree with OKREU 0 (= build.sh --variant r0) dumps 9646adef... at the max shape, byte-equal
+#   to K6's (../gpu-k6/, cmp over 64 slots), and ac8e5ff1... at the parity shape (= ../gpu-k6/disasm.txt).
+#   OKREU is the whole difference from K6: slots 0-7 and 32-39 differ at both shapes, every other slot is equal.
+# Listing counts (slots 0-7 and 32-39, max shape): 6464 FFMA, 5120 printed with .reuse, as in k7
+#   (../gpu-k7/disasm.txt); the remap changed only accumulator register numbers, not the reuse pattern.
+DUMP 0a5de5ef6fd4ce707e7a560e7e4454dbd825fc6f3982dc31f7c693e019a6dd0d source_sha256 6168e6ed2075271eb87e3fa0d57660ad778ad91244cc2d7dfa8c5c91898acbe5 code_sha256 cd777d347da9d65c41915d595e91925b7fd68aa2f3aa0b05809d63d348da982a
+SLOT 0 bytes 7776 sha256 cdd7ac8e3702a3cd474b62641b897a71cdeca0e5fe58d279d10dc5d764896263
+SLOT 1 bytes 7776 sha256 e40f7c496044e755375c9201f4e920146bf7477e6fa8b676f65aaacb1c9fdcb9
+SLOT 2 bytes 7776 sha256 98c4994b8bfdbf9591ecc1db512457284bdb8c82436c48358f999d73566f80c5
+SLOT 3 bytes 7776 sha256 4c9fa17c20d5bdff8650b1a4f522f85d0cc9b4ebd592be3b9de1a2cec652d9dd
+SLOT 4 bytes 8032 sha256 67a146502b2dbceb6fa37892ff35f55150969ca624ace28a7e61a477052e213b
+SLOT 5 bytes 8032 sha256 5c7fa013ce19443944c7cbc07638b1951f04a3ed970796432977ed5c8f7228c7
+SLOT 6 bytes 8032 sha256 72f6a2658b58731c929a4803ab7bacf0ee7d65d5f03bf908e1b44656a38f8904
+SLOT 7 bytes 8032 sha256 ffe26d759b98e81db7825423534dd782d778fcd69b1824ce19b7a3ef1a44b9a6
+SLOT 32 bytes 15040 sha256 453c12fd07f805f88aa599cbe8eb28723803da375bed3103534202ca2f60f1e4
+SLOT 33 bytes 15040 sha256 6fb91f999b3f8df15e20d3eca233c44dfa4091dd0098048773e89b5538dd4ca7
+SLOT 34 bytes 15040 sha256 5b8f0a6e324ee491300ba24ae28e28a617f2463f827fd013878fc29ad98cf73b
+SLOT 35 bytes 15040 sha256 daa33dc1845b8efd81ac7755466ffe93876de66f79f7f1bf4a28ddad4ea365d5
+SLOT 36 bytes 16064 sha256 39eadc7c51c1d9bb16b58ed5e5535cb46a7af94e82ef0e4c69205fa010bdd65c
+SLOT 37 bytes 16064 sha256 b717698bc11b9ee12c60059131d2d19be6262fc8ad3976a51ee7e1e964470f03
+SLOT 38 bytes 16064 sha256 9f426503e3010778c5a257150721c282190ef89494199e832eae43a79d5cce9d
+SLOT 39 bytes 16064 sha256 6d7cdfebbb9cab852e4d0a069d37d20edee1969694845348f1451d751ab9379e

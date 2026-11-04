@@ -1,0 +1,5 @@
+binary: 2a4fc988b0c085c84a6c25dbe8097420df78e4dc077318a77177cf304431fef0
+ck: d11b2ec6b936ff89dc48addf4204f01bff8c21b52ac8f8cc981199695011fc2e
+cmd: geval CK held.tok 4486 merges4096.bin
+GX 121 -110 42 51 0 0 1
+rc=84

@@ -1,0 +1,19 @@
+host_cpu: core 7 (Cortex-X925)
+a9b5f3ec8291c1b046d350dcb7ee6550a271a9e06ee30ba13062d28732aa6137  frozen/ollm
+c7ddea4cea9952209e6e4516fc01e98aaf33940a80ccf9a4d7a5cb4d6881fa89  build/ollm-mut-b
+1fc4f22f96e3446897187d97a84b993c0ac4c177a31b3f02b1f17fb42e9c3d4f  scratch-equiv/v0-ck-2000.bin
+101b41c6d9396e353d4027759252fd8c1c5ec26ae8bec8834af2c9ae07d62fef  data/train.bin
+729e0a4a8854934ee6000ead2b367494c6b4c9eb52d554f81d6f7f44403338ed  data/held.bin
+$ taskset -c 7 nice -n 19 frozen/ollm eval scratch-equiv/v0-ck-2000.bin data/held.bin 256
+rc=0 E 2000 256 1337354 1929394
+$ taskset -c 7 nice -n 19 frozen/ollm train scratch-equiv/mutb/old.ck data/train.bin 2010 10
+rc=0 T 2010 1374427
+$ taskset -c 7 nice -n 19 build/ollm-mut-b eval scratch-equiv/v0-ck-2000.bin data/held.bin 256
+rc=0 E 2000 256 5971175 8614584
+$ taskset -c 7 nice -n 19 build/ollm-mut-b train scratch-equiv/mutb/new.ck data/train.bin 2010 10
+rc=0 T 2010 3049934
+scratch-equiv/mutb/old.eval scratch-equiv/mutb/new.eval differ: byte 12, line 1
+eval lines DIFFER
+scratch-equiv/mutb/old.ck scratch-equiv/mutb/new.ck differ: byte 105, line 1
+checkpoints after step 2010 DIFFER
+verdict DIFFERENT

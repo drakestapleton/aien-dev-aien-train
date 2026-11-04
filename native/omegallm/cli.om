@@ -1,0 +1,630 @@
+note SPDX-License-Identifier: AGPL-3.0-only
+note omegallm cli.om (aien-train#52): the ollm commands (CONTRACT section 7). The platform unit
+note (lio.om or eio.om) follows it and holds main.
+note Command words are matched as little-endian u64 packings of their bytes (Wolfram
+note FromDigits[Reverse[ToCharacterCode[w]],256]): prep 1885696624, init 1953066601,
+note grad 1684107879, train 474214396532, eval 1818326629, base 1702060386, sample 111516417089907,
+note gcheck 118074647274343, mathck 118074698391917, adamck 118074781033569; v1: bpefit
+note 127996038312034, bpeenc 109325798699106, bpedec 109287127216226 (bpe.om).
+note Exit codes: 0 ok; 2 usage; 10-15 checkpoint refusals (ckpt.om); 20 data file shorter than
+note T + 1 bytes; 21 data over 2^25 bytes or OFFS not exactly 8 B bytes; 22 an OFFS offset with
+note o + T >= N; 23 eval W = 0 or W T + 1 > M; 24 prep story over 999999 bytes; 40 gcheck over
+note tolerance; 41 adamck over tolerance; 42 mathck over tolerance; 70 I/O.
+
+fn ocmdw to ulong
+r = oargr 1
+if or le r 0 gt r 8
+ret 0
+end
+v = ulong 0
+for k ulong ulong r
+v = or v shl ulong get oarg k mul k 8
+end
+ret v
+end
+
+note run the command named by argument 1; the platform main checks that it exists.
+fn ocmd to int
+w = ocmdw
+if eq w 1885696624
+cmdprep
+ret 0
+end
+if eq w 127996038312034
+cmdbpfit
+ret 0
+end
+if eq w 109325798699106
+cmdbpenc
+ret 0
+end
+if eq w 109287127216226
+cmdbpdec
+ret 0
+end
+if eq w 1953066601
+cmdinit
+ret 0
+end
+if eq w 1684107879
+cmdgrad
+ret 0
+end
+if eq w 474214396532
+cmdtrain
+ret 0
+end
+if eq w 1818326629
+cmdeval
+ret 0
+end
+if eq w 1702060386
+cmdbase
+ret 0
+end
+if eq w 111516417089907
+cmdsamp
+ret 0
+end
+if eq w 118074647274343
+cmdgchk
+ret 0
+end
+if eq w 118074698391917
+cmdmath
+ret 0
+end
+if eq w 118074781033569
+cmdadamck
+ret 0
+end
+exit 2
+end
+
+note init CK V T D H F L B SEED TOTAL LRMICRO [G]; lr = f64(LRMICRO)/1000000.0. Without G the file
+note is OLLMCK01 (G = 1); with G it is OLLMCK02 (CONTRACT-V1 section 6).
+fn cmdinit to void
+na = oargc
+if and ne na 13 ne na 14
+exit 2
+end
+for i ulong 7
+put og i oargu add 3 i
+end
+if not ogeom
+exit 12
+end
+put og 40 oargu 10
+tt = oargu 11
+if gt tt 999999
+exit 12
+end
+g = ulong 1
+put og 46 1
+if eq na 14
+g = oargu 13
+put og 46 2
+end
+if not ogok2 g
+exit 12
+end
+put og 44 g
+put og 42 tt
+put og 43 bitcast ulong div f64 oargu 12 1000000.0
+put og 41 0
+oinit
+ocksave 2
+oputc 73
+oputc 32
+oputu get og 8
+oputc 10
+oflush
+end
+
+note little-endian u64 at ochk[o..o+8)
+fn ochk64 o ulong to ulong
+v = ulong 0
+for k ulong 8
+x = ulong get ochk add o k
+v = or v shl x mul k 8
+end
+ret v
+end
+
+note row b from offset ochk[b] (checked by ooffok)
+fn ooffrow b ulong to void
+obrow b ochk64 mul b 8
+end
+
+note exit 22 when any offset has o >= N - T (written so that an offset near 2^64 cannot wrap)
+fn ooffok to void
+n = get odn 0
+tt = get og 1
+for b ulong get og 6
+if ge ochk64 mul b 8 sub n tt
+exit 22
+end
+end
+end
+
+note grad CK DATA OFFS OUT: the gradient of CONTRACT-V1 section 5 (G blocks, K = 1)
+fn cmdgrad to void
+if ne oargc 6
+exit 2
+end
+ockload 2
+odopen 3
+ooffrd 4
+ooffok
+for b ulong get og 6
+ooffrow b
+end
+ls = ograd
+ogrsave 5
+oputc 71
+oputc 32
+oputx bitcast ulong ls
+oputc 32
+oputl rmic ls
+oputc 10
+oflush
+end
+
+note train CK TRAIN UNTIL EVERY [K]: steps step .. min(UNTIL, TOTAL)-1; after step s, when
+note (s+1) mod EVERY = 0 or s+1 is the end, save CK and print `T s+1 loss_micro(step s)`.
+note K worker processes (CONTRACT-V1 section 5.1): K < 1, K > G or G mod K != 0 is exit 29.
+fn cmdtrain to void
+na = oargc
+if and ne na 6 ne na 7
+exit 2
+end
+ockload 2
+odopen 3
+un = oargu 4
+ev = oargu 5
+if eq ev 0
+exit 2
+end
+k = ulong 1
+if eq na 7
+k = oargu 6
+end
+gg = get og 44
+if or eq k 0 gt k gg
+exit 29
+end
+if ne rem gg k 0
+exit 29
+end
+put og 45 k
+en = get og 42
+if lt un en
+en = un
+end
+while lt get og 41 en bound 999999
+ls = ostep
+s1 = get og 41
+if or eq rem s1 ev 0 eq s1 en
+ocksave 2
+oputc 84
+oputc 32
+oputu s1
+oputc 32
+oputl rmic ls
+oputc 10
+oflush
+end
+end
+end
+
+note eval CK HELD W [MERGES]: windows at 0, T, .., (W-1)T; prints `E step W loss_micro bpb_micro`.
+note V > 256 needs MERGES (else exit 2); bpb = ((loss/ln2) f64(W T))/f64(nbytes) with nbytes the
+note decoded length of the W T targets (CONTRACT-V1 section 7.1); V = 256 keeps loss/ln2.
+fn cmdeval to void
+na = oargc
+if and ne na 5 ne na 6
+exit 2
+end
+ockload 2
+ww = oargu 4
+v = get og 0
+if gt v 256
+if eq na 5
+exit 2
+end
+obload 5 v
+end
+odopen 3
+tt = get og 1
+m = get odn 0
+note W T + 1 > N, tested as W > (N - 1) / T so that a huge W cannot wrap W T
+if eq ww 0
+exit 23
+end
+if gt ww div sub m 1 tt
+exit 23
+end
+ls = 0.0f64
+nb = ulong 0
+for w ulong ww
+obrow 0 mul w tt
+ls = add ls ofwd 0
+if gt v 256
+nb = add nb oevnb tt
+end
+end
+lo = div ls f64 ww
+bp = div lo 0.6931471805599453
+if gt v 256
+bp = div mul bp f64 mul ww tt f64 nb
+end
+oputc 69
+oputc 32
+oputu get og 41
+oputc 32
+oputu ww
+oputc 32
+oputl rmic lo
+oputc 32
+oputl rmic bp
+oputc 10
+oflush
+end
+
+note decoded bytes of the targets oby[0 .. n)
+fn oevnb n ulong to ulong
+s = ulong 0
+for t ulong n
+s = add s obtlen get oby t
+end
+ret s
+end
+
+note append token c to the context window obx[0 .. CT), keeping the last T tokens
+fn ocpush c ulong to void
+cn = get og 9
+tt = get og 1
+if lt cn tt
+put obx cn c
+put og 9 add cn 1
+else
+for i ulong sub tt 1
+put obx i get obx add i 1
+end
+put obx sub tt 1 c
+end
+end
+
+note sample CK SEED N TEMPMILLI PROMPT [MERGES]. Context = token 0, then PROMPT (bytes when V = 256,
+note its encoding when V > 256, CONTRACT-V1 section 7.2); the model reads the last T context tokens
+note at positions 0..; the next token comes from the logits at the last position.
+note TEMPMILLI 0: argmax (lowest index on ties), no draw. Otherwise softmax(logits/(TEMPMILLI/1000))
+note and u = (splitmix64 stream out >> 11) 2^-53 with state = SEED, out = mix(state += GOLD);
+note the token is the smallest c with u < p[0] + .. + p[c], else the last c with p[c] > 0.
+note A generated token 0 ends the output and is not written; another writes its decoded bytes.
+fn cmdsamp to void
+na = oargc
+if and ne na 7 ne na 8
+exit 2
+end
+ockload 2
+st = oargu 3
+nn = oargu 4
+if gt nn 999999
+exit 2
+end
+tm = oargu 5
+v = get og 0
+put og 9 0
+ocpush 0
+if gt v 256
+if eq na 7
+exit 2
+end
+r = oargr 6
+if or lt r 0 gt r 4000
+exit 2
+end
+obload 7 v
+np = obprompt 6
+for i ulong np
+ocpush get obtk i
+end
+else
+r = oargr 6
+if or lt r 0 gt r 4096
+exit 2
+end
+for i ulong ulong r
+ocpush ulong get oarg i
+end
+end
+for g ulong nn
+lf = ofwd 0
+olast
+c = ulong 0
+if eq tm 0
+c = oargmax
+else
+c = odraw st div f64 tm 1000.0
+st = add st 11400714819323198485
+end
+if eq c 0
+break
+end
+if gt v 256
+obtput c
+else
+oputc c
+end
+ocpush c
+end
+oflush
+end
+
+note logits of the last context position into TMP[0..V) (oa)
+fn olast to void
+d = get og 2
+z = add get og 17 mul sub get og 9 1 d
+klogit z get og 27 get og 0 d
+end
+
+fn oargmax to ulong
+tm = get og 27
+b = ulong 0
+bv = get oa tm
+for c ulong get og 0
+if gt get oa add tm c bv
+bv = get oa add tm c
+b = c
+end
+end
+ret b
+end
+
+fn odraw st ulong tau f64 to ulong
+tm = get og 27
+v = get og 0
+m = bitcast f64 ulong 18442240474082181120
+for c ulong v
+x = div get oa add tm c tau
+put oa add tm c x
+m = fmax m x
+end
+sm = osoft tm v m
+u = mul f64 shr smx st 11 1.1102230246251565e-16
+acc = 0.0f64
+la = ulong 0
+for k ulong v
+pk = get oa add tm k
+acc = add acc pk
+if lt u acc
+ret k
+end
+if gt pk 0.0
+la = k
+end
+end
+ret la
+end
+
+note gcheck constants (derivation and Wolfram queries in docs/omegallm/README.md). GCH2 = GCH/4 is
+note the retry step for an index whose difference at GCH crossed a ReLU kink.
+const GCH f64 0.000001
+const GCH2 f64 0.00000025
+const GCFLOOR f64 0.000001
+const GCTOL f64 0.001
+note mathck: max relative error allowed against the correctly rounded reference
+const MCTOL f64 0.000000000000001
+
+note gcheck CK TRAIN: the hand gradient of the step loss for the batch of the header step is
+note compared with central differences (L(p+h) - L(p-h))/((p+h) - (p-h)) at 4 indices of every
+note tensor instance (wte, wpe, per layer g1 wq wk wv wo g2 w1 w2, gf), drawn by splitmix64.
+note rel = |num - g| / max(|num|, |g|, GCFLOOR). An index with rel > GCTOL at GCH is measured
+note again at GCH2 and keeps the smaller rel (a wrong hand gradient fails at both steps). Prints
+note one `c index g_e12 num_e12` line per index (num of the kept step), then
+note `C count maxrel_bits_hex maxrel_e9 worst_index retries`; exit 40 when maxrel > GCTOL.
+fn cmdgchk to void
+if ne oargc 4
+exit 2
+end
+ockload 2
+odopen 3
+obatch get og 41
+ls = ograd
+d = get og 2
+cnt = ulong 0
+put og 50 0
+put og 51 0
+put og 52 0
+put og 53 0
+ogcten 0 mul get og 0 d 0
+ogcten get og 30 mul get og 1 d 1
+for l ulong get og 5
+ogcten opg1 l d 2
+ogcten opwq l mul d d 3
+ogcten opwk l mul d d 4
+ogcten opwv l mul d d 5
+ogcten opwo l mul d d 6
+ogcten opg2 l d 7
+ogcten opw1 l mul d get og 4 8
+ogcten opw2 l mul d get og 4 9
+end
+ogcten get og 33 d 10
+mx = bitcast f64 get og 51
+oputc 67
+oputc 32
+oputu get og 50
+oputc 32
+oputx get og 51
+oputc 32
+oputl long mul mx 1000000000.0
+oputc 32
+oputu get og 52
+oputc 32
+oputu get og 53
+oputc 10
+oflush
+if gt mx GCTOL
+exit 40
+end
+end
+
+note step-loss for the batch in obx/oby without touching the gradient
+fn oloss to f64
+ls = 0.0f64
+for b ulong get og 6
+ls = add ls ofwd b
+end
+ret div ls f64 get og 6
+end
+
+fn ogcten o ulong n ulong tag ulong to void
+for j ulong 4
+i = add o rem smx xor get og 40 add mul get og 50 4 j n
+ogc1 i
+end
+end
+
+note central difference (L(p+h) - L(p-h))/((p+h) - (p-h)) at parameter i; restores p
+fn ogcnum i ulong h f64 to f64
+p0 = owg i
+pp = add p0 h
+pm = sub p0 h
+owp i pp
+lp = oloss
+owp i pm
+lm = oloss
+owp i p0
+ret div sub lp lm sub pp pm
+end
+
+fn ogcrel num f64 g f64 to f64
+den = fmax fmax fabs num fabs g GCFLOOR
+ret div fabs sub num g den
+end
+
+note one gradient check at parameter i; updates og[50] count, og[51] max rel bits, og[52] worst
+note index, og[53] retries at GCH2
+fn ogc1 i ulong to void
+g = ocsg i
+num = ogcnum i GCH
+rel = ogcrel num g
+if gt rel GCTOL
+put og 53 add get og 53 1
+n2 = ogcnum i GCH2
+r2 = ogcrel n2 g
+if lt r2 rel
+num = n2
+rel = r2
+end
+end
+oputc 99
+oputc 32
+oputu i
+oputc 32
+oputl long mul g 1000000000000.0
+oputc 32
+oputl long mul num 1000000000000.0
+oputc 10
+put og 50 add get og 50 1
+if gt rel bitcast f64 get og 51
+put og 51 bitcast ulong rel
+put og 52 i
+end
+end
+
+note mathck REF: REF lines are `e XBITS RBITS` or `l XBITS RBITS` (16 lowercase hex digits each,
+note 36 bytes per line); RBITS is the correctly rounded Wolfram value of exp or log at the exact
+note f64 XBITS. Prints `M e count max_ulp maxrel_bits_hex maxrel_e18` and the same for l;
+note exit 42 when a special value (r = 0, inf or NaN) differs in bits, maxrel > MCTOL, or REF has
+note no e line or no l line (a check that checked nothing fails).
+fn cmdmath to void
+if ne oargc 3
+exit 2
+end
+n = odread 2
+if ne rem n 36 0
+exit 21
+end
+for k ulong 6
+put og add 50 k 0
+end
+for i ulong div n 36
+omline mul i 36
+end
+omprint 101 0
+omprint 108 3
+if or gt bitcast f64 get og 52 MCTOL gt bitcast f64 get og 55 MCTOL
+exit 42
+end
+if or eq get og 50 0 eq get og 53 0
+exit 42
+end
+end
+
+fn ohex o ulong to ulong
+v = ulong 0
+for k ulong 16
+c = odb add o k
+if lt c 58
+v = or shl v 4 sub c 48
+else
+v = or shl v 4 sub c 87
+end
+end
+ret v
+end
+
+note og[50+b]: count, max ulp, max rel bits (b = 0 for exp, 3 for log)
+fn omline o ulong to void
+kd = odb o
+x = bitcast f64 ohex add o 2
+rb = ohex add o 19
+b = ulong 0
+y = 0.0f64
+if eq kd 101
+y = fexp x
+else
+b = ulong 3
+y = flog x
+end
+yb = bitcast ulong y
+put og add 50 b add get og add 50 b 1
+r = bitcast f64 rb
+if or or eq r 0.0 ne r r eq fabs r bitcast f64 ulong 9218868437227405312
+if ne yb rb
+exit 42
+end
+ret
+end
+ul = ulong 0
+if gt yb rb
+ul = sub yb rb
+else
+ul = sub rb yb
+end
+if gt ul get og add 51 b
+put og add 51 b ul
+end
+rel = div fabs sub y r fabs r
+if gt rel bitcast f64 get og add 52 b
+put og add 52 b bitcast ulong rel
+end
+end
+
+fn omprint c ulong b ulong to void
+oputc 77
+oputc 32
+oputc c
+oputc 32
+oputu get og add 50 b
+oputc 32
+oputu get og add 51 b
+oputc 32
+oputx get og add 52 b
+oputc 32
+oputl long mul bitcast f64 get og add 52 b 1e18
+oputc 10
+oflush
+end

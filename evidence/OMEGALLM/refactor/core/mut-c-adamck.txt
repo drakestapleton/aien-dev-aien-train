@@ -1,0 +1,10 @@
+receipt: mut-c-adamck
+host_cpu: core 7 (Cortex-X925)
+binary: ollm-mut-c sha256 831b3d79de226a93e05123a83372a4700c0f5db06124566f02f835e845049aee
+source: ollm-mut-c.om sha256 82a9a84ab715bb714a263f049ceaab135972016f4f71758646fae55061493caa
+$ taskset -c 7 nice -n 19 build-rf/ollm-mut-c adamck
+--- output
+A 5 3fe473698d936acd 639088417544678
+--- end
+rc=41 expect=41
+wall_ns=3149516

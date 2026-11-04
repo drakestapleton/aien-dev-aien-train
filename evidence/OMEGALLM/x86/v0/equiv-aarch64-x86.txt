@@ -1,0 +1,17 @@
+host_cpu: core 7 (Cortex-X925)
+b729cc35faa6b3543ff1893c64e8a6feafc224feba7b99f7f13353e1d2179f22  build/ollm
+b457ca7811ca79df77374d6608ddf10b450cb3684552bcf402da0de3f550c827  build-x86/ollm
+1fc4f22f96e3446897187d97a84b993c0ac4c177a31b3f02b1f17fb42e9c3d4f  run/v0/ck-2000.bin
+101b41c6d9396e353d4027759252fd8c1c5ec26ae8bec8834af2c9ae07d62fef  data/train.bin
+729e0a4a8854934ee6000ead2b367494c6b4c9eb52d554f81d6f7f44403338ed  data/held.bin
+$ taskset -c 7 nice -n 19 build/ollm eval run/v0/ck-2000.bin data/held.bin 256
+rc=0 E 2000 256 1337354 1929394
+$ taskset -c 7 nice -n 19 build/ollm train scratch-x86/equiv/old.ck data/train.bin 2010 10
+rc=0 T 2010 1374427
+$ taskset -c 7 nice -n 19 build-x86/ollm eval run/v0/ck-2000.bin data/held.bin 256
+rc=0 E 2000 256 1337354 1929394
+$ taskset -c 7 nice -n 19 build-x86/ollm train scratch-x86/equiv/new.ck data/train.bin 2010 10
+rc=0 T 2010 1374427
+eval lines equal
+checkpoints after step 2010 equal: eeece4c5b4d10ebf52256291c2c40d18a76d37843e7422188123c68aa5427f14
+verdict EQUAL

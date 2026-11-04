@@ -1,0 +1,16 @@
+BF16 lane build receipt 2 (aien-train feat/omega-llm-bf16, the gbfrag amendment: case 10 k = 128, long-K cases gbfl)
+compiler: omega-mv seed/out/omc sha256 2c82480596bbdc50cda9626866209ef662d5834f278f839ff4ce0250c495029f
+command: OMC=<omc> TARGET=gb10 OUT=<dir> CORE=3 sh tests/omegallm/build.sh [--mutant X]
+host: DGX Spark GB10 (aarch64), one core; build only, nothing run on the chip
+
+product gb10   ollm-gb10          54fb8233c62a13c0b3bac13a38dd5b583943e9e9097342baaa57fc22db2ceb49
+               source ollm.om     dfaaf2467e7dab7aa532db4af9a27e524bb58ed56a5bef7bb88cf6b0767fe459
+mutant u       ollm-mut-u-gb10    efc983e95d1add108457e3cdbd26fa0ec472b3345b4d23204ebd36b330d2916e
+mutant l       ollm-mut-l-gb10    b62ce7f89b00cdcee427a6077a49d3964f269800ad25751b9ce96d77c2b89402
+mutant o       ollm-mut-o-gb10    af0489913b875118c539ac2cdec39774415134388c2dd74062365687d108bbe5
+mutant v       ollm-mut-v-gb10    ef2ddbfce4ba0224908da571396721aa9134c3d8686bafc73ee43901b722f4b9
+
+kernel bytes: sh tests/omegallm/gpu-disasm.sh 27 on the amended tree
+DUMP b4a15af838f845b8625d52f1cc856f0a8987f43a41e61a927d8fe964f05f610f source_sha256 03750edd3ecdfd4d976c6707fa88ca5ea77b03de3c1665f6d71aa108e24d1eb1 code_sha256 f2628fdad32cc0d56f4a10729edefc17057ea398b254f255ed85422f71f7c887
+SLOT 27 bytes 6544 sha256 8d5798c32b06328d7fe4b41eba801281f3f6847ad9f9093c9e0d2a7d52d7e2fe
+code_sha256 equals the e329675 dump (disasm-27-36.txt): the amendment changes host gate code only.

@@ -1,0 +1,22 @@
+rung-7 gate window gg-r7g (20261102T170635Z-7da477), binary P 2184c782..., PR e0d39e8a...
+prereg.sha256: prereg.txt 68bd2395..., run.sh b3eeb38f...
+Labels: EXERCISED on one GB10, timings non-quiet.
+
+G1 PASS  ge-v1-30000: E 30000 2243 1338156 499194 (equal to r6 final)
+G2 PASS  t200-v1: ck_after ec4a8c21... (equal to the v1 binary)
+G3 MISS (prediction mis-stated)  gc2-small-s3: GCMP2 PASS; fields 1-13 and 15 equal the k9 line;
+         field 14 is gpu_ns, a wall-clock timing (3737193 vs 3807371) that cannot repeat. The
+         prediction should have excluded it. Not a behaviour difference.
+G4 FAIL  gc2-v2max-s7: rc=103 (trap 3 BOUNDS) after 161 s. Cause: gpu/gg.om `global ggfs f64 1024`,
+         the gcmp2 row scratch indexed by FFN unit j < F = 1536. Host-side only; no kernel touches it.
+G5 FAIL  gc2-v2max-s7-R: same trap 103 before the verdict, so the mutant was not judged.
+G6 FAIL  ge-v2-0: E 0 2243 8398671 3133094; 8.398671 - ln 4096 = 0.080905 (Wolfram), over the 0.05
+         bound. Open question: whether the v1 init shows the same excess (measured in gg-r7g2).
+G7 REPORT t250-v2: 250 steps 66.64 s wall incl. load/save = 0.2666 s/step (Wolfram); v1 on the same
+         kernels (t200-v1) 0.1554 s/step; ratio 1.715.
+G8 PASS  ga-v2-250: GACMP PASS
+G9 PASS  ge-v2-250: E 250 2243 2773849 1034774 < E 0 (and below r6's step-250 2840107 by 0.066258)
+
+Decision: run-start rule (G1-G6, G8, G9) NOT met. Rung 7 does not start from this window.
+Fix: ggfs capacity 1536 (gg.om:1093), rebuilt P2 1853303e..., PR2 360f3bd9...; v1-shape gpu-code.bin
+byte-identical to 1575dc8 (dis4 vs o3). Re-gate in gg-r7g2 under its own prereg.

@@ -1,0 +1,38 @@
+bf-t1 report (window 20261102T223234Z-1972ac, spark-window verdict "quiet machine"; labelled
+non-quiet because CPU lanes were running). Binary P 54fb8233c62a13c0b3bac13a38dd5b583943e9e9097342baaa57fc22db2ceb49,
+input ckL0 fc8835feae77a7ee93b59807337d51c72dd5df277b48fd93f011e5c592c5ac86. Status: EXERCISED on one GB10.
+
+Part 2, training gate
+T1 PASS  tb-0-250 rc=0, tb-250-2000 rc=0; all 8 T lines are integers (finite).
+T2 PASS  E 2000 2243 1749889 652790 <= 1765719 (rung 7: 1756935; 1756935-1749889 -> 7046 µnats,
+         1765719-1749889 -> 15830 µnats of margin). Not a held-out improvement claim (same step count).
+         E 250 2243 2751292 1026360, reported next to rung 7's 2773849 (diff 22557 µnats).
+T3 PASS  250->2000 leg wall_ns 367566612809 (gtrainb process wall, includes load and checkpoint save,
+         so a superset of the rung-7 train.txt stamp interval) < 434158613786.
+         Wolfram: 434.158613786/367.566612809 -> 1.18117; 1 - 367.566612809/434.158613786 -> 0.153382;
+         per step 367.566612809/1750 -> 0.210038 s vs 434.158613786/1750 -> 0.248091 s.
+ck250 6fc3c83e0d7d3ca4ec8e4a2b8fe8c4e918e797773b2bb78bc758e96aa4ecef05
+ck2000 d8955c2a7e750382292a93ee4952a7bcb81af27dd309d59cc8f7fa42972a0f28
+Decision (prereg rule): T1, T2, T3 all hold, so BF16 is adopted for a long run. The long-run quality
+claim needs its own prereg.
+
+Part 1, profile (gprof/gprofb ckL0 train.tok 3, three alternating rounds; one profiled step, 367 GP
+lines each, of which 204 are non-GEMM launches incl. the 64 ZERO round-trip probes). Per GEMM id:
+median over rounds of summed 2mnk*gz / summed wait_ns. Ids 0 and 1 are shared by both paths.
+
+ f32 id  BF16 id  launches  GFLOP     f32 wait ms  f32 TFLOP/s  BF16 wait ms  BF16 TFLOP/s
+   0        0        16      51.540     12.716        4.053        12.585        4.095
+   1        1        16      51.540     13.394        3.848        13.221        3.898
+  40       27        32     463.856     35.361       13.118        26.546       17.474
+  42       28         9     167.504     13.446       12.457         9.265       18.079
+  46       30        41     335.007     41.680        8.038        27.867       12.022
+  48       31         1      51.540      3.523       14.631         2.306       22.351
+  50       32        16     193.274     17.549       11.013        11.075       17.451
+  54       34        16      77.309      8.254        9.366         6.565       11.776
+  56       35         8     154.619     15.911        9.717        13.318       11.609
+  58       36         8     154.619     13.869       11.149        11.960       12.928
+Per profiled step: GEMM 1700.807 GFLOP; GEMM wait median f32 176.594 ms, BF16 135.336 ms
+(Wolfram 176.593954/135.335994 -> 1.30486); all-launch wait median f32 230.942 ms, BF16 189.337 ms
+(difference 41.605 ms). BF16 GEMMs reach 11.6-22.4 TFLOP/s against the 118.81 TFLOP/s HMMA rate
+measured on our own path: the GEMMs are no longer the only cost; 54 ms/step of non-GEMM wait and the
+synchronous launch round trip remain.

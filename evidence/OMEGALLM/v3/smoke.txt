@@ -1,0 +1,18 @@
+v3 banked-storage smoke (aarch64, pinned omc 2c824805, core 3/4 nice 19), EXERCISED
+v3 ollm 5e20559a..., bx deacaf60..., mutant v e83cc90f..., v2 base 6da13670...
+1 v2 shape 4096 64 64 4 128 4 8 1 100 10 2: init+train 3 steps, v2 vs v3 checkpoint cmp equal, T log equal
+T 1 8339520
+T 2 8329620
+T 3 8333874
+2 L16 init 4096 32 32 2 64 16 4 1 100 10 1: v2 rc 12 (refused), v3 rc 0; train 2 steps:
+T 1 8337469
+T 2 8333247
+3 crossing shape 256 8 16 2 32 4 4 1 100 10 2, train 3: normal vs --variant bx checkpoint cmp equal
+T 1 5561960
+T 2 5563489
+T 3 5553927
+mutant v:
+T 1 5564670
+T 2 5565256
+T 3 5556670
+mutant v checkpoint differs: caught

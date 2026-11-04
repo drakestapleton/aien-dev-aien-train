@@ -1,0 +1,6 @@
+qemu: QEMU emulator version 8.2.2 (Debian 1:8.2.2+ds-0ubuntu1.18)
+ovmf: ad23261d43116abc3747d59a7837fbf578c9586a8993f4eeba064cd07eccb083 OVMF_CODE_4M.fd (ovmf 2024.02-2ubuntu0.10)
+mtools: mtools (GNU mtools) 4.0.43
+sgdisk: GPT fdisk (sgdisk) version 1.0.10
+imac-image: 75be49a5916296430924e8d006441c487dd0a3ad0db8f2b6f9a40de2dcdbe09e
+core 5 midr_el1 0x00000000410fd851

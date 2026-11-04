@@ -1,0 +1,40 @@
+k7b pre-registration (written before window open, 2026-11-02T15:19:37Z)
+Change under test: remove the k7 accumulator column remap (OKBNK, gkcol, gkacc32, variant b0) and keep
+Ra operand reuse plus control bit 109 (OKREU, gkru, variant r0). k7's window (20261102T150912Z-072e61,
+evidence/OMEGALLM/gpu-k7/, committed d3d4551) measured one profile per binary: 64x64 GEMM wait relative
+to the K6 mean was K7 0.918, B0 (reuse only) 0.896, R0 (remap only) 0.989, with a K6a/K6b spread of
+0.027. The remap showed no benefit, so k7b removes it. This window gates the k7b product and repeats the
+profiles to measure the run-to-run spread that k7 had only two K6 runs for.
+Sources: /tmp/wt-gpu HEAD d3d4551 + uncommitted gk.om/build.sh (the remap removal), omc e5b32567.
+Static checks before the window (gpu-disasm.sh slot image, 64 slots of 16384 bytes):
+ P product code equals the k7 b0 code (d3d4551 with OKBNK 0) byte for byte: max shape
+   (4096 256 256 8 1024 8) code_sha256 cd777d34..., parity shape 9659b361...
+ the new r0 (OKREU 0) code equals K6's: max 9646adef..., parity ac8e5ff1... (as the k6 evidence).
+ P differs from K6 only in slots 0-7 and 32-39 at both shapes.
+Exactness argument [INFERENCE until the run]: reuse and bit 109 are issue hints; each C element's FFMA
+chain is K6's. P is predicted BIT-IDENTICAL to K6 and K7a on every output.
+Mutant t (OMUTT 0) kept: drops the k = 7 product of the thread's C element (row 0, column 0), register
+R16 again.
+Binaries:
+ P   /tmp/gk/k7b/bin/ollm-gb10            50dcd16e  k7b product
+ PT  /tmp/gk/k7b/bin/ollm-mut-t-gb10      69724d09  k7b mutant t
+ K7a /tmp/gk/k7/bin/ollm-gb10             53ff5f71  k7 product (reuse + remap), committed d3d4551
+ K6  /tmp/gk/k6/bin/ollm-gb10             e49491c5  k6 product
+Expectations (tolerances unchanged). GC2 field 14 (gpu_ns) and GA field 7 (adam_ns) are wall timings and
+are exempt from equality; every other field must equal the k6/k7 receipts:
+ P gc2-small-s3: rc 0, GC2 84288 177 177 3815 211 7629 1 0 0 194221 0 5529261 5529261 * 0
+ P gc2-max-s7:   rc 0, GC2 7409920 159783 758 122070 450 61035 6 3 358192 1557866 0 8339291 8339291 * 0
+ P ga-max:       rc 0, GACMP PASS, GA 7409920 59554 4021923359 14807 125 15259 * 2841667
+ P geval r5 ck9000: E 9000 2243 1445466 539226; r6 ck30000: E 30000 2243 1338156 499194.
+ PT gc2-max-s7: GCMP2 FAIL rc 47 (the control). PT gc2-small-s3: FAIL rc 47 (k7's KT failed there).
+ t200 from r6 ck9000, K6 then K7a then P: all rc 0, T 9200 1508182, ck_after ec4a8c21... for all three.
+ gprof, three rounds in rotated order (K6 K7a P / K7a P K6 / P K6 K7a), 3 steps each from prof/ck.bin.
+   Decision metric: GPU wait summed over ids 0-7 and 32-39 (GEMM total), per binary mean and range.
+   Directions pre-registered [INFERENCE, not a gate]:
+   (1) P GEMM total below K6 in every round (max P < min K6) - reuse is a real gain.
+   (2) P and K7a ranges overlap - the remap removal costs nothing.
+   If (1) fails, the k7 speed claim is withdrawn as within run-to-run spread and recorded as a null
+   result. If (2) fails with P above K7a, the remap removal is reverted.
+ Speed is non-quiet.
+A FAIL of any product gate, a mutant t pass, or a checkpoint mismatch is kept as a receipt and stops the
+commit.

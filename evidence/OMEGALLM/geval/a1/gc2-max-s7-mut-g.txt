@@ -1,0 +1,6 @@
+binary: a382b05623dfe41b32eafabf6e5d99207541f441db033973af24ddc427b0dd1b
+ck: bd839cb29a3feb67e0de45cefbce11f974ce497d739cb73e59bb2d7581defdc2
+cmd: gcmp2 CK train.tok 7
+GX 121 -110 42 99 0 0 1
+rc=84
+wall_ns=6856650218

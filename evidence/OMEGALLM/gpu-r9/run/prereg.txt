@@ -1,0 +1,44 @@
+Rung 9 pre-registration (2026-11-03, UTC), written before any rung-9 window opens
+
+Question: on rung 7's schedule, does BF16 training (gtrainb, CONTRACT-BF16, adopted by Drake on
+2026-11-03) reach the same held-out loss as f32 training (gtrainf)? This is the first long BF16 run
+and the quality check that CONTRACT-BF16 section 7 requires.
+
+Binary: /tmp/gk/r9/ollm-gb10 54fb8233c62a13c0b3bac13a38dd5b583943e9e9097342baaa57fc22db2ceb49.
+This is the bf-g1/bf-t1 binary (gpu-bf/build-2.txt, aien-train feat/omega-llm-bf16; no source change
+after f28e6ad). It passed CONTRACT-BF16 4.1-4.5 on the chip.
+Input: ck.bin = /tmp/gk/r7/ckL0.bin fc8835feae77a7ee93b59807337d51c72dd5df277b48fd93f011e5c592c5ac86
+(rung 7's start: ollm init ckL0.bin 4096 256 384 12 1536 8 64 1 30000 3000 16). The data is rung
+7's: train.tok, held.tok, merges4096.bin under ~/handoffs/omega-llm-20261101/v1-data.
+Procedure: drive.sh and leg.sh in this directory. Each leg runs in its own spark-window. A leg runs
+gtrainb to the next stop and then gevals the saved checkpoint. Stops are 250, then every +3000,
+clipped at 2000, 9000 and 30000. These are rung 7's legs, so the eval points are rung 7's 12 points:
+250 2000 5000 8000 9000 12000 15000 18000 21000 24000 27000 30000. The only change from rung 7 is
+gtrainb in place of gtrainf.
+Windows: --lease 22, --gb10 shared, --quiet none. All timings are non-quiet.
+
+Reference, rung 7 f32 (aien-train evidence/OMEGALLM/gpu-r7/run/geval.txt):
+E 30000 2243 1254741 468077. Its summed gtrainf wall for 250->30000 is 7,110.6 s.
+
+Predictions:
+Q1 (decisive) chip E at 30000 <= 1261014 µnats, i.e. within +0.5% of rung 7.
+   Wolfram: Floor[1254741*1.005] -> 1261014. This is the tolerance CONTRACT-BF16 4.4 uses at
+   step 2000. The difference from rung 7 is reported in µnats and percent.
+Q2 stop rule: chip E at 2000 <= 1765719 (CONTRACT-BF16 4.4). If it fails, drive.sh stops.
+Q3 determinism across windows: ck2000 sha256 equals bf-t1's
+   d8955c2a7e750382292a93ee4952a7bcb81af27dd309d59cc8f7fa42972a0f28 and the E 2000 line equals
+   bf-t1's E 2000 2243 1749889 652790. Same binary, input and legs. If it fails, report it; the run
+   does not stop.
+Q4 the chip geval curve is strictly decreasing over the 12 points.
+Q5 a CPU eval of ck30000 (/tmp/gk/r7/cpu/ollm 6da13670..., one core, nice 19) is within 10 µnats of
+   the chip E 30000. Both evaluate in f32, CONTRACT-BF16 section 7.
+Q6 summed gtrainb wall 250->30000 < 7,110.6 s (rung 7). The ns stamps around each gtrainb in
+   train.txt include checkpoint load and save. MODELED from bf-t1's leg ratio:
+   Wolfram 7110.62*367.566612809/434.158613786 -> 6019.98 s.
+Reported, not gated: E at every shared step against rung 7. The schedules are identical, so
+intermediate steps are comparable here, unlike rung 8.
+
+Failures are reported as failures. No leg is rerun to replace a receipt. An infrastructure kill
+(not a gtrainb failure) is resumed from the last checkpoint, disclosed, and counted in Q6, as in
+rung 8. Batches derive from (seed, step).
+Status labels: EXERCISED on one GB10 at most. Not QUALIFIED.

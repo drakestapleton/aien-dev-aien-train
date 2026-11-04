@@ -1,0 +1,7 @@
+cmd: taskset -c 7 nice -n 19 ollm eval CK v1-data/held.tok 2243 v1-data/merges4096.bin (CPU, AArch64)
+binary: ollm sha256 bfd92d150d72186424bbf401cc30ed0f906ecc14520b161b3571c32d70b2368e (build.txt CPU line)
+ck: rung-5 gtrainf step-9000 checkpoint sha256 f022797f124e6cddb54d855e4b22337942340c7b856106159c04c9a0fe2b69bd
+held.tok sha256 8f6ac61acfb59acc285383531f93d8c56b25f70827a07e4aea137e80c46aa1cf
+merges4096.bin sha256 73a29baf97619a746a21232c403bf08af71a76e48b3b2cde6d64dab766083882
+E 9000 2243 1445466 539226
+rc=0 wall_s=7323

@@ -1,0 +1,7 @@
+omc 2c82480596bbdc50cda9626866209ef662d5834f278f839ff4ce0250c495029f (omega-mv e5b32567)
+# this commit's tree: TARGET=gb10 sh tests/omegallm/build.sh [--mutant s|p], CORE=6; rebuilt from the
+# committed tree after the window and byte-identical to the binaries the window ran
+BUILD_OK 6a4c97a114092ef1d68c95ba48f6e6eae339d1aad4a7ae822338388430560dd7 ollm-gb10 source_sha256 d386082e689f965bf4930d7ddaa9b0d5da5fda1846ecd8db819e4aa9b19be99b
+BUILD_OK 4fef03af926383c9940c93fdc597bc61dc031aa8922fe95dfa0bea60b9f3bb25 ollm-mut-s-gb10 source_sha256 904fa7dd0b57cb2c052f39fb96761f992c812e12295f00cda704a83e9a68752b
+BUILD_OK 0746a3330f6f1feabf5b6af834e94f561e93ce01e55e6ca3a5c853382464831b ollm-mut-p-gb10 source_sha256 4ffc6f3c3df1eeb39ac01d9ac94f6290204649d7f3a96241072c092e13dfeba0
+# A (timing base only, not in any commit): a scratch build of the one-warp softmax alone, sha256 e50ccfa3

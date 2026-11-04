@@ -1,0 +1,53 @@
+$ taskset -c 8 nice -n 19 python3 aien-train/tests/omegallm/oracle.py xgrad --cfg v0 --ollm build/ollm --data scratch-oracle/work/real/oracle-train.bin --receipt aien-train/evidence/OMEGALLM/oracle/real/xgrad-v0.json
+$ build/ollm grad scratch-oracle/work/real/tmp/tmpsr6g3hoe/ck.init scratch-oracle/work/real/oracle-train.bin scratch-oracle/work/real/tmp/tmpsr6g3hoe/offs.init scratch-oracle/work/real/tmp/tmpsr6g3hoe/gr.init
+  rc=0 0.73s stdout='G 4016401c5a9e00f9 5562608\n'
+PASS init: rc 0
+PASS init: loss
+PASS init: OLLMGR01 header
+  wte    maxerr 4.438e-14 at 2099 (got -0.00045444828600969426 ref -0.0004544482860096741)
+  wpe    maxerr 1.409e-13 at 1088 (got 6.6489120083403162e-06 ref 6.6489120083372262e-06)
+  g1.0   maxerr 3.626e-14 at 11 (got 3.1535805026579375e-06 ref 3.1535805026580518e-06)
+  wq.0   maxerr 2.898e-13 at 2770 (got -1.1472687317160602e-07 ref -1.1472687317157278e-07)
+  wk.0   maxerr 2.220e-13 at 2628 (got 2.2484190948457409e-07 ref 2.2484190948462401e-07)
+  wv.0   maxerr 5.551e-14 at 883 (got 4.3868448631855763e-06 ref 4.3868448631844684e-06)
+  wo.0   maxerr 6.595e-14 at 3922 (got 3.1234121943252255e-05 ref 3.1234121943254674e-05)
+  g2.0   maxerr 2.870e-14 at 49 (got 4.2199698648064196e-06 ref 4.2199698648065407e-06)
+  w1.0   maxerr 1.200e-13 at 7483 (got -8.8267458426806593e-06 ref -8.826745842682638e-06)
+  w2.0   maxerr 7.103e-14 at 10645 (got -5.3999359992346814e-05 ref -5.3999359992350649e-05)
+  g1.1   maxerr 1.713e-14 at 25 (got 1.7507453820233596e-06 ref 1.7507453820234058e-06)
+  wq.1   maxerr 1.488e-13 at 677 (got -4.2406093550697553e-08 ref -4.2406093550675213e-08)
+  wk.1   maxerr 2.026e-13 at 416 (got 1.2943408817334076e-07 ref 1.2943408817331278e-07)
+  wv.1   maxerr 6.940e-14 at 1006 (got -3.4892133043942426e-06 ref -3.4892133043961772e-06)
+  wo.1   maxerr 4.138e-14 at 2620 (got 3.8575663943189485e-05 ref 3.8575663943191728e-05)
+  g2.1   maxerr 1.792e-14 at 6 (got 2.1934746389378682e-05 ref 2.1934746389378289e-05)
+  w1.1   maxerr 1.032e-13 at 4351 (got -2.7767575911701446e-06 ref -2.7767575911725976e-06)
+  w2.1   maxerr 5.762e-14 at 4373 (got 7.6205645442493024e-05 ref 7.6205645442488633e-05)
+  gf     maxerr 7.733e-15 at 10 (got 2.2343679534276877e-05 ref 2.234367953427705e-05)
+PASS init: gradient (rtol 1e-09)
+$ build/ollm grad scratch-oracle/work/real/tmp/tmpsr6g3hoe/ck.perturbed scratch-oracle/work/real/oracle-train.bin scratch-oracle/work/real/tmp/tmpsr6g3hoe/offs.perturbed scratch-oracle/work/real/tmp/tmpsr6g3hoe/gr.perturbed
+  rc=0 0.73s stdout='G 4020f160c6c1decb 8471441\n'
+PASS perturbed: rc 0
+PASS perturbed: loss
+PASS perturbed: OLLMGR01 header
+  wte    maxerr 6.926e-13 at 7131 (got -9.3690755650947745e-06 ref -9.3690755652876541e-06)
+  wpe    maxerr 3.348e-12 at 1921 (got 6.7623660526336046e-05 ref 6.7623660526034855e-05)
+  g1.0   maxerr 6.475e-13 at 52 (got 0.00020373304338255205 ref 0.00020373304338242013)
+  wq.0   maxerr 1.784e-12 at 1610 (got -3.3378961182887857e-05 ref -3.3378961183047764e-05)
+  wk.0   maxerr 2.461e-12 at 3920 (got -3.4792807525735782e-05 ref -3.4792807525915143e-05)
+  wv.0   maxerr 5.894e-13 at 3258 (got -9.6465878245423169e-05 ref -9.6465878245363077e-05)
+  wo.0   maxerr 1.023e-12 at 344 (got 4.199381282738922e-05 ref 4.1993812827314017e-05)
+  g2.0   maxerr 7.886e-14 at 10 (got 0.00051555533070158895 ref 0.00051555533070162961)
+  w1.0   maxerr 9.846e-13 at 1892 (got -1.0566621524405422e-05 ref -1.0566621524450362e-05)
+  w2.0   maxerr 7.448e-13 at 6522 (got 5.8425590667496031e-06 ref 5.8425590667884582e-06)
+  g1.1   maxerr 6.760e-13 at 14 (got 0.00011504158782659016 ref 0.00011504158782666793)
+  wq.1   maxerr 1.266e-12 at 2909 (got -6.1124804750554857e-06 ref -6.1124804750939198e-06)
+  wk.1   maxerr 1.557e-12 at 1038 (got 2.2807488263063035e-06 ref 2.2807488262679774e-06)
+  wv.1   maxerr 2.701e-13 at 795 (got -7.3127274129327954e-05 ref -7.3127274129348703e-05)
+  wo.1   maxerr 1.896e-13 at 174 (got 0.00013296818289914477 ref 0.00013296818289911956)
+  g2.1   maxerr 3.105e-14 at 35 (got -0.00056574344831100156 ref -0.00056574344831101912)
+  w1.1   maxerr 1.580e-13 at 13591 (got -1.7108858969601515e-05 ref -1.7108858969614092e-05)
+  w2.1   maxerr 1.323e-13 at 14047 (got 6.074564869871012e-05 ref 6.0745648698721776e-05)
+  gf     maxerr 9.111e-15 at 3 (got 0.005140588951948597 ref 0.0051405889519486438)
+PASS perturbed: gradient (rtol 1e-09)
+XGRAD PASS
+rc=0
