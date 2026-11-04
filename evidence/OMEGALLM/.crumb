@@ -14,6 +14,6 @@
     }
   },
   "name": "omegallm-evidence",
-  "purpose": "Receipts for Omega LLM v0: core/ (.om lane runs on GB10 Grace) and oracle/ (referee cross-checks)",
+  "purpose": "Receipts for Omega LLM v0 and v1: core/ (.om lane runs on GB10 Grace), oracle/ (referee cross-checks), v1/ (rung-3 run and v1 checks)",
   "schema_version": "1.0.0"
 }

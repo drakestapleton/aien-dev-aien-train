@@ -14,6 +14,6 @@
     }
   },
   "name": "omegallm-tests",
-  "purpose": "Build script, core receipt script, Wolfram exp/log reference and the Python-stdlib referee (oracle.py) for Omega LLM v0; verification only, never in the build",
+  "purpose": "Build script, core receipt script, v1 referee and BPE checks (v1-oracle.sh, bpe-check.sh), Wolfram exp/log reference and the Python-stdlib referee (oracle.py) for Omega LLM v0 and v1; verification only, never in the build",
   "schema_version": "1.0.0"
 }

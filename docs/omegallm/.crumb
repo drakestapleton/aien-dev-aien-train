@@ -14,6 +14,6 @@
     }
   },
   "name": "omegallm-docs",
-  "purpose": "Omega LLM v0 contract (CONTRACT.md) and status/run guide (README.md)",
+  "purpose": "Omega LLM v0 and v1 contracts (CONTRACT.md, CONTRACT-V1.md) and status/run guide (README.md)",
   "schema_version": "1.0.0"
 }

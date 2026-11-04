@@ -14,6 +14,6 @@
     }
   },
   "name": "omegallm",
-  "purpose": "Omega LLM v0 (aien-train#52): byte-level 119104-parameter decoder-only transformer trained from random init in seeded .om (units math, data, model, adam, ckpt, cli; concatenated in that order); CPU only, no GPU",
+  "purpose": "Omega LLM v0 (aien-train#52) and v1 (#54): decoder-only transformer trained from random init in seeded .om; v0 byte-level 119104 parameters, v1 adds a BPE tokenizer (bpe.om), shapes to V4096, gradient blocks G and K worker processes (units math, data, model, adam, ckpt, bpe, cli, then lio or eio; concatenated in that order); CPU only, no GPU",
   "schema_version": "1.0.0"
 }

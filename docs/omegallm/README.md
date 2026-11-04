@@ -10,6 +10,32 @@ parameters:
 The normative spec is [CONTRACT.md](CONTRACT.md). The receipts are under
 `evidence/OMEGALLM/core/` (the `.om` lane) and `evidence/OMEGALLM/oracle/` (the Python-stdlib referee).
 
+## v1 (aien-train#54)
+
+v1 adds a byte-pair tokenizer in `.om` (`bpe.om`, concatenated between `ckpt.om` and `cli.om`),
+shapes up to V 4096, T 256, D 256, L 8, B 64, gradient blocks G and K worker processes with
+byte-identical results for every valid K, and the `OLLMCK02` checkpoint. The spec is
+[CONTRACT-V1.md](CONTRACT-V1.md); v0 commands and files keep their bytes.
+
+```sh
+ollm bpefit TEXT MERGES V [MAXBYTES]   # fit merges: M V types chunks fitbytes
+ollm bpeenc MERGES V TEXT TOKS         # encode to u16 tokens: K bytes tokens
+ollm bpedec MERGES TOKS OUT            # decode: D tokens bytes
+ollm init CK V T D H F L B SEED TOTAL LRMICRO [G]
+ollm train CK TOKS UNTIL EVERY [K]     # K worker processes, G mod K = 0 (Linux only)
+ollm eval CK HELD W MERGES             # MERGES required when V > 256
+ollm sample CK SEED N TEMPMILLI PROMPT MERGES
+```
+
+| What | Status | Receipt |
+|---|---|---|
+| rung 3: config b (V4096 T128 D192 H6 F768 L4 B40, G = K = 20, P 2,582,208), 9000 steps | EXERCISED, 2026-11-02, 41,814 s on the Grace CPU; held-out `E 9000 4486 1823975 680427` (0.680427 bpb over 0.99988 of `held.tok`) | `evidence/OMEGALLM/v1/` |
+| v0 receipt suite on the v1 binary b9b4e02d, aarch64 | EXERCISED, 48/48 PASS (2026-11-04) | `evidence/OMEGALLM/v1/checks/core-aarch64/` |
+| v1 referee checks, mutants d and e, K = 1/2/4 and config-a K = 1/4 identity | EXERCISED (2026-11-04) | `evidence/OMEGALLM/v1/checks/reruns.txt` |
+
+v0's 1.463036 bpb scores 4096 × 64 bytes, 0.11803 of the same held text; v1's 0.680427 scores
+nearly all of it, so the two are not measured on the same positions.
+
 ## Status
 
 Evidence for every row is in `evidence/OMEGALLM/core/summary.tsv` (48/48 as expected). Every receipt
