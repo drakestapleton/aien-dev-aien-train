@@ -50,7 +50,12 @@ virtual index of every value is unchanged, so every v2 shape uses exactly the v2
   LA `Floor[(15833472-1671168-1770240-384)/1770240] -> 7`, bank B `(16-7)*1770240 -> 15932160`.
 - Gradient GRD and Adam m, v: a cold store of 3·P f64 (`ocsg/ocsp`), an anonymous mapping of
   `24*29995392 -> 719889408` B on aarch64/x86linux (`lio.om`), global arrays on x86efi
-  (`eio.om`). The block buffer BLK is `ogr` [0, OGC) then `ogb` (`29995392-15833472 -> 14161920`).
+  (`eio.om`). The mapping is the v3-maximum size (`OCSN` = `3*29995392 -> 89986176` f64) at every
+  shape; it is private, anonymous and zero-filled, so only the pages a shape touches become resident.
+  The block buffer BLK is `ogr` [0, OGC) then `ogb` (`29995392-15833472 -> 14161920`).
+- New exits: 70 when that mapping fails (`lio.om` `mapnew`, an I/O refusal like the other exit-70
+  paths), and 16 when a kernel reads a bank-B layer that is not the staged one (`model.om` `opx`:
+  a missing `ostw`, which is a product defect, not an input refusal).
 - Activations: bank A `oa` (OAC = 15,016,192) holds layers [0, LAA) plus two layer windows and the
   temporaries; bank B `oab` the rest. With ASTR = 8TD + 2T + 2TF (`-> 1573376`) and temporaries
   `-> 2429184`, LAA `Floor[(15016192-2429184-2*1573376)/1573376] -> 6`, bank B
@@ -73,8 +78,8 @@ with L: at V 4096, T 256, D 384, H 12, F 1536, B 64 it is 5,892,226,816 B at L 8
 1. v0/v1/v2: `core-receipts.sh` rows and receipts equal `evidence/OMEGALLM/core`; `v1-oracle.sh`
    with L 17 exit 12, L 16 small and the full v3 maximum init byte-identical to the referee.
 2. v2 maximum: the v3 CPU build gives the v2 build's eval lines and training checkpoints byte for byte.
-3. Bank crossing (`build.sh --variant bx`) gives the normal build's checkpoints (K 1, K 2), eval and
-   sample output; mutant v (wrong bank) is caught.
+3. Bank crossing (`build.sh --variant bx`) gives the normal build's checkpoints (G 1, G 2), eval and
+   sample output; mutant y (wrong bank) is caught.
 4. `gcheck` passes at an L 16 small shape and on the bx build.
 5. v3 maximum: init byte-identical to the referee; one training step runs; peak RSS under 2 GB.
 6. CPU eval time per window at the v2 maximum regresses at most 5% against the v2 build.

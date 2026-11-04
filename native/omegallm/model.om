@@ -141,9 +141,9 @@ end
 ret add get og 36 sub i opg1 l
 end
 
-note Mutant v (wrong bank-B layer: ostw stages layer LA's block for every layer): 1 in the product,
+note Mutant y (wrong bank-B layer: ostw stages layer LA's block for every layer): 1 in the product,
 note 0 in the mutant.
-const OMUTV ulong 1
+const OMUTY ulong 1
 
 const OCH ulong 999999
 
@@ -155,7 +155,7 @@ ret
 end
 n = get og 32
 s = mul sub l la n
-if eq OMUTV 0
+if eq OMUTY 0
 s = 0
 end
 ostwc get og 36 s n

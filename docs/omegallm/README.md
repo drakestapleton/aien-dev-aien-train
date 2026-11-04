@@ -64,6 +64,8 @@ against `frozen/ollm` and the copied checkpoint, and the unit's start time and c
 sh tests/omegallm/build.sh               # -> ../build/ollm (AArch64 Linux)
 sh tests/omegallm/build.sh --mutant a    # also b, c: -> ../build/ollm-mut-X
 sh tests/omegallm/build.sh --variant h5  # also h7: -> ../build/ollm-var-hX
+sh tests/omegallm/build.sh --variant bx  # small bank-A capacities (CONTRACT-V3 check 3): -> ../build/ollm-var-bx
+sh tests/omegallm/build.sh --mutant y    # bx plus the wrong bank-B layer (four lines): -> ../build/ollm-mut-y
 TARGET=x86linux sh tests/omegallm/build.sh   # x86-64 Linux ELF
 TARGET=x86efi sh tests/omegallm/build.sh     # -> ../build/ollm.efi, a UEFI x86-64 application
 TARGET=gb10 sh tests/omegallm/build.sh       # -> ../build/ollm-gb10, CPU ollm plus the GB10 GPU commands
@@ -84,9 +86,10 @@ The build script does four things:
    CONTRACT-V3 §2), `model.om adam.om ckpt.om bpe.om cli.om` and the platform unit
    (`lio.om` for Linux, `eio.om` for UEFI; CONTRACT §9). The x86 targets put the line
    `target x86linux` or `target x86efi` first.
-3. For a mutant, it changes exactly one line of the concatenated copy (`OMUTA`, `OMUTB`, `OMUTC`).
-   A variant sets both gcheck steps `GCH` and `GCH2` to 1e-5 (h5) or 1e-7 (h7) and must change
-   exactly those two lines; any other count stops the build with exit 4.
+3. For a mutant, it changes exactly one line of the concatenated copy (`OMUTA`, `OMUTB`, `OMUTC`;
+   mutant y changes four: bx's three capacities and `OMUTY`). A variant sets both gcheck steps `GCH`
+   and `GCH2` to 1e-5 (h5) or 1e-7 (h7) and must change exactly those two lines (bx: the three
+   bank-A capacities); any other count stops the build with exit 4.
 4. It compiles under `taskset -c $CORE nice -n 19` and prints
    `BUILD_OK <bin sha256> <path> source_sha256 <sha>`.
 
