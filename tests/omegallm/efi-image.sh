@@ -4,7 +4,8 @@
 # Usage: sh tests/omegallm/efi-image.sh EFI IMG SRC:NAME...
 #   each SRC:NAME copies file SRC to \OLLM\NAME; one NAME must be JOB.TXT.
 # Env: IMAC_IMAGE (required): the Omega-built imac-image tool, which writes imac-boot.img (96 MiB
-#      GPT + FAT, partition 1 at sector 2048) around ./BOOTX64.EFI in the current directory.
+#      GPT + FAT, partition 1 at sector 2048) around ./BOOTX64.EFI in the current directory. A
+#      relative IMAC_IMAGE is taken from the directory this script is started in.
 # mtools (mmd, mcopy) adds the \OLLM files and reads every member back (cmp) before IMG is
 # published; IMG must not exist yet. Prints every member's sha256, then the image's.
 # File dates come from SOURCE_DATE_EPOCH (default 1793491200 = 2026-11-01T00:00:00Z), so the same
@@ -15,6 +16,7 @@ export SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH:-1793491200}"
 EFI=$1 IMG=$2
 shift 2
 [ -n "${IMAC_IMAGE:-}" ] && [ -x "$IMAC_IMAGE" ] || { echo "IMAC_IMAGE must name the imac-image tool" >&2; exit 2; }
+case $IMAC_IMAGE in /*) ;; *) IMAC_IMAGE=$PWD/$IMAC_IMAGE ;; esac
 [ ! -e "$IMG" ] || { echo "fresh output required: $IMG exists" >&2; exit 73; }
 [ -f "$EFI" ] || { echo "missing $EFI" >&2; exit 66; }
 job=0
