@@ -3,17 +3,17 @@
     "generated": {
       "children": [],
       "children_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "compiled_at": "2026-11-04T14:36:44Z",
+      "compiled_at": "2026-11-04T14:37:51Z",
       "compiler": "crumb-compile/1",
-      "digest": "sha256:28795562831ee6dd3e5719db145cbc294a31bbc0591ef9ee2062b9c9b5e9a707",
+      "digest": "sha256:f3a434e144363be5ac9c52ae5ff1ec986037fd70baf315fa55c3f6e99e468900",
       "evidence_files": 0,
       "evidence_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "files": 3,
-      "generated_at_commit": "27a428240244230e20e87b74d071d801310dc13d",
-      "source_tree": "sha256:5176bf064da462defa5aa1d5523cc1d3191967e245dcdd15e891d54ecdeb1b71"
+      "generated_at_commit": "9ca015bd2cc896bbe8b96eab6b6a846522ea70d7",
+      "source_tree": "sha256:da682e7af107d7046f26b5e1094db72c7f5f1d9a268244815eb41ebd5ada08ce"
     }
   },
   "name": "omegallm-docs",
-  "purpose": "Omega LLM v0 and v1 contracts (CONTRACT.md, CONTRACT-V1.md) and status/run guide (README.md)",
+  "purpose": "Omega LLM v0 contract (CONTRACT.md) and status/run guide (README.md)",
   "schema_version": "1.0.0"
 }

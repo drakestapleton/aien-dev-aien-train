@@ -1,0 +1,7 @@
+omc 2c82480596bbdc50cda9626866209ef662d5834f278f839ff4ce0250c495029f (omega-mv e5b32567)
+# this commit's tree: TARGET=gb10 sh tests/omegallm/build.sh [--mutant w], CORE=6; rebuilt from the
+# committed tree after the window and byte-identical to the binaries the window ran
+BUILD_OK e49491c5410a45ff3e4a5fb8789e462a19b78a2c863d9781fda90129acee0e7d ollm-gb10 source_sha256 8e8d9a6c0a020db1470064c7faf2fb1ae78c35c22537302f1ca7e27a29bb96fd
+BUILD_OK 67b1653d571695420325073155b535e63174ff899ff3841525c603d269a18462 ollm-mut-w-gb10 source_sha256 c6c77050ba4c44c90fc7b17738500ea9fb0ac0f156e030a4a46abe10bd48150c
+# K5 (timing and bit-equality base, run in the same window): the parent commit's product, ../gpu-k5/build.txt, sha256 5c38d237
+# disassembly: disasm.txt

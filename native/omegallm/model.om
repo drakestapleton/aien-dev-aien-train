@@ -736,8 +736,14 @@ c = add c 1
 end
 end
 
+note ogkm[0] = 0: the backward ReLU mask is the sign of this pass's own FP (every command but
+note gcmp2); 1: offb calls ogmask, which gpu/gg.om defines for gcmp2 (the chip's FP sign) and
+note nogpu.om defines as a refusal on the CPU-only targets. ogkm[1] = the sequence in flight.
+global ogkm ulong 2
+
 note forward pass of sequence b (x in obx, y in oby); returns its mean loss
 fn ofwd b ulong to f64
+put ogkm 1 b
 oemb b
 for l ulong get og 5
 olayf l
@@ -786,7 +792,11 @@ dh = add get og 19 mul t get og 2
 df = add get og 26 mul t f
 ozero df f
 kvta dh opw2 l df f get og 2
+if eq get ogkm 0 0
 kdrelu df add oafp l mul t f f
+else
+ogmask df l t
+end
 g2 = add get og 10 opw2 l
 kger add oarl l mul t f dh g2 f get og 2
 offb2 l t df

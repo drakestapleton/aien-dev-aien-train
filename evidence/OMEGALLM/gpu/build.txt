@@ -1,0 +1,9 @@
+omc 2c82480596bbdc50cda9626866209ef662d5834f278f839ff4ce0250c495029f (omega-mv e5b32567)
+# legs gtrain1-3 and the gc-small/gc-night gate receipts ran these (source 4b83ad45 = before the on-chip Adam; src-diff-4b83ad45-7bd36d87.txt is the whole change):
+BUILD_OK 3568922745aaa298eebe1fad6e28a0abcf80c0c8f1a41f308f5230b9ee2fed44 ollm-gb10 source_sha256 4b83ad45ad84a345374ed5f0b2305ff7b6a759d477973c5da2917e498379b225
+BUILD_OK 29b1701def3966874887ee6a1644bb2511784c25ca17a5565ad9d5ab01de2426 ollm-mut-g-gb10 source_sha256 3aa593b2d0d8c72c981fc779f794dc8a7d978cb2aecda685660e53ba0da61975
+# this tree (TARGET=gb10 sh tests/omegallm/build.sh [--mutant h|g]); ga-*, gc-night-371ff177, gtrainf-* ran these binaries. They were built from
+# sources 426026f9 / 100a2afb / 17175dbf, which differ from this tree only in the gg.om note above fn main; the ELFs are byte-identical:
+BUILD_OK 371ff1771e9d86af4a6466569e2eb2283385eaa023b2ab9e53d766ba49ca3fc2 ollm-gb10 source_sha256 7bd36d87cb0a75a9d860f0db15e8b11961a5ecb048f56df57462e23ec2d71c9f
+BUILD_OK 36a4efc2baffec0df31c80a684800e57e6a72ed27e7bd3c3164661c659a83807 ollm-mut-h-gb10 source_sha256 fbd24f8695de6a46aafd89b5006adb144d09218eb68c8336414713b0e1553331
+BUILD_OK 3d4d3eaacd4c9ee676d9e97f047b0e98d0339fae3ff9fcf7cea0df9f0fea1b05 ollm-mut-g-gb10 source_sha256 417ddd48f23e85ffa3716de0ac8765a65f4bfb908057ab076cfddfd2f9ec02dd

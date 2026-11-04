@@ -1,0 +1,18 @@
+c1 pre-registration (written before window open, 2026-11-02)
+Change under test: launch batching removed from gk.om/gg.om (gkbm/gkbq/gkbw, WAIT_FOR_IDLE and
+INVALIDATE_SHADER_CACHES branches, ggh, OMUTQ, gkt[4]); gkbuild always resets the pushbuffer, gksend
+returns the wait. Kept: spin-wait gkwait + gkpoll, gprof, one-warp softmax (OMUTS), split-K weight
+gradients (OMUTP). Source is meant to compute what NB (038c4374, bt-chk3) computed.
+Binaries (omc e5b32567, sources from /tmp/wt-gpu on HEAD 154fd8c + uncommitted):
+ C  /tmp/gk/c1/out/ollm-gb10             6a4c97a1  product
+ CS /tmp/gk/c1/outs/ollm-mut-s-gb10      4fef03af  mutant s (softmax butterfly lane-1 step dropped)
+ CP /tmp/gk/c1/outp/ollm-mut-p-gb10      0746a333  mutant p (split-K drops last slice)
+ A  /tmp/gk/sm/out/ollm-gb10             e50ccfa3  softmax-only product, timing base
+Expectations (tolerances unchanged):
+ C: gc2-small-s3, gc2-max-s7, ga-max rc 0
+ CS: gc2-small-s3 and gc2-max-s7 FAIL rc 47 (as in sm-chk1)
+ CP: gc2-max-s7 FAIL rc 47 (as NBP in bt-chk3); gc2-small-s3 reported, no expectation
+ C geval: E 9000 2243 1445466 539226 (r5 ck9000) and E 30000 2243 1338156 499194 (r6 ck30000)
+ gprof C: report per-kernel lines, no expectation
+ t200 from r6 ck9000: C and A wall_ns; C expected near NB 47.835 s, no speed claim unless both rc 0.
+A FAIL of any product gate is kept as a receipt and stops the commit.

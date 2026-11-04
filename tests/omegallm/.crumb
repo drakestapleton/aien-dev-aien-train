@@ -3,17 +3,17 @@
     "generated": {
       "children": [],
       "children_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "compiled_at": "2026-11-04T14:36:44Z",
+      "compiled_at": "2026-11-04T14:37:51Z",
       "compiler": "crumb-compile/1",
-      "digest": "sha256:8cfa4c60e538cca78651b89245c4f9ecfa3015cb21560c58406997bf8b516d02",
+      "digest": "sha256:b6793b0d0dfd91c05d55fbc711e06009c784ad91a0ed32db8762fde554340cb9",
       "evidence_files": 0,
       "evidence_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "files": 17,
-      "generated_at_commit": "27a428240244230e20e87b74d071d801310dc13d",
-      "source_tree": "sha256:a23d6664b9e591f883b712b7f8549f4874165db14074750cad6e5489d951a95c"
+      "files": 19,
+      "generated_at_commit": "9ca015bd2cc896bbe8b96eab6b6a846522ea70d7",
+      "source_tree": "sha256:8530e0239b1febd58f9da6ca58bb0b524a040275689d914584172dbba3d1910a"
     }
   },
   "name": "omegallm-tests",
-  "purpose": "Build script, core receipt script, v1 referee and BPE checks (v1-oracle.sh, bpe-check.sh), Wolfram exp/log reference and the Python-stdlib referee (oracle.py) for Omega LLM v0 and v1; verification only, never in the build",
+  "purpose": "Build script, core receipt script, Wolfram exp/log reference and the Python-stdlib referee (oracle.py) for Omega LLM v0; verification only, never in the build",
   "schema_version": "1.0.0"
 }

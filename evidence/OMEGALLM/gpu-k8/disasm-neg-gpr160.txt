@@ -1,0 +1,11 @@
+# negative control: attempt-2 tree with gkgpr 160 for the 64x64 kernels, SHAPE="256 32 64 2 128 2", slots as above; rc 4 (GPR_LOW)
+# nvdisasm -b SM121; DUMP/SLOT/GPR/SMEM lines below, listing not kept (regenerable).
+DUMP 834fd3e01019ebf908d8c9b38c9497bcfcb736db012a8374b62bd70763aba12e source_sha256 e88a9d7597a7a83bdc5ffb5028a05878e7903edc806c50d1856a0cc7005ff922 code_sha256 70e215afe8f6aa0876aeb23b86354f20ce73f24aa96e1ecfaf96ac60b2ac0f90
+SLOT 0 bytes 7776 sha256 cdd7ac8e3702a3cd474b62641b897a71cdeca0e5fe58d279d10dc5d764896263
+GPR 0 max R101 need 104 declared 104 OK
+SLOT 40 bytes 15984 sha256 66da4691e31a0f542c59c975b30c62519c2b3e808e9290b0e939296d683ebbe0
+GPR 40 max R158 need 161 declared 160 LOW
+SLOT 54 bytes 17008 sha256 33476526cbd142febae14c8229b9adf8e803f9244a3def5d04a8518f14c11319
+GPR 54 max R158 need 161 declared 160 LOW
+GPR_LOW
+GPR_LOW

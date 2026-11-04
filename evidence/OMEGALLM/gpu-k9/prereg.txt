@@ -1,0 +1,56 @@
+k9 pre-registration (written before window open, 2026-11-02)
+Round k9: GEMM epilogue ReLU fusion. Flash-style attention (the ~41.7 ms/step attention path in the k8
+profile) is deferred to a later round; BF16 waits on Drake's gate decision; launch batching was dropped.
+Motivation (k8 product Q profile, evidence/OMEGALLM/gpu-k8/a3/prof-{1,2,3}-Q.txt, max shape, R = B T =
+16384, F 1024, L 8): RELUF (id 17) 6.004 ms/step and RELUB (id 18) 8.15 ms/step of 143.14 ms/step.
+Wolfram: 8*2*16384*1024*4 B / 6.004 ms = 178.84 GB/s; 8*3*t / 8.15 ms = 197.62 GB/s: both already
+bandwidth-bound, so the gain can only come from removing tensor passes.
+Change (source fc8a1e2e vs Q 60db63c0, /tmp/gk/k9/srcdiff-q-to-p.txt, 366 diff lines):
+ gk.om: GEMM epilogue ep (args 30/31 = second pointer, gkna 32): ep 1 stores C = FP and also
+ Y = FP > 0 ? FP : 0 (FSETP.GT P2 vs RZ, FSEL; NaN -> 0) to the second pointer; ep 2 loads FP from the
+ second pointer and stores C = FP > 0 ? C : 0. New ids 25 (ep1) / 26 (ep2) 32x32 and 56 (ep1) / 58 (ep2)
+ 64x64; ep1 needs ma1 mb0 (ggxw), ep2 ma1 mb1 (ggxwt), beta false; anything else -> gkmm refuses
+ nverr -22 (gkepok). gkope ep y arms the next gkmm. OMUTM moved from gr.om to gk.om: mutant m sets the
+ ep 2 threshold to 2^-10 (MOV imm into R92 / R140) while forward and FP are unchanged.
+ gr.om: RELUF/RELUB kernels removed (slots 17/18 empty); grew keeps COPY 19 / ZERO 20.
+ gg.om: ggffn uses gkope 1 y before the W1 GEMM (FP l10 and Y l11 both written, so gcmp2's ogmask FP
+ check is unchanged); ggbffn uses gkope 2 FP before the dF GEMM; ggew 17/18 calls removed.
+Modeled saving [INFERENCE]: per layer 5 passes of 64 MiB removed (RELUF read FP + write Y, RELUB read FP,
+ read dF, write dF), 2 added in the epilogues (Y store, mask load). Wolfram: at the measured combined
+ 189.65 GB/s, 2 added passes cost 5.6616 ms/step -> net 8.4924 ms/step (5.93%); if fully hidden, up to
+ 14.154 ms/step (9.89%). Launches -16 per step (2 per layer x 8).
+Arms:
+ P  /tmp/gk/k9/bin/ollm-gb10              89ce7107  k9 product (source fc8a1e2e)
+ PT /tmp/gk/k9/bint/ollm-mut-t-gb10       2ce7fd6e  P mutant t (source 4106e2cb)
+ PM /tmp/gk/k9/binm/ollm-mut-m-gb10       73d45399  P mutant m (source a4103a7d)
+ Q  /tmp/gk/k8c/binq/ollm-gb10            0b701583  k8 product (baseline)
+Odd shape: /tmp/gk/k9/ck-odd.bin 7ac2a238 = ollm init 256 32 64 2 96 2 3 7 100 1000 (F 96, B 3, R 96:
+ gktile 32, so the FFN GEMMs take fused ids 25/26; the parity and max shapes take 56/58).
+Static checks (/tmp/gk/k9/dis-{p,x}.txt = parity / max shape, both rc 0): slots 17, 18 empty; GPR OK
+ for all: 2, 3, 25, 26 max R101 need 104 declared 104; 42, 46, 56, 58 max R158 need 161 declared 168;
+ 19 R34 / 20 R31 declared 72. SMEM target 17 for GEMMs, 9 for 19/20. Slot 26: 16 mask LDG, 16
+ FSETP.GT P2 vs RZ + FSEL, 16 STG. Slot 25: 16 STG (FP), FSETP/FSEL, address recompute from R90, 16 STG.
+ Store read-barrier SB1 is waited on before the registers are reused (gkst/gkpend).
+Expectations (tolerances unchanged; GC2 field 14 and GA field 7 are wall timings, exempt):
+ P gc2-small-s3: rc 0, GC2 84288 177 177 3815 211 7629 1 0 0 194221 0 5529261 5529261 * 0 (= k8 Q)
+ P gc2-max-s7:   rc 0, GC2 7409920 159783 758 122070 450 61035 6 3 358192 1557866 0 8339291 8339291 * 0
+ P gc2-odd-s3:   rc 0, GCMP2 PASS, GC2 fields 1-13 and 15 equal to Q gc2-odd-s3 (same window)
+ Q gc2-odd-s3:   rc 0, GCMP2 PASS
+ P ga-max:       rc 0, GACMP PASS, GA 7409920 59554 4021923359 14807 125 15259 * 2841667
+ P geval:        E 9000 2243 1445466 539226; E 30000 2243 1338156 499194
+ PT gc2-small-s3 and gc2-max-s7: GCMP2 FAIL rc 47 (control; t only touches 64x64 kernels).
+ PM gc2-max-s7: GCMP2 FAIL rc 47 (control, precedent evidence/OMEGALLM/gpu-max/gc2-max-s7-mut-m.txt).
+ PM gc2-odd-s3: GCMP2 FAIL (control for the 32x32 ep 2 path) [INFERENCE: some FP fall in (0, 2^-10]].
+ PM gc2-small-s3: reported [INFERENCE: expected FAIL].
+ t200 from r6 ck9000, Q then P: rc 0, T 9200 1508182, ck_after ec4a8c21... for both [INFERENCE: same
+ FP arithmetic, same mask instructions, so bit-identical].
+ gprof, three rounds rotated (Q P / P Q / Q P), 3 steps each from prof/ck.bin: P lists no GP 17 or 18
+ and lists GP 56 and 58; P GT launch field = Q's - 48 (3 steps x 16).
+Decision rule (metric = GT summed GPU wait, field 9, per profile; speed is non-quiet):
+ ADOPT k9 if every expectation marked rc/PASS/FAIL/E/T/ck above holds AND max P wait < min Q wait over the
+ three rounds. Gates pass but speed rule fails -> NULL, the k9 source is reverted to Q (c05b89f).
+ A PM gc2-odd-s3 PASS leaves the 32x32 ep 2 path uncontrolled -> no adoption until a new control.
+ Also reported: per-id wait for ids 2/42 vs 25/56 and 3/46 vs 26/58, t200 wall per arm.
+A FAIL of any product gate, a mutant PASS where FAIL is required, or a checkpoint mismatch is kept as a
+receipt and stops the commit.
+run.sh: the k8c run() function unchanged; runs listed in run.sh, paths above.

@@ -1,0 +1,635 @@
+note SPDX-License-Identifier: AGPL-3.0-only
+note gr.om: row and elementwise SM121 kernels for the ollm GPU step (slots 9..24), emitted after
+note gkall with the model dimensions baked in as immediates. Words verified with nvdisasm -b SM121.
+note Launch shape: 64 threads per block, R4 = ctaid.x 64 + tid.x, R3 = ctaid.y, R7 = ctaid.z;
+note arg 0 is the R4 bound (threads at or past it exit). Registers: R8-R23 pointers and ints,
+note R24-R29 constants, R26 = 1, R30 loop counter, R31 = -1, R32-R63 data, R64-R69 scalars.
+global grd ulong 8
+note grd: 0 V 1 T 2 D 3 H 4 F 5 B
+fn grf v f64 to uint
+ret bitcast uint f32 v
+end
+fn grarg i uint to uint
+ret add 896 mul i 4
+end
+fn grfsetp p uint a uint b uint cc uint to void
+gkpr or 29195 shl a 24 b or or 66060288 shl cc 12 shl p 17
+end
+fn grfsel d uint a uint b uint p uint to void
+gkfx or or 29192 shl d 16 shl a 24 b shl p 23
+end
+fn grfmax d uint a uint b uint to void
+gkfx or or 29193 shl d 16 shl a 24 b 125829120
+end
+fn grfadd d uint a uint b uint to void
+gkfx or or 29217 shl d 16 shl a 24 b 0
+end
+fn grfsub d uint a uint b uint to void
+gkfx or or 29217 shl d 16 shl a 24 or b 2147483648 0
+end
+fn grmufu d uint a uint op uint to void
+gkvr or 29448 shl d 16 a op
+end
+note pointer number i (odd) sits in arg slots i+1, i+2 so its LDC.64 is 8-byte aligned
+fn grptr d uint i uint idx uint scale uint to void
+gkldc64 d grarg add i 1
+gkimadw d idx scale d
+end
+fn grtop c uint n uint to ulong
+gkmovi c n
+ret div get gkat 0 16
+end
+fn grbot c uint top ulong to void
+gkiadd c c 31
+gkisge 0 c 1
+gkbra 0 top
+end
+fn gradv p uint n uint to void
+gkimadw p 26 n p
+end
+fn grld8 d uint p uint first bool to void
+for u uint 8
+gkldg add d u p mul u 4 or ne u 0 not first
+end
+end
+fn grst8 p uint s uint to void
+for u uint 8
+gkstg p add s u mul u 4 ne u 0
+end
+end
+fn grpro to void
+gkldc 1 892 false
+gks2r 0 33 true
+gks2r 2 37 true
+gks2r 3 38 true
+gks2r 7 39 true
+gkq 4278482860 27392 134220288 or gkcw 4 2 7 get gkpend 0 8192
+put gkpend 0 4
+gkimadi 4 2 64 0
+gkldc 5 896 false
+gkisetp 0 4 5 6
+gkexitp 0
+gkmovi 31 4294967295
+gkmovi 26 1
+end
+note 9 EMB: out[b T + t][i] = wte[x[b T + t]][i] + wpe[t][i]; grid (D/64, T, B); args D out wte wpe x
+fn gremb to void
+d = uint get grd 2
+t = uint get grd 1
+grpro
+gkimadi 8 7 t 3
+grptr 12 7 8 4
+gkldg 9 12 0 false
+gkimadi 10 9 d 4
+grptr 14 3 10 4
+gkimadi 11 3 d 4
+grptr 16 5 11 4
+gkimadi 20 8 d 4
+grptr 18 1 20 4
+gkldg 32 14 0 false
+gkldg 33 16 0 true
+grfadd 34 32 33
+gkstg 18 34 0 false
+gkexit
+end
+note RMS kernels: one warp per row (threads R*32, arg 0); lane l holds columns l + 32 u, u < D/32,
+note so each warp load and store is one coalesced 128-byte line and every row is read once.
+note R8 = row, R9 = lane; ld/st w: n words at p + 128 u (gkldg/gkstg chain flag: first false).
+fn grrrow to void
+grpro
+gkshr 8 4 5
+gkandi 9 4 31
+end
+fn grrptr d uint i uint d4 uint to void
+grptr d i 8 d4
+gkimadw d 9 4 d
+end
+fn grldw d uint p uint n uint first bool to void
+for u uint n
+gkldg add d u p mul u 128 or ne u 0 not first
+end
+end
+fn grstw p uint s uint n uint to void
+for u uint n
+gkstg p add s u mul u 128 ne u 0
+end
+end
+note 10 RMSF: per row r < R: s = 1/sqrt(sum v^2 / D + 1e-5); y = v s g; args R*32 v g y s
+fn grrmsf to void
+d = uint get grd 2
+d4 = mul d 4
+n = div d 32
+grrrow
+gkmovi 24 grf div 1.0f64 f64 d
+gkmovi 25 grf 0.00001f64
+grrptr 10 1 d4
+gkldc64 14 grarg 4
+gkimadw 14 9 4 14
+grldw 32 10 n true
+grldw 40 14 n false
+gkmovz 64
+for u uint n
+gkffmaf 64 add 32 u add 32 u 64
+end
+grwred 0 0
+gkffmaf 65 64 24 25
+grmufu 66 65 5120
+grptr 12 7 8 4
+gkstg 12 66 0 false
+grrptr 16 5 d4
+for u uint n
+gkfmulf add 32 u add 32 u 66
+gkfmulf add 32 u add 32 u add 40 u
+end
+grstw 16 32 n
+gkexit
+end
+note Mutant r: 1 in the product, 0 in the mutant, whose RMSB row sum sum(da g v) skips the lane-1
+note butterfly step (k1 from half the row), which gcmp2 must catch.
+const OMUTR ulong 1
+note 11 RMSB: per row: k1 = s^2 sum(da g v)/D; dh += (da g - v k1) s; w = da v s; args R*32 v g s da dh w
+fn grrmsb to void
+d = uint get grd 2
+d4 = mul d 4
+n = div d 32
+grrrow
+gkmovi 24 grf div 1.0f64 f64 d
+grrptr 10 1 d4
+gkldc64 12 grarg 4
+gkimadw 12 9 4 12
+grrptr 14 7 d4
+grrptr 16 9 d4
+grptr 20 5 8 4
+grldw 32 14 n true
+grldw 40 12 n false
+grldw 48 10 n false
+grldw 56 16 n false
+gkldg 67 20 0 true
+gkmovz 64
+for u uint n
+gkfmulf add 40 u add 32 u add 40 u
+gkffmaf 64 add 40 u add 48 u 64
+end
+if eq OMUTR 0
+grwred 0 1
+else
+grwred 0 0
+end
+gkfmulf 66 67 67
+gkfmulf 66 66 64
+gkfmulf 66 66 24
+grrptr 18 11 d4
+for u uint n
+gkfmulf add 32 u add 32 u add 48 u
+gkfmulf add 32 u add 32 u 67
+gkfmulf add 48 u add 48 u 66
+grfsub add 40 u add 40 u add 48 u
+gkfmulf add 40 u add 40 u 67
+grfadd add 56 u add 56 u add 40 u
+end
+grstw 16 56 n
+grstw 18 32 n
+gkexit
+end
+note 13/14 COLSUM: out[c ostr + i] (=, +=) sum_k in[c cstr + k kstr + i]; grid (n/64, chunks)
+note arg slots: 0 n, 1 kcnt (>= 1), 2-3 in, 4 kstr, 5 cstr, 6-7 out, 8 ostr (strides in bytes)
+fn grcol acc bool to void
+grpro
+grptr 10 1 4 4
+gkldc 20 grarg 5 false
+gkimadwr 10 3 20 10
+gkldc 21 grarg 4 false
+gkldc 30 grarg 1 false
+gkmovz 64
+top = div get gkat 0 16
+gkldg 32 10 0 false
+grfadd 64 64 32
+gkimadwr 10 26 21 10
+grbot 30 top
+grptr 12 5 4 4
+gkldc 22 grarg 8 false
+gkimadwr 12 3 22 12
+if acc
+gkldg 33 12 0 false
+grfadd 64 64 33
+end
+gkstg 12 64 0 false
+gkexit
+end
+note SHFL.BFLY PT, Rd, Ra, lane, 0x1f (codegen.c:671 SHFL.DOWN with the BFLY mode bits, sm121.tbl:183)
+fn grshfl d uint a uint lane uint to void
+gkvr or or 32649 shl d 16 shl a 24 or 201334528 shl lane 21 917504
+end
+note Softmax kernels: one warp per row; lane l holds columns l + 32 u, u < T/32, in R32.. (p) and
+note R48.. (dp), so every load and store of a warp is one coalesced 128-byte line. Threads: T 32
+note per score block (arg 0), grid (T/2, Z); R21 = row t, R22 = lane, R10/R12 = row base + 4 lane.
+fn grsrow tt uint dp bool to void
+grpro
+gkshr 21 4 5
+gkandi 22 4 31
+gkimadi 8 3 tt 21
+grptr 10 1 8 mul tt 4
+gkimadw 10 22 4 10
+if dp
+grptr 12 3 8 mul tt 4
+gkimadw 12 22 4 12
+end
+end
+note sum (op 0) or max (op 1) of R64 across the warp by butterfly, R65 scratch
+fn grwred op uint skip uint to void
+for i uint 5
+o = uint shr 16 i
+if ne o skip
+grshfl 65 64 o
+if eq op 0
+grfadd 64 64 65
+else
+grfmax 64 64 65
+end
+end
+end
+end
+note Mutant s: 1 in the product, 0 in the mutant, whose SOFTF row sum skips the lane-1 butterfly step
+note (each lane then normalizes by half the row), which gcmp and gcmp2 must catch.
+const OMUTS ulong 1
+note Causal chunks (k6): row t (R21) loads 32-column chunk u only if t >= 32 u (P u-1 for u 1..7;
+note chunk 0 and chunks from 8 on stay PT, loaded and masked), and stores chunk u only if
+note t >= 64 floor(u/2). The causal GEMMs read a P or DS row only up to the end of its diagonal tile
+note (32 or 64 columns), so later chunks are neither read nor written and keep stale arena data.
+note Predicates are set before the loads: an ISETP between them would wait on their scoreboard.
+note Mutant w: 1 in the product, 0 in the mutant, whose loads also skip the diagonal chunk (t >= 32 u + 32).
+const OMUTW ulong 1
+fn grcpred n uint off uint to void
+for u uint n
+if and ge u 1 le u 7
+gkisge sub u 1 21 add mul u 32 off
+end
+end
+end
+fn grcp u uint to uint
+if or eq u 0 ge u 8
+ret 7
+end
+ret sub u 1
+end
+fn grcwo to uint
+if eq OMUTW 0
+ret 32
+end
+ret 0
+end
+note 15 SOFTF: causal softmax of row t of score block z in place, zero above t; args T*32 P
+fn grsoftf to void
+tt = uint get grd 1
+n = div tt 32
+grsrow tt false
+gkmovi 27 4286578688
+gkmovi 28 grf 1.4426950408889634f64
+gkmovi 29 grf neg 1.4426950408889634f64
+gkmovi 23 32
+grcpred n grcwo
+for u uint n
+gkldgp add 32 u 10 mul u 128 ne u 0 grcp u
+end
+gkimadi 20 22 1 255
+gkmovi 64 4286578688
+for u uint n
+gkisetp 1 20 21 4
+grfsel add 32 u 27 add 32 u 1
+gkiadd 20 20 23
+grfmax 64 64 add 32 u
+end
+grwred 1 0
+gkfmulf 66 64 29
+gkmovz 64
+for u uint n
+gkffmaf add 32 u add 32 u 28 66
+grmufu add 32 u add 32 u 2048
+grfadd 64 64 add 32 u
+end
+if eq OMUTS 0
+grwred 0 1
+else
+grwred 0 0
+end
+grmufu 67 64 4096
+grcpred n 0
+for u uint n
+gkfmulf add 32 u add 32 u 67
+gkstgp 10 add 32 u mul u 128 ne u 0 grcp and u 4294967294
+end
+gkexit
+end
+note 16 SOFTB: ds = p (dp - sum p dp) / sqrt(E) in place over dp; args T*32 P DP. p and dp above the
+note diagonal (column > t) read as 0: their chunks may be unloaded (k6) or stale (the causal DP GEMM,
+note gkmm cz 3, skips those tiles), and 0 times a stale Inf or NaN is NaN.
+fn grsoftb to void
+tt = uint get grd 1
+n = div tt 32
+e = div get grd 2 get grd 3
+grsrow tt true
+gkmovi 29 grf div 1.0f64 fsqrt f64 e
+grcpred n grcwo
+for u uint n
+gkldgp add 32 u 10 mul u 128 ne u 0 grcp u
+end
+for u uint n
+gkldgp add 48 u 12 mul u 128 true grcp u
+end
+gkmovi 23 32
+gkimadi 20 22 1 255
+for u uint n
+gkisetp 1 20 21 4
+grfsel add 48 u 255 add 48 u 1
+grfsel add 32 u 255 add 32 u 1
+gkiadd 20 20 23
+end
+gkmovz 64
+for u uint n
+gkffmaf 64 add 32 u add 48 u 64
+end
+grwred 0 0
+grcpred n 0
+for u uint n
+grfsub add 48 u add 48 u 64
+gkfmulf add 48 u add 48 u add 32 u
+gkfmulf add 48 u add 48 u 29
+gkstgp 12 add 48 u mul u 128 ne u 0 grcp and u 4294967294
+end
+gkexit
+end
+note 19 COPY y = x; 20 ZERO; args n then pointers. The FFN ReLU forward and backward mask are fused
+note into the GEMM epilogue (gk.om gkepi, kernels 25/26/56/58), so slots 17/18 stay empty.
+fn grew kind uint to void
+grpro
+grptr 10 1 4 4
+if eq kind 20
+gkstg 10 255 0 false
+else
+grptr 12 3 4 4
+gkldg 32 10 0 false
+grfadd 34 32 255
+gkstg 12 34 0 false
+end
+gkexit
+end
+note 21 CE: per row r of logits L (R x V): m, e = exp(l - m), sum; L <- (e/sum - [c = y]) sc;
+note stats[r] = (m, sum, l_y); sc = 1/(T B); args R*32 L y st. One warp per row (grrrow): lane l
+note holds columns l + 32 u, read as 8 coalesced 128-byte lines per step of 256 columns. Pass 1 takes
+note the lane max, then the warp max. Pass 2 sums e per lane without storing it, then the warp sum
+note of the lane totals. Pass 3 recomputes e with the same FFMA and MUFU (bit-identical to pass 2),
+note scales it and stores it. The lane that owns column y (lane y & 31, the thread that stored it)
+note subtracts sc there and writes stats, so no lane reads another lane's store. l_y is loaded
+note before any store, and the next instruction waits for that load.
+note Each lane's sum is compensated (Kahan: R40 carries the lost low part, R41 y, R42 t) and the
+note lane total is s - c. A plain sequential f32 sum over V 4096 in one thread biased log sum low by
+note about 1.04e-5 relative on trained checkpoints (gdiag receipt). Mutant k (OMUTK 0) keeps the
+note plain per-lane sum. Mutant x (OMUTX 0) skips the lane-1 butterfly step of the warp sum, which
+note gcmp2 and geval must catch. Kernels launch with 72 GPRs (gkgpr in grall); Kahan state in
+note R69-R71 hung this kernel (launch wait -110, evidence/OMEGALLM/geval/a1), so it uses R40-R42.
+note The warp sum overwrites R64 and its scratch R65 (grwred), so R43 keeps m and pass 3 recomputes
+note R65 = -m log2e from it (the same FMUL as pass 2, so the same value).
+const OMUTK ulong 1
+const OMUTX ulong 1
+fn grce to void
+v = uint get grd 0
+v4 = mul v 4
+it = div v 256
+sc = div 1.0f64 f64 mul get grd 1 get grd 5
+grrrow
+gkmovi 28 grf 1.4426950408889634f64
+gkmovi 29 grf neg 1.4426950408889634f64
+gkmovi 25 grf sc
+grptr 12 3 8 4
+gkldg 20 12 0 false
+grptr 14 1 8 v4
+gkimadw 14 20 4 14
+gkldg 68 14 0 false
+grrptr 10 1 v4
+gkmovi 64 4286578688
+top = grtop 30 it
+grldw 32 10 8 true
+for u uint 8
+grfmax 64 64 add 32 u
+end
+gradv 10 1024
+grbot 30 top
+grwred 1 0
+grfadd 43 64 255
+gkfmulf 65 64 29
+grrptr 10 1 v4
+gkmovz 66
+gkmovz 40
+top2 = grtop 30 it
+grldw 32 10 8 true
+for u uint 8
+gkffmaf add 32 u add 32 u 28 65
+grmufu add 32 u add 32 u 2048
+if eq OMUTK 0
+grfadd 66 66 add 32 u
+end
+if ne OMUTK 0
+grfsub 41 add 32 u 40
+grfadd 42 66 41
+grfsub 66 42 66
+grfsub 40 66 41
+grfadd 66 42 255
+end
+end
+gradv 10 1024
+grbot 30 top2
+grfsub 64 66 40
+if eq OMUTX 0
+grwred 0 1
+else
+grwred 0 0
+end
+grmufu 67 64 4096
+gkfmulf 67 67 25
+gkfmulf 65 43 29
+grrptr 10 1 v4
+top3 = grtop 30 it
+grldw 32 10 8 true
+for u uint 8
+gkffmaf add 32 u add 32 u 28 65
+grmufu add 32 u add 32 u 2048
+gkfmulf add 32 u add 32 u 67
+end
+grstw 10 32 8
+gradv 10 1024
+grbot 30 top3
+gkandi 21 20 31
+gkisetp 1 9 21 5
+gkexitp 1
+gkldg 33 14 0 false
+grfsub 33 33 25
+gkstg 14 33 0 false
+grptr 16 5 8 12
+gkstg 16 43 0 false
+gkstg 16 64 4 true
+gkstg 16 68 8 true
+gkexit
+end
+note 22 CSRG: gw[c][i] += sum over k in [start[c], start[c+1]) of dh[ord[k]][i]; grid (D/64, V)
+note args D dh start ord gw (start: V + 1 uints, ord: rows sorted by token, ascending within a token)
+fn grcsr to void
+d = uint get grd 2
+grpro
+grptr 10 3 3 4
+gkldg 20 10 0 false
+gkldg 21 10 4 true
+gkisetp 1 20 21 2
+gkexitp 1
+gkimad 30 20 31 21
+grptr 12 5 20 4
+grptr 16 1 4 4
+gkmovz 64
+top = div get gkat 0 16
+gkldg 22 12 0 false
+gkimadw 14 22 mul d 4 16
+gkldg 32 14 0 false
+grfadd 64 64 32
+gradv 12 4
+grbot 30 top
+gkimadi 23 3 d 4
+grptr 18 7 23 4
+gkldg 33 18 0 false
+grfadd 64 64 33
+gkstg 18 64 0 false
+gkexit
+end
+note 23 SQN: out[c] = sum over i in [512 c, 512 c + 512) of g[i]^2 (f32); args nchunk g out. The
+note gradient buffer is padded with zeros to a multiple of 512 (ggplan, ggbwd), so no tail guard.
+fn grsqn to void
+grpro
+grptr 10 1 4 2048
+gkmovz 64
+top = grtop 30 64
+grld8 32 10 true
+for u uint 8
+gkffmaf 64 add 32 u add 32 u 64
+end
+gradv 10 32
+grbot 30 top
+grptr 12 3 4 4
+gkstg 12 64 0 false
+gkexit
+end
+note OMUTH: 1 in the product; 0 in mutant h (beta1 0.8 on chip), which gacmp must catch.
+const OMUTH ulong 1
+note 24 ADAM (f32, on chip): g = g c; m = b1 m + (1 - b1) g; v = b2 v + (1 - b2) g^2;
+note w -= lrb m / (sqrt(v ibc2) + 1e-8), the f32 image of og.om oadam1/oadam2 with lrb = lr/bc1 and
+note ibc2 = 1/bc2 from the host. Args P w m v g c lrb ibc2 (slots 0, 2-9, 10, 11, 12).
+fn gradam to void
+grpro
+b1 = 0.9f64
+if eq OMUTH 0
+b1 = 0.8f64
+end
+gkmovi 24 grf b1
+gkmovi 25 grf sub 1.0f64 0.9
+gkmovi 27 grf 0.99f64
+gkmovi 28 grf sub 1.0f64 0.99
+gkmovi 29 grf 0.00000001f64
+grptr 10 1 4 4
+grptr 12 3 4 4
+grptr 14 5 4 4
+grptr 16 7 4 4
+gkldc 64 grarg 10 false
+gkldc 65 grarg 11 true
+gkldc 66 grarg 12 true
+gkldg 32 16 0 true
+gkldg 33 12 0 true
+gkldg 34 14 0 true
+gkldg 35 10 0 true
+gkfmulf 32 32 64
+gkfmulf 33 33 24
+gkffmaf 33 32 25 33
+gkfmulf 36 32 32
+gkfmulf 34 34 27
+gkffmaf 34 36 28 34
+gkfmulf 37 34 66
+grmufu 38 37 8192
+grfadd 38 38 29
+grmufu 39 38 4096
+gkfmulf 40 33 65
+gkfmulf 40 40 39
+grfsub 35 35 40
+gkstg 10 35 0 false
+gkstg 12 33 0 true
+gkstg 14 34 0 true
+gkexit
+end
+note emit slots 9..24 (12, 17 and 18 empty) for dims V T D H F B; false when a kernel overflows its 16 KiB slot
+fn grset v ulong t ulong d ulong h ulong f ulong b ulong to void
+put grd 0 v
+put grd 1 t
+put grd 2 d
+put grd 3 h
+put grd 4 f
+put grd 5 b
+end
+fn grall to bool
+note the warp-per-row RMS kernels hold D/32 columns per lane, softmax T/32, and CE steps 256 columns
+if or ne rem get grd 2 32 0 ne rem get grd 1 32 0
+ret false
+end
+if ne rem get grd 0 256 0
+ret false
+end
+for k uint 16
+id = add k 9
+gkslot id
+if eq id 9
+gremb
+end
+if eq id 10
+grrmsf
+end
+if eq id 11
+grrmsb
+end
+if eq id 13
+grcol false
+end
+if eq id 14
+grcol true
+end
+if eq id 15
+grsoftf
+end
+if eq id 16
+grsoftb
+end
+if and ge id 19 le id 20
+grew id
+end
+if eq id 21
+grce
+end
+if eq id 22
+grcsr
+end
+if eq id 23
+grsqn
+end
+if eq id 24
+gradam
+end
+if gt get gkat 0 mul ulong add id 1 16384
+ret false
+end
+put gkthr id 64
+put gkgpr id 72
+put gksm id 0
+end
+ret true
+end
+note open the chip with the row slots 9..24 for the given dims, then gkopen's GEMM slots, arena asz bytes
+fn gropen asz ulong to bool
+if not grall
+put nverr 0 neg long 7
+ret false
+end
+ret gkopen asz
+end

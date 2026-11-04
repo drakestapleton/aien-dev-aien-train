@@ -1,0 +1,10 @@
+# P5: CPU eval of rung 6's step-30000 checkpoint (prereg.txt P5), systemd user unit ollm-r6-p5,
+# core 7 (CPUAffinity=7), nice 19, MemoryMax=1G, cwd /tmp/gk/r6, started 2026-11-02T13:20:38Z
+# (a first attempt as a session job died with that session before printing; relaunched as the unit)
+# cmd: ollm eval ck30000.bin v1-data/held.tok 2243 v1-data/merges4096.bin
+binary: bfd92d150d72186424bbf401cc30ed0f906ecc14520b161b3571c32d70b2368e (CPU ollm)
+ck: 8ccaa099ad68ab02afafef9743b8fddc793b9cad029ab8291e91fb86e82d5509
+held.tok: 8f6ac61acfb59acc285383531f93d8c56b25f70827a07e4aea137e80c46aa1cf
+merges4096.bin: 73a29baf97619a746a21232c403bf08af71a76e48b3b2cde6d64dab766083882
+E 30000 2243 1338156 499194
+rc=0 wall_s=5519 start=1793625638

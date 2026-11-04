@@ -1,0 +1,56 @@
+k8 attempt 2 pre-registration (written before window open, 2026-11-02T15:59Z)
+Change under test: software-pipelined (double-buffered) K loop in the 64x64 GEMM (gk.om gkgemm64,
+gkld64, gksts64). Each K tile first issues the global loads of the next tile into staging registers
+R142-157 (predicated @P1, P1 = ktiles left >= 2), runs its 64 FFMA steps from the current shared buffer,
+then stores the staging into the other buffer (two 4352-byte buffers, 8704 bytes) behind one barrier;
+k7b had two barriers per tile and exposed the global-load latency every tile. Registers 144 -> 168 (see attempt 1).
+The 64x64 kernels move from ids 32..39 (one 16 KiB slot) to ids 40,42,..,54 (two slots each), because
+the beta kernels are 17008 bytes. gpu-disasm.sh cuts two slots for ids 40-54.
+Attempt 1 (window 20261102T153743Z-8dfb45, receipts /tmp/gk/k8/w) FAILED: every P and PT run printed
+"GX 99 -110 42 3 0 0 1" (gkmm false, launch wait timeout -110 at the 5 s gkwait, 3 launches done) and
+exited rc 84; B in the same window was healthy (t200-B T 9200 1508182, ck_after ec4a8c21...).
+Root cause: the 64x64 kernels use R158 (buffer step) but declared gkgpr 160. Volta+ hardware burns
+2 GPRs of the QMD count for the program counter (Mesa NAK sm70.rs:101 hw_reserved_gprs, api.rs:275
+QMD count = num_gprs + 2), so R158/R159 lie outside the allocation. Same failure mode as gr.om's R69-R71
+under 72 (evidence/OMEGALLM/geval/a1). Shared memory ruled out: QMD word 36 fixed bits 0x4B44800 give
+MIN 9 / MAX 26 / TARGET 9 SM config (32 / 100 / 32 KiB, clcdc0qmd.h MW(1168:1163) etc.); 8704 fits.
+Fix: put gkgpr id 168 for the 64x64 kernels; kernel code unchanged. Occupancy unchanged at 64
+threads per block: floor(65536/(160*64)) = floor(65536/(168*64)) = 6 blocks per SM.
+New static gate: gpu-disasm.sh reads the dump's gkgpr table and checks gkgpr >= highest GPR + 3 per slot.
+Baseline B = k7b product (aien-train 574e78a), committed evidence/OMEGALLM/gpu-k7b/.
+Sources: /tmp/wt-gpu HEAD fc9af27 + uncommitted gk.om / gpu-disasm.sh / gpu-dump.om, omc e5b32567.
+Static checks before the window:
+ code_sha256 parity 70e215af..., max 9b2e6d92... (equal to attempt 1: kernel bytes unchanged);
+ attempt-1 checks of slot bytes, FFMA/.reuse counts and control bits therefore carry over.
+ GPR check all 31 emitted slots (0-7, 9-11, 13-24, 40-54 even), both shapes: OK.
+   0-7 max R101 need 104 declared 104; 40-54 max R158 need 161 declared 168; gr.om max R68 need 71 of 72.
+ Negative control (same tree, gkgpr 160): GPR 40/54 LOW, script exit 4.
+ Source diff P attempt 1 -> 2 (ollm.om): the gkgpr line and its 5-line note only.
+Binaries:
+ P  /tmp/gk/k8b/bin/ollm-gb10            d0413445  k8 product   (source 63cf5e96)
+ PT /tmp/gk/k8b/bint/ollm-mut-t-gb10     d58b8782  k8 mutant t  (source a891e2d8)
+ B  /tmp/gk/k7b/bin/ollm-gb10            50dcd16e  k7b product
+Exactness argument [INFERENCE until the run]: each C element is the same FFMA chain over k in order, on
+the same operand values; only where the tile is staged changes. P is predicted BIT-IDENTICAL to B.
+Expectations (tolerances unchanged). GC2 field 14 (gpu_ns) and GA field 7 (adam_ns) are wall timings and
+exempt from equality; every other field must equal the k7b receipts:
+ P gc2-small-s3: rc 0, GC2 84288 177 177 3815 211 7629 1 0 0 194221 0 5529261 5529261 * 0
+ P gc2-max-s7:   rc 0, GC2 7409920 159783 758 122070 450 61035 6 3 358192 1557866 0 8339291 8339291 * 0
+ P ga-max:       rc 0, GACMP PASS, GA 7409920 59554 4021923359 14807 125 15259 * 2841667
+ P geval r5 ck9000: E 9000 2243 1445466 539226; r6 ck30000: E 30000 2243 1338156 499194.
+ PT gc2-max-s7 and gc2-small-s3: GCMP2 FAIL rc 47 (the control).
+ t200 from r6 ck9000, B then P: both rc 0, T 9200 1508182, ck_after ec4a8c21... for both.
+ gprof, three rounds rotated (B P / P B / B P), 3 steps each from prof/ck.bin.
+   Decision metric: GPU wait summed over the GEMM ids (B 0-7, 32-39; P 0-7, 40-54), per binary mean
+   and range; also total profile wait and t200 wall / wait.
+   Direction pre-registered [INFERENCE, not a gate]: P GEMM total below B in every round
+   (max P < min B). If it fails, k8 is recorded as a null result and the pipelining is reverted.
+ Speed is non-quiet.
+A FAIL of any product gate, a mutant t pass, or a checkpoint mismatch is kept as a receipt and stops the
+commit.
+run.sh: attempt-1 run.sh with P/PT/cd paths moved to /tmp/gk/k8b (same runs, same order).
+Occupancy risk [INFERENCE, not a gate; recorded so a slow result is not misread] (Wolfram):
+ registers: k7b 144 GPRs -> Floor[65536/(144*64)] = 7 blocks/SM; k8 160 or 168 -> 6.
+ shared memory: QMD TARGET SM config 32 KiB -> Floor[32768/8704] = 3 blocks/SM for k8 (k7b 4352 B: 7);
+ if the hardware sizes the carveout toward MAX 100 KiB, Floor[102400/8704] = 11, not binding.
+ The QMD smem config words are unchanged in this attempt (one change at a time).

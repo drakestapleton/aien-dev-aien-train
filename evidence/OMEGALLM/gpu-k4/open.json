@@ -1,0 +1,7 @@
+{"window_id": "20261102T141140Z-b2bc92", "name": "k4", "owner": "omp-ollm-k4", "lease_min": 25, "gb10": "shared", "waited_s": 1, "state": {"utc": "2026-11-02T14:11:41Z", "loadavg": "4.26 3.90 4.06 3/1948 1926968", "mem_avail_kB": 108242376, "gpu_util_pct": "0", "gpu_W": "4.88",
+ "gb10_lock_holders": "holds shared pid 1926416 (s) (set by a finished flock; processes with /tmp/aien-gb10.lock open now: pid 1926399 /bin/sh ~/.local/bin/spark-window _hold 20261102T14); ",
+ "quiet_lock_holders": "",
+ "quiet_waiters": "",
+ "gpu_apps": "",
+ "sensors_row": "1793628699,2026-11-02T08:11:39-06:00,170,4.87,0,4.37,108208260,0,2192", "sensors_row_age_s": 2}
+}

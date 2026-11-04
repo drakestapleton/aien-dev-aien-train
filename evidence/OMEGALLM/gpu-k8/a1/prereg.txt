@@ -1,0 +1,43 @@
+k8 pre-registration (written before window open, 2026-11-02T15:38Z)
+Change under test: software-pipelined (double-buffered) K loop in the 64x64 GEMM (gk.om gkgemm64,
+gkld64, gksts64). Each K tile first issues the global loads of the next tile into staging registers
+R142-157 (predicated @P1, P1 = ktiles left >= 2), runs its 64 FFMA steps from the current shared buffer,
+then stores the staging into the other buffer (two 4352-byte buffers, 8704 bytes) behind one barrier;
+k7b had two barriers per tile and exposed the global-load latency every tile. Registers 144 -> 160.
+The 64x64 kernels move from ids 32..39 (one 16 KiB slot) to ids 40,42,..,54 (two slots each), because
+the beta kernels are 17008 bytes. gpu-disasm.sh cuts two slots for ids 40-54.
+Baseline B = k7b product (aien-train 574e78a), committed evidence/OMEGALLM/gpu-k7b/.
+Sources: /tmp/wt-gpu HEAD fc9af27 + uncommitted gk.om / gpu-disasm.sh, omc e5b32567.
+Static checks before the window (gpu-disasm.sh, 64 slots of 16384 bytes):
+ fc9af27 dump reproduces the k7b code_sha256 at parity (9659b361...) and max (cd777d34...) shape.
+ k8 code_sha256: parity 70e215af..., max 9b2e6d92...; it differs from k7b only in slots 32-55
+   (32-39 now zero, 40-55 the new kernels) at both shapes; slots 0-31 byte-equal.
+ Kernel bytes ids 40-46 15984, ids 48-54 17008 (each within its 32768-byte pair).
+ FFMA / .reuse per kernel (max shape): product 512/448 (no beta), 576/448 (beta: 64 epilogue FFMAs);
+   mutant t 511/447 and 575/447.
+ Control bits decoded from slot 40: loop top ISETP P1 then four LDS.128 on SB3, prefetch LDGs @P1 write
+   SB0 read-barrier SB1, round-1 address IMADs wait SB1, first FFMA waits SB3, set-1 FFMAs wait SB4,
+   loop STS waits SB0|SB1, one BAR.SYNC per tile, @P0 BRA back to the ISETP; no LDS or LDG outstanding
+   at loop exit, before the epilogue reuses R80-111.
+Exactness argument [INFERENCE until the run]: each C element is the same FFMA chain over k in order, on
+the same operand values; only where the tile is staged changes. P is predicted BIT-IDENTICAL to B.
+Binaries:
+ P  /tmp/gk/k8/bin/ollm-gb10            115f984f  k8 product   (source 7ffa9b53)
+ PT /tmp/gk/k8/bint/ollm-mut-t-gb10     66df07bb  k8 mutant t  (source 460d5e03)
+ B  /tmp/gk/k7b/bin/ollm-gb10           50dcd16e  k7b product
+Expectations (tolerances unchanged). GC2 field 14 (gpu_ns) and GA field 7 (adam_ns) are wall timings and
+exempt from equality; every other field must equal the k7b receipts:
+ P gc2-small-s3: rc 0, GC2 84288 177 177 3815 211 7629 1 0 0 194221 0 5529261 5529261 * 0
+ P gc2-max-s7:   rc 0, GC2 7409920 159783 758 122070 450 61035 6 3 358192 1557866 0 8339291 8339291 * 0
+ P ga-max:       rc 0, GACMP PASS, GA 7409920 59554 4021923359 14807 125 15259 * 2841667
+ P geval r5 ck9000: E 9000 2243 1445466 539226; r6 ck30000: E 30000 2243 1338156 499194.
+ PT gc2-max-s7 and gc2-small-s3: GCMP2 FAIL rc 47 (the control).
+ t200 from r6 ck9000, B then P: both rc 0, T 9200 1508182, ck_after ec4a8c21... for both.
+ gprof, three rounds rotated (B P / P B / B P), 3 steps each from prof/ck.bin.
+   Decision metric: GPU wait summed over the GEMM ids (B 0-7, 32-39; P 0-7, 40-54), per binary mean
+   and range; also total profile wait and t200 wall / wait.
+   Direction pre-registered [INFERENCE, not a gate]: P GEMM total below B in every round
+   (max P < min B). If it fails, k8 is recorded as a null result and the pipelining is reverted.
+ Speed is non-quiet.
+A FAIL of any product gate, a mutant t pass, or a checkpoint mismatch is kept as a receipt and stops the
+commit.

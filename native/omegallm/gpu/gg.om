@@ -1,0 +1,1909 @@
+note SPDX-License-Identifier: AGPL-3.0-only
+note gg.om: ollm GPU gradient (aien-train#52, rung 4). The step loss and its gradient for the batch in
+note obx/oby, computed on the GB10 by gk.om GEMMs and gr.om row kernels over all R = B T rows at
+note once in f32; the gradient lands in ogr[0..P) as f64 and the loss in olos, so oadam and olsum run
+note unchanged on the CPU. Arena (gbmem 5) byte offsets in gga: 0 W, 1 G, 2 X, 3 Y, 4 CSR start
+note (V + 1), 5 CSR order (R), 6 first layer, 7 layer stride, 8 HF, 9 SF, 10 Z, 11 logits (R V),
+note 12 CE stats (R 3), 13 DH, 14 DA, 15 DQ DK DU (contiguous), 16 DO, 17 DF, 18 DP, 19 WS, 20 CS;
+note layer fields 24 + f: 0 hin 1 a 2 q 3 k 4 u 5 o 6 hm 7 bn 8 s1 9 s2 10 fp 11 rl 12 P;
+note 40 the arena device address, 47 the plan cursor. s1, s2 and SF hold 1/s (the CPU keeps s).
+global gga ulong 48
+global ggcn ulong 65537
+note byte strides: 0 D, 1 T D, 2 E, 3 T, 4 T T, 5 H T T, 6 R D, 7 D D (each times 4)
+global ggs uint 8
+note OMUTG: 1 in the product; 0 in mutant g (DK = -DS^T Q), which the parity check must catch.
+const OMUTG ulong 1
+
+fn ggdie c ulong to void
+oputc 71
+oputc 88
+oputc 32
+oputu c
+oputc 32
+oputl get nverr 0
+oputc 32
+oputu ulong get nvstage 0
+note diagnostics: launches done, mark1, mark2, QMD semaphore
+oputc 32
+oputl get gkt 0
+oputc 32
+oputu mapget get gbmem 3 0 4
+oputc 32
+oputu mapget get gbmem 3 16 4
+oputc 32
+oputu mapget get gbmem 2 8192 4
+oputc 10
+oflush
+exit 84
+end
+
+fn ggcd n ulong k ulong to ulong
+ret div add n sub k 1 k
+end
+
+fn ggr to ulong
+ret mul get og 6 get og 1
+end
+
+note P rounded up to the SQN chunk of 512; the gradient buffer is that long and zeroed to it
+fn ggp5 to ulong
+ret mul ggcd get og 8 512 512
+end
+
+fn ggput i ulong n ulong to void
+c = get gga 47
+put gga i c
+b = mul div add mul n 4 255 256 256
+put gga 47 add c b
+end
+
+note arena plan for the dims in og; returns its size in bytes
+fn ggplan to ulong
+tt = get og 1
+d = get og 2
+h = get og 3
+f = get og 4
+bb = get og 6
+r = ggr
+rd = mul r d
+pp = mul mul bb h mul tt tt
+put gga 47 0
+for i ulong 8
+ggput add 24 i rd
+end
+ggput 32 r
+ggput 33 r
+ggput 34 mul r f
+ggput 35 mul r f
+ggput 36 pp
+put gga 7 get gga 47
+put gga 47 0
+ggput 0 get og 8
+ggput 1 ggp5
+ggput 2 r
+ggput 3 r
+ggput 4 add get og 0 1
+ggput 5 r
+put gga 6 get gga 47
+ls = mul get gga 7 get og 5
+put gga 47 add get gga 47 ls
+ggput 8 rd
+ggput 9 r
+ggput 10 rd
+ggput 11 mul r get og 0
+ggput 12 mul r 3
+ggput 13 rd
+ggput 14 rd
+ggput 15 mul rd 3
+ggput 16 rd
+ggput 17 mul r f
+ggput 18 pp
+ggput 19 rd
+ggput 20 mul bb d
+ggput 21 get og 8
+ggput 22 get og 8
+ggput 23 div ggp5 512
+note 37: split-K partials for ggsk, at most 2^21 floats (ggks stops doubling once a grid has 1024 blocks)
+ggput 37 2097152
+ret get gga 47
+end
+
+fn gga1 i ulong to ulong
+ret add get gga 40 get gga i
+end
+
+fn ggl l ulong f ulong to ulong
+o = add get gga 6 mul l get gga 7
+ret add add get gga 40 o get gga add 24 f
+end
+
+note address of the output of layer l (the next hin, or HF after the last layer)
+fn ggout l ulong to ulong
+if lt add l 1 get og 5
+ret ggl add l 1 0
+end
+ret gga1 8
+end
+
+fn ggw o ulong to ulong
+ret add gga1 0 mul o 4
+end
+
+fn ggg o ulong to ulong
+ret add gga1 1 mul o 4
+end
+
+note GEMM tiles need m, n multiples of 32 and k of 16: V T D F E multiples of 32; R = B T;
+note softmax rows keep T/32 values per lane in R32..R47, so T is at most 512
+fn ggok to bool
+for i ulong 5
+v = get og i
+if eq i 3
+v = get og 7
+end
+if eq i 1
+v = get og 1
+end
+if or eq v 0 ne rem v 32 0
+ret false
+end
+end
+if gt get og 0 65536
+ret false
+end
+if gt get og 1 512
+ret false
+end
+ret le mul get og 6 get og 3 65535
+end
+
+note open the chip and emit the kernels for the dims in og
+fn ggopen to void
+if not ggok
+ggdie 1
+end
+asz = ggplan
+v = get og 0
+tt = get og 1
+d = get og 2
+h = get og 3
+f = get og 4
+bb = get og 6
+grset v tt d h f bb
+if not gropen asz
+ggdie 2
+end
+put gga 40 gkbase
+ggstr
+end
+
+note pointer j (1-based) into arg slots 2j, 2j + 1
+fn ggpt j uint a ulong to void
+put gkarg mul j 2 gblo a
+put gkarg add mul j 2 1 gbhi a
+end
+
+fn ggu s uint v ulong to void
+put gkarg s uint v
+end
+
+fn ggrun id uint na uint gx ulong gy ulong gz ulong to void
+put gkna 0 na
+x = uint gx
+y = uint gy
+z = uint gz
+if not gklaunch id x y z
+ggdie add 100 ulong id
+end
+end
+
+fn ggmm m ulong n ulong k ulong nz ulong h2 ulong bt bool to void
+a = uint m
+b = uint n
+c = uint k
+e = uint nz
+g = uint h2
+if not gkmm a b c e g bt
+ggdie 99
+end
+end
+
+note C[R][n] (+)= X[R][k] W[k][n]
+fn ggxw x ulong w ulong c ulong n ulong k ulong bt bool to void
+k4 = uint mul k 4
+n4 = uint mul n 4
+gkopa 0 x k4 4 0 0
+gkopa 1 w 4 n4 0 0
+gkopc c n4 4 0 0 f32 1.0f64
+ggmm ggr n k 1 1 bt
+end
+
+note C[R][n] (+)= X[R][k] W[n][k]^T
+fn ggxwt x ulong w ulong c ulong n ulong k ulong bt bool to void
+k4 = uint mul k 4
+n4 = uint mul n 4
+gkopa 0 x k4 4 0 0
+gkopa 1 w k4 4 0 0
+gkopc c n4 4 0 0 f32 1.0f64
+ggmm ggr n k 1 1 bt
+end
+
+note G[kk][n] += X[R][kk]^T DY[R][n], split over R when the grid is small (ggks)
+fn ggwg x ulong dy ulong g ulong kk ulong n ulong to void
+k4 = uint mul kk 4
+n4 = uint mul n 4
+s = ggks kk n 1
+if eq s 1
+gkopa 0 x 4 k4 0 0
+gkopa 1 dy 4 n4 0 0
+gkopc g n4 4 0 0 f32 1.0f64
+ggmm kk n ggr 1 1 true
+ret
+end
+sl = div ggr s
+gkopa 0 x 4 k4 0 uint mul mul sl kk 4
+gkopa 1 dy 4 n4 0 uint mul mul sl n 4
+ggsk kk n 1 s g 0
+end
+
+note Split-K for the weight gradients, whose depth is R = B T. A grid of (m/32)(n/32)nz blocks
+note leaves most SMs idle (rung-6 gprof: id 4 at 1.7-6 TFLOP/s on 64-256 blocks), so ggks doubles
+note the split s (up to 16, R/s a multiple of 16) until the grid reaches 1024 blocks: then
+note blocks s < 2048, so the m n nz s partials fit the 2^21 floats of slot 37.
+fn ggks m ulong n ulong nz ulong to ulong
+b = mul mul div m 32 div n 32 nz
+r = ggr
+s = ulong 1
+while lt mul b s 1024 bound 8
+s2 = mul s 2
+if or gt s2 16 ne rem r mul s2 16 0
+ret s
+end
+s = s2
+end
+ret s
+end
+
+note Operands A and B are set (gkopa) with the slice stride as s2. Batch z = z1 s + z2 (z1 < nz the
+note caller's batch, z2 < s the slice) writes partial P[z1][z2] = A[z1 z2]^T B[z1 z2] into slot 37,
+note then COLSUM 14 adds G[z1] (byte stride gz) += sum over z2 of P[z1][z2], in slice order.
+note Mutant p (OMUTP 0) adds one slice fewer, which gcmp2 must catch.
+const OMUTP ulong 1
+fn ggsk m ulong n ulong nz ulong s ulong g ulong gz uint to void
+mn = mul m n
+p = gga1 37
+n4 = uint mul n 4
+c1 = uint mul mul mn s 4
+c2 = uint mul mn 4
+gkopc p n4 4 c1 c2 f32 1.0f64
+k = div ggr s
+z = mul nz s
+ggmm m n k z s false
+ggskr mn nz s g gz
+end
+
+note COLSUM 14 over slot 37: G[c gz + i] += sum over z2 < s of P[c][z2][i], i < mn, c < nz
+fn ggskr mn ulong nz ulong s ulong g ulong gz uint to void
+kc = s
+if eq OMUTP 0
+kc = sub s 1
+end
+ggu 0 mn
+ggu 1 kc
+ggpt 1 gga1 37
+ggu 4 mul mn 4
+ggu 5 mul mul mn s 4
+ggpt 3 g
+ggu 8 ulong gz
+ggrun 14 9 ggcd mn 64 nz 1
+end
+
+note 19 COPY (x into y), 20 ZERO (x) over n elements (the FFN ReLU is fused into the GEMMs, gkope)
+fn ggew id uint n ulong x ulong y ulong to void
+ggu 0 n
+ggpt 1 x
+ggpt 2 y
+ggrun id 6 ggcd n 64 1 1
+end
+
+note RMSF/RMSB run one warp per row: arg 0 and the thread count are R*32
+fn ggrmsf v ulong g ulong y ulong s ulong to void
+r = mul ggr 32
+ggu 0 r
+ggpt 1 v
+ggpt 2 g
+ggpt 3 y
+ggpt 4 s
+ggrun 10 10 ggcd r 64 1 1
+end
+
+note dh += RMS backward of da; the gain terms go to WS
+fn ggrmsb v ulong g ulong s ulong to void
+r = mul ggr 32
+ggu 0 r
+ggpt 1 v
+ggpt 2 g
+ggpt 3 s
+ggpt 4 gga1 14
+ggpt 5 gga1 13
+ggpt 6 gga1 19
+ggrun 11 14 ggcd r 64 1 1
+end
+
+note gain gradient at parameter offset go += column sums of WS: per sequence (slot 13), then over B
+fn ggain go ulong to void
+d = get og 2
+tt = get og 1
+bb = get og 6
+ggu 0 d
+ggu 1 tt
+ggpt 1 gga1 19
+ggu 4 mul d 4
+ggu 5 mul mul tt d 4
+ggpt 3 gga1 20
+ggu 8 mul d 4
+ggrun 13 9 ggcd d 64 bb 1
+ggu 0 d
+ggu 1 bb
+ggpt 1 gga1 20
+ggu 4 mul d 4
+ggu 5 0
+ggpt 3 ggg go
+ggu 8 0
+ggrun 14 9 ggcd d 64 1 1
+end
+
+note softmax rows: one warp per row, T 32 threads per score block, grid (T/2, B H)
+fn ggsoft id uint p ulong dp ulong to void
+tt = get og 1
+ggu 0 mul tt 32
+ggpt 1 p
+ggpt 2 dp
+ggrun id 6 div tt 2 mul get og 6 get og 3 1
+end
+
+note attention GEMM over the B H (sequence, head) batch; operands set by gghd/ggpl/ggch/ggcp first;
+note cz: gkopz causal mode (1 A = P or DS, 2 A = P^T or DS^T, 3 C = S or DP)
+fn ggbh m ulong n ulong k ulong bt bool cz uint to void
+gkopz cz
+ggmm m n k mul get og 6 get og 3 get og 3 bt
+end
+
+note head-layout operand (rows of E inside D-wide rows, batch b then head); tr: k runs along rows
+fn gghd ab uint p ulong tr bool to void
+s0 = get ggs 0
+s1 = get ggs 1
+s2 = get ggs 2
+if tr
+gkopa ab p 4 s0 s1 s2
+else
+gkopa ab p s0 4 s1 s2
+end
+end
+
+note T x T score operand (batch b then head); tr: transposed
+fn ggpl ab uint p ulong tr bool to void
+s3 = get ggs 3
+s4 = get ggs 4
+s5 = get ggs 5
+if tr
+gkopa ab p 4 s3 s5 s4
+else
+gkopa ab p s3 4 s5 s4
+end
+end
+
+fn ggch c ulong al f64 to void
+s0 = get ggs 0
+s1 = get ggs 1
+s2 = get ggs 2
+gkopc c s0 4 s1 s2 f32 al
+end
+
+fn ggcp c ulong al f64 to void
+s3 = get ggs 3
+s4 = get ggs 4
+s5 = get ggs 5
+gkopc c s3 4 s5 s4 f32 al
+end
+
+note stride table for the dims in og (bytes)
+fn ggstr to void
+d = get og 2
+tt = get og 1
+put ggs 0 uint mul d 4
+put ggs 1 uint mul tt mul d 4
+put ggs 2 uint mul get og 7 4
+put ggs 3 uint mul tt 4
+put ggs 4 uint mul tt mul tt 4
+put ggs 5 uint mul get og 3 mul tt mul tt 4
+put ggs 6 uint mul ggr mul d 4
+put ggs 7 uint mul d mul d 4
+end
+
+note q, k, u = a wq, a wk, a wv as one batched GEMM (wq wk wv and q k u are contiguous)
+fn ggqkv l ulong to void
+d = get og 2
+a = ggl l 1
+w = ggw opwq l
+c = ggl l 2
+s0 = get ggs 0
+s6 = get ggs 6
+s7 = get ggs 7
+gkopa 0 a s0 4 0 0
+gkopa 1 w 4 s0 0 s7
+gkopc c s0 4 0 s6 f32 1.0f64
+ggmm ggr d d 3 3 false
+end
+
+note P = softmax(q k^T / sqrt(E)), o = P u; causal: only S on and below the diagonal is formed
+note (gkmm cz 3) and o stops at the diagonal (cz 1), since P is exactly 0 above it
+fn ggatt l ulong to void
+tt = get og 1
+e = get og 7
+pp = ggl l 12
+q = ggl l 2
+k = ggl l 3
+gghd 0 q false
+gghd 1 k false
+isq = div 1.0f64 fsqrt f64 e
+ggcp pp isq
+ggbh tt tt e false 3
+ggsoft 15 pp pp
+u = ggl l 4
+o = ggl l 5
+ggpl 0 pp false
+gghd 1 u true
+ggch o 1.0f64
+ggbh tt e tt false 1
+end
+
+note hm = hin + o wo; bn = rms(hm) g2; out = hm + relu(bn w1) w2
+fn ggffn l ulong to void
+d = get og 2
+f = get og 4
+rd = mul ggr d
+hm = ggl l 6
+x = ggl l 0
+ggew 19 rd x hm
+x = ggl l 5
+w = ggw opwo l
+ggxw x w hm d d true
+x = ggl l 7
+w = ggw opg2 l
+s = ggl l 9
+ggrmsf hm w x s
+fp = ggl l 10
+w = ggw opw1 l
+y = ggl l 11
+gkope 1 y
+ggxw x w fp f d false
+x = y
+o = ggout l
+ggew 19 rd hm o
+w = ggw opw2 l
+ggxw x w o d f true
+end
+
+fn ggfl l ulong to void
+x = ggl l 0
+w = ggw opg1 l
+a = ggl l 1
+s = ggl l 8
+ggrmsf x w a s
+ggqkv l
+ggatt l
+ggffn l
+end
+
+fn ggfwd to void
+d = get og 2
+x = ggl 0 0
+ggu 0 d
+ggpt 1 x
+x = ggw 0
+ggpt 2 x
+x = ggw get og 30
+ggpt 3 x
+x = gga1 2
+ggpt 4 x
+tt = get og 1
+bb = get og 6
+ggrun 9 10 ggcd d 64 tt bb
+for l ulong get og 5
+ggfl l
+end
+x = gga1 8
+w = ggw get og 33
+z = gga1 10
+s = gga1 9
+ggrmsf x w z s
+x = gga1 11
+w = ggw 0
+v = get og 0
+ggxwt z w x v d false
+r = mul ggr 32
+ggu 0 r
+ggpt 1 x
+x = gga1 3
+ggpt 2 x
+x = gga1 12
+ggpt 3 x
+ggrun 21 8 ggcd r 64 1 1
+end
+
+note layer l FFN backward: DH holds d out on entry, d hm on exit. The dF GEMM's fused epilogue (gkope 2)
+note applies the ReLU mask FP > 0; the forward W1 GEMM (ggffn, gkope 1) stores both FP and Y.
+fn ggbffn l ulong to void
+d = get og 2
+f = get og 4
+dh = gga1 13
+df = gga1 17
+da = gga1 14
+w = ggw opw2 l
+x = ggl l 10
+gkope 2 x
+ggxwt dh w df f d false
+x = ggl l 11
+w = ggg opw2 l
+ggwg x dh w f d
+x = ggl l 7
+w = ggg opw1 l
+ggwg x df w d f
+w = ggw opw1 l
+ggxwt df w da d f false
+x = ggl l 6
+w = ggw opg2 l
+s = ggl l 9
+ggrmsb x w s
+ggain opg2 l
+end
+
+note layer l attention backward: DO, DP, DU, DS (in DP), DQ, DK, then DA. Causal as in ggatt: DP
+note on and below the diagonal (cz 3, SOFTB reads dp above it as 0), DU and DK start at the diagonal
+note (cz 2), DQ stops there (cz 1).
+fn ggbatt l ulong to void
+d = get og 2
+tt = get og 1
+e = get og 7
+dh = gga1 13
+dn = gga1 16
+w = ggw opwo l
+ggxwt dh w dn d d false
+x = ggl l 5
+w = ggg opwo l
+ggwg x dh w d d
+dp = gga1 18
+x = ggl l 4
+gghd 0 dn false
+gghd 1 x false
+ggcp dp 1.0f64
+ggbh tt tt e false 3
+pp = ggl l 12
+dq = gga1 15
+dk = add dq ulong get ggs 6
+du = add dk ulong get ggs 6
+ggpl 0 pp true
+gghd 1 dn true
+ggch du 1.0f64
+ggbh tt e tt false 2
+ggsoft 16 pp dp
+x = ggl l 3
+ggpl 0 dp false
+gghd 1 x true
+ggch dq 1.0f64
+ggbh tt e tt false 1
+al = 1.0f64
+if eq OMUTG 0
+al = neg 1.0f64
+end
+x = ggl l 2
+ggpl 0 dp true
+gghd 1 x true
+ggch dk al
+ggbh tt e tt false 2
+end
+
+note DA = DQ wq^T + DK wk^T + DU wv^T; G wq wk wv += a^T (DQ DK DU) batched; then the rms backward
+fn ggbqkv l ulong to void
+d = get og 2
+da = gga1 14
+dq = gga1 15
+dk = add dq ulong get ggs 6
+du = add dk ulong get ggs 6
+w = ggw opwq l
+ggxwt dq w da d d false
+w = ggw opwk l
+ggxwt dk w da d d true
+w = ggw opwv l
+ggxwt du w da d d true
+a = ggl l 1
+w = ggg opwq l
+s0 = get ggs 0
+s6 = get ggs 6
+s7 = get ggs 7
+k = ggks d d 3
+if eq k 1
+gkopa 0 a 4 s0 0 0
+gkopa 1 dq 4 s0 0 s6
+gkopc w s0 4 0 s7 f32 1.0f64
+ggmm d d ggr 3 3 true
+else
+sl = uint div ggr k
+gkopa 0 a 4 s0 0 mul sl s0
+gkopa 1 dq 4 s0 s6 mul sl s0
+ggsk d d 3 k w s7
+end
+x = ggl l 0
+w = ggw opg1 l
+s = ggl l 8
+ggrmsb x w s
+ggain opg1 l
+end
+
+fn ggbl l ulong to void
+ggbffn l
+ggbatt l
+ggbqkv l
+end
+
+fn ggbwd to void
+d = get og 2
+v = get og 0
+tt = get og 1
+r = ggr
+ggew 20 ggp5 gga1 1 gga1 1
+ggew 20 mul r d gga1 13 gga1 13
+ggxw gga1 11 ggw 0 gga1 14 d v false
+ggwg gga1 11 gga1 10 ggg 0 v d
+ggrmsb gga1 8 ggw get og 33 gga1 9
+ggain get og 33
+l = get og 5
+while gt l 0 bound 1000
+l = sub l 1
+ggbl l
+end
+td = mul tt d
+ggu 0 td
+ggu 1 get og 6
+ggpt 1 gga1 13
+ggu 4 mul td 4
+ggu 5 0
+ggpt 3 ggg get og 30
+ggu 8 0
+ggrun 14 9 ggcd td 64 1 1
+ggu 0 d
+ggpt 1 gga1 13
+ggpt 2 gga1 4
+ggpt 3 gga1 5
+ggpt 4 ggg 0
+ggrun 22 10 ggcd d 64 v 1
+end
+
+note Mutant f: 1 in the product, 0 in the mutant, which uploads layer 0's W1 times 1 + 2^-10 (a
+note forward error on the chip that gcmp2's FP check must name).
+const OMUTF ulong 1
+
+note W[i] as f32 for i in chunk q of P (a loop runs at most 999999 passes)
+fn ggupc q ulong p ulong to void
+h = get gbmem 5
+wo = get gga 0
+i0 = mul q OCH
+for j ulong sub oce q p i0
+i = add i0 j
+x = bitcast uint f32 ggupv i
+m = mapset h add wo mul i 4 4 ulong x
+end
+end
+
+note the uploaded value of W[i]: ow[i] in the product
+fn ggupv i ulong to f64
+w = get ow i
+if eq OMUTF 0
+a = opw1 0
+if and ge i a lt i add a mul get og 2 get og 4
+w = mul w 1.0009765625f64
+end
+end
+ret w
+end
+
+note upload the f32 parameters
+fn ggupw to void
+p = get og 8
+for q ulong ocn p
+ggupc q p
+end
+put gkinv 0 1
+end
+
+note upload the batch tokens and the CSR of x (rows sorted by token)
+fn ggupb to void
+ggupt
+ggcsr
+put gkinv 0 1
+end
+
+note n values omv[s + j] as f32 to arena byte offset o + 4 j, and back (one chunk of an Adam moment)
+fn ggupmc s ulong o ulong n ulong to void
+h = get gbmem 5
+for j ulong n
+x = bitcast uint f32 get omv add s j
+m = mapset h add o mul j 4 4 ulong x
+end
+end
+
+fn ggdnmc s ulong o ulong n ulong to void
+h = get gbmem 5
+for j ulong n
+x = uint mapget h add o mul j 4 4
+put omv add s j f64 bitcast f32 x
+end
+end
+
+note chip parameters of chunk q back into ow as f64
+fn ggdnwc q ulong p ulong to void
+h = get gbmem 5
+o = get gga 0
+i0 = mul q OCH
+for j ulong sub oce q p i0
+i = add i0 j
+x = uint mapget h add o mul i 4 4
+put ow i f64 bitcast f32 x
+end
+end
+
+note optimizer state (ow, omv) to the chip as f32 (m in gga 21, v in gga 22), and back
+fn ggupst to void
+ggupw
+p = get og 8
+for q ulong ocn p
+i0 = mul q OCH
+n = sub oce q p i0
+ggupmc add get og 11 i0 add get gga 21 mul i0 4 n
+ggupmc add get og 12 i0 add get gga 22 mul i0 4 n
+end
+put gkinv 0 1
+end
+
+fn ggdnst to void
+p = get og 8
+for q ulong ocn p
+ggdnwc q p
+i0 = mul q OCH
+n = sub oce q p i0
+ggdnmc add get og 11 i0 add get gga 21 mul i0 4 n
+ggdnmc add get og 12 i0 add get gga 22 mul i0 4 n
+end
+end
+
+fn ggupt to void
+h = get gbmem 5
+xo = get gga 2
+yo = get gga 3
+for i ulong ggr
+tk = get obx i
+m = mapset h add xo mul i 4 4 tk
+ty = get oby i
+m = mapset h add yo mul i 4 4 ty
+end
+end
+
+note counting sort of the R rows by input token: start (V + 1) and order (R) arrays
+fn ggcsr to void
+h = get gbmem 5
+v = get og 0
+for c ulong add v 1
+put ggcn c 0
+end
+for i ulong ggr
+c1 = add get obx i 1
+n = add get ggcn c1 1
+put ggcn c1 n
+end
+for c ulong v
+c1 = add c 1
+n = add get ggcn c1 get ggcn c
+put ggcn c1 n
+end
+so = get gga 4
+for c ulong add v 1
+n = get ggcn c
+m = mapset h add so mul c 4 4 n
+end
+so = get gga 5
+for i ulong ggr
+c = get obx i
+p = get ggcn c
+m = mapset h add so mul p 4 4 i
+put ggcn c add p 1
+end
+end
+
+note ogr[i] = G[i] for i in chunk q of P
+fn ggdnc q ulong p ulong to void
+h = get gbmem 5
+go = get gga 1
+i0 = mul q OCH
+for j ulong sub oce q p i0
+i = add i0 j
+x = uint mapget h add go mul i 4 4
+put ogr i f64 bitcast f32 x
+end
+end
+
+fn ggdown to void
+p = get og 8
+for q ulong ocn p
+ggdnc q p
+end
+end
+
+note one f32 at arena byte offset o, as f64
+fn ggf o ulong to f64
+x = uint mapget get gbmem 5 o 4
+ret f64 bitcast f32 x
+end
+
+note row loss from the CE stats (m, sum, l_y) of row r: log(sum) + m - l_y
+fn ggrl r ulong to f64
+o = add get gga 12 mul r 12
+m = ggf o
+sm = ggf add o 4
+ly = ggf add o 8
+ret sub add flog sm m ly
+end
+
+fn ggloss to f64
+tt = get og 1
+for b ulong get og 6
+s = 0.0f64
+for t ulong tt
+s = add s ggrl add mul b tt t
+end
+put olos b div s f64 tt
+end
+ret olsum
+end
+
+note the step loss and gradient for the batch in obx/oby; ggopen first. full: upload the f32
+note parameters first and download the gradient into ogr[0..P) after; otherwise both stay on chip.
+note phase wall times (ns): 0 upload, 1 forward, 2 backward, 3 download, 4 loss, 5 on-chip Adam
+global ggtm long 6
+fn ggpass full bool to f64
+t = monons
+if full
+ggupw
+end
+ggupb
+u = monons
+put ggtm 0 sub u t
+ggfwd
+t = monons
+put ggtm 1 sub t u
+ggbwd
+u = monons
+put ggtm 2 sub u t
+if full
+ggdown
+end
+t = monons
+put ggtm 3 sub t u
+l = ggloss
+u = monons
+put ggtm 4 sub u t
+ret l
+end
+
+fn gggrad to f64
+ret ggpass true
+end
+
+note clip and Adam on chip at step og[41], the f32 image of oadam: SQN partial sums of g^2, the
+note norm, clip factor, schedule and bias corrections on the host in f64, then ADAM over P
+fn ggadam to void
+p = get og 8
+nc = div ggp5 512
+ggu 0 nc
+ggpt 1 gga1 1
+ggpt 2 gga1 23
+ggrun 23 6 ggcd nc 64 1 1
+h = get gbmem 5
+so = get gga 23
+ss = 0.0f64
+for c ulong nc
+x = uint mapget h add so mul c 4 4
+ss = add ss f64 bitcast f32 x
+end
+nr = fsqrt ss
+cl = 1.0f64
+if gt nr 1.0
+cl = div 1.0 nr
+end
+s = get og 41
+lrs = olrs s bitcast f64 get og 43
+bc1 = sub 1.0 opowb 0.9 s
+bc2 = sub 1.0 opowb 0.99 s
+if eq OMUTC 0
+bc1 = 1.0f64
+bc2 = 1.0f64
+end
+ggu 0 p
+ggpt 1 gga1 0
+ggpt 2 gga1 21
+ggpt 3 gga1 22
+ggpt 4 gga1 1
+ggu 10 ulong grf cl
+ggu 11 ulong grf div lrs bc1
+ggu 12 ulong grf div 1.0f64 bc2
+ggrun 24 13 ggcd p 64 1 1
+end
+
+fn ggtms to void
+oputc 71
+oputc 84
+for i ulong 6
+oputc 32
+oputl get ggtm i
+end
+for i ulong 4
+oputc 32
+oputl get gkt i
+end
+oputc 10
+end
+
+note keep the CPU gradient: ogr[P + i] = ogr[i] (chunked: a loop runs at most 999999 passes)
+fn ggkeep p ulong to void
+for q ulong ocn p
+i0 = mul q OCH
+for j ulong sub oce q p i0
+i = add i0 j
+put ogr add p i get ogr i
+end
+end
+end
+
+note ggcm[0] = max |ogr[i] - ogr[P + i]|, ggcm[1] = max |ogr[P + i]| over i < P
+global ggcm f64 2
+fn ggmaxd p ulong to void
+put ggcm 0 0.0f64
+put ggcm 1 0.0f64
+for q ulong ocn p
+i0 = mul q OCH
+for j ulong sub oce q p i0
+i = add i0 j
+rf = get ogr add p i
+dd = sub get ogr i rf
+if lt dd 0.0f64
+dd = neg dd
+end
+if lt rf 0.0f64
+rf = neg rf
+end
+if gt dd get ggcm 0
+put ggcm 0 dd
+end
+if gt rf get ggcm 1
+put ggcm 1 rf
+end
+end
+end
+end
+
+note gcmp CK DATA S: CPU ograd and GPU gradient for batch S; prints
+note `GC P maxabs_e12 maxref_e12 rel_e9 cpu_loss_micro gpu_loss_micro gpu_ns tol_e9` and GCMP PASS
+note (rel < tol, |loss difference| < 1e-5) or GCMP FAIL (exit 45). tol = R 2^-24 is the first-order
+note bound gamma_R on the f32 error of a sum of R = B T rows, the longest reduction of the weight
+note gradients, relative to the sum of magnitudes; the CPU reference is f64. ReLU units whose f64
+note pre-activation lies within f32 resolution of zero can take the other side on the GPU (receipt:
+note evidence/OMEGALLM/gpu/README.md), and both sides are valid subgradients.
+fn ggcmp to void
+if ne oargc 5
+exit 2
+end
+ockload 2
+odopen 3
+obatch oargu 4
+put og 10 0
+lc = ograd
+p = get og 8
+ggkeep p
+ggopen
+t0 = monons
+lg = gggrad
+t1 = monons
+ggmaxd p
+mx = get ggcm 0
+mr = get ggcm 1
+rel = div mx mr
+dl = sub lg lc
+if lt dl 0.0f64
+dl = neg dl
+end
+oputc 71
+oputc 67
+oputc 32
+oputu p
+oputc 32
+oputl rmic mul mx 1000000.0f64
+oputc 32
+oputl rmic mul mr 1000000.0f64
+oputc 32
+oputl rmic mul rel 1000.0f64
+oputc 32
+oputl rmic lc
+oputc 32
+oputl rmic lg
+oputc 32
+oputl sub t1 t0
+oputc 32
+tol = div f64 ggr 16777216.0f64
+oputl rmic mul tol 1000.0f64
+oputc 10
+ggtms
+ok = and lt rel tol lt dl 0.00001f64
+r = nvstop
+oputc 71
+oputc 67
+oputc 77
+oputc 80
+oputc 32
+if ok
+oputc 80
+oputc 65
+oputc 83
+oputc 83
+oputc 10
+oflush
+ret
+end
+oputc 70
+oputc 65
+oputc 73
+oputc 76
+oputc 10
+oflush
+exit 45
+end
+
+note true when x is finite (every comparison with NaN is false)
+fn ggfin x f64 to bool
+a = x
+if lt a 0.0f64
+a = neg a
+end
+ret le a bitcast f64 ulong 9218868437227405311
+end
+
+note x for printing: 1e6 when x is not finite or above 1e6 (rmic traps past the long range)
+fn ggclp x f64 to f64
+if ggfin x
+if lt x 1000000.0f64
+ret x
+end
+end
+ret 1000000.0f64
+end
+
+note gcmp2 state. ggfs[j] = s_j for the row in flight (F <= 1024, CONTRACT-V1). ggk2: [0] ReLU
+note flips (sign of FP_chip differs from FP_ref), [1] non-finite FP values (chip or reference),
+note [2] layer of the largest rho, [3] non-finite gradient values (chip, K0 or K1).
+note ggk3: [0] rho max, [1] max |FP_ref| at a flip, [2] max |FP_chip - FP_ref|.
+global ggfs f64 1024
+global ggk2 ulong 4
+global ggk3 f64 3
+
+note s_j = sum_k |bn_k| |W1[k F + j]| for row t of layer l (k < D ascending), the magnitude sum of
+note the FP dot product the chip rounds
+fn ggsj l ulong t ulong to void
+d = get og 2
+f = get og 4
+bn = add oabn l mul t d
+w = opw1 l
+for j ulong f
+put ggfs j 0.0f64
+end
+for k ulong d
+a = get oa add bn k
+if lt a 0.0f64
+a = neg a
+end
+ggsjk a add w mul k f f
+end
+end
+
+fn ggsjk a f64 wo ulong f ulong to void
+for j ulong f
+x = get ow add wo j
+if lt x 0.0f64
+x = neg x
+end
+put ggfs j add get ggfs j mul a x
+end
+end
+
+note model.om's ReLU mask hook (ogkm[0] = 1, gcmp2 only): for row t of layer l of the sequence in
+note flight, check every unit's reference FP against the chip's FP (left in the arena by gggrad),
+note then zero dF where the chip's FP is not > 0, the chip's fused dF mask (gkope 2; NaN included).
+fn ogmask yo ulong l ulong t ulong to void
+f = get og 4
+xo = add oafp l mul t f
+ggsj l t
+row = add mul get ogkm 1 get og 1 t
+c0 = add sub ggl l 10 get gga 40 mul mul row f 4
+for j ulong f
+c = ggf add c0 mul j 4
+ggk1 get oa add xo j c j l
+if not gt c 0.0f64
+put oa add yo j 0.0f64
+end
+end
+end
+
+note one unit: non-finite count, |FP_chip - FP_ref|, rho = that over s_j (inf when s_j = 0 and the
+note values differ), and the flip count
+fn ggk1 v f64 c f64 j ulong l ulong to void
+if not and ggfin v ggfin c
+put ggk2 1 add get ggk2 1 1
+ret
+end
+dd = sub c v
+if lt dd 0.0f64
+dd = neg dd
+end
+if gt dd get ggk3 2
+put ggk3 2 dd
+end
+ggkr dd get ggfs j l
+ggkfl v c
+end
+
+fn ggkr dd f64 s f64 l ulong to void
+if not gt dd 0.0f64
+ret
+end
+rho = bitcast f64 ulong 9218868437227405312
+if gt s 0.0f64
+rho = div dd s
+end
+if gt rho get ggk3 0
+put ggk3 0 rho
+put ggk2 2 l
+end
+end
+
+fn ggkfl v f64 c f64 to void
+a = gt v 0.0f64
+b = gt c 0.0f64
+if eq a b
+ret
+end
+put ggk2 0 add get ggk2 0 1
+if lt v 0.0f64
+v = neg v
+end
+if gt v get ggk3 1
+put ggk3 1 v
+end
+end
+
+note omv[o + i] = ogr[i] for i < P (the chip gradient at o = 0, K0 at o = P; gcmp2 has no Adam step)
+fn ggstash p ulong o ulong to void
+for q ulong ocn p
+ggstq q p o
+end
+end
+
+fn ggstq q ulong p ulong o ulong to void
+i0 = mul q OCH
+for j ulong sub oce q p i0
+i = add i0 j
+put omv add o i get ogr i
+end
+end
+
+note ggc2: [0] max |G_chip - K0|, [1] max |K0|, [2] max |G_chip - K1| over i < P, with the chip
+note gradient in omv[0, P), K0 in omv[P, 2P) and K1 in ogr[0, P); non-finite values count in ggk2[3]
+global ggc2 f64 3
+fn gg2cmp p ulong to void
+for k ulong 3
+put ggc2 k 0.0f64
+end
+for q ulong ocn p
+i0 = mul q OCH
+for j ulong sub oce q p i0
+gg2c1 add i0 j p
+end
+end
+end
+
+fn gg2c1 i ulong p ulong to void
+c = get omv i
+r0 = get omv add p i
+r1 = get ogr i
+if not and and ggfin c ggfin r0 ggfin r1
+put ggk2 3 add get ggk2 3 1
+ret
+end
+gg2mx 0 sub c r0
+gg2mx 1 r0
+gg2mx 2 sub c r1
+end
+
+fn gg2mx k ulong x f64 to void
+if lt x 0.0f64
+x = neg x
+end
+if gt x get ggc2 k
+put ggc2 k x
+end
+end
+
+note gcmp2 CK DATA S: branch-conditioned parity (evidence/OMEGALLM/gpu-max/README.md). The chip
+note gradient runs first and stays in omv; K0 is the CPU ograd with its own ReLU mask (gcmp's
+note reference), K1 the CPU ograd with the chip's FP sign as the ReLU mask (ogmask), which also checks
+note every FFN pre-activation. Prints `GC2 P rel0_e9 rel1_e9 tolr_e9 rho_e9 tolf_e9 rho_layer flips
+note vflip_e12 fpdiff_e12 nonfinite cpu_loss_micro gpu_loss_micro gpu_ns fails` and GCMP2 PASS, or
+note GCMP2 FAIL (exit 47). rel0 = max|G_chip - K0| / max|K0| (gcmp's rel), rel1 = max|G_chip - K1| /
+note max|K0|; rho = max |FP_chip - FP_ref| / s_j. fails is a bit set: 1 a non-finite FP or gradient
+note value, 2 rho >= tolf = max(D, F, T) 2^-24, 4 rel1 >= tolr = R 2^-24 (gcmp's gamma_R), 8 |chip
+note loss - K0 loss| >= 1e-5.
+fn ggcmp2 to void
+if ne oargc 5
+exit 2
+end
+ockload 2
+odopen 3
+obatch oargu 4
+p = get og 8
+ggopen
+t0 = monons
+lg = gggrad
+t1 = monons
+ggstash p 0
+put og 10 0
+put ogkm 0 0
+l0 = ograd
+ggstash p p
+for k ulong 4
+put ggk2 k 0
+end
+for k ulong 3
+put ggk3 k 0.0f64
+end
+put ogkm 0 1
+put og 10 0
+l1 = ograd
+put ogkm 0 0
+gg2cmp p
+ggc2pr lg l0 sub t1 t0
+end
+
+note the GC2 line and verdict of gcmp2 (lg chip loss, l0 K0 loss, ns chip gradient time)
+fn ggc2pr lg f64 l0 f64 ns long to void
+fl = ggc2fl lg l0
+ggc2ln lg l0 ns fl
+ggtms
+r = nvstop
+ggc2vd eq fl 0
+end
+
+note ggc2[k] / max |K0|, clamped for printing
+fn gg2rl k ulong to f64
+ret ggclp div get ggc2 k get ggc2 1
+end
+
+note tolf = max(D, F, T) 2^-24
+fn gg2tf to f64
+n = fmax f64 get og 2 fmax f64 get og 4 f64 get og 1
+ret div n 16777216.0f64
+end
+
+note tolr = R 2^-24 (gcmp's gamma_R)
+fn gg2tr to f64
+ret div f64 ggr 16777216.0f64
+end
+
+note the gcmp2 fail bits (see ggcmp2)
+fn ggc2fl lg f64 l0 f64 to ulong
+dl = sub lg l0
+if lt dl 0.0f64
+dl = neg dl
+end
+fl = ulong 0
+if ne add get ggk2 1 get ggk2 3 0
+fl = or fl 1
+end
+if not lt ggclp get ggk3 0 gg2tf
+fl = or fl 2
+end
+if not lt gg2rl 2 gg2tr
+fl = or fl 4
+end
+if not lt dl 0.00001f64
+fl = or fl 8
+end
+ret fl
+end
+
+fn ggc2ln lg f64 l0 f64 ns long fl ulong to void
+oputc 71
+oputc 67
+oputc 50
+oputc 32
+oputu get og 8
+gg2pe gg2rl 0
+gg2pe gg2rl 2
+gg2pe gg2tr
+gg2pe ggclp get ggk3 0
+gg2pe gg2tf
+oputc 32
+oputu get ggk2 2
+oputc 32
+oputu get ggk2 0
+oputc 32
+oputl rmic mul ggclp get ggk3 1 1000000.0f64
+oputc 32
+oputl rmic mul ggclp get ggk3 2 1000000.0f64
+oputc 32
+oputu add get ggk2 1 get ggk2 3
+oputc 32
+oputl rmic ggclp l0
+oputc 32
+oputl rmic ggclp lg
+oputc 32
+oputl ns
+oputc 32
+oputu fl
+oputc 10
+end
+
+note " x_e9"
+fn gg2pe x f64 to void
+oputc 32
+oputl rmic mul x 1000.0f64
+end
+
+fn ggc2vd ok bool to void
+oputc 71
+oputc 67
+oputc 77
+oputc 80
+oputc 50
+oputc 32
+if ok
+oputc 80
+oputc 65
+oputc 83
+oputc 83
+oputc 10
+oflush
+ret
+end
+oputc 70
+oputc 65
+oputc 73
+oputc 76
+oputc 10
+oflush
+exit 47
+end
+
+note gtrain CK TRAIN UNTIL EVERY: cmdtrain with the gradient from the GPU (K = 1, no workers); prints
+note `T s+1 loss_micro` at save points like train
+fn ggtrain to void
+if ne oargc 6
+exit 2
+end
+ockload 2
+odopen 3
+un = oargu 4
+ev = oargu 5
+if eq ev 0
+exit 2
+end
+en = get og 42
+if lt un en
+en = un
+end
+ggopen
+while lt get og 41 en bound 999999
+s = get og 41
+obatch s
+put og 10 0
+ls = gggrad
+oadam
+s1 = add s 1
+put og 41 s1
+if or eq rem s1 ev 0 eq s1 en
+ocksave 2
+oputc 84
+oputc 32
+oputu s1
+oputc 32
+oputl rmic ls
+oputc 10
+oflush
+end
+end
+r = nvstop
+end
+
+note ogr[P + i] = ow[i], the f64 parameter before the step
+fn ggkw q ulong p ulong to void
+i0 = mul q OCH
+for j ulong sub oce q p i0
+i = add i0 j
+put ogr add p i get ow i
+end
+end
+
+note ogr[i] = chip parameter i as f64
+fn ggdw q ulong p ulong to void
+h = get gbmem 5
+wo = get gga 0
+i0 = mul q OCH
+for j ulong sub oce q p i0
+i = add i0 j
+x = uint mapget h add wo mul i 4 4
+put ogr i f64 bitcast f32 x
+end
+end
+
+note over i < P with w0 = ogr[P + i], c = ow[i] (CPU f64 result), g = ogr[i] (chip f32 result):
+note u = c - w0, d = (g - f32(w0)) - u; ggam 0 max |d|, 1 max |u|, 2 max (|d| - 2^-24 |c|), the part
+note of d above the half-ulp rounding of the f32 master weight
+global ggam f64 3
+fn ggad1 i ulong p ulong to void
+w0 = get ogr add p i
+c = get ow i
+u = sub c w0
+g = sub get ogr i f64 f32 w0
+d = fabs sub g u
+u = fabs u
+e = sub d mul fabs c 0.000000059604644775390625f64
+if gt d get ggam 0
+put ggam 0 d
+end
+if gt u get ggam 1
+put ggam 1 u
+end
+if gt e get ggam 2
+put ggam 2 e
+end
+end
+
+fn ggadc q ulong p ulong to void
+i0 = mul q OCH
+for j ulong sub oce q p i0
+ggad1 add i0 j p
+end
+end
+
+note gacmp CK DATA S: one step from CK on batch S with the chip gradient, Adam on the CPU (oadam, f64)
+note and on the chip (ggadam, f32); prints `GA P maxd_e12 maxu_e12 rel_e9 resid_e9 tol_e9 adam_ns
+note loss_micro` and GACMP PASS (resid = max(|d| - 2^-24 |c|) / max |u| < tol = 2^-16) or GACMP FAIL
+note (exit 46)
+fn ggacmp to void
+if ne oargc 5
+exit 2
+end
+ockload 2
+odopen 3
+obatch oargu 4
+put og 10 0
+p = get og 8
+ggopen
+ggupst
+lg = ggpass true
+for q ulong ocn p
+ggkw q p
+end
+oadam
+t0 = monons
+ggadam
+t1 = monons
+for q2 ulong ocn p
+ggdw q2 p
+end
+for k ulong 3
+put ggam k 0.0f64
+end
+for q3 ulong ocn p
+ggadc q3 p
+end
+mu = get ggam 1
+rel = div get ggam 0 mu
+res = div get ggam 2 mu
+tol = div 1.0f64 65536.0f64
+oputc 71
+oputc 65
+oputc 32
+oputu p
+oputc 32
+oputl rmic mul get ggam 0 1000000.0f64
+oputc 32
+oputl rmic mul mu 1000000.0f64
+oputc 32
+oputl rmic mul rel 1000.0f64
+oputc 32
+oputl rmic mul res 1000.0f64
+oputc 32
+oputl rmic mul tol 1000.0f64
+oputc 32
+oputl sub t1 t0
+oputc 32
+oputl rmic lg
+oputc 10
+r = nvstop
+oputc 71
+oputc 65
+oputc 67
+oputc 77
+oputc 80
+oputc 32
+if lt res tol
+oputc 80
+oputc 65
+oputc 83
+oputc 83
+oputc 10
+oflush
+ret
+end
+oputc 70
+oputc 65
+oputc 73
+oputc 76
+oputc 10
+oflush
+exit 46
+end
+
+note gtrainf CK TRAIN UNTIL EVERY: gtrain with the parameters and Adam state resident on the chip in
+note f32 (ggadam); only the batch goes up each step. At save points the state comes back to f64 for
+note ocksave and `T s+1 loss_micro` is printed; GT at the end has the last step's phase times.
+fn ggtrainf to void
+if ne oargc 6
+exit 2
+end
+ockload 2
+odopen 3
+un = oargu 4
+ev = oargu 5
+if eq ev 0
+exit 2
+end
+en = get og 42
+if lt un en
+en = un
+end
+ggopen
+ggupst
+while lt get og 41 en bound 999999
+s = get og 41
+obatch s
+put og 10 0
+ls = ggpass false
+t = monons
+ggadam
+put ggtm 5 sub monons t
+s1 = add s 1
+put og 41 s1
+if or eq rem s1 ev 0 eq s1 en
+ggdnst
+ocksave 2
+oputc 84
+oputc 32
+oputu s1
+oputc 32
+oputl rmic ls
+oputc 10
+oflush
+end
+end
+ggtms
+oflush
+r = nvstop
+end
+
+note gprof CK TRAIN N: N gtrainf steps from CK, nothing saved. The last step runs with the launch
+note profile on (gk.om gkpf), then 64 ZERO launches of 64 floats measure the bare launch round trip.
+note Prints `T steps loss_micro`, one `GP id gx gy gz m n k wait_ns` per profiled launch, then GT.
+fn ggprof to void
+if ne oargc 5
+exit 2
+end
+ockload 2
+odopen 3
+nn = oargu 4
+if eq nn 0
+exit 2
+end
+ggopen
+ggupst
+ls = 0.0f64
+for i ulong nn
+s = get og 41
+obatch s
+put og 10 0
+if eq add i 1 nn
+put gkpf 0 1
+end
+ls = ggpass false
+t = monons
+ggadam
+put ggtm 5 sub monons t
+put og 41 add s 1
+end
+for i ulong 64
+ggew 20 64 ggg 0 ggg 0
+end
+put gkpf 0 0
+oputc 84
+oputc 32
+oputu get og 41
+oputc 32
+oputl rmic ls
+oputc 10
+for q ulong get gkpc 0
+o = mul q 8
+oputc 71
+oputc 80
+for j ulong 8
+oputc 32
+oputu get gkpl add o j
+end
+oputc 10
+end
+ggtms
+oflush
+r = nvstop
+end
+
+note geval CK HELD W [MERGES]: eval (cli.om cmdeval) with the forward pass on the chip in f32. Windows
+note w < W at offsets w T, B per forward (og 6); the last set pads its spare rows with window 0 and
+note does not count them. Each window adds its mean row loss in window order and, when V > 256, the
+note decoded length of its T targets, as cmdeval does. Prints `E step W loss_micro bpb_micro` like
+note eval, then `GE gpu_ns` (upload, forwards and loss reads). Exits 2 and 23 as eval.
+global ggev f64 1
+global ggen ulong 1
+fn ggeval to void
+ww = ggevw
+t = monons
+ggopen
+ggupw
+put ggev 0 0.0f64
+put ggen 0 0
+bb = get og 6
+nc = div add ww sub bb 1 bb
+for c ulong nc
+ggevc c ww
+end
+ns = sub monons t
+ggevpr ww
+oputc 71
+oputc 69
+oputc 32
+oputl ns
+oputc 10
+oflush
+r = nvstop
+end
+
+note eval's argument checks; loads CK, MERGES and HELD and returns W
+fn ggevw to ulong
+na = oargc
+if and ne na 5 ne na 6
+exit 2
+end
+ockload 2
+ww = oargu 4
+v = get og 0
+if gt v 256
+if eq na 5
+exit 2
+end
+obload 5 v
+end
+odopen 3
+tt = get og 1
+m = get odn 0
+if eq ww 0
+exit 23
+end
+if gt ww div sub m 1 tt
+exit 23
+end
+ret ww
+end
+
+note window set c: rows b < B hold window c B + b (window 0 past W), one chip forward, then the sums
+fn ggevc c ulong ww ulong to void
+bb = get og 6
+tt = get og 1
+for b ulong bb
+w = add mul c bb b
+if ge w ww
+w = 0
+end
+obrow b mul w tt
+end
+ggupb
+ggfwd
+for b ulong bb
+w = add mul c bb b
+if lt w ww
+ggevr b
+end
+end
+end
+
+note add row b's mean loss (CE stats left by ggfwd) and, when V > 256, its decoded target bytes
+fn ggevr b ulong to void
+tt = get og 1
+o = mul b tt
+s = 0.0f64
+for t ulong tt
+s = add s ggrl add o t
+end
+put ggev 0 add get ggev 0 div s f64 tt
+if gt get og 0 256
+n = get ggen 0
+for t ulong tt
+n = add n obtlen get oby add o t
+end
+put ggen 0 n
+end
+end
+
+note the E line of cmdeval from the sums
+fn ggevpr ww ulong to void
+lo = div get ggev 0 f64 ww
+bp = div lo 0.6931471805599453
+if gt get og 0 256
+tt = get og 1
+bp = div mul bp f64 mul ww tt f64 get ggen 0
+end
+oputc 69
+oputc 32
+oputu get og 41
+oputc 32
+oputu ww
+oputc 32
+oputl rmic lo
+oputc 32
+oputl rmic bp
+oputc 10
+end
+
+note gdiag CK DATA S: the CE kernel's per-row stats (max m, sum of exp(l - m), logit l_y) on the chip
+note in f32 against the CPU's f64 values for the same forward of batch S. Prints R, then the mean
+note over rows times 1e9 of: d m, d l_y, d log sum, d loss, (sum of the chip's p) - 1, d (l_y - m).
+note It located the CE sum bias that the Kahan sum in gr.om grce removes.
+global gdacc f64 6
+global gdcpu f64 3
+fn ggdiag to void
+if ne oargc 5
+exit 2
+end
+ockload 2
+odopen 3
+obatch oargu 4
+put og 10 0
+ggopen
+ggupw
+ggupb
+ggfwd
+for i ulong 6
+put gdacc i 0.0f64
+end
+for b ulong get og 6
+x = ofwd b
+for t ulong get og 1
+ggdrow b t
+end
+end
+n = f64 ggr
+oputu ggr
+for i ulong 6
+oputc 32
+oputl rmic mul div get gdacc i n 1000.0f64
+end
+oputc 10
+oflush
+r = nvstop
+end
+
+fn ggdrow b ulong t ulong to void
+r = add mul b get og 1 t
+ggdcpu t get oby r
+ggdacc r
+put gdacc 4 add get gdacc 4 sub ggdps r 1.0f64
+end
+
+note CPU f64 stats of row t of the last ofwd: max logit, log sum exp(l - max), logit of y
+fn ggdcpu t ulong y ulong to void
+d = get og 2
+v = get og 0
+pr = add get og 18 mul t v
+klogit add get og 17 mul t d pr v d
+m = bitcast f64 ulong 18442240474082181120
+for j ulong v
+m = fmax m get oa add pr j
+end
+s = 0.0f64
+for k ulong v
+s = add s fexp sub get oa add pr k m
+end
+put gdcpu 0 m
+put gdcpu 1 flog s
+put gdcpu 2 get oa add pr y
+end
+
+fn ggdacc r ulong to void
+o = add get gga 12 mul r 12
+mg = sub ggf o get gdcpu 0
+ls = sub flog ggf add o 4 get gdcpu 1
+lg = sub ggf add o 8 get gdcpu 2
+put gdacc 0 add get gdacc 0 mg
+put gdacc 1 add get gdacc 1 lg
+put gdacc 2 add get gdacc 2 ls
+put gdacc 3 add get gdacc 3 sub add ls mg lg
+put gdacc 5 add get gdacc 5 sub lg mg
+end
+
+note sum of the chip's probabilities of row r, recovered from the CE output L = (p - [j = y]) sc
+fn ggdps r ulong to f64
+v = get og 0
+sc = div 1.0f64 f64 ggr
+o = add get gga 11 mul mul r v 4
+s = 0.0f64
+for j ulong v
+s = add s div ggf add o mul j 4 sc
+end
+ret add s 1.0f64
+end
+
+note gb10 platform main: gcmp, gcmp2, gtrain, gtrainf, gacmp, geval and gdiag here, every other
+note command through the CPU main (lio.om)
+fn main to int
+if lt oargc 2
+exit 2
+end
+w = ocmdw
+if eq w 1886217063
+ggcmp
+ret 0
+end
+if eq w 216634581863
+ggcmp2
+ret 0
+end
+if eq w 121398885512295
+ggtrain
+ret 0
+end
+if eq w 28831846509999207
+ggtrainf
+ret 0
+end
+if eq w 482871566695
+ggacmp
+ret 0
+end
+if eq w 465491617127
+ggeval
+ret 0
+end
+if eq w 444015928423
+ggdiag
+ret 0
+end
+if eq w 439956435047
+ggprof
+ret 0
+end
+ret ocpumain
+end
