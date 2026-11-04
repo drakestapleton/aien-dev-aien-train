@@ -1,16 +1,23 @@
 {
   "extensions": {
     "generated": {
-      "children": [],
-      "children_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "compiled_at": "2026-10-29T02:16:20Z",
+      "children": [
+        {
+          "digest": "9cff602a50ae4caecd8d5d2b5b49f256fab02d0c5f9dad289c8b57706b21cb10",
+          "last_commit": "9061d3b",
+          "name": "nl1r",
+          "purpose": "NL1R host-only capacity arms and immutable experiment evidence"
+        }
+      ],
+      "children_root": "sha256:cba2bd992e66c6d5a0e65284e20e86412b3feb114a29b04e9084fe2767bf4927",
+      "compiled_at": "2026-11-04T20:55:15Z",
       "compiler": "crumb-compile/1",
-      "digest": "sha256:e91b19fd917c92f39f45cc19436d2b628e9513306761711f1586b952d28d50f8",
-      "evidence_files": 110,
-      "evidence_root": "sha256:e95037f0ee5cf146ab9f07165b75dd2630aa84d16268353cb1273dfe019d90a4",
-      "files": 131,
-      "generated_at_commit": "7edaca90d9c530044b9c5144315cc35bede78780",
-      "source_tree": "sha256:2af0bcbc467226e2bf3983d27fe5b432c677f923aaa67db13062e5072004c090"
+      "digest": "sha256:443925d43f48451746a028ac0077898f993284edb082957e3d7efd020f1ab36c",
+      "evidence_files": 692,
+      "evidence_root": "sha256:2f4870b8ab155aafc76249c7674b269bb51d6e85f9d6356e60b10fb14c824693",
+      "files": 722,
+      "generated_at_commit": "686b07d250e89e115b2deb00ac246a6043d26a02",
+      "source_tree": "sha256:ac8d4171b0989e20f4d7e0f43efa19246bc9d1ddd2741db8aa62189a32c9f74b"
     }
   },
   "name": "neuralese",
