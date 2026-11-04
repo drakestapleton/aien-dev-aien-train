@@ -3,14 +3,14 @@
     "generated": {
       "children": [],
       "children_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "compiled_at": "2026-11-04T20:54:37Z",
+      "compiled_at": "2026-11-04T20:54:44Z",
       "compiler": "crumb-compile/1",
-      "digest": "sha256:479c15905779e98587c86b4765e473e1e5ce77d87fd2cf556e0ac0a255d128ea",
+      "digest": "sha256:e03410343fcc1e6d239d8e95c95e5866a9c3ab0f7dccff290aca2a3c0427abd8",
       "evidence_files": 123,
       "evidence_root": "sha256:467755a911c53fc1befadfb068aed53feb9fdf7afbf9b8177adc0363ed7ef967",
-      "files": 178,
-      "generated_at_commit": "56cc88706a9a685ed9c5dae8050e4643cc7f1aae",
-      "source_tree": "sha256:48d4898be60225174bd4439f2782d98a277282207dcd58f95cf66dbf416330d0"
+      "files": 177,
+      "generated_at_commit": "deb7c7fd478771974f297bb7b407c92a58abfa29",
+      "source_tree": "sha256:144e41b02c0ebd604f2001154d60bfbd19a930a145b810697e0d76673bb9a2fc"
     }
   },
   "name": "neuralese",
