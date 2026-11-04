@@ -1,0 +1,96 @@
+=== win-1.txt
+spark-window: note, other lanes also want the chip (L679 L332 L424 L401 L400 L386 L312 L354 L355 L356 L314 L313 L352 L369 L371 L375 L376 L788). Courtesy rule (Drake 2026-10-24): post what you run and for how long on ~/handoffs/BOARD.md, let anyone mid-measurement finish, step aside if asked.
+spark-window: window 20261103T123608Z-c13cc8 open, chip lock shared, quiet lock none (waited 2 s); box state in ~/yardsticks/windows/20261103T123608Z-c13cc8/open.json
+20261103T123608Z-c13cc8
+spark-window: verdict for its timings: quiet machine
+spark-window: window 20261103T123608Z-c13cc8 closed (closed). It holds:
+  close.json
+  open.json
+=== win-2.txt
+spark-window: note, other lanes also want the chip (L679 L332 L424 L401 L400 L386 L312 L354 L355 L356 L314 L313 L352 L369 L371 L375 L376 L788). Courtesy rule (Drake 2026-10-24): post what you run and for how long on ~/handoffs/BOARD.md, let anyone mid-measurement finish, step aside if asked.
+spark-window: window 20261103T123713Z-41252c open, chip lock shared, quiet lock none (waited 2 s); box state in ~/yardsticks/windows/20261103T123713Z-41252c/open.json
+20261103T123713Z-41252c
+spark-window: verdict for its timings: quiet machine
+spark-window: window 20261103T123713Z-41252c closed (closed). It holds:
+  close.json
+  open.json
+=== win-3.txt
+spark-window: note, other lanes also want the chip (L679 L332 L424 L401 L400 L386 L312 L354 L355 L356 L314 L313 L352 L369 L371 L375 L376 L788). Courtesy rule (Drake 2026-10-24): post what you run and for how long on ~/handoffs/BOARD.md, let anyone mid-measurement finish, step aside if asked.
+spark-window: window 20261103T124308Z-b18d39 open, chip lock shared, quiet lock none (waited 2 s); box state in ~/yardsticks/windows/20261103T124308Z-b18d39/open.json
+20261103T124308Z-b18d39
+spark-window: verdict for its timings: quiet machine
+spark-window: window 20261103T124308Z-b18d39 closed (closed). It holds:
+  close.json
+  open.json
+=== win-4.txt
+spark-window: note, other lanes also want the chip (L679 L332 L424 L401 L400 L386 L312 L354 L355 L356 L314 L313 L352 L369 L371 L375 L376 L788). Courtesy rule (Drake 2026-10-24): post what you run and for how long on ~/handoffs/BOARD.md, let anyone mid-measurement finish, step aside if asked.
+spark-window: window 20261103T125302Z-af62c2 open, chip lock shared, quiet lock none (waited 2 s); box state in ~/yardsticks/windows/20261103T125302Z-af62c2/open.json
+20261103T125302Z-af62c2
+spark-window: verdict for its timings: quiet machine
+spark-window: window 20261103T125302Z-af62c2 closed (closed). It holds:
+  close.json
+  open.json
+=== win-5.txt
+spark-window: note, other lanes also want the chip (L679 L332 L424 L401 L400 L386 L312 L354 L355 L356 L314 L313 L352 L369 L371 L375 L376 L788). Courtesy rule (Drake 2026-10-24): post what you run and for how long on ~/handoffs/BOARD.md, let anyone mid-measurement finish, step aside if asked.
+spark-window: window 20261103T130249Z-15b983 open, chip lock shared, quiet lock none (waited 2 s); box state in ~/yardsticks/windows/20261103T130249Z-15b983/open.json
+20261103T130249Z-15b983
+spark-window: verdict for its timings: quiet machine
+spark-window: window 20261103T130249Z-15b983 closed (closed). It holds:
+  close.json
+  open.json
+=== win-6.txt
+spark-window: note, other lanes also want the chip (L679 L332 L424 L401 L400 L386 L312 L354 L355 L356 L314 L313 L352 L369 L371 L375 L376 L788). Courtesy rule (Drake 2026-10-24): post what you run and for how long on ~/handoffs/BOARD.md, let anyone mid-measurement finish, step aside if asked.
+spark-window: window 20261103T130613Z-bfa629 open, chip lock shared, quiet lock none (waited 2 s); box state in ~/yardsticks/windows/20261103T130613Z-bfa629/open.json
+20261103T130613Z-bfa629
+spark-window: verdict for its timings: quiet machine
+spark-window: window 20261103T130613Z-bfa629 closed (closed). It holds:
+  close.json
+  open.json
+=== win-7.txt
+spark-window: note, other lanes also want the chip (L679 L332 L424 L401 L400 L386 L312 L354 L355 L356 L314 L313 L352 L369 L371 L375 L376 L788). Courtesy rule (Drake 2026-10-24): post what you run and for how long on ~/handoffs/BOARD.md, let anyone mid-measurement finish, step aside if asked.
+spark-window: window 20261103T131601Z-4598db open, chip lock shared, quiet lock none (waited 2 s); box state in ~/yardsticks/windows/20261103T131601Z-4598db/open.json
+20261103T131601Z-4598db
+spark-window: verdict for its timings: quiet machine
+spark-window: window 20261103T131601Z-4598db closed (closed). It holds:
+  close.json
+  open.json
+=== win-8.txt
+spark-window: note, other lanes also want the chip (L679 L332 L424 L401 L400 L386 L312 L354 L355 L356 L314 L313 L352 L369 L371 L375 L376 L788). Courtesy rule (Drake 2026-10-24): post what you run and for how long on ~/handoffs/BOARD.md, let anyone mid-measurement finish, step aside if asked.
+spark-window: window 20261103T132545Z-839773 open, chip lock shared, quiet lock none (waited 2 s); box state in ~/yardsticks/windows/20261103T132545Z-839773/open.json
+20261103T132545Z-839773
+spark-window: verdict for its timings: quiet machine
+spark-window: window 20261103T132545Z-839773 closed (closed). It holds:
+  close.json
+  open.json
+=== win-9.txt
+spark-window: note, other lanes also want the chip (L679 L332 L424 L401 L400 L386 L312 L354 L355 L356 L314 L313 L352 L369 L371 L375 L376 L788). Courtesy rule (Drake 2026-10-24): post what you run and for how long on ~/handoffs/BOARD.md, let anyone mid-measurement finish, step aside if asked.
+spark-window: window 20261103T133534Z-813cf5 open, chip lock shared, quiet lock none (waited 2 s); box state in ~/yardsticks/windows/20261103T133534Z-813cf5/open.json
+20261103T133534Z-813cf5
+spark-window: verdict for its timings: quiet machine
+spark-window: window 20261103T133534Z-813cf5 closed (closed). It holds:
+  close.json
+  open.json
+=== win-10.txt
+spark-window: note, other lanes also want the chip (L679 L332 L424 L401 L400 L386 L312 L354 L355 L356 L314 L313 L352 L369 L371 L375 L376 L788). Courtesy rule (Drake 2026-10-24): post what you run and for how long on ~/handoffs/BOARD.md, let anyone mid-measurement finish, step aside if asked.
+spark-window: window 20261103T134524Z-777d9b open, chip lock shared, quiet lock none (waited 2 s); box state in ~/yardsticks/windows/20261103T134524Z-777d9b/open.json
+20261103T134524Z-777d9b
+spark-window: verdict for its timings: quiet machine
+spark-window: window 20261103T134524Z-777d9b closed (closed). It holds:
+  close.json
+  open.json
+=== win-11.txt
+spark-window: note, other lanes also want the chip (L679 L332 L424 L401 L400 L386 L312 L354 L355 L356 L314 L313 L352 L369 L371 L375 L376 L788). Courtesy rule (Drake 2026-10-24): post what you run and for how long on ~/handoffs/BOARD.md, let anyone mid-measurement finish, step aside if asked.
+spark-window: window 20261103T135511Z-068edb open, chip lock shared, quiet lock none (waited 2 s); box state in ~/yardsticks/windows/20261103T135511Z-068edb/open.json
+20261103T135511Z-068edb
+spark-window: verdict for its timings: quiet machine
+spark-window: window 20261103T135511Z-068edb closed (closed). It holds:
+  close.json
+  open.json
+=== win-12.txt
+spark-window: note, other lanes also want the chip (L679 L332 L424 L401 L400 L386 L312 L354 L355 L356 L314 L313 L352 L369 L371 L375 L376 L788). Courtesy rule (Drake 2026-10-24): post what you run and for how long on ~/handoffs/BOARD.md, let anyone mid-measurement finish, step aside if asked.
+spark-window: window 20261103T140459Z-68f12d open, chip lock shared, quiet lock none (waited 1 s); box state in ~/yardsticks/windows/20261103T140459Z-68f12d/open.json
+20261103T140459Z-68f12d
+spark-window: verdict for its timings: quiet machine
+spark-window: window 20261103T140459Z-68f12d closed (closed). It holds:
+  close.json
+  open.json
