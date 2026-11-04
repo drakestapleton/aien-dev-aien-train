@@ -1,0 +1,19 @@
+{
+  "extensions": {
+    "generated": {
+      "children": [],
+      "children_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "compiled_at": "2026-11-04T15:29:34Z",
+      "compiler": "crumb-compile/1",
+      "digest": "sha256:23313e447c8d991fb8d07504af03bb76bb5e57bca04f1612f1e19717f3daac99",
+      "evidence_files": 29,
+      "evidence_root": "sha256:069c20319f11211af981b2c65d98ae8b69de6cb88646f88c0ed087dc7549a1a9",
+      "files": 29,
+      "generated_at_commit": "76835954fc6244ab5df17e3dc0c03a5f2ea22b7b",
+      "source_tree": "sha256:49b3dca9345e08d07c3311cb3d25c5f9b6bdb211dbbdcaed104f71915868a0d9"
+    }
+  },
+  "name": "weight-edit-evidence",
+  "purpose": "Retained direct checkpoint-edit experiments, candidate selection and controls; no overwritten source checkpoints",
+  "schema_version": "1.0.0"
+}

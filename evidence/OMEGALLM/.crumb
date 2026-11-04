@@ -1,16 +1,23 @@
 {
   "extensions": {
     "generated": {
-      "children": [],
-      "children_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "compiled_at": "2026-11-04T14:49:38Z",
+      "children": [
+        {
+          "digest": "23313e447c8d991fb8d07504af03bb76bb5e57bca04f1612f1e19717f3daac99",
+          "last_commit": "",
+          "name": "weight-edit-20261104",
+          "purpose": "Retained direct checkpoint-edit experiments, candidate selection and controls; no overwritten so"
+        }
+      ],
+      "children_root": "sha256:48230f4dbfce2ab107ddc816dac447164b9d129313ce11246d65a914a108d25f",
+      "compiled_at": "2026-11-04T15:29:34Z",
       "compiler": "crumb-compile/1",
-      "digest": "sha256:fec47a5b82d2f6168110e223f4c8c26f68b6de796a69396c60fa139761244e19",
-      "evidence_files": 1107,
-      "evidence_root": "sha256:62ff6dcf18a4577ab6b38a411a3dd7d5405bc9f3389fc0b43690b2eb23f13f6a",
-      "files": 1107,
-      "generated_at_commit": "3fe6c3360719ae5658901a31220b915df74e3c1e",
-      "source_tree": "sha256:7b706c82cd03b25ba53244bb362c1ef7da1ffb54aec6dba7b917712bfd7fcba6"
+      "digest": "sha256:7af898a3be42a42fa8dae846895682a929efca2a216cc6be0634e766506bf0ba",
+      "evidence_files": 1136,
+      "evidence_root": "sha256:542bcfddd3ee475f99003a19589e348836d71217084cd5e23143f8f23b22e9e1",
+      "files": 1136,
+      "generated_at_commit": "76835954fc6244ab5df17e3dc0c03a5f2ea22b7b",
+      "source_tree": "sha256:bca13c0305f85725c81c639af934952346656cf804b8e10f86eb410fb33f80a1"
     }
   },
   "name": "omegallm-evidence",

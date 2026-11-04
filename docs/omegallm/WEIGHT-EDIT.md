@@ -96,5 +96,9 @@ choice before evaluating the 4,096 final stories. Require at least 0.1% lower fi
 loss for a substantive upgrade and at most 0.2% regression on the published set.
 No further search follows these final scores. Keep both experiments' receipts.
 
-Status: experiments in progress; no substantive upgrade claimed by this document.
+The completed first search found only a 0.016192% fresh final-loss reduction; the
+second search rejected every BF16/f32 blend on calibration and selected the unchanged
+baseline. Retain the original training checkpoint. The small-gain copy is an optional
+inference experiment. Numerical records and limitations are in
+[`evidence/OMEGALLM/weight-edit-20261104`](../../evidence/OMEGALLM/weight-edit-20261104/README.md).
 No installed skill, existing build command, or production model route is changed.

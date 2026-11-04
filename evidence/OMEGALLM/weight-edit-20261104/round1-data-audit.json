@@ -1,0 +1,27 @@
+{
+  "normalization": "lowercase and collapse ASCII whitespace; SHA256",
+  "source": "$DATA/held-v1.bin",
+  "candidate_count": 16000,
+  "excluded_normalized_training_duplicates": {
+    "train.bin": 0,
+    "held.dec": 0
+  },
+  "audited_source_sha256": {
+    "train.bin": "a8e1143ef7d40e0e39c64fcad3705365b5096bf3f2072cc3680a4e9d66a2f9dc",
+    "held.dec": "729e0a4a8854934ee6000ead2b367494c6b4c9eb52d554f81d6f7f44403338ed"
+  },
+  "partitions": {
+    "calibration": {
+      "stories": 2048,
+      "bytes": 1653326,
+      "sha256": "871e130a6af8c77e6104a47b73a45bcf9b097f503ab5646f6373c2fe3afb850b",
+      "selection_sha256": "4d17cb7ef8cca7fabf3585e7638d62ce2c42b883592d0376cfd86ce75806c4d3"
+    },
+    "final": {
+      "stories": 4096,
+      "bytes": 3277545,
+      "sha256": "280dcdadb72422acec8caab48dfe858b72d3bd5661f17bad5511a29b8c8b6f9b",
+      "selection_sha256": "8914294582b19f3a479927c0c57f6fa461fc957ee4766a2693ff8a1759425a90"
+    }
+  }
+}

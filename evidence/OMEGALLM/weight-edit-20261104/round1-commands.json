@@ -1,0 +1,1175 @@
+[
+  {
+    "label": "baseline-legacy",
+    "command": [
+      "$R10/ollm-gb10",
+      "geval",
+      "$R10/run/ck60000.bin",
+      "$DATA/held.tok",
+      "2243",
+      "$DATA/merges4096.bin"
+    ],
+    "rc": 0,
+    "started_unix": 1793805617.8191066,
+    "finished_unix": 1793805624.3139222,
+    "score": {
+      "label": "baseline-legacy",
+      "checkpoint": "$R10/run/ck60000.bin",
+      "windows": 2243,
+      "loss_micronats": 1204466,
+      "bpb_micro": 449322
+    }
+  },
+  {
+    "label": "baseline-calibration-w1-gpu",
+    "command": [
+      "$R10/ollm-gb10",
+      "geval",
+      "$R10/run/ck60000.bin",
+      "$RUN1/data/calibration.tok",
+      "1",
+      "$DATA/merges4096.bin"
+    ],
+    "rc": 0,
+    "started_unix": 1793805624.3144372,
+    "finished_unix": 1793805627.8885615,
+    "score": {
+      "label": "baseline-calibration-w1-gpu",
+      "checkpoint": "$R10/run/ck60000.bin",
+      "windows": 1,
+      "loss_micronats": 1239518,
+      "bpb_micro": 481378
+    }
+  },
+  {
+    "label": "baseline-calibration-w1-cpu",
+    "command": [
+      "$RUN1/build/ollm",
+      "eval",
+      "$R10/run/ck60000.bin",
+      "$RUN1/data/calibration.tok",
+      "1",
+      "$DATA/merges4096.bin"
+    ],
+    "rc": 0,
+    "started_unix": 1793805627.8894806,
+    "finished_unix": 1793805633.9858077,
+    "score": {
+      "label": "baseline-calibration-w1-cpu",
+      "checkpoint": "$R10/run/ck60000.bin",
+      "windows": 1,
+      "loss_micronats": 1239517,
+      "bpb_micro": 481378
+    }
+  },
+  {
+    "label": "calibration-1000-1000",
+    "command": [
+      "$R10/ollm-gb10",
+      "geval",
+      "$R10/run/ck60000.bin",
+      "$RUN1/data/calibration.tok",
+      "1678",
+      "$DATA/merges4096.bin"
+    ],
+    "rc": 0,
+    "started_unix": 1793805633.9960594,
+    "finished_unix": 1793805639.6390688,
+    "score": {
+      "label": "calibration-1000-1000",
+      "checkpoint": "$R10/run/ck60000.bin",
+      "windows": 1678,
+      "loss_micronats": 1203286,
+      "bpb_micro": 451081
+    }
+  },
+  {
+    "label": "edit-900-1000",
+    "command": [
+      "$RUN1/build/weight-edit",
+      "$R10/run/ck30000.bin",
+      "$R10/run/ck60000.bin",
+      "$RUN1/checkpoints/alpha-900-gain-1000.ck",
+      "900",
+      "1000"
+    ],
+    "rc": 0,
+    "started_unix": 1793805639.6492388,
+    "finished_unix": 1793805643.8291862
+  },
+  {
+    "label": "calibration-900-1000",
+    "command": [
+      "$R10/ollm-gb10",
+      "geval",
+      "$RUN1/checkpoints/alpha-900-gain-1000.ck",
+      "$RUN1/data/calibration.tok",
+      "1678",
+      "$DATA/merges4096.bin"
+    ],
+    "rc": 0,
+    "started_unix": 1793805643.829675,
+    "finished_unix": 1793805649.4266746,
+    "score": {
+      "label": "calibration-900-1000",
+      "checkpoint": "$RUN1/checkpoints/alpha-900-gain-1000.ck",
+      "windows": 1678,
+      "loss_micronats": 1203611,
+      "bpb_micro": 451202
+    }
+  },
+  {
+    "label": "edit-950-1000",
+    "command": [
+      "$RUN1/build/weight-edit",
+      "$R10/run/ck30000.bin",
+      "$R10/run/ck60000.bin",
+      "$RUN1/checkpoints/alpha-950-gain-1000.ck",
+      "950",
+      "1000"
+    ],
+    "rc": 0,
+    "started_unix": 1793805649.4367805,
+    "finished_unix": 1793805653.624587
+  },
+  {
+    "label": "calibration-950-1000",
+    "command": [
+      "$R10/ollm-gb10",
+      "geval",
+      "$RUN1/checkpoints/alpha-950-gain-1000.ck",
+      "$RUN1/data/calibration.tok",
+      "1678",
+      "$DATA/merges4096.bin"
+    ],
+    "rc": 0,
+    "started_unix": 1793805653.625111,
+    "finished_unix": 1793805659.2336195,
+    "score": {
+      "label": "calibration-950-1000",
+      "checkpoint": "$RUN1/checkpoints/alpha-950-gain-1000.ck",
+      "windows": 1678,
+      "loss_micronats": 1203149,
+      "bpb_micro": 451029
+    }
+  },
+  {
+    "label": "edit-1050-1000",
+    "command": [
+      "$RUN1/build/weight-edit",
+      "$R10/run/ck30000.bin",
+      "$R10/run/ck60000.bin",
+      "$RUN1/checkpoints/alpha-1050-gain-1000.ck",
+      "1050",
+      "1000"
+    ],
+    "rc": 0,
+    "started_unix": 1793805659.2438755,
+    "finished_unix": 1793805663.429514
+  },
+  {
+    "label": "calibration-1050-1000",
+    "command": [
+      "$R10/ollm-gb10",
+      "geval",
+      "$RUN1/checkpoints/alpha-1050-gain-1000.ck",
+      "$RUN1/data/calibration.tok",
+      "1678",
+      "$DATA/merges4096.bin"
+    ],
+    "rc": 0,
+    "started_unix": 1793805663.4300358,
+    "finished_unix": 1793805669.1270814,
+    "score": {
+      "label": "calibration-1050-1000",
+      "checkpoint": "$RUN1/checkpoints/alpha-1050-gain-1000.ck",
+      "windows": 1678,
+      "loss_micronats": 1204058,
+      "bpb_micro": 451370
+    }
+  },
+  {
+    "label": "edit-1100-1000",
+    "command": [
+      "$RUN1/build/weight-edit",
+      "$R10/run/ck30000.bin",
+      "$R10/run/ck60000.bin",
+      "$RUN1/checkpoints/alpha-1100-gain-1000.ck",
+      "1100",
+      "1000"
+    ],
+    "rc": 0,
+    "started_unix": 1793805669.1372836,
+    "finished_unix": 1793805673.379727
+  },
+  {
+    "label": "calibration-1100-1000",
+    "command": [
+      "$R10/ollm-gb10",
+      "geval",
+      "$RUN1/checkpoints/alpha-1100-gain-1000.ck",
+      "$RUN1/data/calibration.tok",
+      "1678",
+      "$DATA/merges4096.bin"
+    ],
+    "rc": 0,
+    "started_unix": 1793805673.3803775,
+    "finished_unix": 1793805679.0357776,
+    "score": {
+      "label": "calibration-1100-1000",
+      "checkpoint": "$RUN1/checkpoints/alpha-1100-gain-1000.ck",
+      "windows": 1678,
+      "loss_micronats": 1205527,
+      "bpb_micro": 451921
+    }
+  },
+  {
+    "label": "edit-950-900",
+    "command": [
+      "$RUN1/build/weight-edit",
+      "$R10/run/ck30000.bin",
+      "$R10/run/ck60000.bin",
+      "$RUN1/checkpoints/alpha-950-gain-900.ck",
+      "950",
+      "900"
+    ],
+    "rc": 0,
+    "started_unix": 1793805679.0463052,
+    "finished_unix": 1793805683.193713
+  },
+  {
+    "label": "calibration-950-900",
+    "command": [
+      "$R10/ollm-gb10",
+      "geval",
+      "$RUN1/checkpoints/alpha-950-gain-900.ck",
+      "$RUN1/data/calibration.tok",
+      "1678",
+      "$DATA/merges4096.bin"
+    ],
+    "rc": 0,
+    "started_unix": 1793805683.1945012,
+    "finished_unix": 1793805688.782045,
+    "score": {
+      "label": "calibration-950-900",
+      "checkpoint": "$RUN1/checkpoints/alpha-950-gain-900.ck",
+      "windows": 1678,
+      "loss_micronats": 1212338,
+      "bpb_micro": 454474
+    }
+  },
+  {
+    "label": "edit-950-950",
+    "command": [
+      "$RUN1/build/weight-edit",
+      "$R10/run/ck30000.bin",
+      "$R10/run/ck60000.bin",
+      "$RUN1/checkpoints/alpha-950-gain-950.ck",
+      "950",
+      "950"
+    ],
+    "rc": 0,
+    "started_unix": 1793805688.7922626,
+    "finished_unix": 1793805693.0226567
+  },
+  {
+    "label": "calibration-950-950",
+    "command": [
+      "$R10/ollm-gb10",
+      "geval",
+      "$RUN1/checkpoints/alpha-950-gain-950.ck",
+      "$RUN1/data/calibration.tok",
+      "1678",
+      "$DATA/merges4096.bin"
+    ],
+    "rc": 0,
+    "started_unix": 1793805693.0232027,
+    "finished_unix": 1793805698.6699657,
+    "score": {
+      "label": "calibration-950-950",
+      "checkpoint": "$RUN1/checkpoints/alpha-950-gain-950.ck",
+      "windows": 1678,
+      "loss_micronats": 1204743,
+      "bpb_micro": 451627
+    }
+  },
+  {
+    "label": "edit-950-1050",
+    "command": [
+      "$RUN1/build/weight-edit",
+      "$R10/run/ck30000.bin",
+      "$R10/run/ck60000.bin",
+      "$RUN1/checkpoints/alpha-950-gain-1050.ck",
+      "950",
+      "1050"
+    ],
+    "rc": 0,
+    "started_unix": 1793805698.671257,
+    "finished_unix": 1793805702.8541596
+  },
+  {
+    "label": "calibration-950-1050",
+    "command": [
+      "$R10/ollm-gb10",
+      "geval",
+      "$RUN1/checkpoints/alpha-950-gain-1050.ck",
+      "$RUN1/data/calibration.tok",
+      "1678",
+      "$DATA/merges4096.bin"
+    ],
+    "rc": 0,
+    "started_unix": 1793805702.854765,
+    "finished_unix": 1793805708.544649,
+    "score": {
+      "label": "calibration-950-1050",
+      "checkpoint": "$RUN1/checkpoints/alpha-950-gain-1050.ck",
+      "windows": 1678,
+      "loss_micronats": 1206428,
+      "bpb_micro": 452258
+    }
+  },
+  {
+    "label": "edit-950-1100",
+    "command": [
+      "$RUN1/build/weight-edit",
+      "$R10/run/ck30000.bin",
+      "$R10/run/ck60000.bin",
+      "$RUN1/checkpoints/alpha-950-gain-1100.ck",
+      "950",
+      "1100"
+    ],
+    "rc": 0,
+    "started_unix": 1793805708.5456405,
+    "finished_unix": 1793805712.6804025
+  },
+  {
+    "label": "calibration-950-1100",
+    "command": [
+      "$R10/ollm-gb10",
+      "geval",
+      "$RUN1/checkpoints/alpha-950-gain-1100.ck",
+      "$RUN1/data/calibration.tok",
+      "1678",
+      "$DATA/merges4096.bin"
+    ],
+    "rc": 0,
+    "started_unix": 1793805712.6810396,
+    "finished_unix": 1793805718.3233376,
+    "score": {
+      "label": "calibration-950-1100",
+      "checkpoint": "$RUN1/checkpoints/alpha-950-gain-1100.ck",
+      "windows": 1678,
+      "loss_micronats": 1213711,
+      "bpb_micro": 454989
+    }
+  },
+  {
+    "label": "final-baseline",
+    "command": [
+      "$R10/ollm-gb10",
+      "geval",
+      "$R10/run/ck60000.bin",
+      "$RUN1/data/final.tok",
+      "3317",
+      "$DATA/merges4096.bin"
+    ],
+    "rc": 0,
+    "started_unix": 1793805718.527985,
+    "finished_unix": 1793805726.2822714,
+    "score": {
+      "label": "final-baseline",
+      "checkpoint": "$R10/run/ck60000.bin",
+      "windows": 3317,
+      "loss_micronats": 1210473,
+      "bpb_micro": 452448
+    }
+  },
+  {
+    "label": "final-selected",
+    "command": [
+      "$R10/ollm-gb10",
+      "geval",
+      "$RUN1/checkpoints/alpha-950-gain-1000.ck",
+      "$RUN1/data/final.tok",
+      "3317",
+      "$DATA/merges4096.bin"
+    ],
+    "rc": 0,
+    "started_unix": 1793805726.292307,
+    "finished_unix": 1793805734.0005257,
+    "score": {
+      "label": "final-selected",
+      "checkpoint": "$RUN1/checkpoints/alpha-950-gain-1000.ck",
+      "windows": 3317,
+      "loss_micronats": 1210277,
+      "bpb_micro": 452375
+    }
+  },
+  {
+    "label": "selected-legacy",
+    "command": [
+      "$R10/ollm-gb10",
+      "geval",
+      "$RUN1/checkpoints/alpha-950-gain-1000.ck",
+      "$DATA/held.tok",
+      "2243",
+      "$DATA/merges4096.bin"
+    ],
+    "rc": 0,
+    "started_unix": 1793805734.0107043,
+    "finished_unix": 1793805740.4679575,
+    "score": {
+      "label": "selected-legacy",
+      "checkpoint": "$RUN1/checkpoints/alpha-950-gain-1000.ck",
+      "windows": 2243,
+      "loss_micronats": 1204325,
+      "bpb_micro": 449269
+    }
+  },
+  {
+    "label": "selected-final-w1-gpu",
+    "command": [
+      "$R10/ollm-gb10",
+      "geval",
+      "$RUN1/checkpoints/alpha-950-gain-1000.ck",
+      "$RUN1/data/final.tok",
+      "1",
+      "$DATA/merges4096.bin"
+    ],
+    "rc": 0,
+    "started_unix": 1793805740.4780245,
+    "finished_unix": 1793805744.0211391,
+    "score": {
+      "label": "selected-final-w1-gpu",
+      "checkpoint": "$RUN1/checkpoints/alpha-950-gain-1000.ck",
+      "windows": 1,
+      "loss_micronats": 1181657,
+      "bpb_micro": 422071
+    }
+  },
+  {
+    "label": "selected-final-w1-cpu",
+    "command": [
+      "$RUN1/build/ollm",
+      "eval",
+      "$RUN1/checkpoints/alpha-950-gain-1000.ck",
+      "$RUN1/data/final.tok",
+      "1",
+      "$DATA/merges4096.bin"
+    ],
+    "rc": 0,
+    "started_unix": 1793805744.0316393,
+    "finished_unix": 1793805750.0488257,
+    "score": {
+      "label": "selected-final-w1-cpu",
+      "checkpoint": "$RUN1/checkpoints/alpha-950-gain-1000.ck",
+      "windows": 1,
+      "loss_micronats": 1181658,
+      "bpb_micro": 422071
+    }
+  },
+  {
+    "label": "final-block-00-baseline",
+    "command": [
+      "$R10/ollm-gb10",
+      "geval",
+      "$R10/run/ck60000.bin",
+      "$RUN1/data/final-block-00.tok",
+      "207",
+      "$DATA/merges4096.bin"
+    ],
+    "rc": 0,
+    "started_unix": 1793805750.0601642,
+    "finished_unix": 1793805753.866994,
+    "score": {
+      "label": "final-block-00-baseline",
+      "checkpoint": "$R10/run/ck60000.bin",
+      "windows": 207,
+      "loss_micronats": 1209967,
+      "bpb_micro": 454923
+    }
+  },
+  {
+    "label": "final-block-00-selected",
+    "command": [
+      "$R10/ollm-gb10",
+      "geval",
+      "$RUN1/checkpoints/alpha-950-gain-1000.ck",
+      "$RUN1/data/final-block-00.tok",
+      "207",
+      "$DATA/merges4096.bin"
+    ],
+    "rc": 0,
+    "started_unix": 1793805753.8776925,
+    "finished_unix": 1793805757.6811833,
+    "score": {
+      "label": "final-block-00-selected",
+      "checkpoint": "$RUN1/checkpoints/alpha-950-gain-1000.ck",
+      "windows": 207,
+      "loss_micronats": 1209677,
+      "bpb_micro": 454814
+    }
+  },
+  {
+    "label": "final-block-01-baseline",
+    "command": [
+      "$R10/ollm-gb10",
+      "geval",
+      "$R10/run/ck60000.bin",
+      "$RUN1/data/final-block-01.tok",
+      "207",
+      "$DATA/merges4096.bin"
+    ],
+    "rc": 0,
+    "started_unix": 1793805757.6828873,
+    "finished_unix": 1793805761.4731362,
+    "score": {
+      "label": "final-block-01-baseline",
+      "checkpoint": "$R10/run/ck60000.bin",
+      "windows": 207,
+      "loss_micronats": 1185134,
+      "bpb_micro": 443492
+    }
+  },
+  {
+    "label": "final-block-01-selected",
+    "command": [
+      "$R10/ollm-gb10",
+      "geval",
+      "$RUN1/checkpoints/alpha-950-gain-1000.ck",
+      "$RUN1/data/final-block-01.tok",
+      "207",
+      "$DATA/merges4096.bin"
+    ],
+    "rc": 0,
+    "started_unix": 1793805761.4835815,
+    "finished_unix": 1793805765.420487,
+    "score": {
+      "label": "final-block-01-selected",
+      "checkpoint": "$RUN1/checkpoints/alpha-950-gain-1000.ck",
+      "windows": 207,
+      "loss_micronats": 1185098,
+      "bpb_micro": 443479
+    }
+  },
+  {
+    "label": "final-block-02-baseline",
+    "command": [
+      "$R10/ollm-gb10",
+      "geval",
+      "$R10/run/ck60000.bin",
+      "$RUN1/data/final-block-02.tok",
+      "207",
+      "$DATA/merges4096.bin"
+    ],
+    "rc": 0,
+    "started_unix": 1793805765.4218707,
+    "finished_unix": 1793805769.2621317,
+    "score": {
+      "label": "final-block-02-baseline",
+      "checkpoint": "$R10/run/ck60000.bin",
+      "windows": 207,
+      "loss_micronats": 1215474,
+      "bpb_micro": 453818
+    }
+  },
+  {
+    "label": "final-block-02-selected",
+    "command": [
+      "$R10/ollm-gb10",
+      "geval",
+      "$RUN1/checkpoints/alpha-950-gain-1000.ck",
+      "$RUN1/data/final-block-02.tok",
+      "207",
+      "$DATA/merges4096.bin"
+    ],
+    "rc": 0,
+    "started_unix": 1793805769.2633545,
+    "finished_unix": 1793805773.0488367,
+    "score": {
+      "label": "final-block-02-selected",
+      "checkpoint": "$RUN1/checkpoints/alpha-950-gain-1000.ck",
+      "windows": 207,
+      "loss_micronats": 1215245,
+      "bpb_micro": 453732
+    }
+  },
+  {
+    "label": "final-block-03-baseline",
+    "command": [
+      "$R10/ollm-gb10",
+      "geval",
+      "$R10/run/ck60000.bin",
+      "$RUN1/data/final-block-03.tok",
+      "208",
+      "$DATA/merges4096.bin"
+    ],
+    "rc": 0,
+    "started_unix": 1793805773.050199,
+    "finished_unix": 1793805776.8868587,
+    "score": {
+      "label": "final-block-03-baseline",
+      "checkpoint": "$R10/run/ck60000.bin",
+      "windows": 208,
+      "loss_micronats": 1183698,
+      "bpb_micro": 443709
+    }
+  },
+  {
+    "label": "final-block-03-selected",
+    "command": [
+      "$R10/ollm-gb10",
+      "geval",
+      "$RUN1/checkpoints/alpha-950-gain-1000.ck",
+      "$RUN1/data/final-block-03.tok",
+      "208",
+      "$DATA/merges4096.bin"
+    ],
+    "rc": 0,
+    "started_unix": 1793805776.8880048,
+    "finished_unix": 1793805780.6735618,
+    "score": {
+      "label": "final-block-03-selected",
+      "checkpoint": "$RUN1/checkpoints/alpha-950-gain-1000.ck",
+      "windows": 208,
+      "loss_micronats": 1183499,
+      "bpb_micro": 443634
+    }
+  },
+  {
+    "label": "final-block-04-baseline",
+    "command": [
+      "$R10/ollm-gb10",
+      "geval",
+      "$R10/run/ck60000.bin",
+      "$RUN1/data/final-block-04.tok",
+      "207",
+      "$DATA/merges4096.bin"
+    ],
+    "rc": 0,
+    "started_unix": 1793805780.6751335,
+    "finished_unix": 1793805784.465954,
+    "score": {
+      "label": "final-block-04-baseline",
+      "checkpoint": "$R10/run/ck60000.bin",
+      "windows": 207,
+      "loss_micronats": 1228923,
+      "bpb_micro": 460151
+    }
+  },
+  {
+    "label": "final-block-04-selected",
+    "command": [
+      "$R10/ollm-gb10",
+      "geval",
+      "$RUN1/checkpoints/alpha-950-gain-1000.ck",
+      "$RUN1/data/final-block-04.tok",
+      "207",
+      "$DATA/merges4096.bin"
+    ],
+    "rc": 0,
+    "started_unix": 1793805784.4764588,
+    "finished_unix": 1793805788.267841,
+    "score": {
+      "label": "final-block-04-selected",
+      "checkpoint": "$RUN1/checkpoints/alpha-950-gain-1000.ck",
+      "windows": 207,
+      "loss_micronats": 1228628,
+      "bpb_micro": 460041
+    }
+  },
+  {
+    "label": "final-block-05-baseline",
+    "command": [
+      "$R10/ollm-gb10",
+      "geval",
+      "$R10/run/ck60000.bin",
+      "$RUN1/data/final-block-05.tok",
+      "207",
+      "$DATA/merges4096.bin"
+    ],
+    "rc": 0,
+    "started_unix": 1793805788.2785563,
+    "finished_unix": 1793805792.0683503,
+    "score": {
+      "label": "final-block-05-baseline",
+      "checkpoint": "$R10/run/ck60000.bin",
+      "windows": 207,
+      "loss_micronats": 1210526,
+      "bpb_micro": 451382
+    }
+  },
+  {
+    "label": "final-block-05-selected",
+    "command": [
+      "$R10/ollm-gb10",
+      "geval",
+      "$RUN1/checkpoints/alpha-950-gain-1000.ck",
+      "$RUN1/data/final-block-05.tok",
+      "207",
+      "$DATA/merges4096.bin"
+    ],
+    "rc": 0,
+    "started_unix": 1793805792.0789733,
+    "finished_unix": 1793805795.876973,
+    "score": {
+      "label": "final-block-05-selected",
+      "checkpoint": "$RUN1/checkpoints/alpha-950-gain-1000.ck",
+      "windows": 207,
+      "loss_micronats": 1210377,
+      "bpb_micro": 451326
+    }
+  },
+  {
+    "label": "final-block-06-baseline",
+    "command": [
+      "$R10/ollm-gb10",
+      "geval",
+      "$R10/run/ck60000.bin",
+      "$RUN1/data/final-block-06.tok",
+      "208",
+      "$DATA/merges4096.bin"
+    ],
+    "rc": 0,
+    "started_unix": 1793805795.8785074,
+    "finished_unix": 1793805799.6631544,
+    "score": {
+      "label": "final-block-06-baseline",
+      "checkpoint": "$R10/run/ck60000.bin",
+      "windows": 208,
+      "loss_micronats": 1181553,
+      "bpb_micro": 440026
+    }
+  },
+  {
+    "label": "final-block-06-selected",
+    "command": [
+      "$R10/ollm-gb10",
+      "geval",
+      "$RUN1/checkpoints/alpha-950-gain-1000.ck",
+      "$RUN1/data/final-block-06.tok",
+      "208",
+      "$DATA/merges4096.bin"
+    ],
+    "rc": 0,
+    "started_unix": 1793805799.6737206,
+    "finished_unix": 1793805803.4136121,
+    "score": {
+      "label": "final-block-06-selected",
+      "checkpoint": "$RUN1/checkpoints/alpha-950-gain-1000.ck",
+      "windows": 208,
+      "loss_micronats": 1181436,
+      "bpb_micro": 439982
+    }
+  },
+  {
+    "label": "final-block-07-baseline",
+    "command": [
+      "$R10/ollm-gb10",
+      "geval",
+      "$R10/run/ck60000.bin",
+      "$RUN1/data/final-block-07.tok",
+      "207",
+      "$DATA/merges4096.bin"
+    ],
+    "rc": 0,
+    "started_unix": 1793805803.4242737,
+    "finished_unix": 1793805807.1788921,
+    "score": {
+      "label": "final-block-07-baseline",
+      "checkpoint": "$R10/run/ck60000.bin",
+      "windows": 207,
+      "loss_micronats": 1252399,
+      "bpb_micro": 464774
+    }
+  },
+  {
+    "label": "final-block-07-selected",
+    "command": [
+      "$R10/ollm-gb10",
+      "geval",
+      "$RUN1/checkpoints/alpha-950-gain-1000.ck",
+      "$RUN1/data/final-block-07.tok",
+      "207",
+      "$DATA/merges4096.bin"
+    ],
+    "rc": 0,
+    "started_unix": 1793805807.1893806,
+    "finished_unix": 1793805810.9866772,
+    "score": {
+      "label": "final-block-07-selected",
+      "checkpoint": "$RUN1/checkpoints/alpha-950-gain-1000.ck",
+      "windows": 207,
+      "loss_micronats": 1252159,
+      "bpb_micro": 464685
+    }
+  },
+  {
+    "label": "final-block-08-baseline",
+    "command": [
+      "$R10/ollm-gb10",
+      "geval",
+      "$R10/run/ck60000.bin",
+      "$RUN1/data/final-block-08.tok",
+      "207",
+      "$DATA/merges4096.bin"
+    ],
+    "rc": 0,
+    "started_unix": 1793805810.9975505,
+    "finished_unix": 1793805814.7962728,
+    "score": {
+      "label": "final-block-08-baseline",
+      "checkpoint": "$R10/run/ck60000.bin",
+      "windows": 207,
+      "loss_micronats": 1221204,
+      "bpb_micro": 454202
+    }
+  },
+  {
+    "label": "final-block-08-selected",
+    "command": [
+      "$R10/ollm-gb10",
+      "geval",
+      "$RUN1/checkpoints/alpha-950-gain-1000.ck",
+      "$RUN1/data/final-block-08.tok",
+      "207",
+      "$DATA/merges4096.bin"
+    ],
+    "rc": 0,
+    "started_unix": 1793805814.8073623,
+    "finished_unix": 1793805818.6149306,
+    "score": {
+      "label": "final-block-08-selected",
+      "checkpoint": "$RUN1/checkpoints/alpha-950-gain-1000.ck",
+      "windows": 207,
+      "loss_micronats": 1220983,
+      "bpb_micro": 454120
+    }
+  },
+  {
+    "label": "final-block-09-baseline",
+    "command": [
+      "$R10/ollm-gb10",
+      "geval",
+      "$R10/run/ck60000.bin",
+      "$RUN1/data/final-block-09.tok",
+      "208",
+      "$DATA/merges4096.bin"
+    ],
+    "rc": 0,
+    "started_unix": 1793805818.6256003,
+    "finished_unix": 1793805822.4105704,
+    "score": {
+      "label": "final-block-09-baseline",
+      "checkpoint": "$R10/run/ck60000.bin",
+      "windows": 208,
+      "loss_micronats": 1243667,
+      "bpb_micro": 464859
+    }
+  },
+  {
+    "label": "final-block-09-selected",
+    "command": [
+      "$R10/ollm-gb10",
+      "geval",
+      "$RUN1/checkpoints/alpha-950-gain-1000.ck",
+      "$RUN1/data/final-block-09.tok",
+      "208",
+      "$DATA/merges4096.bin"
+    ],
+    "rc": 0,
+    "started_unix": 1793805822.421033,
+    "finished_unix": 1793805826.2648013,
+    "score": {
+      "label": "final-block-09-selected",
+      "checkpoint": "$RUN1/checkpoints/alpha-950-gain-1000.ck",
+      "windows": 208,
+      "loss_micronats": 1243561,
+      "bpb_micro": 464820
+    }
+  },
+  {
+    "label": "final-block-10-baseline",
+    "command": [
+      "$R10/ollm-gb10",
+      "geval",
+      "$R10/run/ck60000.bin",
+      "$RUN1/data/final-block-10.tok",
+      "207",
+      "$DATA/merges4096.bin"
+    ],
+    "rc": 0,
+    "started_unix": 1793805826.2755544,
+    "finished_unix": 1793805830.0648363,
+    "score": {
+      "label": "final-block-10-baseline",
+      "checkpoint": "$R10/run/ck60000.bin",
+      "windows": 207,
+      "loss_micronats": 1200839,
+      "bpb_micro": 452156
+    }
+  },
+  {
+    "label": "final-block-10-selected",
+    "command": [
+      "$R10/ollm-gb10",
+      "geval",
+      "$RUN1/checkpoints/alpha-950-gain-1000.ck",
+      "$RUN1/data/final-block-10.tok",
+      "207",
+      "$DATA/merges4096.bin"
+    ],
+    "rc": 0,
+    "started_unix": 1793805830.0750372,
+    "finished_unix": 1793805833.8109937,
+    "score": {
+      "label": "final-block-10-selected",
+      "checkpoint": "$RUN1/checkpoints/alpha-950-gain-1000.ck",
+      "windows": 207,
+      "loss_micronats": 1200882,
+      "bpb_micro": 452172
+    }
+  },
+  {
+    "label": "final-block-11-baseline",
+    "command": [
+      "$R10/ollm-gb10",
+      "geval",
+      "$R10/run/ck60000.bin",
+      "$RUN1/data/final-block-11.tok",
+      "207",
+      "$DATA/merges4096.bin"
+    ],
+    "rc": 0,
+    "started_unix": 1793805833.821343,
+    "finished_unix": 1793805837.568025,
+    "score": {
+      "label": "final-block-11-baseline",
+      "checkpoint": "$R10/run/ck60000.bin",
+      "windows": 207,
+      "loss_micronats": 1197303,
+      "bpb_micro": 449803
+    }
+  },
+  {
+    "label": "final-block-11-selected",
+    "command": [
+      "$R10/ollm-gb10",
+      "geval",
+      "$RUN1/checkpoints/alpha-950-gain-1000.ck",
+      "$RUN1/data/final-block-11.tok",
+      "207",
+      "$DATA/merges4096.bin"
+    ],
+    "rc": 0,
+    "started_unix": 1793805837.56956,
+    "finished_unix": 1793805841.4960322,
+    "score": {
+      "label": "final-block-11-selected",
+      "checkpoint": "$RUN1/checkpoints/alpha-950-gain-1000.ck",
+      "windows": 207,
+      "loss_micronats": 1196744,
+      "bpb_micro": 449593
+    }
+  },
+  {
+    "label": "final-block-12-baseline",
+    "command": [
+      "$R10/ollm-gb10",
+      "geval",
+      "$R10/run/ck60000.bin",
+      "$RUN1/data/final-block-12.tok",
+      "208",
+      "$DATA/merges4096.bin"
+    ],
+    "rc": 0,
+    "started_unix": 1793805841.4970565,
+    "finished_unix": 1793805845.3279796,
+    "score": {
+      "label": "final-block-12-baseline",
+      "checkpoint": "$R10/run/ck60000.bin",
+      "windows": 208,
+      "loss_micronats": 1232348,
+      "bpb_micro": 460534
+    }
+  },
+  {
+    "label": "final-block-12-selected",
+    "command": [
+      "$R10/ollm-gb10",
+      "geval",
+      "$RUN1/checkpoints/alpha-950-gain-1000.ck",
+      "$RUN1/data/final-block-12.tok",
+      "208",
+      "$DATA/merges4096.bin"
+    ],
+    "rc": 0,
+    "started_unix": 1793805845.3385224,
+    "finished_unix": 1793805849.1240807,
+    "score": {
+      "label": "final-block-12-selected",
+      "checkpoint": "$RUN1/checkpoints/alpha-950-gain-1000.ck",
+      "windows": 208,
+      "loss_micronats": 1232231,
+      "bpb_micro": 460491
+    }
+  },
+  {
+    "label": "final-block-13-baseline",
+    "command": [
+      "$R10/ollm-gb10",
+      "geval",
+      "$R10/run/ck60000.bin",
+      "$RUN1/data/final-block-13.tok",
+      "207",
+      "$DATA/merges4096.bin"
+    ],
+    "rc": 0,
+    "started_unix": 1793805849.1348934,
+    "finished_unix": 1793805852.819077,
+    "score": {
+      "label": "final-block-13-baseline",
+      "checkpoint": "$R10/run/ck60000.bin",
+      "windows": 207,
+      "loss_micronats": 1189037,
+      "bpb_micro": 445077
+    }
+  },
+  {
+    "label": "final-block-13-selected",
+    "command": [
+      "$R10/ollm-gb10",
+      "geval",
+      "$RUN1/checkpoints/alpha-950-gain-1000.ck",
+      "$RUN1/data/final-block-13.tok",
+      "207",
+      "$DATA/merges4096.bin"
+    ],
+    "rc": 0,
+    "started_unix": 1793805852.8298411,
+    "finished_unix": 1793805856.6247027,
+    "score": {
+      "label": "final-block-13-selected",
+      "checkpoint": "$RUN1/checkpoints/alpha-950-gain-1000.ck",
+      "windows": 207,
+      "loss_micronats": 1188731,
+      "bpb_micro": 444962
+    }
+  },
+  {
+    "label": "final-block-14-baseline",
+    "command": [
+      "$R10/ollm-gb10",
+      "geval",
+      "$R10/run/ck60000.bin",
+      "$RUN1/data/final-block-14.tok",
+      "207",
+      "$DATA/merges4096.bin"
+    ],
+    "rc": 0,
+    "started_unix": 1793805856.6359704,
+    "finished_unix": 1793805860.430733,
+    "score": {
+      "label": "final-block-14-baseline",
+      "checkpoint": "$R10/run/ck60000.bin",
+      "windows": 207,
+      "loss_micronats": 1207189,
+      "bpb_micro": 449602
+    }
+  },
+  {
+    "label": "final-block-14-selected",
+    "command": [
+      "$R10/ollm-gb10",
+      "geval",
+      "$RUN1/checkpoints/alpha-950-gain-1000.ck",
+      "$RUN1/data/final-block-14.tok",
+      "207",
+      "$DATA/merges4096.bin"
+    ],
+    "rc": 0,
+    "started_unix": 1793805860.4325018,
+    "finished_unix": 1793805864.2359128,
+    "score": {
+      "label": "final-block-14-selected",
+      "checkpoint": "$RUN1/checkpoints/alpha-950-gain-1000.ck",
+      "windows": 207,
+      "loss_micronats": 1207180,
+      "bpb_micro": 449599
+    }
+  },
+  {
+    "label": "final-block-15-baseline",
+    "command": [
+      "$R10/ollm-gb10",
+      "geval",
+      "$R10/run/ck60000.bin",
+      "$RUN1/data/final-block-15.tok",
+      "208",
+      "$DATA/merges4096.bin"
+    ],
+    "rc": 0,
+    "started_unix": 1793805864.246729,
+    "finished_unix": 1793805868.0019763,
+    "score": {
+      "label": "final-block-15-baseline",
+      "checkpoint": "$R10/run/ck60000.bin",
+      "windows": 208,
+      "loss_micronats": 1208323,
+      "bpb_micro": 450605
+    }
+  },
+  {
+    "label": "final-block-15-selected",
+    "command": [
+      "$R10/ollm-gb10",
+      "geval",
+      "$RUN1/checkpoints/alpha-950-gain-1000.ck",
+      "$RUN1/data/final-block-15.tok",
+      "208",
+      "$DATA/merges4096.bin"
+    ],
+    "rc": 0,
+    "started_unix": 1793805868.0126638,
+    "finished_unix": 1793805871.8023775,
+    "score": {
+      "label": "final-block-15-selected",
+      "checkpoint": "$RUN1/checkpoints/alpha-950-gain-1000.ck",
+      "windows": 208,
+      "loss_micronats": 1208014,
+      "bpb_micro": 450489
+    }
+  },
+  {
+    "label": "sample-baseline",
+    "command": [
+      "$RUN1/build/ollm",
+      "sample",
+      "$R10/run/ck60000.bin",
+      "1",
+      "40",
+      "0",
+      "Once upon a time, a little robot wanted to learn",
+      "$DATA/merges4096.bin"
+    ],
+    "rc": 0,
+    "started_unix": 1793805871.8131506,
+    "finished_unix": 1793805895.6501446
+  },
+  {
+    "label": "sample-selected",
+    "command": [
+      "$RUN1/build/ollm",
+      "sample",
+      "$RUN1/checkpoints/alpha-950-gain-1000.ck",
+      "1",
+      "40",
+      "0",
+      "Once upon a time, a little robot wanted to learn",
+      "$DATA/merges4096.bin"
+    ],
+    "rc": 0,
+    "started_unix": 1793805895.6513274,
+    "finished_unix": 1793805921.3219678
+  }
+]

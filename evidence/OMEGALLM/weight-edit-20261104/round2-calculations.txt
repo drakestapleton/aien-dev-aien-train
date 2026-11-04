@@ -1,0 +1,2 @@
+WolframLanguageEvaluator: N[100 ({1290081,2013795,3451507}/1196691 - 1), 8]
+Result (percent relative selection-loss increase): {7.804019584002888,68.28028288004172,188.42090397604728}.

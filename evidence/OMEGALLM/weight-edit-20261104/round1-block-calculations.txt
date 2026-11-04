@@ -1,0 +1,2 @@
+WolframLanguageEvaluator: b and c are the baseline and selected micronat arrays in results.json; {Count[b-c,_?Positive],Count[b-c,_?Negative],N[Mean[b-c]]}
+Result: {15,1,196.1875}. Mean block reduction is in micronats per token, unweighted over sixteen contiguous text blocks; no independence claim.
