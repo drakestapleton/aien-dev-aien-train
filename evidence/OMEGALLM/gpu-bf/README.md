@@ -9,7 +9,7 @@ receipts here were produced and what a replay needs. The receipts themselves are
 | `build-2.txt` | build hashes after the gbfrag amendment (f28e6ad); the binaries of both windows |
 | `g1/` | chip window bf-g1, gates B1-B12 (EXERCISED, one GB10, non-quiet) |
 | `t1/` | chip window bf-t1, profile and the 2000-step gate T1-T3 (EXERCISED, one GB10, non-quiet) |
-| `fix-pad/` | gbfrag padding check (2026-11-04): host build and kernel-byte identity; chip run NOT_RUN |
+| `fix-pad/` | gbfrag padding check and its negative control, mutant n (2026-11-04): host builds and kernel-byte identity; chip run NOT_RUN |
 
 ## Build
 
@@ -18,13 +18,14 @@ From the repository root, with the pinned omc (omega-mv seed/out/omc, sha256
 
 ```sh
 OMC=<omc> TARGET=gb10 OUT=<dir> CORE=3 sh tests/omegallm/build.sh               # ollm-gb10
-OMC=<omc> TARGET=gb10 OUT=<dir> CORE=3 sh tests/omegallm/build.sh --mutant u    # also l, o, v
+OMC=<omc> TARGET=gb10 OUT=<dir> CORE=3 sh tests/omegallm/build.sh --mutant u    # also l, o, v, n (n from e62a495)
 ```
 
 At f28e6ad this gives the binaries of both windows (`build-2.txt`): ollm-gb10
 54fb8233c62a13c0b3bac13a38dd5b583943e9e9097342baaa57fc22db2ceb49, mutants u efc983e9..., l
 b62ce7f8..., o af048991..., v ef2ddbfc.... On 2026-11-04 the same command on a82fc1a rebuilt
-54fb8233... again (`fix-pad/build.txt`).
+54fb8233... again (`fix-pad/build.txt`). The product and mutant hashes at e62a495 (with mutant n)
+are in `fix-pad/build-n.txt`.
 
 ## Inputs
 
