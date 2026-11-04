@@ -1,0 +1,34 @@
+--- sample seed 1 N 200 temp 0 prompt [Once upon a time]
+, there was a little girl named Lily. She had a big, red ball that she loved to play with. One day, she saw a small, red ball in the park. She wanted to play with it, but she was too small to reach it.
+Lily asked her friend, Tom, "Can you help me get the ball?" Tom said, "Yes, I can help you." They both tried to reach the ball, but it was too high. They felt sad and started to cry.
+Then, a kind bird saw them and flew down to help. The bird said, "I can help you get the ball." The bird flew up and picked the ball with its beak. The bird was happy and said, "Thank you, Lily and Tom!" They all played together and had a fun day.
+rc=0
+--- sample seed 1 N 200 temp 800 prompt [Once upon a time]
+, there was a little boy named Tim. Tim had a toy car that he loved very much. The car was a very happy car.
+One day, Tim and his toy car went for a drive. They drove down the street, laughing and having fun. Then, it started to race with Tim's toy car.
+"Ready, set, go!" said Tim. "I will pass your car and you go fast," said Sam.
+As they lined up, they saw a dead tree. Tim had an idea. "Tim, let's race to get the ball!" said Tim. They both jumped to the tree and started to race. They ran as fast as they could.
+As they raced, the ball rolled away, they had to delay. Tim and Sam were very sad. The dangerous tree was big and dirty. They could not have their car back.
+rc=0
+--- sample seed 1 N 200 temp 0 prompt [The little dog]
+ was very excited. He wanted to go on a trip. He put on his shoes and went outside. He was very excited to go on his trip.
+When he got to the park, he saw a big tree. He wanted to climb it. He climbed up and up, but he was too high. He felt sad.
+Then, a little bird came and said, "I can help you." The bird flew up and took the bird to the tree. The bird was happy and said, "Thank you, bird!"
+The bird flew up and took the bird home. The bird was happy and thanked the bird. The bird was not sad anymore. The bird and the bird became good friends. They played together every day.
+rc=0
+--- sample seed 1 N 200 temp 800 prompt [The little dog]
+ was still restless. He loved to run and jump all day. One day, he went for a walk and saw a big, soft kitten. It was sad because it was lost. The dog wanted to help the kitten find its home.
+He asked the dog and the cat, "Please help me find my home." The dog said, "Yes, I will help you." They looked near the gate and found a lot of toys. They were happy and played, but then it started to rain too hard. The rain made the ground wet and all dirty.
+The dog and the cat were sad, but they could not find their home. The rain was not happy anymore. They played together and had fun. The dog was not lonely anymore. They were happy because the rain made them all happy and safe.
+rc=0
+--- sample seed 1 N 200 temp 0 prompt [Lily wanted to]
+ go to the park with her mom. She saw a big slide and wanted to go on it. She ran to the slide and climbed up. She was very fast and fast. She felt the wind in her hair and the wind. She felt the wind in her hair and the wind. She felt the wind in her hair and the wind.
+She saw a boy with a big smile. He was holding a balloon. He was holding a balloon. He had a balloon and a balloon. He wanted to play with it. He ran to the slide and climbed up. He was happy.
+But then, he saw a big dog. The dog was barking and running towards him. He was scared. He wanted to run away. He ran to the dog and tried to grab the balloon. But the dog was too fast. It ran away.
+Lily was sad. She did not know what to do. She did not know what to do. She did not know what to do.
+rc=0
+--- sample seed 1 N 200 temp 800 prompt [Lily wanted to]
+ make a sunflower. She asked her mom, "Can I make a sunflower?" Her mom said, "Yes, but you have some bread."
+Lily went to her mom and asked, "Can you help me make it a sunflower?" Her mom said, "Yes, but you need to be very careful." Lily used her hands to make the sunflower. She found the sunflower and began to stumble it.
+While Lily was done, a big wind came and blew the sunflower away. Lily was sad, but she did not give up. She tried and tried, but the wind was too strong. Lily had a lot of fun, and her sunflower was sad too.
+rc=0

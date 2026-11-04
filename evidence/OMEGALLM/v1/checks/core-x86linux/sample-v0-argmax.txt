@@ -1,0 +1,10 @@
+receipt: sample-v0-argmax
+host_cpu: core 6 (Cortex-X925)
+target: x86linux EMULATED: qemu-x86_64 version 8.2.2 (Debian 1:8.2.2+ds-0ubuntu1.18), binfmt flags PO
+binary: ollm sha256 5163c1fb204b2f60b074875759df292187d55b263a5193323d190c2a4c6e0895
+source: ollm.om sha256 0fb3487218ff49d74acbbcdf48a123e0598c44b283664eb2ddf3a591c49575e4
+$ taskset -c 6 nice -n 19 ../fixv1/x86/build/ollm sample ../fixv1/x86/work/v0.ck 7 200 0 Once upon a time
+--- output
+  a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a a --- end
+rc=0 expect=0
+wall_ns=38234087571
