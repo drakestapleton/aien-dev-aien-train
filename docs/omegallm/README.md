@@ -161,8 +161,10 @@ at W=256 and a saved checkpoint. Chunking does not change the result, because re
 bit-identical (`resume-cmp.txt`). After the last chunk it runs one eval at W=4096 and writes three
 samples at TEMPMILLI 800 and one argmax sample, each 400 bytes after the prompt "Once upon a time".
 
-The run directory holds `v0-run.sh` copied as `run.sh` (same sha256, `4898aae5…`), the binary as
-`ollm`, `train.bin` and `held.bin`. It was started with
+The run directory holds `v0-run.sh` copied as `run.sh` (sha256 `4898aae5…`), the binary as
+`ollm`, `train.bin` and `held.bin`. On 2026-11-04 a four-line usage comment (lines 2-5) was added
+to `tests/omegallm/v0-run.sh`; `sed 2,5d tests/omegallm/v0-run.sh | sha256sum` still gives
+`4898aae5…`, so the run's `run.sh` is the script without that comment. It was started with
 
 ```sh
 systemd-run --user --unit=ollm-v0 --collect -p CPUAffinity=9 -p Nice=19 -p MemoryMax=1G \
