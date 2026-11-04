@@ -244,7 +244,7 @@ or the machine and are not part of the body comparison. Every other OUT.TXT line
 shaped like `J n` or `OLLM DONE a b` inside a job, must equal what a Linux build prints for the same
 lines (`tests/omegallm/efi-ref.sh`, checked in that order by `tests/omegallm/efi-check.sh`).
 
-The identity line is read from the firmware with `efi 14` (omega-mv PR #1022 commit `ab572d8f2840`,
+The identity line is read from the firmware with `efi 14` (omega-mv PR #1022 commit `cf9fbda1a7be`,
 branch `feat/x86efi-ident`):
 `cpu=` is the CPUID brand string (leaves 0x80000002–0x80000004) without leading or trailing spaces
 and NULs; `fw=` is the SystemTable FirmwareVendor, one byte per UCS-2 code unit; `fwrev=` is the
