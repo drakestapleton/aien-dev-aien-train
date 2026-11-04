@@ -2,12 +2,12 @@
 
 Rung 9 (#61) found that BF16 matches f32 on rung 7's 30000-step schedule. Rung 10 asks the same
 question over twice as many BF16 steps, where BF16 rounding drift has longer to build up. It replays
-rung 8 (`gpu-r8/` on #59) with the same init checkpoint, data, seed and schedule, and with `gtrainb`
+rung 8 (`gpu-r8/`, aien-train #59) with the same init checkpoint, data, seed and schedule, and with `gtrainb`
 in place of `gtrainf` (BF16, CONTRACT-BF16 section 7). Held-out loss is measured as in rung 8: chip
 `geval` of `held.tok`, W 2243 windows at T 256, `merges4096.bin`. `geval` runs on the f32 kernels
 in both rungs.
 
-Status: EXERCISED on one GB10. It is not QUALIFIED and not MERGED. All 24 windows were opened with
+Status: EXERCISED on one GB10. It is not QUALIFIED. All 24 windows were opened with
 `--gb10 shared --quiet none`, so timings are labelled non-quiet (last close, `run/close.json`: load
 average 1.87).
 
@@ -56,7 +56,8 @@ Seed-to-seed spread was not measured, so this does not show that BF16 is better.
 ## Pre-registered predictions (`run/prereg.txt`, committed at a2e1111 before the first window)
 
 `run/prereg.sha256` covers `prereg.txt`, `drive.sh` and `leg.sh`. It was checked against the run
-directory after the first failed window and again when the receipts were copied.
+directory after the first failed window and again when the receipts were copied. Both checks are
+unreceipted: no `sha256sum -c` output was kept.
 
 | prediction | receipt | result |
 |---|---|---|
@@ -68,7 +69,7 @@ directory after the first failed window and again when the receipts were copied.
 
 R5 (WolframLanguageEvaluator over the ns stamps around each `gtrainb` in `run/train.txt`; they
 include checkpoint load and save): the 22 legs 250→60000 sum to 11,478.56 s. That is 0.192110
-s/step and 85,285 tokens/s, and 0.9956 of the model scaled from rung 9. Rung 8 ran its undisturbed
+s/step and 85,285 tokens/s, and 0.9956 of the model scaled from rung 9 (#61). Rung 8 (#59) ran its undisturbed
 legs at 0.24471 s/step, so rung 10 is 1.2738x faster per step. Against the lower end of rung 8's
 total, the ratio is 1.2796x. The 0→250 leg took 50.87 s. Everything is non-quiet.
 
@@ -88,11 +89,15 @@ What this does not show:
   changed after f28e6ad on #58. The CPU build for R4 is rung 7's and rung 8's `ollm` 6da13670….
   `/tmp/gk/cpu-eval.sh` lacks the execute bit, so the first two detached launches started nothing
   and wrote no file. The eval that produced `run/eval60000.txt` was started with `sh cpu-eval.sh`.
+  `run/cpu-eval.sh` is that script copied verbatim (byte-identical to the copies on #59 and #61); its
+  mtime 2026-11-02T23:03:05Z precedes this eval's start (2026-11-04T02:26:26Z). It writes the cmd,
+  binary and checkpoint sha256, start/end stamps and rc around the `ollm eval` output, and holds an
+  absolute home path.
 - Init: rung 8's `ckL0.bin` e02c6234…
   (`ollm init ckL0.bin 4096 256 384 12 1536 8 64 1 60000 3000 16`).
 - Legs: `run/leg.sh` trains 0→250, then runs 3000-step legs that stop exactly at 2000, 9000, 15500,
   30000 and 60000, and runs `geval` on the saved checkpoint after each leg.
-  - Rung 8 lost a leg mid-window and resumed from T 15500 (`gpu-r8/run/infra-note.txt`). The 15500
+  - Rung 8 lost a leg mid-window and resumed from T 15500 (`gpu-r8/run/infra-note.txt`, aien-train #59). The 15500
     stop places rung 10's later eval points on rung 8's (18500, 21500, …).
   - Batches derive from (seed, step), so leg boundaries do not change what is trained.
 - Driver: `run/drive.sh` opens one `spark-window` per leg (lease 22 min) and posts STARTING/DONE
@@ -100,7 +105,11 @@ What this does not show:
 - Scripts: both are rung 9's with the paths, names, milestones, final step and stop-rule bound
   changed. Line 5 of `drive.sh` now reads `windows.txt` through `cat`, so the harmless "cannot open
   windows.txt" line from rungs 8 and 9 no longer appears in `run/drive.out`. `leg.sh` is committed
-  verbatim (it is sha-covered), including its absolute home path.
+  verbatim (it is sha-covered), including its absolute home path on line 3.
+- `run/leg.sh` does not check the `geval` exit code or the `cp ck.bin ckN.bin` result. This had no
+  effect here: all 23 `geval` blocks in `run/geval.txt` end `rc=0`, and the hashes of ck2000, ck9000,
+  ck30000 and ck60000 in `run/checkpoints.sha256` equal the `step=N ck=` hashes recorded in
+  `run/geval.txt`.
 - Checkpoints stay outside the repository; their hashes are in `run/checkpoints.sha256`.
 - Window logs: `run/windows.txt` has one line per window. `run/windows-log.txt` holds all 24
   `win-*.txt` files with the home prefix replaced by `~/`.
