@@ -1,0 +1,17 @@
+# f32 kernel byte identity: gpu-dump code at base 273ca2a vs ba2f02c, 64 slots x 16384 B
+base DUMP a769cfb3420aa845d1884facd92411bd926452ce07a2a7b7d5b469b0dc0f5d31 source_sha256 415a597e08f21ad41c9c093c58dbd81d610ceee18d7116801fe70ac96b47d5f2 code_sha256 112b77e386c7fde158f1615f5d0840af564d1d8f855ecf1e769a3a6d6d67b004
+head DUMP 0a7f9c72fe2e5a47cda177cdfad1d2b3a6d01ac0334ea1abafeda0f3504192de source_sha256 c7e81911c4cff101ad020430ffdb675dfa514028b0e039d27fb1122d35f00ff9 code_sha256 f2628fdad32cc0d56f4a10729edefc17057ea398b254f255ed85422f71f7c887
+# differing bytes per 16 KiB slot (cmp -l); every other slot byte-identical
+slot 27 bytes_differ 3756
+slot 28 bytes_differ 3720
+slot 29 bytes_differ 3708
+slot 30 bytes_differ 3672
+slot 31 bytes_differ 4076
+slot 32 bytes_differ 4040
+slot 33 bytes_differ 4028
+slot 34 bytes_differ 3992
+slot 35 bytes_differ 4930
+slot 36 bytes_differ 4882
+# gpu-gpr.bin (GPR table bytes 0-63, SMEM target bytes 64-127) differing offsets
+27 28 29 30 31 32 33 34 35 36 91 92 93 94 95 96 97 98 99 100 
+# HMMA.16816.F32.BF16 count over slots 27-36: 160
