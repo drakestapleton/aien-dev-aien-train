@@ -14,7 +14,7 @@ mathck, adamck, prep, base, init, gcheck, train 20, eval S.CK, eval CK 64, two s
 
 | Item | Value |
 |---|---|
-| Compiler | omc `b4f45121f6c6d5d8a6ed0f5c4f3934b7cc4bec369bfa89523699bd33928f9b55`, omega-mv draft PR [#1015](https://github.com/aien-dev/omega-mv/pull/1015) commit `5ce9ecaa7b2034d5a7b4502403591d5c2489c06d` (not merged; main's omc refuses `target x86efi` with error 25) |
+| Compiler | omc `b4f45121f6c6d5d8a6ed0f5c4f3934b7cc4bec369bfa89523699bd33928f9b55`, omega-mv PR [#1015](https://github.com/aien-dev/omega-mv/pull/1015) commit `5ce9ecaa7b2034d5a7b4502403591d5c2489c06d`. 2026-11-04: omega-mv #1015 merged at `d3d1b1bc`; same omc `b4f45121`. The omc built from `d3d1b1bc` (`5ce9ecaa` is its ancestor) builds the same `ollm.efi` and `ollm-mut-b.efi` bytes (`repin-d3d1b1bc.txt`) |
 | `ollm.efi` | sha256 `2474a842…8d7f`, source sha256 `412f1255…b5b6` (`build.txt`) |
 | Reference | AArch64 Linux `ollm` `52f5684f…ac1b` from the same tree, omc `2c824805…` (omega-mv `e5b32567`), run by `efi-ref.sh` on core 7 (`ref.out`, `ref-files.txt`) |
 | Image | `ollm.img` sha256 `2b9a420a93486a4d37ed78141a45861427090535502243ecbb67fa4008b6c162`, 100663296 bytes, GPT, one EF00 partition, FAT label ALLEN (`image.txt`) |
@@ -40,22 +40,34 @@ From the clone's parent, with the omega-mv #1015 omc and the Omega `imac-image` 
 
 ```sh
 IMAC_IMAGE=<imac-image> EOMC=<omc b4f45121> ABUILD=build-rf EBUILD=build-efi CORE=7 MCORE=8 \
-  sh aien-train/tests/omegallm/efi-receipts.sh
+  EV=<new or empty dir> sh aien-train/tests/omegallm/efi-receipts.sh
 ```
 
-It exits 1 on any FAIL. Wall time here: 1640 s.
+It exits 1 on any FAIL. Wall time here: 1640 s. `EV` is required: the script refuses (exit 2) an
+unset `EV` or one that exists and is not an empty directory, including this committed directory,
+so a rerun cannot overwrite these receipts. (Before 2026-11-04 the script wrote here directly.)
 
-`build.txt` from this run carried absolute paths. They were removed after the run with exactly
-the substitution the script now applies (`sed "s|<clone parent>/||g"`, efi-receipts.sh line 61).
-No other byte of the receipts was changed.
+2026-11-04, aien-train e08443c plus the uncommitted EV guard, core 4 (`CORE=4 MCORE=4`, so the
+main and mut-b boots shared one core), into a scratch `EV`: every `summary.tsv` row PASS, and
+`summary.tsv`, `ref.out`, `ref-files.txt`, `image.txt`, `image-mut-b.txt` and `inputs.txt` are
+byte-equal (`cmp`) to the files here; image `2b9a420a…c162` again. Wall time 2934 s; main
+`OUT.TXT` ends `OLLM DONE 11 2283206`. These scratch receipts are not committed. Same day, a
+48-byte JOB.TXT (a comment, a line of only spaces and a tab, `adamck`) booted the same `ollm.efi`:
+OUT.TXT echoes the blank line with no `J` line and ends `OLLM DONE 1 213`, and `efi-check.sh`
+against the new `efi-ref.sh` output prints `EQUAL`; the pre-2026-11-04 `efi-ref.sh` stops at that
+line with `rc=2`, and the pre-2026-11-04 `efi-check.sh` prints `DIFFERENT` (not committed).
+
+`build.txt` from the committed run carried absolute paths. They were removed after the run with exactly
+the substitution the script now applies (`sed "s|<clone parent>/||g"`, the `build.txt` line of
+efi-receipts.sh). No other byte of the receipts was changed.
 
 ## Host tools (exact versions in `tools.txt`)
 
 | Tool | Role | Omega replacement |
 |---|---|---|
-| `imac-image` (Omega) | builds the GPT disk and the empty FAT container | already Omega |
-| mtools 4.0.43 (`mmd`, `mcopy`) | adds `EFI/BOOT/BOOTX64.EFI` and `OLLM/*` to the FAT volume; reads OUT.TXT and the written files back | PROPOSED: a FAT member writer in `imac-image` (directory entries and cluster chains); the read-back stays an oracle |
-| sgdisk 1.0.10 | checks the partition table (oracle, read-only) | none needed |
+| `imac-image` (Omega) | builds the GPT disk and the FAT volume and writes `EFI/BOOT/BOOTX64.EFI` into it (`efi-image.sh` runs it on a directory holding `BOOTX64.EFI`) | already Omega |
+| mtools 4.0.43 (`mmd`, `mcopy`) | makes `::/OLLM`, adds the `OLLM/*` files, and reads every member back for `cmp`, including `BOOTX64.EFI` (`efi-image.sh`); copies OUT.TXT and the written files out after a boot (`efi-qemu.sh`) | PROPOSED: a FAT member writer in `imac-image` (directory entries and cluster chains); the read-back stays an oracle |
+| sgdisk 1.0.10 | only its version is recorded in `tools.txt`; no receipt step runs it | none needed |
 | QEMU 8.2.2, OVMF 2024.02-2ubuntu0.10 (`OVMF_CODE_4M.fd` `ad23261d…b083`) | emulator and firmware (verification oracle) | none; the physical run is [`../imac/`](../imac/) (EXERCISED on physical hardware (one machine)) |
 | sh, coreutils (`sha256sum`, `cmp`, `tr`) | glue and comparison (oracle) | none needed |
 

@@ -233,7 +233,7 @@ OLLM DONE <jobs> <wall milliseconds>
 
 The application then waits up to 300 s for a key and returns 0. A command that refuses (`exit N`)
 ends the application at once with status N, as on Linux; OUT.TXT then ends with the output flushed
-so far. This needs the `x86efi` compiler of omega-mv#1015 (`5ce9ecaa`): its `exit` flushes and closes
+so far. This needs the `x86efi` compiler of omega-mv#1015 (built from `5ce9ecaa`, merged into main as `d3d1b1bc`): its `exit` flushes and closes
 the open `efi 12` file before returning to the firmware, so the bytes written before the refusal are
 on the volume (`evidence/OMEGALLM/efi/ckbad/`: a refused checkpoint, and OUT.TXT equal to the Linux
 body). Differences from `lio.om`: there is no rename, so a refused or interrupted checkpoint write
