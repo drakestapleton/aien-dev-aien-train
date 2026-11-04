@@ -3,13 +3,14 @@
 # Receipts for the ollm UEFI rung (aien-train#52, CONTRACT section 9): build ollm.efi, compose the boot
 # image, boot it under QEMU/OVMF and compare its \OLLM\OUT.TXT and written files with a Linux build
 # running the same job, plus three controls. EMULATED evidence only: this is not the iMac.
-# Usage: sh tests/omegallm/efi-receipts.sh
+# Usage: EV=<new receipt dir> sh tests/omegallm/efi-receipts.sh
 # Env: IMAC_IMAGE (required; see efi-image.sh), EOMC (x86efi omc; build.sh's default when unset),
 #      ABUILD (aarch64 reference build dir, default build), EBUILD (x86efi build dir, default
 #      build-efi), DATA (TinyStoriesV2-GPT4-valid.txt, default data/...), CK (the v0 checkpoint,
 #      default run/v0/ck-20000.bin), WORK (scratch, default scratch-efi), CORE (taskset core for the
 #      reference and the main boot, default 6), MCORE (core for the mutant boot, run in parallel,
-#      default CORE), EV (receipt dir, default evidence/OMEGALLM/efi in this clone).
+#      default CORE), EV (required: the receipt dir, new or empty; the script refuses a dir that
+#      already holds files, so it can never delete committed receipts such as evidence/OMEGALLM/efi).
 # Runs from the clone's parent directory; give every path relative to it, so the receipts name no
 # absolute (private) path. Checks, each a line in summary.tsv (name, want, got, verdict):
 #   main      efi-job.txt: efi-check EQUAL and TR.BIN, HE.BIN, S.CK equal to the reference's files
@@ -25,6 +26,12 @@ here=$(cd "$(dirname "$0")/../.." && pwd)
 cd "$here/.." || exit 70
 r=$(basename "$here")
 t=$r/tests/omegallm
+E=${EV:-}
+[ -n "$E" ] || { echo "EV must name a new or empty receipt dir" >&2; exit 2; }
+if [ -e "$E" ] && { [ ! -d "$E" ] || [ -n "$(ls -A "$E")" ]; }; then
+	echo "EV $E exists and is not an empty dir; refusing to overwrite receipts" >&2
+	exit 2
+fi
 [ -n "${IMAC_IMAGE:-}" ] && [ -x "$IMAC_IMAGE" ] || { echo "IMAC_IMAGE must name the imac-image tool" >&2; exit 2; }
 ABUILD=${ABUILD:-build}
 EBUILD=${EBUILD:-build-efi}
@@ -33,9 +40,8 @@ CK=${CK:-run/v0/ck-20000.bin}
 WORK=${WORK:-scratch-efi}
 CORE=${CORE:-6}
 MCORE=${MCORE:-$CORE}
-E=${EV:-$r/evidence/OMEGALLM/efi}
-rm -rf "$WORK" "$E"
-mkdir -p "$WORK" "$E"
+rm -rf "$WORK"
+mkdir -p "$WORK" "$E" || exit 70
 fail=0
 row() { # name want got
 	if [ "$2" = "$3" ]; then v=PASS; else v=FAIL; fail=1; fi
@@ -68,7 +74,7 @@ cp "$DATA" "$WORK/ref/STORIES.TXT"
 cp "$t/mathref.txt" "$WORK/ref/MATHREF.TXT"
 CORE=$CORE sh "$t/efi-ref.sh" "$ABUILD/ollm" "$t/efi-job.txt" "$WORK/ref" > "$E/ref.out"
 (cd "$WORK/ref" && sha256sum TR.BIN HE.BIN S.CK) > "$E/ref-files.txt"
-jobs=$(grep -cvE '^(#|$)' "$t/efi-job.txt")
+jobs=$(tr -d '\r' < "$t/efi-job.txt" | grep -cvE '^(#|[[:blank:]]*$)')
 bytes=$(wc -c < "$t/efi-job.txt" | tr -d ' ')
 
 # 2. images
