@@ -1,0 +1,11 @@
+omc 2c82480596bbdc50cda9626866209ef662d5834f278f839ff4ce0250c495029f (omega-mv e5b32567)
+# this commit's tree: TARGET=gb10 sh tests/omegallm/build.sh [--variant r0|--mutant t], CORE=6;
+# built from this tree before the window; these are the binaries the window ran (t200, gates, gprof).
+# Rebuilt after the window from the same tree into a fresh OUT: the same three binary and source sha256s.
+BUILD_OK 50dcd16efca939691b1df2913ce5533854be10a8c860ae43dfd75290f1c991a4 ollm-gb10 source_sha256 627d0c67d1b7e88d894fc4854dc0a9fbb0b56b8e1b4181fb06d99af3e08b1c62
+BUILD_OK 15ea2453ea82ab150c0261d4da1bb9e4eb763fd0ad0ad085e39eb884ba0404be ollm-var-r0-gb10 source_sha256 9ac05c0d65fcaad318df7675d26a3b42542baa7f81e3351c8ecaeb5fc205fd41
+BUILD_OK 69724d0959449824f786647e4397ca6255c088118bfe51be1a539b9ac503ca8c ollm-mut-t-gb10 source_sha256 48f02f6d10447907004f541d2648c7f2d2b2ece1b10ba0e2da1e4b3a3373702d
+# K6 (base, run in the same window): ../gpu-k6/build.txt, sha256 e49491c5
+# K7a (parent commit d3d4551, run in the same window): ../gpu-k7/build.txt, sha256 53ff5f71
+# --variant r0 was built for the static switch check only; the window did not run it
+# --variant b0 is gone with the remap: build.sh --variant b0 prints the usage line and exits 2

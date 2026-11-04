@@ -1,0 +1,26 @@
+prereg.txt: OK
+run.sh: OK
+window.sh: OK
+/tmp/gk/v3i/b-gb10/ollm-gb10: OK
+/tmp/gk/v3i/b-gb10/ollm-mut-r-gb10: OK
+/tmp/gk/v3i/b-gb10/ollm-mut-u-gb10: OK
+/tmp/gk/v3i/b-gb10/ollm-mut-l-gb10: OK
+/tmp/gk/v3i/b-gb10/ollm-mut-o-gb10: OK
+/tmp/gk/v3i/b-gb10/ollm-mut-v-gb10: OK
+/tmp/gk/v3i/b-gb10/ollm-mut-n-gb10: OK
+/tmp/gk/r7/gpu2/ollm-gb10: OK
+/tmp/gk/r7/ckL0.bin: OK
+/tmp/gk/r7/ckb8.bin: OK
+/tmp/gk/r6/ck9000.bin: OK
+/tmp/gk/r7/run/ck30000.bin: OK
+/tmp/gk/r6/ck30000.bin: OK
+/tmp/gk/v3i/chip-g1/ck16.bin: OK
+/tmp/gk/v3i/chip-g1/ck16b8.bin: OK
+/tmp/gk/v3i/chip-g1/cks.bin: OK
+spark-window: note, other lanes also want the chip (L679 L332 L424 L401 L400 L386 L312 L354 L355 L356 L314 L313 L352 L369 L371 L375 L376 L788). Courtesy rule (Drake 2026-10-24): post what you run and for how long on ~/handoffs/BOARD.md, let anyone mid-measurement finish, step aside if asked.
+spark-window: window 20261104T130054Z-4f1b28 open, chip lock shared, quiet lock none (waited 2 s); box state in /home/drakestapleton/yardsticks/windows/20261104T130054Z-4f1b28/open.json
+20261104T130054Z-4f1b28
+spark-window: verdict for its timings: quiet machine
+spark-window: window 20261104T130054Z-4f1b28 closed (closed). It holds:
+  close.json
+  open.json

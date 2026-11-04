@@ -1,0 +1,10 @@
+receipt: eval-v0
+host_cpu: core 7 (Cortex-X925)
+binary: ollm sha256 52f5684fe2a600f0221337925233343cede03883bc81dcbbc32b40123a4dac1b
+source: ollm.om sha256 076871af4be89d59f2fbe2e1bdb99c30277a622b0c0b1504db1edabbe6e31e19
+$ taskset -c 7 nice -n 19 build-rf/ollm eval scratch-rf/work/v0.ck data/held.bin 256
+--- output
+E 50 256 3049318 4399237
+--- end
+rc=0 expect=0
+wall_ns=4634530460

@@ -1,0 +1,23 @@
+c2 pre-registration (written before window open, 2026-11-02)
+Change under test: gk.om f32 GEMM 64x64 output tile (64 threads, 8x8 microtile per thread, K8 smem
+tiles, 4352 B smem, 144 GPR) as kernel ids 32-39, chosen by gktile when m and n are both multiples of
+64; the 32x32 kernels (ids 0-7) stay for every other shape (the n=32 PV products). Runtime gkmut/id-8
+mutant replaced by build-time mutant t (OMUTT 0: kernels 32-39 drop the kk=7 k=0 FFMA of every K tile).
+Each output element keeps the same FFMA chain order over k as the 32 kernel, so results are meant to
+be bit-identical to C1.
+Static checks done before the window (nvdisasm -b SM121 on the dumped gkcode slots): slots 0,32-39
+decode, one EXIT each, every slot under 16384 B; slot 0 byte-identical between product and mutant t;
+mutant t differs only in slots 32-39, with 511 FFMA in slot 32 (product 512) and 575 in slot 36 (576).
+Binaries (omc e5b32567, sources from /tmp/wt-gpu on HEAD 154fd8c + uncommitted):
+ C2 /tmp/gk/c2/out/ollm-gb10             44ea8a17  product
+ CT /tmp/gk/c2/outt/ollm-mut-t-gb10      254c249b  mutant t
+ C1 /tmp/gk/c1/out/ollm-gb10             6a4c97a1  c1-chk1 product, timing and bit-identity base
+Expectations (tolerances unchanged):
+ C2: gc2-small-s3, gc2-max-s7, ga-max rc 0
+ CT: gc2-max-s7 FAIL rc 47; gc2-small-s3 reported, no expectation (small shapes may not take the 64 path)
+ C2 geval: E 9000 2243 1445466 539226 (r5 ck9000) and E 30000 2243 1338156 499194 (r6 ck30000)
+ gprof C2: per-kernel lines reported; GEMM launches with m,n multiples of 64 show ids 32-39
+ t200 from r6 ck9000, C1 then C2: both rc 0; C2 T and GT loss lines equal to C1 and ck_after equal
+   (C1 in c1-chk1: T 9200 1507707, ck_after fde1fae9). C2 wall_ns expected below C1; the speed is
+   reported as non-quiet (ollm-night CPU load), no speed claim unless both rc 0.
+A FAIL of any product gate is kept as a receipt and stops the commit.

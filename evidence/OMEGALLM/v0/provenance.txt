@@ -1,0 +1,23 @@
+receipt: provenance of the running v0 unit against the files the equivalence receipts compare
+host_cpu: core 9 (Cortex-X925), midr_el1 0x00000000410fd851
+taken: 2026-11-01T16:13:22Z
+$ sha256sum run/v0/ollm frozen/ollm run/v0/run.sh aien-train/tests/omegallm/v0-run.sh run/v0/ck-2000.bin scratch-equiv/v0-ck-2000.bin run/v0/train.bin run/v0/held.bin data/train.bin data/held.bin
+a9b5f3ec8291c1b046d350dcb7ee6550a271a9e06ee30ba13062d28732aa6137  run/v0/ollm
+a9b5f3ec8291c1b046d350dcb7ee6550a271a9e06ee30ba13062d28732aa6137  frozen/ollm
+4898aae5362da73252de96b85dbed435f6ca4838d2415c790ca44d21e706c590  run/v0/run.sh
+4898aae5362da73252de96b85dbed435f6ca4838d2415c790ca44d21e706c590  aien-train/tests/omegallm/v0-run.sh
+1fc4f22f96e3446897187d97a84b993c0ac4c177a31b3f02b1f17fb42e9c3d4f  run/v0/ck-2000.bin
+1fc4f22f96e3446897187d97a84b993c0ac4c177a31b3f02b1f17fb42e9c3d4f  scratch-equiv/v0-ck-2000.bin
+101b41c6d9396e353d4027759252fd8c1c5ec26ae8bec8834af2c9ae07d62fef  run/v0/train.bin
+729e0a4a8854934ee6000ead2b367494c6b4c9eb52d554f81d6f7f44403338ed  run/v0/held.bin
+101b41c6d9396e353d4027759252fd8c1c5ec26ae8bec8834af2c9ae07d62fef  data/train.bin
+729e0a4a8854934ee6000ead2b367494c6b4c9eb52d554f81d6f7f44403338ed  data/held.bin
+$ systemctl --user show ollm-v0 -p ActiveEnterTimestamp -p ExecStart -p CPUAffinity -p Nice -p MemoryMax -p WorkingDirectory (absolute prefixes replaced by <handoff> and <home>)
+ExecStart={ path=/bin/sh ; argv[]=/bin/sh <handoff>/run/v0/run.sh ; ignore_errors=no ; start_time=[Sun 2026-11-01 09:24:54 CST] ; stop_time=[n/a] ; pid=571337 ; code=(null) ; status=0/0 }
+MemoryMax=1073741824
+WorkingDirectory=!<home>
+Nice=19
+CPUAffinity=9
+ActiveEnterTimestamp=Sun 2026-11-01 09:24:54 CST
+$ head -1 run/v0/started.txt
+2026-11-01T15:24:54Z

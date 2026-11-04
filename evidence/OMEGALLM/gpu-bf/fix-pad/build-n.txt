@@ -1,0 +1,39 @@
+BF16 lane build receipt fix-pad mutant n (aien-train feat/omega-llm-bf16 e62a49539ff64f7b505b7d1ab2512ea844df7d24, 2026-11-04 UTC)
+change: gb.om const OMUTN (1 in the product). Mutant n (OMUTN 0) makes the host write 0.0 into C's
+  first padding word (block 0, row 0, column n) after each of gbfrag's 26 short cases is launched and
+  before gbfcmp checks it: the negative control of the padding check (CONTRACT-BF16 4.1, 5).
+  Host gate code only; no kernel change.
+compiler: omega-mv seed/out/omc sha256 2c82480596bbdc50cda9626866209ef662d5834f278f839ff4ce0250c495029f
+command: OMC=<omc> TARGET=gb10 OUT=<dir> CORE=3 sh tests/omegallm/build.sh [--mutant X]
+host: DGX Spark GB10 (aarch64), core 3 at nice 19; build only, nothing run on the chip
+
+product gb10   ollm-gb10          05880627a4a8f73d11fb8ce7bd5dc6ad37da8f259014185a60a3eb05dd91b4dc
+               source ollm.om     6edbdd82e67bf573f5e7a941ead932991d4359872bcf63c03351a18b6038017a
+mutant n       ollm-mut-n-gb10    34595bb01e98754a4e1f3271c593f9cfbd23297175a9f345404aab87aaf6e3f3
+               source             007a539663095d7c0344f2184c74a34db4c0de143b54836d37a23a0a44b48ec0
+mutant u       ollm-mut-u-gb10    922b56938d870fab041949d8d03c267dd03772b0443868c1c08993388ab21b88
+               source             06456048bb4969fb5056532c2240bf7e1ec994891f90d09661dd6da0e7ffef74
+mutant l       ollm-mut-l-gb10    11fe8a370af4e2f251fc67b7563b9b58424a9768a6ca27ac00b7ec19a0fcd4e9
+               source             b3bc358318df64cda159c8cce8f7caa7c4c54cb1c7286c71b026fcda25adceee
+mutant o       ollm-mut-o-gb10    d26fbbf14ed084cce3db2eba5f68e1e65fb5c77ba7ff3736c4a186112109e0bd
+               source             a49e2b0c19a07dfea266eb113d514577a967f3025d699c820090e15b465e7ffd
+mutant v       ollm-mut-v-gb10    4e9862e1570cad758f89390c457afd0d6ef7411949cf91a014e439d15765f09a
+               source             70f6930cacec152b10c3c35b5f8b3622d81777d79dd428b430ab7c6c86a030d0
+All six builds rc 0. The product and mutant n builds were repeated from `git archive e62a495` and
+gave the same binary and source sha256. build.sh's sed check reports exactly one changed line for
+mutant n (const OMUTN ulong 1 -> 0).
+
+product changed: the product binary differs from build.txt's 3c794661... (f5a6941). The only
+  source change is OMUTN: diff of the concatenated sources f5a6941 -> e62a495 shows just the 4
+  note/const lines plus a blank line after OMUTU, and the 4-line `if eq OMUTN 0 ... end` block in
+  gbf1 before gbfcmp.
+  The mutant u, l, o and v binaries change for the same reason; these hashes supersede build.txt's
+  for chip runs of this head.
+
+kernel bytes: OMC=<omc> OUT=<dir> CORE=3 sh tests/omegallm/gpu-disasm.sh 0 1 ... 36 40 42 ... 58
+  (slot list as in disasm-identity.txt), rc 0.
+  e62a495 DUMP 98bfc2bda59df32c8b7c43cc60d41ed218a614a629f1be70e0df31576995482b source_sha256 1191bd4f891f5e58f82e32c71f58804dd769dcea03f521c8008110cb4ed6da1d code_sha256 f2628fdad32cc0d56f4a10729edefc17057ea398b254f255ed85422f71f7c887
+  gpu-code.bin  f2628fdad32cc0d56f4a10729edefc17057ea398b254f255ed85422f71f7c887 (cmp with f5a6941: identical)
+  gpu-gpr.bin   506ac68484cd57fd7a823f29cc0485e3d444414867d9a092d7d8ed125359f777 (cmp with f5a6941: identical)
+  Every SLOT, GPR and SMEM line equals disasm-identity.txt (diff: only the DUMP line). No kernel
+  byte changed.

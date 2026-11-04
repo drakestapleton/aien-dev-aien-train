@@ -1,0 +1,6 @@
+binary: f671ba7abd19294baf89a6373a16a2f7e0611932a4cdea6313f97d98c9e67a60
+ck: d11b2ec6b936ff89dc48addf4204f01bff8c21b52ac8f8cc981199695011fc2e
+cmd: gdiag CK train.tok 7
+GX 121 -110 42 51 0 0 1
+rc=84
+wall_ns=6206964744

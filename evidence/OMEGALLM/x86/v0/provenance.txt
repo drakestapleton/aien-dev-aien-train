@@ -1,0 +1,18 @@
+receipt: rebuild of the two x86-64 binaries named in equiv-aarch64-x86.txt, equiv-control-x86-mut-b.txt
+and final-eval-x86.txt (those receipts record the binary hashes but not the source hash; the build
+directory was later reused for the platform-unit build)
+host_cpu: core 8 (Cortex-X925), nice 19
+omc: omega-mv main ba5559d9, seed/out/omc sha256 be8c51301307555254fc59e351d281aae1aa096d91521777e33a41c8b446448a
+$ for u in math data model adam ckpt cli; do git show 2dafb137:native/omegallm/$u.om; done > body.om
+47c27b0b6f0f962f359330d5fbbaa4b9f974265feb6471359202710d5e70c889  body.om   (= ollm.om of the aarch64 v0 build b729cc35)
+$ { echo 'target x86linux'; cat body.om; } > ollm.om
+cb4df751b5b521d7d78bd2d2bce4eda33c3a0aa36061f52020cdce1a264db28f  ollm.om
+$ omc < ollm.om > ollm
+rc=0
+b457ca7811ca79df77374d6608ddf10b450cb3684552bcf402da0de3f550c827  ollm   (= build-x86/ollm in the three receipts)
+$ sed 's/^const OMUTB ulong 1$/const OMUTB ulong 2/' ollm.om > mut-b.om   (1 line changed)
+a9021aff6802a7e9a55267c25e3506b67915137e4d9df8a6fdf91bff98b09805  mut-b.om
+$ omc < mut-b.om > mut-b
+rc=0
+3c57e8e1541c0c45a0b9803ad7b67779f2a605de5abb35e2c76bc8513b3ad4a4  mut-b   (= build-x86/ollm-mut-b in equiv-control-x86-mut-b.txt)
+verdict: both binaries rebuild byte for byte from the committed v0 source plus the target line

@@ -1,0 +1,18 @@
+rung 6 pre-registration, written before any chip step (2026-11-02, UTC)
+
+run: gtrainf at the rung-5 shape (V 4096, T 256, D 256, H 8, F 1024, L 8, B 64, P 7,409,920),
+init seed 1, TOTAL 30000, lr 0.003 (ollm init ckL0.bin 4096 256 256 8 1024 8 64 1 30000 3000 16).
+ckL0 differs from rung-5 ck0 in exactly 2 bytes (the TOTAL field); the weights are identical.
+binary: /tmp/wt-gpu build 576bf296... (Kahan CE, the geval tree). Legs: 0->250, then <=1750 steps
+per spark-window (--gb10 shared --quiet none), each followed by geval CK held.tok 2243 merges4096.bin.
+Tokens: 30000 * 16384 = 491,520,000 = 0.963 x train.tok (510,369,302 u16 tokens); 66.3 tokens per
+parameter against 19.9 for rung 5 (WolframLanguageEvaluator).
+
+P1  every leg exits rc 0, and every geval exits rc 0 with a finite E line.
+P2  per-step chip time within 5% of rung 5 (0.3808 s/step); the Kahan CE adds no visible cost.
+P3  the final held-out E (step 30000) is below rung-5 step 9000's chip value 1445466 micro-nats
+    (539226 micro-bpb).
+P4  the held-out curve from the geval after each leg is non-increasing within 2000 micro-nats
+    (the noise band is unknown; a rise larger than that is reported, not hidden).
+P5  the step-30000 CPU eval of the final checkpoint matches the chip geval within 10 micro-nats
+    (the geval gate).

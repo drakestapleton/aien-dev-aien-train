@@ -1,0 +1,10 @@
+note SPDX-License-Identifier: AGPL-3.0-only
+note omegallm epool.om (aien-train#52, CONTRACT-V3 section 2): the bank-B pools of the x86efi target,
+note one element each. The firmware image keeps the v2 bank-A capacity: ogeom refuses any shape whose
+note parameters, BLK or activations pass bank A (lpool.om holds the Linux pools).
+const OWWN ulong 1
+global oww f64 1
+const OGBN ulong 1
+global ogb f64 1
+const OABN ulong 1
+global oab f64 1

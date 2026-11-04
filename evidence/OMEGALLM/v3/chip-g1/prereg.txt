@@ -1,0 +1,82 @@
+v3 chip gate window v3-g1, pre-registered before the window opens (2026-11-04, UTC)
+
+Purpose: before PR #60 (v3, L <= 16) merges, run on the chip (a) the f32 regressions of the
+integrated binary against the rung-6/rung-7 receipts, (b) the CONTRACT-V3 section 4 check 7 chip
+gates (v2-shape bit identity at step 250; gcmp2 and gacmp at L 16), and (c) the BF16 gates of
+gpu-bf/g1 plus the gbfrag padding check of gpu-bf/fix-pad, all on one integrated build.
+
+Source: aien-train feat/omega-llm-v3 at b42a068 (merge of feat/omega-llm-v2 43f374a and
+  feat/omega-llm-bf16 cb55646 into v3; v3's bank-crossing mutant renamed v -> y). The commit that
+  carries this file adds only evidence. Pinned omc 2c824805... (aarch64 and gb10).
+Binaries (tests/omegallm/build.sh TARGET=gb10, OUT=/tmp/gk/v3i/b-gb10; ../integrated/build.txt):
+  P   ollm-gb10            e18dee7a34107f7257fc1840e7f66b560fe4e2d93440815745585b6fa764aad9
+  Mr  ollm-mut-r-gb10      4f8ffd6338b65746076a3ab971d326d729c6cb09711e2ed32e25cbb9e1f1d3d8
+  Mu  ollm-mut-u-gb10      58661482f31aa48785caa898720339a8968c59ff4d702af881f99a077359ddf6
+  Ml  ollm-mut-l-gb10      ac227ed4cdd194ce5d4d42f66c54dc6bac440d66404a63ecbe2ad4a44d57fb36
+  Mo  ollm-mut-o-gb10      695eaa64466689f4b6dc574ecea3af604dc49dd457e33e28635f03d2ec5ed78e
+  Mv  ollm-mut-v-gb10      9e55b66529c0766b3fe7f888873b780605cff92c470cd96641dd8493fcef92fa
+  Mn  ollm-mut-n-gb10      85e5dbb657fd561d3f53a08fd636151d1cab68502f69c872435e1a454624d503
+  P7  /tmp/gk/r7/gpu2/ollm-gb10 (rung-7 run binary) 1853303e82e9770822e643d0a22e5af9d3c7377a1a8b2c5cbf55ba6774814f0f
+Host evidence already taken (../integrated/disasm.txt): gpu-disasm.sh over every slot (0-36, 40-58
+  even) at the maximum grset 4096 256 384 12 1536 64 and the parity shape 256 32 64 2 128 2: no
+  LOW, and gpu-code.bin, gpu-gpr.bin and every listing line equal the BF16 head cb55646's
+  (code_sha256 f85abb94... max, f2628fda... parity). The kernels the chip runs are BF16's,
+  byte for byte. The aarch64 CPU build is 5e20559a..., the v3 lane's binary.
+
+Inputs:
+  /tmp/gk/r7/ckL0.bin        fc8835feae77a7ee93b59807337d51c72dd5df277b48fd93f011e5c592c5ac86 (rung-7 start, v2 max, B 64)
+  /tmp/gk/r7/ckb8.bin        0a4c382cbd2fdbb9fe6bc6f5e07e59b1012ec738491ce05570fe38a15be854a3 (v2 max, B 8)
+  /tmp/gk/r6/ck9000.bin      e91349fbfe2e0851491af1a02799af5bad045b09a602fb7b56f4f320df8b206d
+  /tmp/gk/r7/run/ck30000.bin 378d5a2d877841007a1e9319ba2f7c2378a8ad575520adc71f08ca6b15113a73
+  /tmp/gk/r6/ck30000.bin     8ccaa099ad68ab02afafef9743b8fddc793b9cad029ab8291e91fb86e82d5509
+  /tmp/gk/v3i/chip-g1/ck16.bin   3612c260c850417bba47434c0f5c988bb343ee3e4029ba038a41f618fb12e17d
+     (ollm init ck16.bin 4096 256 384 12 1536 16 64 1 30000 3000 16: the v3 maximum, B 64; equal to
+     check 5's ck0, which equals the Python referee's init)
+  /tmp/gk/v3i/chip-g1/ck16b8.bin 64d43ebe130b70e2ce5f2cd43ce903a8905034df8150ac8777774db9dc39be7a
+     (ollm init ck16b8.bin 4096 256 384 12 1536 16 8 1 9000 3000 8: the rung-7 ckb8 command with L 16)
+  /tmp/gk/v3i/chip-g1/cks.bin    c8693160c03c47781d69b6001794be43148221c4995bb0bfa07b18e0931a40ac
+     (ollm init cks.bin 256 32 64 2 128 2 8 1 100 10; the same bytes gpu-bf/g1 used)
+  All three were made with the integrated CPU build 5e20559a... (../integrated/inputs.txt).
+Why gcmp2 at L 16 uses B 8: gcmp2 computes two CPU f64 gradients of the whole batch. At v2 max B 8
+  it took 341.5 s (gpu-bf/g1 f32-c2-v2max-P.txt); at L 16 B 64 the CPU part scales by about 16 and
+  would take about 1.5 h of window time. B 8 at L 16 runs every layer, both banks and the
+  chip kernels exactly as B 64 does, as ckb8 did for rung 7.
+
+Predictions (each a pass/fail line in REPORT.txt; receipts are the files run.sh names):
+F1 gtrainf 250 250 from a copy of ckL0 with P: rc 0, T 250 2818417, ck_after
+   1ab162bf8d2e06e56884045ef17ca6999c4d328f01f75d666e0433c92c9b7094 (gpu-r7/gate1/t250-v2.txt).
+F2 geval of that checkpoint: exactly `E 250 2243 2773849 1034774`, rc 0.
+F3 gacmp of that checkpoint, train.tok 7: GACMP PASS rc 0; the GA line equals
+   `GA 15833472 59587 4063468404 14664 132 15259 * 2774219` except adam_ns (*).
+F4 gtrainf 9200 200 from a copy of r6 ck9000: rc 0, ck_after
+   ec4a8c2125791277047b80dff00c18f4dcbcce0f16f5d0b8028c6cc5d1d1a047.
+F5 gcmp2 ckb8 train.tok 7: GCMP2 PASS rc 0; GC2 line equals the rung-7 gate2 receipt
+   `GC2 15833472 342030 991 122070 425 91553 5 5 267282 2213833 0 8408630 8408630 * 0` except gpu_ns.
+F6 geval r7 ck30000: exactly `E 30000 2243 1254741 468077`, rc 0.
+F7 geval r6 ck30000: exactly `E 30000 2243 1338156 499194`, rc 0.
+F8 gcmp2 cks.bin train.dec 3 with P and with P7: both GCMP2 PASS rc 0, GC2 lines equal except gpu_ns,
+   and equal to gpu-bf/g1's `GC2 84288 223 223 15259 255 7629 1 0 0 225502 0 5549843 5549843 * 0`.
+L1 gcmp2 ck16b8 train.tok 7 with P: GCMP2 PASS rc 0, first GC2 field 29995392 (P at L 16), fails 0.
+   rel1, tolr, rho, tolf, flips and the two loss values are reported.
+L2 the same with Mr: GCMP2 FAIL rc 47 with fails bit 4 set (rel1 >= tolr), as rung-7 gate 2's Mr did.
+L3 gacmp ck16 train.tok 7 with P: GACMP PASS rc 0, first GA field 29995392.
+L4 gbcmp ck16 train.tok 7 with P (BF16 GEMMs at L 16, B 64): GBCMP PASS rc 0.
+B1 gbfrag ckb8 with P: GBFRAG PASS rc 0, GFS 0, 26 GF and 8 GFL lines all bad 0.
+B2 gbfrag with Mu, Ml, Mo, Mv: each GBFRAG FAIL rc 50; Mn: GBFRAG FAIL
+   rc 50 with 26 GF lines bad 1, 8 GFL lines bad 0, GFS 26 (gpu-bf/fix-pad/README.md).
+B3 gbcmp ckb8 train.tok 7 with P: GBCMP PASS rc 0.
+B4 gbcmp ckL0 train.tok 7 with P: GBCMP PASS rc 0.
+B5 gbcmp ckb8 with Ml, Mo, Mv: each GBCMP FAIL rc 48. Mu reported, not gated.
+B6 gbcmp2 ckb8 train.tok 7 with P: GBCMP2 PASS rc 0 with tolb_e9 649703979.
+   For B3, B4 and B6 the GBC/GB2 lines are compared with gpu-bf/g1 and reported (not gated).
+
+Decision: PR #60 is ready for merge on the chip side only if F1-F8, L1-L4, B1, B3, B4, B6 hold and
+every gated mutant (Mr in L2; Mu, Ml, Mo, Mv, Mn in B2; Ml, Mo, Mv in B5) fails as predicted. A
+mutant that passes means the gate does not cover its defect at this build. Nothing is rerun to
+replace a failing receipt. Infrastructure failures (window, ENOSPC, timeout without a verdict) are
+disclosed and the affected item reruns in a new window, recorded as a rerun.
+Expected wall: Wolfram Total of prior receipt walls (L1/L2 at twice the v2-max gcmp2) -> 2246.63 s
+  (37.4 min); --lease 75 (2x margin; L1/L2 have their own 2400 s timeouts).
+Window: spark-window v3-g1, --lease 75 --gb10 shared --quiet none. Timings are non-quiet.
+Run: cd evidence/OMEGALLM/v3/chip-g1 && sh window.sh (checks prereg.sha256 first, writes BOARD
+  STARTING/DONE lines, receipts land in this directory).

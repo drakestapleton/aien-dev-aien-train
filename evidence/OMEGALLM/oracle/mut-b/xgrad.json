@@ -1,0 +1,206 @@
+{
+ "check": "xgrad",
+ "binary": "build/ollm-mut-b",
+ "binary_sha256": "c7ddea4cea9952209e6e4516fc01e98aaf33940a80ccf9a4d7a5cb4d6881fa89",
+ "oracle_sha256": "3edfb60718c1b7c786275e16d4d593cc6418f591be4f30c5a5e17e0555c0d0fa",
+ "started": "2026-11-01T16:00:15Z",
+ "affinity": [
+  8
+ ],
+ "nice": 19,
+ "commands": [
+  {
+   "argv": [
+    "build/ollm-mut-b",
+    "grad",
+    "scratch-oracle/work/mut-b/tmp/tmpthijngdd/ck.init",
+    "scratch-oracle/work/mut-b/train64k.bin",
+    "scratch-oracle/work/mut-b/tmp/tmpthijngdd/offs.init",
+    "scratch-oracle/work/mut-b/tmp/tmpthijngdd/gr.init"
+   ],
+   "rc": 0,
+   "stdout": "G 4016135654d62324 5518884\n",
+   "stderr": "",
+   "seconds": 0.009
+  },
+  {
+   "argv": [
+    "build/ollm-mut-b",
+    "grad",
+    "scratch-oracle/work/mut-b/tmp/tmpthijngdd/ck.perturbed",
+    "scratch-oracle/work/mut-b/train64k.bin",
+    "scratch-oracle/work/mut-b/tmp/tmpthijngdd/offs.perturbed",
+    "scratch-oracle/work/mut-b/tmp/tmpthijngdd/gr.perturbed"
+   ],
+   "rc": 0,
+   "stdout": "G 401a68406569f6fe 6601808\n",
+   "stderr": "",
+   "seconds": 0.006
+  }
+ ],
+ "results": [
+  {
+   "rc": 0,
+   "offsets": [
+    12733,
+    13179
+   ],
+   "name": "init: rc 0",
+   "ok": true
+  },
+  {
+   "got": 5.5188840156268135,
+   "ref": 5.519809886331034,
+   "relerr": 0.00016773597701491883,
+   "got_micro": "5518884",
+   "ref_micro": 5519810,
+   "name": "init: loss",
+   "ok": false
+  },
+  {
+   "header": {
+    "c": {
+     "V": 256,
+     "T": 8,
+     "D": 16,
+     "H": 2,
+     "F": 32,
+     "L": 2,
+     "B": 2
+    },
+    "step": 2,
+    "seed": 42,
+    "total": 1000,
+    "lr": "3f689374bc6a7efa"
+   },
+   "name": "init: OLLMGR01 header",
+   "ok": true
+  },
+  {
+   "max_err_per_tensor": {
+    "wte": 386.51963164034805,
+    "wpe": 125.84312552899104,
+    "g1.0": 149.8372255411492,
+    "wq.0": 90.98962708815647,
+    "wk.0": 116.07566846565916,
+    "wv.0": 209.03861954863308,
+    "wo.0": 181.93781401520124,
+    "g2.0": 90.09640273541436,
+    "w1.0": 94.4896971759884,
+    "w2.0": 231.78941570246036,
+    "g1.1": 8.048132101049468,
+    "wq.1": 72.75786005970068,
+    "wk.1": 381.31313672191294,
+    "wv.1": 47.18109180274062,
+    "wo.1": 74.26453255981187,
+    "g2.1": 15.006824445094173,
+    "w1.1": 121.1895493333102,
+    "w2.1": 207.59155537771275,
+    "gf": 14.417845949315822
+   },
+   "max_err_by_kind": {
+    "wte": 386.51963164034805,
+    "wpe": 125.84312552899104,
+    "g1": 149.8372255411492,
+    "wq": 90.98962708815647,
+    "wk": 381.31313672191294,
+    "wv": 209.03861954863308,
+    "wo": 181.93781401520124,
+    "g2": 90.09640273541436,
+    "w1": 121.1895493333102,
+    "w2": 231.78941570246036,
+    "gf": 14.417845949315822
+   },
+   "grad_norm": 1.6560730246180848,
+   "name": "init: gradient (rtol 1e-09)",
+   "ok": false
+  },
+  {
+   "rc": 0,
+   "offsets": [
+    41559,
+    27011
+   ],
+   "name": "perturbed: rc 0",
+   "ok": true
+  },
+  {
+   "got": 6.6018081518102445,
+   "ref": 6.798023010120527,
+   "relerr": 0.02886351782248585,
+   "got_micro": "6601808",
+   "ref_micro": 6798023,
+   "name": "perturbed: loss",
+   "ok": false
+  },
+  {
+   "header": {
+    "c": {
+     "V": 256,
+     "T": 8,
+     "D": 16,
+     "H": 2,
+     "F": 32,
+     "L": 2,
+     "B": 2
+    },
+    "step": 2,
+    "seed": 43,
+    "total": 1000,
+    "lr": "3f689374bc6a7efa"
+   },
+   "name": "perturbed: OLLMGR01 header",
+   "ok": true
+  },
+  {
+   "max_err_per_tensor": {
+    "wte": 185.98460855937324,
+    "wpe": 86.09896660343043,
+    "g1.0": 7.549751367379036,
+    "wq.0": 56.05607923551072,
+    "wk.0": 219.12184225366423,
+    "wv.0": 145.1191980209427,
+    "wo.0": 87.61502811194649,
+    "g2.0": 3.0178148687217377,
+    "w1.0": 99.85185380669968,
+    "w2.0": 103.33348308050522,
+    "g1.1": 1.4797792567981325,
+    "wq.1": 33.775907211138765,
+    "wk.1": 77.92275633617925,
+    "wv.1": 65.51979391763763,
+    "wo.1": 98.45900348121977,
+    "g2.1": 26.8449929040587,
+    "w1.1": 122.76248405156603,
+    "w2.1": 207.0098849944161,
+    "gf": 1.6474727172447847
+   },
+   "max_err_by_kind": {
+    "wte": 185.98460855937324,
+    "wpe": 86.09896660343043,
+    "g1": 7.549751367379036,
+    "wq": 56.05607923551072,
+    "wk": 219.12184225366423,
+    "wv": 145.1191980209427,
+    "wo": 98.45900348121977,
+    "g2": 26.8449929040587,
+    "w1": 122.76248405156603,
+    "w2": 207.0098849944161,
+    "gf": 1.6474727172447847
+   },
+   "grad_norm": 3.6127632638469547,
+   "name": "perturbed: gradient (rtol 1e-09)",
+   "ok": false
+  }
+ ],
+ "verdict": "FAIL",
+ "data": {
+  "path": "scratch-oracle/work/mut-b/train64k.bin",
+  "sha256": "c440a9689f2592cf976f7ff564c4d7d6bc5a58a54feef881c85c4548ceae3f63",
+  "bytes": 65536
+ },
+ "oracle_seconds": {
+  "init": 0.01,
+  "perturbed": 0.01
+ },
+ "finished": "2026-11-01T16:00:15Z"
+}

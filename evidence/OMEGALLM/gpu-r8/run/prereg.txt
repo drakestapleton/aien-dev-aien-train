@@ -1,0 +1,29 @@
+rung 8 (v2 shape, 60000-step schedule) run prereg, written before the first training window opens.
+Question: at the v2 maximum shape, does doubling the training schedule (2x tokens, same everything
+else) lower held-out loss below rung 7? It needs no code change: the same chip binary trains it.
+Training binary /tmp/gk/r7/gpu2/ollm-gb10 1853303e82e9770822e643d0a22e5af9d3c7377a1a8b2c5cbf55ba6774814f0f
+(the rung-7 binary, unchanged). Start checkpoint ck.bin = /tmp/gk/r8/ckL0.bin e02c6234... =
+init 4096 256 384 12 1536 8 64 1 60000 3000 16 with the v2 CPU build /tmp/gk/r7/cpu/ollm. cmp -l
+against rung 7's ckL0.bin (fc8835fe...) shows bytes 81-82 only (TOTAL 30000 -> 60000): same seed,
+same parameters, data, batch, peak LR 3e-3. The LR decay runs over 60000 steps, so the schedule
+differs from rung 7 after step 100 (at step 30000 it is 0.5508 lr, Wolfram, against 0.1 lr in rung 7).
+Legs: 0->250, then 3000 steps, stopping exactly at 2000, 9000, 30000, 60000; chip geval (held.tok,
+W 2243, merges4096.bin) after every leg.
+
+Baseline (rung 7 chip geval, same held set): 30000 1254741 (b312942 evidence/OMEGALLM/gpu-r7).
+Because the schedules differ, rung 8 at an intermediate step is not compared with rung 7 as a pass
+condition; the intermediate values are reported as observations.
+
+P1 (the claim) final chip geval E at 60000 < 1254741 micro-nats.
+P2 (stop rule, health) E at 2000 < 1797226 (rung 6 at 2000); otherwise the run stops (drive.sh
+   exit 5) and P1 is not claimed.
+P3 the chip geval curve decreases strictly from leg to leg.
+P4 CPU eval of ck60000 with the v2 CPU build (/tmp/gk/r7/cpu/ollm 6da13670..., eval CK held.tok 2243
+   merges4096.bin, one core, nice 19) gives an E line equal to the chip's within 10 micro-nats.
+P5 summed gtrainf wall time 250->60000 < 15,709 s: 1.1x the 14,281 s modeled from rung 7's measured
+   rate (Wolfram: r = 7110.6/29750 -> 0.239012; 59750 r -> 14280.95; 1.1 x -> 15709.05).
+   Timings are non-quiet.
+Not claimed: whether the gain comes from more distinct data or from more passes over the same data
+(the sampler draws hashed windows with replacement, data.om obatch); 60000 x 16384 = 983,040,000
+token positions, 62.09 per parameter (Wolfram).
+Any failure is reported as a failure; no leg is rerun to replace a failing receipt.

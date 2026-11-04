@@ -1,0 +1,20 @@
+receipt: train-v0-50
+host_cpu: core 6 (Cortex-X925)
+target: x86linux EMULATED: qemu-x86_64 version 8.2.2 (Debian 1:8.2.2+ds-0ubuntu1.18), binfmt flags PO
+binary: ollm sha256 5163c1fb204b2f60b074875759df292187d55b263a5193323d190c2a4c6e0895
+source: ollm.om sha256 0fb3487218ff49d74acbbcdf48a123e0598c44b283664eb2ddf3a591c49575e4
+$ taskset -c 6 nice -n 19 ../fixv1/x86/build/ollm train ../fixv1/x86/work/v0.ck ../fixv1/x86/data/train.bin 50 5
+--- output
+T 5 5429638
+T 10 5167769
+T 15 4965627
+T 20 4702053
+T 25 4404937
+T 30 4099218
+T 35 3765766
+T 40 3448276
+T 45 3216285
+T 50 3110411
+--- end
+rc=0 expect=0
+wall_ns=555349150519

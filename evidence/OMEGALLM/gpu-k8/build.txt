@@ -1,0 +1,15 @@
+omc 2c82480596bbdc50cda9626866209ef662d5834f278f839ff4ce0250c495029f (omega-mv e5b32567)
+# this commit's tree: TARGET=gb10 sh tests/omegallm/build.sh [--mutant t], CORE=8, rebuilt after the window
+# into a fresh OUT. The binaries equal the a3 window's Q and QT; only the source sha256 moved, because one
+# gk.om note gained the measured ratios after the window (comments do not reach the binary).
+BUILD_OK 0b7015830d6fcd32a5f051f8be1c891a7e6a9bc661db79b70ef79ea7b144f598 ollm-gb10 source_sha256 dae1868d34476f702f6e0fd978e48e4590b4ad5811ec7de98fbf602f679ea777
+BUILD_OK 3619ef3125fe5ee8bba5c73819b89e814735370884a539a4de54c202733c7948 ollm-mut-t-gb10 source_sha256 677794aac14fa1e05ae7937e25d92c69a01da496f679c2825cc2273c16d7e0d0
+# a3 (k8c) arms, built before the window:
+#  Q  BUILD_OK 0b7015830d6fcd32a5f051f8be1c891a7e6a9bc661db79b70ef79ea7b144f598 ollm-gb10 source_sha256 60db63c0facd00aacd2239a2613a3c432f7d745b7f525b08664802e2774b2461
+#  QT BUILD_OK 3619ef3125fe5ee8bba5c73819b89e814735370884a539a4de54c202733c7948 ollm-mut-t-gb10 source_sha256 a31f53f1fa477d06c87e171be1bf1a71017683c1b1c35f020a92d5fc74985d0d
+#  C  BUILD_OK 58c207eab822b78d0c068176be0bd7390f50d43a8a6e34aaa90e8d637116800d ollm-gb10 source_sha256 6e52afd8c9671a51e4939743042ee5448b75280b48d7590f39a23b47ca28aac3
+#     (parent fc9af27 + the gksmw delta only, a3/srcdiff-b-to-c.txt)
+#  B  BUILD_OK 50dcd16efca939691b1df2913ce5533854be10a8c860ae43dfd75290f1c991a4 ollm-gb10 source_sha256 627d0c67d1b7e88d894fc4854dc0a9fbb0b56b8e1b4181fb06d99af3e08b1c62
+#     (git archive fc9af27, rebuilt: byte-equal to the k7b product, ../gpu-k7b/build.txt)
+# a2 (k8b) arms: P d0413445 (source 63cf5e96), PT d58b8782 (source a891e2d8), B 50dcd16e.
+# a1 (k8) arms: P 115f984f, PT 66df07bb (a2's kernel code, but gkgpr 160 for ids 40-54: the hang); B 50dcd16e.

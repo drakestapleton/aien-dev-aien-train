@@ -4,26 +4,20 @@
       "children": [
         {
           "digest": "9cff602a50ae4caecd8d5d2b5b49f256fab02d0c5f9dad289c8b57706b21cb10",
-          "last_commit": "fed670a",
+          "last_commit": "9061d3b",
           "name": "nl1r",
           "purpose": "NL1R host-only capacity arms and immutable experiment evidence"
-        },
-        {
-          "digest": "3166e646bf20b54d3abf9004d7186594efc963d8ac026ad14a91bda0359f1b6a",
-          "last_commit": "3d1e091",
-          "name": "nl1r-task",
-          "purpose": "Frozen NL1R host-only task-conditioned byte communication and pure proposal controls; historical"
         }
       ],
-      "children_root": "sha256:4deddd1fb4a01edc5f2f8b5dee350e4a969230e76e44ddd65973846853995bc1",
-      "compiled_at": "2026-10-29T19:17:08Z",
+      "children_root": "sha256:cba2bd992e66c6d5a0e65284e20e86412b3feb114a29b04e9084fe2767bf4927",
+      "compiled_at": "2026-11-04T20:55:15Z",
       "compiler": "crumb-compile/1",
-      "digest": "sha256:b1162eaf92d834de2e09c01fcb0f547dd4e305364ee37be456a3e23ddf19381c",
-      "evidence_files": 1054,
-      "evidence_root": "sha256:258d06e730648ecedc45241f41171bc8de260eee3927517b3ea6e4bbe47080ae",
-      "files": 1092,
-      "generated_at_commit": "3d1e091d0fa84f142a7fc906e310d0a4cd696249",
-      "source_tree": "sha256:8980d74c8bc4d9b105aeb0a54a5cb6bf8df448d31d17a5906883d95af71d5a32"
+      "digest": "sha256:443925d43f48451746a028ac0077898f993284edb082957e3d7efd020f1ab36c",
+      "evidence_files": 692,
+      "evidence_root": "sha256:2f4870b8ab155aafc76249c7674b269bb51d6e85f9d6356e60b10fb14c824693",
+      "files": 722,
+      "generated_at_commit": "686b07d250e89e115b2deb00ac246a6043d26a02",
+      "source_tree": "sha256:ac8d4171b0989e20f4d7e0f43efa19246bc9d1ddd2741db8aa62189a32c9f74b"
     }
   },
   "name": "neuralese",

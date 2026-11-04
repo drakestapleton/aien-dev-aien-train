@@ -1,0 +1,68 @@
+# sh tests/omegallm/efi-check.sh evidence/OMEGALLM/imac/OUT.TXT evidence/OMEGALLM/efi/ref.out 11 678
+body EQUAL
+EQUAL
+rc=0
+# TR.BIN HE.BIN S.CK lines in files.txt vs evidence/OMEGALLM/efi/ref-files.txt (those receipts are unchanged)
+files EQUAL rc=0
+# negative control: OUT.TXT with byte 41 set to X
+job 1 line mismatch
+  out: X e 3017 1 3cb37f4016f424e8 270
+  ref: M e 3017 1 3cb37f4016f424e8 270
+DIFFERENT
+rc=1
+# negative control: JOBS 10
+last line is not OLLM DONE 10 ms
+jobs 11, want 10
+body EQUAL
+DIFFERENT
+rc=1
+# negative control: banner byte count 677
+banner is not OLLM efi 677
+body EQUAL
+DIFFERENT
+rc=1
+# negative control: copy with a J-shaped line inserted after the first M e line
+job 1 line mismatch
+  out: J 1
+  ref: M l 2122 2 3cb84aa00c26b048 337
+DIFFERENT
+rc=1
+# negative control: a second J line immediately after the first job
+extra J line after job 1
+DIFFERENT
+rc=1
+# negative control: the first J line moved to before that job output
+job 1 line mismatch
+  out: J 121
+  ref: > mathck \OLLM\MATHREF.TXT
+DIFFERENT
+rc=1
+# negative control: DONE swapped with the previous line, so it is not last
+last line is not OLLM DONE 11 ms
+expected one J line after job 11
+  out: OLLM DONE 11 186521
+DIFFERENT
+rc=1
+# same checker on evidence/OMEGALLM/efi/main/OUT.TXT (emulated receipt, not a new run)
+body EQUAL
+EQUAL
+rc=0
+# negative control: OUT.TXT with the final OLLM DONE line removed
+last line is not OLLM DONE 11 ms
+missing J line after job 11
+DIFFERENT
+rc=1
+# negative control: copy of OUT.TXT with CR LF line endings (the job-1 mismatch is a trailing CR)
+banner is not OLLM efi 678
+last line is not OLLM DONE 11 ms
+job 1 line mismatch
+  out: > mathck \OLLM\MATHREF.TXT
+  ref: > mathck \OLLM\MATHREF.TXT
+DIFFERENT
+rc=1
+# negative control: the line "junk after done" appended after OLLM DONE
+last line is not OLLM DONE 11 ms
+extra line before DONE
+body EQUAL
+DIFFERENT
+rc=1

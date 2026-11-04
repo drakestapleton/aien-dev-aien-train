@@ -1,0 +1,9 @@
+$ taskset -c 8 nice -n 19 python3 aien-train/tests/omegallm/oracle.py xprep --ollm build/ollm-mut-a --data data/TinyStoriesV2-GPT4-valid.txt --outdir scratch-oracle/work/mut-a --receipt aien-train/evidence/OMEGALLM/oracle/mut-a/xprep.json
+$ build/ollm-mut-a prep data/TinyStoriesV2-GPT4-valid.txt scratch-oracle/work/mut-a/ollm-train.bin scratch-oracle/work/mut-a/ollm-held.bin
+  rc=0 0.21s stdout='P 27630 24867 2763 19883834 2220914\n'
+PASS rc 0
+PASS stdout
+PASS TRAIN sha256 identical
+PASS HELD sha256 identical
+XPREP PASS
+rc=0

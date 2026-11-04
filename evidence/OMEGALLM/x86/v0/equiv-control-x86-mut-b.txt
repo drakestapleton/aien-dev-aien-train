@@ -1,0 +1,19 @@
+host_cpu: core 7 (Cortex-X925)
+b729cc35faa6b3543ff1893c64e8a6feafc224feba7b99f7f13353e1d2179f22  build/ollm
+3c57e8e1541c0c45a0b9803ad7b67779f2a605de5abb35e2c76bc8513b3ad4a4  build-x86/ollm-mut-b
+1fc4f22f96e3446897187d97a84b993c0ac4c177a31b3f02b1f17fb42e9c3d4f  run/v0/ck-2000.bin
+101b41c6d9396e353d4027759252fd8c1c5ec26ae8bec8834af2c9ae07d62fef  data/train.bin
+729e0a4a8854934ee6000ead2b367494c6b4c9eb52d554f81d6f7f44403338ed  data/held.bin
+$ taskset -c 7 nice -n 19 build/ollm eval run/v0/ck-2000.bin data/held.bin 256
+rc=0 E 2000 256 1337354 1929394
+$ taskset -c 7 nice -n 19 build/ollm train scratch-x86/equivc/old.ck data/train.bin 2010 10
+rc=0 T 2010 1374427
+$ taskset -c 7 nice -n 19 build-x86/ollm-mut-b eval run/v0/ck-2000.bin data/held.bin 256
+rc=0 E 2000 256 5971175 8614584
+$ taskset -c 7 nice -n 19 build-x86/ollm-mut-b train scratch-x86/equivc/new.ck data/train.bin 2010 10
+rc=0 T 2010 3049934
+scratch-x86/equivc/old.eval scratch-x86/equivc/new.eval differ: byte 12, line 1
+eval lines DIFFER
+scratch-x86/equivc/old.ck scratch-x86/equivc/new.ck differ: byte 105, line 1
+checkpoints after step 2010 DIFFER
+verdict DIFFERENT

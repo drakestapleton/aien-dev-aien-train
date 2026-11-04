@@ -1,0 +1,108 @@
+# OMC=<pinned omc> SHAPE="256 32 64 2 128 2" sh tests/omegallm/gpu-disasm.sh 0 1 2 3 4 5 6 7 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 40 42 44 46 48 50 52 54 56 58  (this commit's tree) rc 0
+# nvdisasm -b SM121; DUMP/SLOT/GPR/SMEM lines below, listing not kept (regenerable).
+DUMP fa709596ac47488ddd0cd7e2891d95ceec9ee38524b21ac498bdf1ee1614801a source_sha256 2a4adf0e635ceeec6b90dcf1d11ceadfd712da570d2a088e1f54034017f4916c code_sha256 112b77e386c7fde158f1615f5d0840af564d1d8f855ecf1e769a3a6d6d67b004
+SLOT 0 bytes 7776 sha256 33b9b977cee0853e8fab33a6419506861560361a8d26484c2eaa1d193fa97d4a
+GPR 0 max R101 need 104 declared 104 OK
+SMEM 0 target 17
+SLOT 1 bytes 7776 sha256 9cc779a38ee7894b3638faa9a50c7fce78525d7fe37dff8da487626d47ae540d
+GPR 1 max R101 need 104 declared 104 OK
+SMEM 1 target 17
+SLOT 2 bytes 7776 sha256 276cad348a382546c3d1d177698c71c60b5d5a35d76064d32b8fa08a60aa7fb1
+GPR 2 max R101 need 104 declared 104 OK
+SMEM 2 target 17
+SLOT 3 bytes 7776 sha256 435b9a16a0d5b86418bd1c1c29ff79fa36a130cb634733858bfa2bdcd5a8324a
+GPR 3 max R101 need 104 declared 104 OK
+SMEM 3 target 17
+SLOT 4 bytes 8032 sha256 308374193b6656ae6610471f82ce949558d6cfe00a26ae032bdc917f3f565832
+GPR 4 max R101 need 104 declared 104 OK
+SMEM 4 target 17
+SLOT 5 bytes 8032 sha256 2de12c39bafbec9328eafc2f6be1d2f79da553e2e53d99b8156edc1a6e9836d1
+GPR 5 max R101 need 104 declared 104 OK
+SMEM 5 target 17
+SLOT 6 bytes 8032 sha256 3cf2e0b6791367367a6b0e454f3bfa29d74d78aacaa5de4be812c38bb6dc5442
+GPR 6 max R101 need 104 declared 104 OK
+SMEM 6 target 17
+SLOT 7 bytes 8032 sha256 9804d89acb52fd5b23cfc2b0de380c203dee8d805af09602cfbd880219a1c984
+GPR 7 max R101 need 104 declared 104 OK
+SMEM 7 target 17
+SLOT 9 bytes 496 sha256 e26832caabbaed80185926e047b13c7ab6b5de7cbecfb83322a40fb61ef72ed7
+GPR 9 max R34 need 37 declared 72 OK
+SMEM 9 target 9
+SLOT 10 bytes 864 sha256 09f5fb6829eb2f1b13acc046d6ad9b0471828ac1a67ad187656e8d79ed545cbc
+GPR 10 max R66 need 69 declared 72 OK
+SMEM 10 target 9
+SLOT 11 bytes 1216 sha256 4cc8a7d4a83867b83cc0c42afd7efaf6b51435116b90bb854d9ababfc1206e30
+GPR 11 max R67 need 70 declared 72 OK
+SMEM 11 target 9
+SLOT 12 bytes 0 sha256 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+SLOT 12 empty
+SLOT 13 bytes 512 sha256 c5839fa60e644fa518ec26991eaa2ff69aec2b50acec10b2212ed5fbba53d836
+GPR 13 max R64 need 67 declared 72 OK
+SMEM 13 target 9
+SLOT 14 bytes 544 sha256 685ab49d22a5d99d009a68f458ed34ff344176628e13bb4e6c9568c9733f00a6
+GPR 14 max R64 need 67 declared 72 OK
+SMEM 14 target 9
+SLOT 15 bytes 944 sha256 51bcd8f828468aa1298cc66853047e799e13b656203027387e093e7776c0ed4e
+GPR 15 max R67 need 70 declared 72 OK
+SMEM 15 target 9
+SLOT 16 bytes 768 sha256 8a70322edcadda88f066973b417ddf05a29a59e7c5d3df9bac09c73eac727742
+GPR 16 max R65 need 68 declared 72 OK
+SMEM 16 target 9
+SLOT 17 bytes 0 sha256 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+SLOT 17 empty
+SLOT 18 bytes 0 sha256 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+SLOT 18 empty
+SLOT 19 bytes 336 sha256 08baaa55bcc854ee5b94c6b0efa6e805292a8238a2e2a55e1a39b3857ae5c7ad
+GPR 19 max R34 need 37 declared 72 OK
+SMEM 19 target 9
+SLOT 20 bytes 272 sha256 db61fb9f0ea88ffa66993d0622499d178443c7e76411f77e456b2b937b0bf23a
+GPR 20 max R31 need 34 declared 72 OK
+SMEM 20 target 9
+SLOT 21 bytes 3360 sha256 12c4e07face1030392a2b2877fd423a3a655dfd5a7561f21ee9a5f241754b467
+GPR 21 max R68 need 71 declared 72 OK
+SMEM 21 target 9
+SLOT 22 bytes 640 sha256 b2921423f26d9c453cf8c6e565300e696bb62b3857f9242492ec6acec793d16d
+GPR 22 max R64 need 67 declared 72 OK
+SMEM 22 target 9
+SLOT 23 bytes 656 sha256 3c8c34f1df991e9daac7d80e6f7c263efb68fb4e131525d06d1061a847a4a83c
+GPR 23 max R64 need 67 declared 72 OK
+SMEM 23 target 9
+SLOT 24 bytes 800 sha256 46b2f05de07a5ed22bd5f6604fce223b9aed0dd7c9c6dddb5337f0b6355ceb00
+GPR 24 max R66 need 69 declared 72 OK
+SMEM 24 target 9
+SLOT 25 bytes 8832 sha256 675d9d7df9b06c467ddf8532cbef6262aebf8ebc05745edab7fa14b3af0b3999
+GPR 25 max R101 need 104 declared 104 OK
+SMEM 25 target 17
+SLOT 26 bytes 8832 sha256 7a395f5cd6e8e6b79ca0c67f6985472daa08ae7d779bbbe53ee6ab919edf2a4b
+GPR 26 max R101 need 104 declared 104 OK
+SMEM 26 target 17
+SLOT 40 bytes 15984 sha256 66da4691e31a0f542c59c975b30c62519c2b3e808e9290b0e939296d683ebbe0
+GPR 40 max R158 need 161 declared 168 OK
+SMEM 40 target 17
+SLOT 42 bytes 15984 sha256 ccc05f0e77436f402b53b7d243d7544c730037115b1d6e2adbe9676443c18b5c
+GPR 42 max R158 need 161 declared 168 OK
+SMEM 42 target 17
+SLOT 44 bytes 15984 sha256 ec9a147a83b00703b3f82c9201426e536b1f124aceaf8781f7d2751c7756c95c
+GPR 44 max R158 need 161 declared 168 OK
+SMEM 44 target 17
+SLOT 46 bytes 15984 sha256 0d17704625d98b9b4dffc98d299008715aaf8a1b8ca10a12fa5879b4f84cd7e3
+GPR 46 max R158 need 161 declared 168 OK
+SMEM 46 target 17
+SLOT 48 bytes 17008 sha256 47141963319f4af86d79b715578bd7639b3de93182e447c437ab26089c47c8a4
+GPR 48 max R158 need 161 declared 168 OK
+SMEM 48 target 17
+SLOT 50 bytes 17008 sha256 b6edb8d11df2f8054cd80543a74a36735c91aff3c94e65fff4db6e8e8ff438cd
+GPR 50 max R158 need 161 declared 168 OK
+SMEM 50 target 17
+SLOT 52 bytes 17008 sha256 046454bbe3dc8ff768f4719a0c475d26ecd17724943ae5a553d86f37c0deb7df
+GPR 52 max R158 need 161 declared 168 OK
+SMEM 52 target 17
+SLOT 54 bytes 17008 sha256 33476526cbd142febae14c8229b9adf8e803f9244a3def5d04a8518f14c11319
+GPR 54 max R158 need 161 declared 168 OK
+SMEM 54 target 17
+SLOT 56 bytes 20176 sha256 fed10654f97c05efcd912b013816bec0262931202b5f1d8ab573fd5b9ddb736f
+GPR 56 max R158 need 161 declared 168 OK
+SMEM 56 target 17
+SLOT 58 bytes 20176 sha256 a66e01b0019eba2981ec47b794482d72f6b786d50b4519845d69e5cd31a25038
+GPR 58 max R158 need 161 declared 168 OK
+SMEM 58 target 17

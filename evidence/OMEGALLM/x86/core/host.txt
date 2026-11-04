@@ -1,0 +1,5 @@
+core 6 midr_el1 0x00000000410fd851
+core 6 cpuinfo_max_freq_khz 3900000
+CPU MODELNAME      MAXMHZ
+  6 Cortex-X925 3900.0000
+target: x86linux EMULATED: qemu-x86_64 version 8.2.2 (Debian 1:8.2.2+ds-0ubuntu1.18), binfmt flags PO

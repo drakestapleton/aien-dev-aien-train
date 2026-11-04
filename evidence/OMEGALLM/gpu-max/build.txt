@@ -1,0 +1,11 @@
+omc 2c82480596bbdc50cda9626866209ef662d5834f278f839ff4ce0250c495029f (omega-mv e5b32567)
+# gc-max*, ga-max*, gtrainf-0-250 ran the rung-4 binaries (../gpu/build.txt: ollm-gb10 371ff177, mut-g 3d4d3eaa, mut-h 36a4efc2)
+# gc2-*, gtrainf-250-9000 ran this tree: TARGET=gb10 sh tests/omegallm/build.sh [--mutant g|m|f]
+BUILD_OK b3d844b19debcdea27f1ff131797abd78176868018d1e6cec6e8af6c8d5a32e3 ollm-gb10 source_sha256 ee090aeff77b30cb2623e10f14669f41016ca0f2a52799efb27cc6aab30105c3
+BUILD_OK c641c9e4862295e7917ef4d0fa93f1f2d8d30af2f965a3b9a0dade04db225f78 ollm-mut-g-gb10 source_sha256 95baed6fe655f06855d0807080046e166efc266781f42e38584c789fe520cebf
+BUILD_OK 2d9213b85120fe70cccf8ea4e42b8ea575f1cdf052b775947ecee193aeb1034f ollm-mut-m-gb10 source_sha256 dad918d781f38a34597346eaca68ec4eab5667e1222469bc44d9af689027ee40
+BUILD_OK c606768724dfa8a96608be61813c7ef74f1702cc9ccbd7497110c53ecd907f1b ollm-mut-f-gb10 source_sha256 f7e4d6ce1b3702e0daba4c0dc1b29b06340eb8c03161ea480890ca370d74a82a
+# CPU eval binary of this tree (sh tests/omegallm/build.sh, no TARGET):
+BUILD_OK bfd92d150d72186424bbf401cc30ed0f906ecc14520b161b3571c32d70b2368e ollm
+# probe/ ran a throwaway diagnostic build not in the tree:
+probe ollmk e4859eaa800958926e8d69cb39a4373085daeb181653f1dd80100b07c47d461a

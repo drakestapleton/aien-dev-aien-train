@@ -1,0 +1,19 @@
+{
+  "extensions": {
+    "generated": {
+      "children": [],
+      "children_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "compiled_at": "2026-11-04T14:49:38Z",
+      "compiler": "crumb-compile/1",
+      "digest": "sha256:fec47a5b82d2f6168110e223f4c8c26f68b6de796a69396c60fa139761244e19",
+      "evidence_files": 1107,
+      "evidence_root": "sha256:62ff6dcf18a4577ab6b38a411a3dd7d5405bc9f3389fc0b43690b2eb23f13f6a",
+      "files": 1107,
+      "generated_at_commit": "3fe6c3360719ae5658901a31220b915df74e3c1e",
+      "source_tree": "sha256:7b706c82cd03b25ba53244bb362c1ef7da1ffb54aec6dba7b917712bfd7fcba6"
+    }
+  },
+  "name": "omegallm-evidence",
+  "purpose": "Receipts for Omega LLM v0: core/ (.om lane runs on GB10 Grace) and oracle/ (referee cross-checks)",
+  "schema_version": "1.0.0"
+}

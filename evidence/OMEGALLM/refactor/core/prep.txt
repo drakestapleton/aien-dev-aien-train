@@ -1,0 +1,12 @@
+receipt: prep
+host_cpu: core 7 (Cortex-X925)
+binary: ollm sha256 52f5684fe2a600f0221337925233343cede03883bc81dcbbc32b40123a4dac1b
+source: ollm.om sha256 076871af4be89d59f2fbe2e1bdb99c30277a622b0c0b1504db1edabbe6e31e19
+$ taskset -c 7 nice -n 19 build-rf/ollm prep data/TinyStoriesV2-GPT4-valid.txt data/train.bin data/held.bin
+--- output
+P 27630 24867 2763 19883834 2220914
+--- end
+rc=0 expect=0
+wall_ns=211500519
+101b41c6d9396e353d4027759252fd8c1c5ec26ae8bec8834af2c9ae07d62fef  data/train.bin
+729e0a4a8854934ee6000ead2b367494c6b4c9eb52d554f81d6f7f44403338ed  data/held.bin

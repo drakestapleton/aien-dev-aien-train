@@ -1,0 +1,54 @@
+k6 pre-registration (written before window open, 2026-11-02)
+Change under test: causal chunk skipping in the softmax row kernels gr.om grsoftf (id 15) and
+grsoftb (id 16). The k5 profile (evidence/OMEGALLM/gpu-k5/prof-K5.txt) has 8 launches per step of
+each, grid 128x512x1, at about 224 and 228 GB/s each (WolframLanguageEvaluator b=512*256*256*4;
+{2b/(9568788/8), 3b/(14096979/8)} -> {224.43, 228.50}): bandwidth-bound, so only traffic can drop.
+ Loads: row t (R21) loads 32-column chunk u only if t >= 32u. Predicates P0..P6 = (t >= 32u) for
+   u = 1..7 are set by ISETP before the loads (an ISETP between the loads would wait on their
+   scoreboard); chunk 0 and chunks from u = 8 on stay PT (loaded, then masked). New encoders
+   gk.om gkldgp/gkstgp put the guard in word 0 bits 12-15; gkldg/gkstg are now gkldgp/gkstgp with
+   PT (p 7), so their words are unchanged.
+ Stores: chunk u is stored only if t >= 64 floor(u/2) (P1, P3, P5 for chunk pairs 2-3, 4-5, 6-7,
+   recomputed before the stores because the mask loop reuses P1). The causal GEMMs read a P or DS
+   row only up to the end of its diagonal tile (S/DP id 35 GEMM64; P U, DS K, P^T DO, DS^T Q
+   GEMM32 at E = 32, tile <= 64), so the chunks not stored are never read.
+ grsoftb now also FSELs p to RZ for columns > t (unloaded p registers hold stale values); in K5 p
+   there was exactly +0 from softf, so the value is the same.
+Fixed latent encoder bug: gk.om gkisge put the destination predicate at word 0 bit 16; ISETP's is word
+2 bit 17 (as in gkisetp). The first max-shape dump showed all seven ISETPs writing P0. Every
+existing caller passes p 0, so their words do not change (static check below).
+Exactness argument [INFERENCE until the run]: every value a consumer reads is computed from the same
+inputs by the same instruction sequence as K5. Unloaded chunks lie wholly above the diagonal and are
+replaced by FSEL (-inf in softf, +0 in softb) before any arithmetic, exactly as K5's loaded values
+were. So K6 is predicted BIT-IDENTICAL to K5 on every output.
+New build-time mutant w (gr.om OMUTW 0): load predicates t >= 32u + 32, so from chunk 1 on the
+diagonal chunk of each row is not loaded and its stale register enters the softmax.
+Static checks before the window (gpu-disasm.sh + nvdisasm, omc e5b32567, scratch copies whose dump
+calls grset 4096 256 256 8 1024 8, the max shape, instead of the parity shape 256 32 64 2 128 2):
+ max shape: K6 dump differs from K5 (f84a657 sources) only in slots 15 and 16; mutant w differs from
+   K6 only in slots 15 and 16, and there only in the seven ISETP immediates (0x40..0x100 instead of
+   0x20..0xe0) in each.
+ parity shape (committed gpu-disasm.sh): K6 code differs from K5 (5840a49b) only in slot 16 (the
+   p FSEL); T = 32 gives one chunk, so no predicates are emitted, and mutant w equals K6 there.
+ K6 slot 15: ISETP.GE P0..P6 R21 0x20..0xe0; LDG R32; @P0..@P6 LDG R33..R39; stores STG R32, R33,
+   @P1 R34 R35, @P3 R36 R37, @P5 R38 R39. Slot 16 the same for p (R32..) and dp (R48..), FSEL RZ
+   on both, stores of R48..R55 with the same guards.
+Binaries (omc e5b32567, sources /tmp/wt-gpu HEAD f84a6572 + uncommitted gk.om/gr.om/build.sh):
+ K6 /tmp/gk/k6/bin/ollm-gb10            e49491c5  product
+ KW /tmp/gk/k6/bin/ollm-mut-w-gb10      67b1653d  mutant w
+ K5 /tmp/gk/k5/bin/ollm-gb10            5c38d237  k5 product (f84a6572), base in the same window
+Expectations (tolerances unchanged):
+ K6: gc2-small-s3, gc2-max-s7, ga-max rc 0 with lines equal to the k5 window's K5 lines:
+   GC2 84288 177 177 3815 211 7629 1 0 0 194221 0 5529261 5529261 3859425 0
+   GC2 7409920 159783 758 122070 450 61035 6 3 358192 1557866 0 8339291 8339291 274328240 0
+   GA 7409920 59554 4021923359 14807 125 15259 1370421 2841667
+ KW: gc2-max-s7 FAIL rc 47. gc2-small-s3 rc 0 with the K6 line (T = 32: mutant code equals K6),
+   recorded as the shape control, not as a catch.
+ K6 geval r5 ck9000: E 9000 2243 1445466 539226; r6 ck30000: E 30000 2243 1338156 499194.
+ gprof K5 and K6 in this window: K6 lower wait in ids 15 and 16. Modeled [INFERENCE, not a gate]:
+   WolframLanguageEvaluator ld = Mean[Floor[q/32]+1, q 0..255], st = Mean[2(Floor[q/64]+1)];
+   ff = (ld+st)/16; fb = (2ld+st)/24; sv = 9.568788(1-ff) + 14.096979(1-fb) ->
+   ld 9/2, st 5, ff 19/32, fb 7/12, sv 9.761061375 ms per step, 0.0579 of the k5 168.54 ms profile.
+ t200 from r6 ck9000, K5 then K6: both rc 0, both T 9200 1508182, ck_after byte-equal to each other
+   and to ec4a8c21 (k4/k5 windows). K6 wall_ns below K5's in this window. Speed is non-quiet.
+A FAIL of any product gate, or a K6/K5 checkpoint mismatch, is kept as a receipt and stops the commit.

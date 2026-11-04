@@ -1,0 +1,5 @@
+note ogmask for the CPU-only targets (aarch64, x86linux, x86efi). model.om calls it only when
+note ogkm[0] = 1, which only gpu/gg.om's gcmp2 sets, so reaching it is a defect: exit 2.
+fn ogmask yo ulong l ulong t ulong to void
+exit 2
+end

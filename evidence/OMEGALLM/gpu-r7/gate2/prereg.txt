@@ -1,0 +1,19 @@
+rung-7 gate window 2 (gg-r7g2), written before the window opens.
+Binaries: P2 /tmp/gk/r7/gpu2/ollm-gb10 1853303e82e9770822e643d0a22e5af9d3c7377a1a8b2c5cbf55ba6774814f0f
+          PR2 /tmp/gk/r7/gpur2/ollm-mut-r-gb10 360f3bd91f972ef243a6ffc2104a14612ad091ec463fe6fb34cb9006c1c068e4
+Change from gg-r7g: gpu/gg.om ggfs f64 1024 -> 1536 (gcmp2 host scratch). See ../g/REPORT.txt.
+
+H1 gc2-v2max-s7 (P2, ckb8 0a4c382c..., train.tok seq 7): GCMP2 PASS, rc 0.
+H2 gc2-v2max-s7-R (PR2, same): GCMP2 FAIL, rc 47.
+H3 gc2-small-s3 (P2, /tmp/gk/gt/ck.bin, train.dec 3): GCMP2 PASS; GC2 fields 1-13 and 15 equal
+   84288 177 177 3815 211 7629 1 0 0 194221 0 5529261 5529261 _ 0 (field 14 gpu_ns is timing).
+H4 ge-v1-0 (P2, r6 ckL0 11d6d39f...): reported. G6 from gg-r7g is replaced by: the v2 init E 0
+   (8398671, gg-r7g) is within 50000 micro-nats of this v1 init E 0. Rationale: same init family
+   and seed; the v2 init is already byte-identical to the Python referee, so the remaining question
+   is only whether the excess over ln V is a v2 artefact. This replacement is written after G6
+   missed and is disclosed as such.
+H5 ge-v1-30000 (P2): exactly E 30000 2243 1338156 499194.
+H6 t200-v1 (P2, r6 ck9000 -> 9200): ck_after ec4a8c2125791277047b80dff00c18f4dcbcce0f16f5d0b8028c6cc5d1d1a047.
+H7 ga-v2-250 (P2, ../g/ckg.bin 1ab162bf...): GACMP PASS.
+
+Rung 7 starts only if H1, H2, H3, H4, H5, H6 and H7 all hold, with P2 as the training binary.

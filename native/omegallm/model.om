@@ -1,0 +1,1244 @@
+note SPDX-License-Identifier: AGPL-3.0-only
+note omegallm model.om (aien-train#52): geometry, forward pass and hand-derived backward pass
+note (CONTRACT sections 1-3, CONTRACT-V1 section 1). Needs math.om and data.om before it.
+note
+note f64 values live in banked pools (one omc global holds at most 16777216 elements, and all
+note globals together at most 2^30 bytes, omc error 23; CONTRACT-V3 section 2):
+note  ow  parameter bank A: [0, SB) of the CONTRACT section 2 order, then a one-layer window of
+note      LSTR values at og[36] and the final gain gf at og[37]; oww (lpool.om/epool.om) bank B holds
+note      layers LA .. L-1 at (l - LA) LSTR. When P <= OWC, SB = GF, LA = L and ow is the v2 layout.
+note      Every index outside the kernels is virtual (the section 2 order); owg/owp map it, and opx
+note      maps a hot index of bank A or the staged layer (og[48]).
+note  the gradient pool [0, 2P): GRD [0, P) in the platform cold store (ocsg/ocsp), BLK [P, 2P) in
+note      ogr[j] below OGC and ogb[j - OGC] from OGC (j = i - P), reached through ogrg/ogrp/ogra
+note  the Adam pool [0, 2P) (omvg/omvp): m at 0, v at P, at cold-store index P + i
+note  oa  activations: layers below LAA at l ASTR, later layers in two windows at AW + (l mod 2) ASTR
+note      flushed to bank B oab at (l - LAA) ASTR after their forward and staged back before their
+note      backward; HF and the backward temporaries follow. When END <= OAC, LAA = L (v2 layout).
+note  opa attention probabilities PA[l][n][t][j] of every layer
+note og slots:
+note  0 V  1 T  2 D  3 H  4 F  5 L  6 B  7 E=D/H  8 P  9 CT (positions in use, <= T)
+note  10 GRD (base in the gradient pool of the gradient being accumulated: 0, or P for BLK) 11 MOM
+note  (0 in the Adam pool) 12 VEL (P) 13 ACT (0 in oa) 14 ASTR (per-layer activation stride) 15 HF
+note  16 SF 17 Z 18 PR 19 DH 20 DA 21 DQ 22 DK 23 DU 24 DO 25 DZ 26 DF 27 TMP 28 END
+note  29 PSTR (per-layer PA stride H T T in opa) 30 WPE 31 LAY0 32 LSTR (per-layer parameter
+note  stride) 33 GF 34 SB (first virtual index of bank B) 35 LA (first layer in bank B) 36 window base
+note  in ow 37 gf in ow 38 LAA (first layer in the activation windows) 39 AW (activation window
+note  base) 48 the layer staged in the parameter window (L: none)
+note  40 seed S 41 step 42 TOTAL 43 lr bits 44 G (gradient blocks) 45 K (workers)
+note  46 checkpoint magic of the run (1 OLLMCK01, 2 OLLMCK02)
+note Per layer activations (T rows of width D unless noted): HIN, A, Q, K, U, O, HMID, BN, S1[T],
+note S2[T], FP[T][F] (pre-relu), RL[T][F]. Every sum runs over its index ascending.
+note Sizes at the CONTRACT-V2 maxima (V 4096, T 256, D 384, H 16, F 1536, L 8), Wolfram:
+note  P = V D + T D + L (4 D^2 + 2 D F + 2 D) + D -> 15833472
+note  ASTR = 8 T D + 2 T + 2 T F -> 1573376; END = L ASTR + 10 T D + T + T V + T F + 4096 -> 15016192
+note  and at the CONTRACT-V3 maxima (L 16): P 29995392, PA = L H T T -> 16777216; the bank-B sizes
+note  are in lpool.om. ogeom refuses any layout past a pool.
+note Bank A capacities: OWC parameters, OGC BLK values, OAC activations (the bank-crossing test
+note build of tests/omegallm/build.sh shrinks all three).
+const OWC ulong 15833472
+global ow f64 15833472
+const OGC ulong 15833472
+global ogr f64 15833472
+const OAC ulong 15016192
+global oa f64 15016192
+const OPAN ulong 16777216
+global opa f64 16777216
+
+note gradient pool element i (i < 2 P)
+fn ogrg i ulong to f64
+p = get og 8
+if lt i p
+ret ocsg i
+end
+j = sub i p
+if lt j OGC
+ret get ogr j
+end
+ret get ogb sub j OGC
+end
+
+fn ogrp i ulong v f64 to void
+p = get og 8
+if lt i p
+ocsp i v
+ret
+end
+j = sub i p
+if lt j OGC
+put ogr j v
+else
+put ogb sub j OGC v
+end
+end
+
+note gradient pool element i += a
+fn ogra i ulong a f64 to void
+p = get og 8
+if lt i p
+ocsp i add ocsg i a
+ret
+end
+j = sub i p
+if lt j OGC
+put ogr j add get ogr j a
+else
+k = sub j OGC
+put ogb k add get ogb k a
+end
+end
+
+note Adam pool element i (i < 2 P), cold-store index P + i
+fn omvg i ulong to f64
+ret ocsg add get og 8 i
+end
+
+fn omvp i ulong v f64 to void
+ocsp add get og 8 i v
+end
+
+note parameter at virtual index i (bank A, bank B or gf), and its store
+fn owg i ulong to f64
+sb = get og 34
+if lt i sb
+ret get ow i
+end
+g = get og 33
+if ge i g
+ret get ow add get og 37 sub i g
+end
+ret get oww sub i sb
+end
+
+fn owp i ulong v f64 to void
+sb = get og 34
+if lt i sb
+put ow i v
+ret
+end
+g = get og 33
+if ge i g
+put ow add get og 37 sub i g v
+ret
+end
+put oww sub i sb v
+end
+
+note ow index of virtual index i for the kernels: bank A as is, gf at og[37], a bank-B layer only
+note when it is the staged layer og[48] (else exit 16, a missing ostw)
+fn opx i ulong to ulong
+if lt i get og 34
+ret i
+end
+g = get og 33
+if ge i g
+ret add get og 37 sub i g
+end
+l = div sub i get og 31 get og 32
+if ne l get og 48
+exit 16
+end
+ret add get og 36 sub i opg1 l
+end
+
+note Mutant y (wrong bank-B layer: ostw stages layer LA's block for every layer): 1 in the product,
+note 0 in the mutant.
+const OMUTY ulong 1
+
+const OCH ulong 999999
+
+note stage bank-B layer l into the parameter window (layers below LA live in bank A)
+fn ostw l ulong to void
+la = get og 35
+if lt l la
+ret
+end
+n = get og 32
+s = mul sub l la n
+if eq OMUTY 0
+s = 0
+end
+ostwc get og 36 s n
+put og 48 l
+end
+
+note ow[wb + i] = oww[s + i] for i < n (chunked: a loop runs at most 999999 passes)
+fn ostwc wb ulong s ulong n ulong to void
+for q ulong ocn n
+i = mul q OCH
+ie = oce q n
+while lt i ie bound 999999
+put ow add wb i get oww add s i
+i = add i 1
+end
+end
+end
+
+note copy layer l's activation block between its window and bank B oab (to oab when fo)
+fn oaflip l ulong fo bool to void
+la = get og 38
+if lt l la
+ret
+end
+n = get og 14
+s = mul sub l la n
+oaflc oahin l s n fo
+end
+
+note oab[s + i] = oa[w + i] for i < n when fo, else the reverse
+fn oaflc w ulong s ulong n ulong fo bool to void
+if fo
+oafo w s n
+else
+oafi w s n
+end
+end
+
+fn oafo w ulong s ulong n ulong to void
+for q ulong ocn n
+i = mul q OCH
+ie = oce q n
+while lt i ie bound 999999
+put oab add s i get oa add w i
+i = add i 1
+end
+end
+end
+
+fn oafi w ulong s ulong n ulong to void
+for q ulong ocn n
+i = mul q OCH
+ie = oce q n
+while lt i ie bound 999999
+put oa add w i get oab add s i
+i = add i 1
+end
+end
+end
+
+note TMP holds V logits (sample) or T attention dots
+const OTMP ulong 4096
+
+note Mutant a (attention backward sign flip in the dK term): 1 in the product, 0 in the mutant.
+const OMUTA ulong 1
+
+note Configure og from og[0..6]; false when a shape is zero, over the maximum, or D mod H != 0, or
+note when the layout does not fit the pools.
+fn ogeom to bool
+if not ogok
+ret false
+end
+t = get og 1
+d = get og 2
+put og 7 div d get og 3
+u = mul 4 mul d d
+u = add u mul 2 mul d get og 4
+u = add u mul 2 d
+put og 32 u
+put og 30 mul get og 0 d
+u = mul t d
+put og 31 add get og 30 u
+u = mul get og 5 get og 32
+put og 33 add get og 31 u
+u = add get og 33 d
+put og 8 u
+put og 9 t
+put og 10 0
+put og 11 0
+put og 12 u
+put og 13 0
+put og 29 mul mul get og 3 t t
+u = mul t d
+put og 14 oastr u
+if not ogwb
+ret false
+end
+if not ogab u
+ret false
+end
+p = get og 8
+if gt p add OGC OGBN
+ret false
+end
+if gt mul 3 p ocsinit
+ret false
+end
+ret le mul get og 5 get og 29 OPAN
+end
+
+note parameter banks: v2 layout when P <= OWC, else LA layers in bank A, the window and gf after
+note them, layers LA .. L-1 in oww
+fn ogwb to bool
+ll = get og 5
+g = get og 33
+put og 34 g
+put og 35 ll
+put og 36 g
+put og 37 g
+put og 48 ll
+if le get og 8 OWC
+ret true
+end
+ls = get og 32
+nd = add add get og 31 ls get og 2
+if lt OWC nd
+ret false
+end
+la = div sub OWC nd ls
+if gt mul sub ll la ls OWWN
+ret false
+end
+sb = add get og 31 mul la ls
+put og 34 sb
+put og 35 la
+put og 36 sb
+put og 37 add sb ls
+ret true
+end
+
+note activation banks: v2 layout when END <= OAC, else LAA layers, two windows, then HF and the
+note backward temporaries
+fn ogab td ulong to bool
+ll = get og 5
+st = get og 14
+put og 38 ll
+put og 39 mul ll st
+ogeom3 td mul ll st
+ogeom2 td
+if le get og 28 OAC
+ret true
+end
+w2 = add sub get og 28 get og 15 mul 2 st
+if lt OAC w2
+ret false
+end
+la = div sub OAC w2 st
+if gt mul sub ll la st OABN
+ret false
+end
+aw = mul la st
+put og 38 la
+put og 39 aw
+ogeom3 td add aw mul 2 st
+ogeom2 td
+ret le get og 28 OAC
+end
+
+fn ogeom3 td ulong hf ulong to void
+put og 15 hf
+put og 16 add get og 15 td
+put og 17 add get og 16 get og 1
+put og 18 add get og 17 td
+end
+
+note per-layer activation stride: 8 T D + 2 T + 2 T F
+fn oastr td ulong to ulong
+t = get og 1
+a = add mul 8 td mul 2 t
+ret add a mul mul 2 t get og 4
+end
+
+note shape limits (CONTRACT-V3 section 1): every shape >= 1, 256 <= V <= 4096, T <= 256,
+note D <= 384, H <= 16, F <= 1536, L <= 16, B <= 64, D mod H = 0
+fn ogok to bool
+for i ulong 7
+if eq get og i 0
+ret false
+end
+end
+if or lt get og 0 256 gt get og 0 4096
+ret false
+end
+if or gt get og 1 256 gt get og 2 384
+ret false
+end
+if or gt get og 3 16 gt get og 4 1536
+ret false
+end
+if or gt get og 5 16 gt get og 6 64
+ret false
+end
+ret eq rem get og 2 get og 3 0
+end
+
+fn ogeom2 td ulong to void
+t = get og 1
+put og 19 add get og 18 mul t get og 0
+put og 20 add get og 19 td
+put og 21 add get og 20 td
+put og 22 add get og 21 td
+put og 23 add get og 22 td
+put og 24 add get og 23 td
+put og 25 add get og 24 td
+put og 26 add get og 25 td
+put og 27 add get og 26 mul t get og 4
+put og 28 add get og 27 OTMP
+end
+
+note parameter offsets of layer l
+fn opg1 l ulong to ulong
+ret add get og 31 mul l get og 32
+end
+fn opwq l ulong to ulong
+ret add opg1 l get og 2
+end
+fn opwk l ulong to ulong
+d = get og 2
+ret add opwq l mul d d
+end
+fn opwv l ulong to ulong
+d = get og 2
+ret add opwk l mul d d
+end
+fn opwo l ulong to ulong
+d = get og 2
+ret add opwv l mul d d
+end
+fn opg2 l ulong to ulong
+d = get og 2
+ret add opwo l mul d d
+end
+fn opw1 l ulong to ulong
+ret add opg2 l get og 2
+end
+fn opw2 l ulong to ulong
+ret add opw1 l mul get og 2 get og 4
+end
+
+note activation offsets of layer l (layers from LAA in the two windows at AW)
+fn oahin l ulong to ulong
+if lt l get og 38
+ret add get og 13 mul l get og 14
+end
+ret add get og 39 mul rem l 2 get og 14
+end
+fn oatd n ulong to ulong
+ret mul n mul get og 1 get og 2
+end
+fn oaa l ulong to ulong
+ret add oahin l oatd 1
+end
+fn oaq l ulong to ulong
+ret add oahin l oatd 2
+end
+fn oak l ulong to ulong
+ret add oahin l oatd 3
+end
+fn oau l ulong to ulong
+ret add oahin l oatd 4
+end
+fn oao l ulong to ulong
+ret add oahin l oatd 5
+end
+fn oahm l ulong to ulong
+ret add oahin l oatd 6
+end
+fn oabn l ulong to ulong
+ret add oahin l oatd 7
+end
+fn oas1 l ulong to ulong
+ret add oahin l oatd 8
+end
+fn oas2 l ulong to ulong
+ret add oas1 l get og 1
+end
+fn oafp l ulong to ulong
+ret add oas2 l get og 1
+end
+fn oarl l ulong to ulong
+ret add oafp l mul get og 1 get og 4
+end
+note output rows of layer l: the next layer's HIN, or HF after the last layer
+fn oaout l ulong to ulong
+if lt add l 1 get og 5
+ret oahin add l 1
+end
+ret get og 15
+end
+
+note Kernels. The fast forms keep every v0 sum: each output is one accumulator that starts at
+note 0.0 and adds its terms in the v0 index order with the v0 expression (add s mul a w); four
+note outputs run side by side in separate accumulators, so every result has v0's bits. Results of
+note the four-wide blocks pass through oq.
+global oq f64 4
+
+note y[0..c) = x[0..r) . W[r][c] (overwrites y); x, y in oa, W in ow at virtual index wv
+fn kvm xo ulong wv ulong yo ulong r ulong c ulong to void
+wo = opx wv
+xe = add xo r
+j = ulong 0
+while le add j 4 c bound 999999
+kvmb xo xe add wo j c
+kput4 add yo j
+j = add j 4
+end
+while lt j c bound 4
+put oa add yo j kvm1 xo xe add wo j c
+j = add j 1
+end
+end
+
+note oa[yo..yo+4) = oq[0..4)
+fn kput4 yo ulong to void
+put oa yo get oq 0
+put oa add yo 1 get oq 1
+put oa add yo 2 get oq 2
+put oa add yo 3 get oq 3
+end
+
+note oq[m] = sum over xo <= i < xe of x[i] W[wi + m + (i - xo) c], m < 4
+fn kvmb xo ulong xe ulong wi ulong c ulong to void
+s0 = 0.0f64
+s1 = 0.0f64
+s2 = 0.0f64
+s3 = 0.0f64
+while lt xo xe bound 999999
+a = get oa xo
+s0 = add s0 mul a get ow wi
+s1 = add s1 mul a get ow add wi 1
+s2 = add s2 mul a get ow add wi 2
+s3 = add s3 mul a get ow add wi 3
+wi = add wi c
+xo = add xo 1
+end
+put oq 0 s0
+put oq 1 s1
+put oq 2 s2
+put oq 3 s3
+end
+
+note sum over xo <= i < xe of x[i] W[wi + (i - xo) c]
+fn kvm1 xo ulong xe ulong wi ulong c ulong to f64
+s = 0.0f64
+while lt xo xe bound 999999
+a = get oa xo
+s = add s mul a get ow wi
+wi = add wi c
+xo = add xo 1
+end
+ret s
+end
+
+note y[k] += sum_j dy[j] W[k][j] for k < r, j < c (y += dy . W^T); dy, y in oa, W in ow at virtual
+note index wv
+fn kvta dyo ulong wv ulong yo ulong r ulong c ulong to void
+wo = opx wv
+de = add dyo c
+k = ulong 0
+while le add k 4 r bound 999999
+kdot4 dyo de add wo mul k c c
+kacc4 add yo k
+k = add k 4
+end
+while lt k r bound 4
+a = add get oa add yo k kdot1 dyo de add wo mul k c
+put oa add yo k a
+k = add k 1
+end
+end
+
+note oa[yo + m] = oa[yo + m] + oq[m], m < 4
+fn kacc4 yo ulong to void
+put oa yo add get oa yo get oq 0
+q = add yo 1
+put oa q add get oa q get oq 1
+q = add yo 2
+put oa q add get oa q get oq 2
+q = add yo 3
+put oa q add get oa q get oq 3
+end
+
+note oq[m] = sum over xo <= i < xe of x[i] W[wi + m c + (i - xo)], m < 4; x in oa, W in ow
+fn kdot4 xo ulong xe ulong wi ulong c ulong to void
+s0 = 0.0f64
+s1 = 0.0f64
+s2 = 0.0f64
+s3 = 0.0f64
+w2 = add wi add c c
+while lt xo xe bound 999999
+a = get oa xo
+s0 = add s0 mul a get ow wi
+s1 = add s1 mul a get ow add wi c
+s2 = add s2 mul a get ow w2
+s3 = add s3 mul a get ow add w2 c
+wi = add wi 1
+w2 = add w2 1
+xo = add xo 1
+end
+put oq 0 s0
+put oq 1 s1
+put oq 2 s2
+put oq 3 s3
+end
+
+note sum over xo <= i < xe of x[i] W[wi + (i - xo)]; x in oa, W in ow
+fn kdot1 xo ulong xe ulong wi ulong to f64
+s = 0.0f64
+while lt xo xe bound 999999
+a = get oa xo
+s = add s mul a get ow wi
+wi = add wi 1
+xo = add xo 1
+end
+ret s
+end
+
+note kdot4 with both operands in oa
+fn kdot4a xo ulong xe ulong wi ulong c ulong to void
+s0 = 0.0f64
+s1 = 0.0f64
+s2 = 0.0f64
+s3 = 0.0f64
+w2 = add wi add c c
+while lt xo xe bound 999999
+a = get oa xo
+s0 = add s0 mul a get oa wi
+s1 = add s1 mul a get oa add wi c
+s2 = add s2 mul a get oa w2
+s3 = add s3 mul a get oa add w2 c
+wi = add wi 1
+w2 = add w2 1
+xo = add xo 1
+end
+put oq 0 s0
+put oq 1 s1
+put oq 2 s2
+put oq 3 s3
+end
+
+note kdot1 with both operands in oa
+fn kdot1a xo ulong xe ulong wi ulong to f64
+s = 0.0f64
+while lt xo xe bound 999999
+a = get oa xo
+s = add s mul a get oa wi
+wi = add wi 1
+xo = add xo 1
+end
+ret s
+end
+
+note G[k][j] += x[k] dy[j] for k < r, j < c (outer product into a gradient); x, dy in oa, G in ogr
+fn kger xo ulong dyo ulong go ulong r ulong c ulong to void
+for k ulong r
+kger1 get oa add xo k add go mul k c dyo c
+end
+end
+
+note G[gi + j] += xv dy[j] for j < c (elements independent, four per pass)
+fn kger1 xv f64 gi ulong yi ulong c ulong to void
+ye = add yi c
+while le add yi 4 ye bound 999999
+ogra gi mul xv get oa yi
+ogra add gi 1 mul xv get oa add yi 1
+ogra add gi 2 mul xv get oa add yi 2
+ogra add gi 3 mul xv get oa add yi 3
+gi = add gi 4
+yi = add yi 4
+end
+while lt yi ye bound 4
+ogra gi mul xv get oa yi
+gi = add gi 1
+yi = add yi 1
+end
+end
+
+note y[i] += a x[i]; x, y in oa
+fn kaxpy yo ulong xo ulong a f64 n ulong to void
+for i ulong n
+q = add yo i
+v = mul a get oa add xo i
+put oa q add get oa q v
+end
+end
+
+note y[i] += a x[i]; x in oa, y in the gradient pool
+fn kaxpg yo ulong xo ulong a f64 n ulong to void
+for i ulong n
+ogra add yo i mul a get oa add xo i
+end
+end
+
+fn ozero o ulong n ulong to void
+for i ulong n
+put oa add o i 0.0f64
+end
+end
+
+fn ozerog o ulong n ulong to void
+for q ulong ocn n
+i = mul q OCH
+ie = oce q n
+while lt i ie bound 999999
+ogrp add o i 0.0f64
+i = add i 1
+end
+end
+end
+
+note A loop runs at most 999999 passes (the while bound; a for over a name has the same guard), so
+note loops over P or more run in ocn n chunks of OCH; chunk q covers [q OCH, oce q n).
+fn ocn n ulong to ulong
+ret div add n 999998 OCH
+end
+fn oce q ulong n ulong to ulong
+e = mul add q 1 OCH
+if gt e n
+ret n
+end
+ret e
+end
+
+note y = rms(v, g): s = sqrt((sum v^2)/D + 1e-5) stored at so; y[i] = (v[i]/s) g[i]; g at virtual
+note index gv
+fn frms vo ulong gv ulong yo ulong so ulong to void
+go = opx gv
+d = get og 2
+ss = 0.0f64
+for i ulong d
+v = get oa add vo i
+ss = add ss mul v v
+end
+s = fsqrt add div ss f64 d 0.00001
+put oa so s
+for j ulong d
+v = div get oa add vo j s
+v = mul v get ow add go j
+put oa add yo j v
+end
+end
+
+note rms backward: n = v/s, dn = da g, c = (sum dn n)/D; dv = (dn - n c)/s added to dh;
+note dg += da n added to the gain's gradient. go is the gain's virtual index.
+global ofs f64 8
+fn brms vo ulong go ulong so ulong dao ulong dho ulong to void
+d = get og 2
+put ofs 0 get oa so
+gg = add get og 10 go
+go = opx go
+put ofs 1 div brmsc vo go dao get ofs 0 f64 d
+for j ulong d
+brms1 add vo j add go j add dao j add dho j add gg j
+end
+end
+
+note sum over i < D of (da[i] g[i]) (v[i]/s), ascending
+fn brmsc vo ulong go ulong dao ulong s f64 to f64
+c = 0.0f64
+for i ulong get og 2
+dn = get oa add dao i
+dn = mul dn get ow add go i
+v = div get oa add vo i s
+c = add c mul dn v
+end
+ret c
+end
+
+note one element of the rms backward; s = ofs[0], c = ofs[1]
+fn brms1 vp ulong gp ulong dap ulong dhp ulong ggp ulong to void
+s = get ofs 0
+n = div get oa vp s
+da = get oa dap
+ogra ggp mul da n
+dn = mul da get ow gp
+dn = div sub dn mul n get ofs 1 s
+put oa dhp add get oa dhp dn
+end
+
+note z[i] = a[i] + b[i] for i < n (all in oa)
+fn kadd3 zo ulong ao ulong bo ulong n ulong to void
+for i ulong n
+v = get oa add ao i
+v = add v get oa add bo i
+put oa add zo i v
+end
+end
+
+note z[i] = a[i] + b[i] for i < n (a, b in ow, z in oa)
+fn kadd3w zo ulong ao ulong bo ulong n ulong to void
+for i ulong n
+v = get ow add ao i
+v = add v get ow add bo i
+put oa add zo i v
+end
+end
+
+note h[t] = wte[x[t]] + wpe[t] for sequence b of the batch
+fn oemb b ulong to void
+d = get og 2
+tt = get og 1
+for t ulong get og 9
+wr = get obx add mul b tt t
+wr = mul wr d
+pr = add get og 30 mul t d
+kadd3w add oahin 0 mul t d wr pr d
+end
+end
+
+note offset in opa of PA[n][t][0] of layer l
+fn opar l ulong n ulong t ulong to ulong
+tt = get og 1
+p = add mul n tt t
+ret add mul l get og 29 mul p tt
+end
+
+note attention scores and softmax of head n, row t: PA[n][t][j] for j <= t
+fn fatts l ulong n ulong t ulong to void
+e = get og 7
+qo = add add oaq l mul t get og 2 mul n e
+ko = add oak l mul n e
+pa = opar l n t
+m = fattsk qo ko pa add t 1
+sm = osofp pa add t 1 m
+end
+
+note PA row: s[j] = q.k[j]/sqrt(E) for j < nj, k rows stepping by D; returns the max score
+fn fattsk qo ulong ko ulong pa ulong nj ulong to f64
+d = get og 2
+e = get og 7
+isq = fsqrt f64 e
+m = bitcast f64 ulong 18442240474082181120
+qe = add qo e
+j = ulong 0
+while le add j 4 nj bound 999999
+kdot4a qo qe ko d
+m = fattp4 add pa j isq m
+ko = add ko mul 4 d
+j = add j 4
+end
+while lt j nj bound 4
+s = div kdot1a qo qe ko isq
+put opa add pa j s
+m = fmax m s
+ko = add ko d
+j = add j 1
+end
+ret m
+end
+
+note PA[p + m] = oq[m] / isq for m < 4 in order; returns the running max
+fn fattp4 p ulong isq f64 m f64 to f64
+for i ulong 4
+s = div get oq i isq
+put opa add p i s
+m = fmax m s
+end
+ret m
+end
+
+note p = exp(x - m) / sum over n entries at o in oa (in place); returns sum
+fn osoft o ulong n ulong m f64 to f64
+sm = 0.0f64
+for j ulong n
+ev = fexp sub get oa add o j m
+put oa add o j ev
+sm = add sm ev
+end
+for k ulong n
+v = div get oa add o k sm
+put oa add o k v
+end
+ret sm
+end
+
+note osoft on opa
+fn osofp o ulong n ulong m f64 to f64
+sm = 0.0f64
+for j ulong n
+ev = fexp sub get opa add o j m
+put opa add o j ev
+sm = add sm ev
+end
+for k ulong n
+v = div get opa add o k sm
+put opa add o k v
+end
+ret sm
+end
+
+note o[t][nE + i] = sum_{j <= t} p[t][j] u[j][nE + i]
+fn fatto l ulong n ulong t ulong to void
+e = get og 7
+oo = add add oao l mul t get og 2 mul n e
+uo = add oau l mul n e
+pa = opar l n t
+ozero oo e
+fattok oo uo pa add t 1
+end
+
+note o[0..E) += p[j] u[j][0..E) for j < nj, u rows stepping by D
+fn fattok oo ulong uo ulong pa ulong nj ulong to void
+d = get og 2
+e = get og 7
+for j ulong nj
+kaxpy oo uo get opa add pa j e
+uo = add uo d
+end
+end
+
+fn olayf l ulong to void
+ostw l
+for t ulong get og 9
+olayf1 l t
+end
+for n ulong get og 3
+for t2 ulong get og 9
+fatts l n t2
+fatto l n t2
+end
+end
+for t3 ulong get og 9
+olayf2 l t3
+end
+oaflip l true
+end
+
+note row t: a = rms(h, g1); q, k, u = a.wq, a.wk, a.wv
+fn olayf1 l ulong t ulong to void
+d = get og 2
+r = mul t d
+a = add oaa l r
+frms add oahin l r opg1 l a add oas1 l t
+kvm a opwq l add oaq l r d d
+kvm a opwk l add oak l r d d
+kvm a opwv l add oau l r d d
+end
+
+note row t: h += o.wo; b = rms(h, g2); out = h + relu(b.w1).w2
+fn olayf2 l ulong t ulong to void
+d = get og 2
+f = get og 4
+r = mul t d
+hm = add oahm l r
+kvm add oao l r opwo l hm d d
+kadd3 hm add oahin l r hm d
+frms hm opg2 l add oabn l r add oas2 l t
+fp = add oafp l mul t f
+kvm add oabn l r opw1 l fp d f
+rl = add oarl l mul t f
+krelu rl fp f
+ou = add oaout l r
+kvm rl opw2 l ou f d
+kadd3 ou hm ou d
+end
+
+note y[j] = x[j] when x[j] > 0, else 0, for j < n
+fn krelu yo ulong xo ulong n ulong to void
+for j ulong n
+v = get oa add xo j
+if le v 0.0
+v = 0.0f64
+end
+put oa add yo j v
+end
+end
+
+note loss of row t: the logits at o (n entries) become probabilities; returns
+note log(sum exp(l - max)) - (l_y - max)
+fn olossrow o ulong n ulong y ulong to f64
+m = bitcast f64 ulong 18442240474082181120
+for j ulong n
+m = fmax m get oa add o j
+end
+ly = get oa add o y
+sm = osoft o n m
+ret sub flog sm sub ly m
+end
+
+note final rms, tied head and loss of sequence b; returns the mean loss over CT positions
+fn ohead b ulong to f64
+ls = 0.0f64
+for t ulong get og 9
+ls = add ls oheadr b t
+end
+ret div ls f64 get og 9
+end
+
+note row t of the head: z = rms(HF[t], gf); logits = z . wte^T; returns the row loss
+fn oheadr b ulong t ulong to f64
+d = get og 2
+r = mul t d
+z = add get og 17 r
+hf = add get og 15 r
+frms hf get og 33 z add get og 16 t
+pr = add get og 18 mul t get og 0
+klogit z pr get og 0 d
+y = get oby add mul b get og 1 t
+ret olossrow pr get og 0 y
+end
+
+note p[c] = z . wte[c] for c < n (wte rows of length d at offset 0 of ow; z, p in oa)
+fn klogit zo ulong po ulong n ulong d ulong to void
+ze = add zo d
+c = ulong 0
+while le add c 4 n bound 999999
+kdot4 zo ze mul c d d
+kput4 add po c
+c = add c 4
+end
+while lt c n bound 4
+put oa add po c kdot1 zo ze mul c d
+c = add c 1
+end
+end
+
+note ogkm[0] = 0: the backward ReLU mask is the sign of this pass's own FP (every command but
+note gcmp2); 1: offb calls ogmask, which gpu/gg.om defines for gcmp2 (the chip's FP sign) and
+note nogpu.om defines as a refusal on the CPU-only targets. ogkm[1] = the sequence in flight.
+global ogkm ulong 2
+
+note forward pass of sequence b (x in obx, y in oby); returns its mean loss
+fn ofwd b ulong to f64
+put ogkm 1 b
+oemb b
+for l ulong get og 5
+olayf l
+end
+ret ohead b
+end
+
+note backward of the head for row t: dl = (p - onehot(y)) sc; dwte += dl z; dz = dl . wte;
+note DH[t] = rms backward of HF[t].
+fn ohbwd b ulong t ulong sc f64 to void
+v = get og 0
+pr = add get og 18 mul t v
+y = get oby add mul b get og 1 t
+kdlog pr v y sc
+ohbwd2 pr t
+end
+
+note p[c] = (p[c] - [c = y]) sc for c < n
+fn kdlog po ulong n ulong y ulong sc f64 to void
+for c ulong n
+g = get oa add po c
+if eq c y
+g = sub g 1.0
+end
+put oa add po c mul g sc
+end
+end
+
+fn ohbwd2 pr ulong t ulong to void
+d = get og 2
+v = get og 0
+r = mul t d
+z = add get og 17 r
+kger pr z get og 10 v d
+dz = add get og 25 r
+kvm pr ulong 0 dz v d
+hf = add get og 15 r
+dh = add get og 19 r
+brms hf get og 33 add get og 16 t dz dh
+end
+
+note FFN backward of row t of layer l; DH[t] holds d(out) and gains the rms2 path
+fn offb l ulong t ulong to void
+f = get og 4
+dh = add get og 19 mul t get og 2
+df = add get og 26 mul t f
+ozero df f
+kvta dh opw2 l df f get og 2
+if eq get ogkm 0 0
+kdrelu df add oafp l mul t f f
+else
+ogmask df l t
+end
+g2 = add get og 10 opw2 l
+kger add oarl l mul t f dh g2 f get og 2
+offb2 l t df
+end
+
+note y[j] = 0 where x[j] <= 0, for j < n
+fn kdrelu yo ulong xo ulong n ulong to void
+for j ulong n
+if le get oa add xo j 0.0
+put oa add yo j 0.0f64
+end
+end
+end
+
+fn offb2 l ulong t ulong df ulong to void
+d = get og 2
+r = mul t d
+g1 = add get og 10 opw1 l
+kger add oabn l r df g1 d get og 4
+da = add get og 20 r
+ozero da d
+kvta df opw1 l da d get og 4
+hm = add oahm l r
+dh = add get og 19 r
+brms hm opg2 l add oas2 l t da dh
+end
+
+note dp[j] = dO[t].u[j] (head n) into TMP; returns sum_j p[j] dp[j]
+fn oattd l ulong n ulong t ulong to f64
+e = get og 7
+dor = add add get og 24 mul t get og 2 mul n e
+uo = add oau l mul n e
+pa = opar l n t
+ret kattd dor uo pa add t 1
+end
+
+fn kattd dor ulong uo ulong pa ulong nj ulong to f64
+d = get og 2
+de = add dor get og 7
+dt = 0.0f64
+j = ulong 0
+while le add j 4 nj bound 999999
+kdot4a dor de uo d
+dt = kattd4 add pa j add get og 27 j dt
+uo = add uo mul 4 d
+j = add j 4
+end
+while lt j nj bound 4
+dp = kdot1a dor de uo
+put oa add get og 27 j dp
+a = get opa add pa j
+dt = add dt mul a dp
+uo = add uo d
+j = add j 1
+end
+ret dt
+end
+
+note TMP[tm + m] = oq[m]; dt += PA[p + m] oq[m] for m < 4 in order
+fn kattd4 p ulong tm ulong dt f64 to f64
+for i ulong 4
+dp = get oq i
+put oa add tm i dp
+a = get opa add p i
+dt = add dt mul a dp
+end
+ret dt
+end
+
+note scratch offsets of oatta: 0 q[t], 1 dq[t], 2 dO[t], 3 k, 4 dk, 5 du (head n applied)
+global oz ulong 8
+
+note ds[j] = p[j](dp[j] - dot)/sqrt(E); dq[t] += ds k[j]; dk[j] += ds q[t]; du[j] += p[j] dO[t]
+fn oatta l ulong n ulong t ulong dt f64 to void
+e = get og 7
+hn = mul n e
+r = mul t get og 2
+put ofs 2 dt
+put oz 0 add add oaq l r hn
+put oz 1 add add get og 21 r hn
+put oz 2 add add get og 24 r hn
+put oz 3 add oak l hn
+put oz 4 add get og 22 hn
+put oz 5 add get og 23 hn
+pa = opar l n t
+oatta2 pa add t 1
+end
+
+fn oatta2 pa ulong nj ulong to void
+d = get og 2
+e = get og 7
+for j ulong nj
+jr = mul j d
+ds = oads pa j
+kaxpy get oz 1 add get oz 3 jr ds e
+if eq OMUTA 1
+kaxpy add get oz 4 jr get oz 0 ds e
+else
+kaxpy add get oz 4 jr get oz 0 neg ds e
+end
+pj = get opa add pa j
+kaxpy add get oz 5 jr get oz 2 pj e
+end
+end
+
+note ds[j] = p[j] (TMP[j] - dot) / sqrt(E), dot in ofs 2
+fn oads pa ulong j ulong to f64
+pj = get opa add pa j
+u = sub get oa add get og 27 j get ofs 2
+ret div mul pj u fsqrt f64 get og 7
+end
+
+fn olayb l ulong to void
+ostw l
+oaflip l false
+ct = get og 9
+for t ulong ct
+offb l t
+end
+for t2 ulong ct
+olaybo l t2
+end
+d = get og 2
+ozero get og 21 mul ct d
+ozero get og 22 mul ct d
+ozero get og 23 mul ct d
+for n ulong get og 3
+for t3 ulong ct
+dt = oattd l n t3
+oatta l n t3 dt
+end
+end
+for t4 ulong ct
+olayb2 l t4
+end
+end
+
+note row t: dO[t] = DH[t] . wo^T; dwo += o[t] DH[t]
+fn olaybo l ulong t ulong to void
+d = get og 2
+r = mul t d
+dor = add get og 24 r
+dh = add get og 19 r
+ozero dor d
+kvta dh opwo l dor d d
+kger add oao l r dh add get og 10 opwo l d d
+end
+
+note da = dq.wq^T + dk.wk^T + du.wv^T; weight gradients; DH[t] gains the rms1 path
+fn olayb2 l ulong t ulong to void
+d = get og 2
+r = mul t d
+da = add get og 20 r
+ozero da d
+kvta add get og 21 r opwq l da d d
+kvta add get og 22 r opwk l da d d
+kvta add get og 23 r opwv l da d d
+olayb3 l t
+end
+
+fn olayb3 l ulong t ulong to void
+d = get og 2
+r = mul t d
+a = add oaa l r
+g0 = get og 10
+kger a add get og 21 r add g0 opwq l d d
+kger a add get og 22 r add g0 opwk l d d
+kger a add get og 23 r add g0 opwv l d d
+hi = add oahin l r
+dh = add get og 19 r
+brms hi opg1 l add oas1 l t add get og 20 r dh
+end
+
+note backward pass of sequence b after ofwd b; sc = 1/(T B) scales dl so the gradient is that of
+note the step loss. Gradients accumulate into the gradient at og[10] in ogr.
+fn obwd b ulong sc f64 to void
+ct = get og 9
+ozero get og 19 mul ct get og 2
+for t ulong ct
+ohbwd b t sc
+end
+ll = get og 5
+for i ulong ll
+olayb sub sub ll 1 i
+end
+for t2 ulong ct
+obwde b t2
+end
+end
+
+note row t: dwte[x[t]] += DH[t]; dwpe[t] += DH[t]
+fn obwde b ulong t ulong to void
+d = get og 2
+c = get obx add mul b get og 1 t
+dh = add get og 19 mul t d
+g0 = get og 10
+kaxpg add g0 mul c d dh 1.0 d
+kaxpg add add g0 get og 30 mul t d dh 1.0 d
+end
