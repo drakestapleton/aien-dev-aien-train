@@ -1,0 +1,20 @@
+checks 2 and 6, aarch64 v3 5e20559a... vs v2 6da13670..., nice 19, non-quiet, EXERCISED
+train ckL0 (rung-7 v2-max init) 2 steps (train CK train.tok 2 2), v2 core 5, v3 core 6:
+TRAIN_CK_EQUAL
+ac05dfebc66556c8454243b30597c2693137ee183b6e56fb92c4c9cc1384c587  tv2.ck
+ac05dfebc66556c8454243b30597c2693137ee183b6e56fb92c4c9cc1384c587  tv3.ck
+W1 evals (eval CK held.tok 1 merges4096.bin), core 4:
+e1-ck30000-v2.out:E 30000 1 1101557 403609
+e1-ck30000-v3.out:E 30000 1 1101557 403609
+e1-ckL0-v2.out:E 0 1 8416208 3083688
+e1-ckL0-v3.out:E 0 1 8416208 3083688
+refeval-w1.txt (rung 7 referee): E 0 1 8416208 3083688 -> equal
+W4 eval of rung-7 ck30000, alternating v2/v3 on core 4 (wall, user s, maxrss kB):
+e4-v2-1 1:02.99 57.66 528960 E 30000 4 1371037 498023
+e4-v2-2 1:08.29 67.83 528960 E 30000 4 1371037 498023
+e4-v2-3 1:10.05 69.55 528960 E 30000 4 1371037 498023
+e4-v3-1 1:11.42 70.84 528960 E 30000 4 1371037 498023
+e4-v3-2 1:12.72 72.21 528960 E 30000 4 1371037 498023
+e4-v3-3 1:10.61 70.07 528960 E 30000 4 1371037 498023
+Wolfram: (71.42+72.72+70.61)/(62.99+68.29+70.05) -> 1.06666 (mean, over 5%); Median{71.42,72.72,70.61}/Median{62.99,68.29,70.05} -> 1.04583 (median, under 5%)
+v3 eval wall per window at v2 max: (71.42+72.72+70.61)/12 -> 17.896 s

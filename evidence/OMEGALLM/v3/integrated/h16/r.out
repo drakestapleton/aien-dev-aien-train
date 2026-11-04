@@ -1,0 +1,6 @@
+$ oracle.py ollm init r.ck 4096 256 16 16 32 16 1 1 100 3000 1
+I 102928
+rc=0
+$ oracle.py ollm train r.ck train.tok 1 1
+T 1 8314921
+rc=0

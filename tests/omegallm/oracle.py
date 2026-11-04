@@ -909,8 +909,8 @@ def x_eval(a):
 # output files. Tokenizer files and init are exact; model arithmetic is the v0 referee's
 # (libm, its own summation order), compared with `cmp` at the v0 tolerance (CONTRACT-V1 §9.3).
 
-# shape maxima: CONTRACT-V2 §1 (v1 with D 256 -> 384 and F 1024 -> 1536)
-MAXS2 = {"V": 4096, "T": 256, "D": 384, "H": 16, "F": 1536, "L": 8, "B": 64}
+# shape maxima: CONTRACT-V3 §1 (v1 with D 256 -> 384 and F 1024 -> 1536 in V2, L 8 -> 16 in V3)
+MAXS2 = {"V": 4096, "T": 256, "D": 384, "H": 16, "F": 1536, "L": 16, "B": 64}
 SMALL1 = dict(V=300, T=8, D=16, H=2, F=32, L=2, B=4)
 LN2 = 0.6931471805599453
 CK01, CK02, GR01, BPE1 = b"OLLMCK01", b"OLLMCK02", b"OLLMGR01", b"OLLMBPE1"

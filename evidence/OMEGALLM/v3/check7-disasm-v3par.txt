@@ -1,0 +1,68 @@
+DUMP 90dd6f1d943d62f9c1c7f598ee3c4c52dee6e07462b6a441908e9ff66150dd1c source_sha256 ba60021a8279626a68f5d2eadef9f979e14f755324d4b8e5488adf5176e7317a code_sha256 112b77e386c7fde158f1615f5d0840af564d1d8f855ecf1e769a3a6d6d67b004
+GPR 0 max R101 need 104 declared 104 OK
+SMEM 0 target 17
+GPR 1 max R101 need 104 declared 104 OK
+SMEM 1 target 17
+GPR 2 max R101 need 104 declared 104 OK
+SMEM 2 target 17
+GPR 3 max R101 need 104 declared 104 OK
+SMEM 3 target 17
+GPR 4 max R101 need 104 declared 104 OK
+SMEM 4 target 17
+GPR 5 max R101 need 104 declared 104 OK
+SMEM 5 target 17
+GPR 6 max R101 need 104 declared 104 OK
+SMEM 6 target 17
+GPR 7 max R101 need 104 declared 104 OK
+SMEM 7 target 17
+GPR 9 max R34 need 37 declared 72 OK
+SMEM 9 target 9
+GPR 10 max R66 need 69 declared 72 OK
+SMEM 10 target 9
+GPR 11 max R67 need 70 declared 72 OK
+SMEM 11 target 9
+GPR 13 max R64 need 67 declared 72 OK
+SMEM 13 target 9
+GPR 14 max R64 need 67 declared 72 OK
+SMEM 14 target 9
+GPR 15 max R67 need 70 declared 72 OK
+SMEM 15 target 9
+GPR 16 max R65 need 68 declared 72 OK
+SMEM 16 target 9
+GPR 19 max R34 need 37 declared 72 OK
+SMEM 19 target 9
+GPR 20 max R31 need 34 declared 72 OK
+SMEM 20 target 9
+GPR 21 max R68 need 71 declared 72 OK
+SMEM 21 target 9
+GPR 22 max R64 need 67 declared 72 OK
+SMEM 22 target 9
+GPR 23 max R64 need 67 declared 72 OK
+SMEM 23 target 9
+GPR 24 max R66 need 69 declared 72 OK
+SMEM 24 target 9
+GPR 25 max R101 need 104 declared 104 OK
+SMEM 25 target 17
+GPR 26 max R101 need 104 declared 104 OK
+SMEM 26 target 17
+GPR 40 max R158 need 161 declared 168 OK
+SMEM 40 target 17
+GPR 42 max R158 need 161 declared 168 OK
+SMEM 42 target 17
+GPR 44 max R158 need 161 declared 168 OK
+SMEM 44 target 17
+GPR 46 max R158 need 161 declared 168 OK
+SMEM 46 target 17
+GPR 48 max R158 need 161 declared 168 OK
+SMEM 48 target 17
+GPR 50 max R158 need 161 declared 168 OK
+SMEM 50 target 17
+GPR 52 max R158 need 161 declared 168 OK
+SMEM 52 target 17
+GPR 54 max R158 need 161 declared 168 OK
+SMEM 54 target 17
+GPR 56 max R158 need 161 declared 168 OK
+SMEM 56 target 17
+GPR 58 max R158 need 161 declared 168 OK
+SMEM 58 target 17
+rc=0
