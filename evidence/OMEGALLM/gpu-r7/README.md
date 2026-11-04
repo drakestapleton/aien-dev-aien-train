@@ -7,7 +7,7 @@ trains V 4096, T 256, D 384, H 12, F 1536, L 8, B 64 (P 15,833,472, 2.137× rung
 same seed, data, learning-rate schedule, batch and step count. The held-out measure is the same: chip
 `geval` of `held.tok`, W 2243 windows at T 256, `merges4096.bin`.
 
-Status: EXERCISED on one GB10 and on host CPU. Not QUALIFIED, not MERGED. All 12 training windows were
+Status: EXERCISED on one GB10 and on host CPU. Not QUALIFIED. All 12 training windows were
 opened `--gb10 shared --quiet none`; `spark-window` printed "quiet machine" for each, but the quiet
 lock was not taken, so timings are labelled non-quiet (last close, `run/close.json`: load average 2.96).
 
@@ -42,7 +42,9 @@ not flattened.
 Timing (wall clock between the ns stamps around each `gtrainf` in `run/train.txt`, includes
 checkpoint load and save; WolframLanguageEvaluator): 250→30000 took 7,110.6 s, 0.23901 s/step,
 68,549 tokens/s, about 6.51 TFLOP/s by the 6·P·tokens rule (attention excluded). Legs ranged
-0.23547-0.24809 s/step. The whole run including the 0→250 leg is 1.99 h of chip time. Each `geval`
+0.23547-0.24809 s/step. The whole run including the 0→250 leg is 1.99 h of training (2.01 h with
+the 12 `geval` runs; WolframLanguageEvaluator over the ns pairs of `run/train.txt` and
+`run/geval.txt`: 1.992376 h and 0.021772 h, sum 2.014147 h). Each `geval`
 took 5.44-5.56 s (GE). Rung 6 ran on the pre-k1 binary 576bf296 (0.3771 s/step); the speed gain is
 the k1-k9 kernel rounds (`../gpu-k1/`…`../gpu-k9/`), not the shape. On the same k9 kernels the v2 step
 costs about 1.7× the v1 step (gate G7 below).
@@ -73,6 +75,22 @@ earlier.
   existed; it then counted 0, as intended).
 - Checkpoints are kept outside the repository (380,003,448 bytes each); hashes in
   `run/checkpoints.sha256`.
+- Path names in the hashed files (note added 2026-11-04; the hashed files are unchanged): the run
+  directories were `/tmp/gk/r7/g`, `g2` and `cpu`, committed as `gate1/`, `gate2/` and `cpu/`. So
+  `../g/` in `run/prereg.sha256` and `gate2/prereg.txt` is `gate1/`, `../g2/REPORT.txt` is
+  `gate2/REPORT.txt`, and `../refeval-w1.txt` is `cpu/refeval-w1.txt`; both hashes recompute equal
+  (`sha256sum gate2/REPORT.txt cpu/refeval-w1.txt` → 521ac8da…, 3edd61da…).
+- `leg.sh` (note added 2026-11-04) does not check the `geval` exit status or the `cp ck.bin ck$u.bin`
+  result. Neither mattered in this run: all 12 `geval` blocks print rc=0 and the saved checkpoint
+  hashes in `run/checkpoints.sha256` match the `step=… ck=` lines of `run/geval.txt`. A rerun should
+  fail the leg on either.
+- `run/drive.sh`, `run/leg.sh` and `gate*/run.sh` are frozen receipts: they name private paths
+  (`/tmp/gk/r7/…`, `~/handoffs/…`) and are not meant to be run from the repository. To rerun: build
+  with `tests/omegallm/build.sh` (`TARGET=gb10` for the chip binary), then run the `gtrainf` and
+  `geval` lines of `run/leg.sh` with `B` the built binary and `D` a data directory holding
+  `train.tok` sha256 23a8dcb6415c93b70a3a3bb2ab04f5334faa340b2d08dbb1cfb73a45bd6eb4b0 (read
+  2026-11-04 from the data directory this run used), `held.tok` 8f6ac61a… and `merges4096.bin`
+  73a29baf… (full values in `../gpu-max/eval2000.txt`), inside a `spark-window`.
 
 ## Gates before the run
 
@@ -82,9 +100,21 @@ CPU (host, nice 19):
 - `tests/omegallm/v1-oracle.sh` with the v2 limits: `cpu/v1-oracle.txt`, pass=54 fail=0 not_run=1
   (the v0→v1 checkpoint case needs a v0 binary). D 386 and F 1537 refuse with exit 12; D 384, F 1536
   is accepted with its files checked against the referee (`limit-max-d384-f1536`).
-- One v2 training step: max RSS 785,280 kB (`cpu/rss-train.txt`).
+- One v2 training step: max RSS 785,280 kB (`cpu/rss-train.txt`, CPU `train`, K 1). CPU `eval` at the
+  v2 maximum, W 1: max RSS 528,960 kB (`cpu/ock-boundary.txt`, also `cpu/refeval-w1.txt`). The 2 GB
+  bound is receipted only for these two CPU commands; RSS of `gtrainf`, `geval`, `eval` at W 2243 and
+  `train` with K > 1 worker processes is NOT_RUN.
+- CONTRACT-V2 §4 check 4 (added 2026-11-04): `cpu/disasm-v2.txt`, `gpu-disasm.sh` at
+  `SHAPE="4096 256 384 12 1536 64"` over all emitted slots, rc 0, 33 GPR lines OK, none LOW
+  (slots 12, 17, 18 empty).
+- `OCKCAP` boundary (added 2026-11-04): `cpu/ock-boundary.txt`. The v2-maximum init checkpoint is
+  380,003,448 B (`120+24*15833472`, Wolfram) and `eval` W 1 loads it (rc 0, the `refeval-w1.txt`
+  E line); the same file plus one byte (380,003,449 = `OCKCAP`) and plus two bytes both exit 15.
 - v1-shape GPU code: `gpu-code.bin` and `gpu-gpr.bin` at the rung-6 shape are byte-identical before
   and after the v2 edits (`build.txt`).
+- Register banks not gated on the chip (note added 2026-11-04): the RMS kernels take n = D/32
+  columns per lane. Gates G8/H1 cover n = 12 (D 384) and the v1 gates n ≤ 8; D 288, 320 and 352
+  (n = 9, 10, 11, bank layouts between) have no chip gate.
 
 Chip, window gg-r7g (`gate1/`, prereg written first): G1 (v1 r6 final E line reproduced), G2 (t200 v1
 checkpoint bit-identical), G8 (gacmp at v2) and G9 PASS. G3 was a mis-stated prediction (it included
