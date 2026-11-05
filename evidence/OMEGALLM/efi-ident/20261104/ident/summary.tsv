@@ -1,0 +1,6 @@
+case	want	got	verdict
+nul	cpu=- 	ID cpu=- fw=Ubuntu distribution of EDK II fwrev=00010000 smbios=QEMU/Standard PC (Q35 + ICH9, 2009)/pc-q35-8.2	PASS
+blank	cpu=- 	ID cpu=- fw=Ubuntu distribution of EDK II fwrev=00010000 smbios=QEMU/Standard PC (Q35 + ICH9, 2009)/pc-q35-8.2	PASS
+n2	smbios=OmegaTest/-/-	ID cpu=QEMU TCG CPU version 2.5+ fw=Ubuntu distribution of EDK II fwrev=00010000 smbios=OmegaTest/-/-	PASS
+capwalk	smbios=OmegaTest/-/-	ID cpu=QEMU TCG CPU version 2.5+ fw=Ubuntu distribution of EDK II fwrev=00010000 smbios=OmegaTest/-/-	PASS
+capscan	smbios=-/-/-	ID cpu=QEMU TCG CPU version 2.5+ fw=Ubuntu distribution of EDK II fwrev=00010000 smbios=-/-/-	PASS

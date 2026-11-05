@@ -16,7 +16,7 @@ T=$ROOT/native/omegese45/translate
 C=$ROOT/native/omegese45
 D=$ROOT/tests/omegese45/translator
 W=${WORK:-$(mktemp -d)}
-RUN="taskset -c 10-14 nice -n 19 ionice -c3"
+RUN="taskset -c ${AIEN_TEST_CPUS:-0-9,15-19} nice -n 19 ionice -c3"
 FAIL=0
 fail() { echo "FAIL $*"; FAIL=1; }
 
@@ -211,7 +211,7 @@ repall() {
 }
 repall
 
-# Cost on GB10 Spark Grace CPU, cores 10-14, nice 19, ionice idle.
+# Cost on GB10 Spark Grace CPU, cores $AIEN_TEST_CPUS (default 0-9,15-19), nice 19, ionice idle.
 for t in en2goal goal2en rep2en; do
   case $t in
     en2goal) printf 'run two matmuls of size 4 x 8 x 2 with seeds 7 and 8\n' > "$W/in.$t"; args= ;;
@@ -219,7 +219,7 @@ for t in en2goal goal2en rep2en; do
     rep2en) printf '%s\n%s\n' "$G2" "$P2" > "$W/in.$t"; args=$W/f.ok-pair.tsv ;;
   esac
   $RUN /usr/bin/time -v "$W/$t" $args < "$W/in.$t" > /dev/null 2> "$W/time.$t"
-  echo "COST $t wall=$(grep 'Elapsed (wall' "$W/time.$t" | sed 's/.*): //') maxrss_kb=$(grep 'Maximum resident' "$W/time.$t" | sed 's/.*: //') chip=GB10-Spark-Grace-CPU cores=10-14 nice=19"
+  echo "COST $t wall=$(grep 'Elapsed (wall' "$W/time.$t" | sed 's/.*): //') maxrss_kb=$(grep 'Maximum resident' "$W/time.$t" | sed 's/.*: //') chip=GB10-Spark-Grace-CPU cores=${AIEN_TEST_CPUS:-0-9,15-19} nice=19"
 done
 
 # Negative control: the k<->n mutant must fail the dev cases.

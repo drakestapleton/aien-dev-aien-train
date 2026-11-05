@@ -4,10 +4,12 @@
 # Usage: sh tests/omegallm/efi-check.sh OUT.TXT REF JOBS BYTES
 # Order required:
 #   1. first line is exactly `OLLM efi BYTES` (BYTES is the JOB.TXT size)
-#   2. each reference job, in order, then exactly one `J <ms>` line; a `> ` line holding only
+#   2. second line is the identity line `ID cpu=... fw=... fwrev=XXXXXXXX smbios=.../.../...`
+#      (8 lowercase hex digits; its text depends on the machine, so only its shape is checked)
+#   3. each reference job, in order, then exactly one `J <ms>` line; a `> ` line holding only
 #      spaces and tabs (a JOB.TXT line with no tokens: eio.om main echoes it and runs nothing) has
 #      no J line and is not counted in JOBS
-#   3. last line is `OLLM DONE JOBS <ms>`
+#   4. last line is `OLLM DONE JOBS <ms>`
 # A reference job is the lines from one `> ` line up to the next. Those lines are compared with
 # REF as they stand. A line shaped like `J n` or `OLLM DONE a b` inside a job is part of that
 # comparison: it is not removed. Prints EQUAL (exit 0) or the first problems (exit 1).
@@ -27,9 +29,10 @@ END {
   if (on < 1) { note("empty OUT.TXT"); exit 1 }
   banner = "OLLM efi " bytes
   if (out[1] != banner) note("banner is not " banner)
+  if (on < 2 || out[2] !~ /^ID cpu=.* fw=.* fwrev=([0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]|-) smbios=[^\/]*\/[^\/]*\/.*$/) note("second line is not the ID identity line")
   if (out[on] !~ ("^OLLM DONE " jobs " [0-9]+$")) note("last line is not OLLM DONE " jobs " ms")
   ri = 1
-  oi = 2
+  oi = 3
   nj = 0
   while (ri <= rn) {
     if (ref[ri] !~ /^> /) { note("reference line " ri " does not start a job"); exit 1 }

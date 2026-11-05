@@ -1,0 +1,6 @@
+case	want	got	verdict
+nul	cpu=- 	trap3	FAIL
+blank	cpu=- 	trap3	FAIL
+n2	smbios=OmegaTest/-/-	M cpu=QEMU TCG CPU version 2.5+ fw=Ubuntu distribution of EDK II fwrev=00010000 smbios=OmegaTest/-/??	FAIL
+capwalk	smbios=OmegaTest/-/-	M cpu=QEMU TCG CPU version 2.5+ fw=Ubuntu distribution of EDK II fwrev=00010000 smbios=OmegaTest/-/???????	FAIL
+capscan	smbios=-/-/-	trap3	FAIL
