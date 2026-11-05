@@ -1,0 +1,6 @@
+{
+  "train.tok": "23a8dcb6415c93b70a3a3bb2ab04f5334faa340b2d08dbb1cfb73a45bd6eb4b0",
+  "train.dec": "a8e1143ef7d40e0e39c64fcad3705365b5096bf3f2072cc3680a4e9d66a2f9dc",
+  "held.tok": "8f6ac61acfb59acc285383531f93d8c56b25f70827a07e4aea137e80c46aa1cf",
+  "merges4096.bin": "73a29baf97619a746a21232c403bf08af71a76e48b3b2cde6d64dab766083882"
+}

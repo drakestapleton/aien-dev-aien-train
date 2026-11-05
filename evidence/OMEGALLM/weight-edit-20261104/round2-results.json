@@ -1,0 +1,289 @@
+{
+  "final_baseline": {
+    "label": "final-baseline",
+    "checkpoint": "$R10/run/ck60000.bin",
+    "windows": 3314,
+    "loss_micronats": 1205623,
+    "bpb_micro": 450482
+  },
+  "final_selected": {
+    "label": "final-selected",
+    "checkpoint": "$R10/run/ck60000.bin",
+    "windows": 3314,
+    "loss_micronats": 1205623,
+    "bpb_micro": 450482
+  },
+  "legacy_baseline": {
+    "label": "baseline-legacy",
+    "checkpoint": "$R10/run/ck60000.bin",
+    "windows": 2243,
+    "loss_micronats": 1204466,
+    "bpb_micro": 449322
+  },
+  "legacy_selected": {
+    "label": "selected-legacy",
+    "checkpoint": "$R10/run/ck60000.bin",
+    "windows": 2243,
+    "loss_micronats": 1204466,
+    "bpb_micro": 449322
+  },
+  "blocks": [
+    {
+      "baseline": {
+        "label": "final-block-00-baseline",
+        "checkpoint": "$R10/run/ck60000.bin",
+        "windows": 207,
+        "loss_micronats": 1208273,
+        "bpb_micro": 453058
+      },
+      "selected": {
+        "label": "final-block-00-selected",
+        "checkpoint": "$R10/run/ck60000.bin",
+        "windows": 207,
+        "loss_micronats": 1208273,
+        "bpb_micro": 453058
+      }
+    },
+    {
+      "baseline": {
+        "label": "final-block-01-baseline",
+        "checkpoint": "$R10/run/ck60000.bin",
+        "windows": 207,
+        "loss_micronats": 1194318,
+        "bpb_micro": 448173
+      },
+      "selected": {
+        "label": "final-block-01-selected",
+        "checkpoint": "$R10/run/ck60000.bin",
+        "windows": 207,
+        "loss_micronats": 1194318,
+        "bpb_micro": 448173
+      }
+    },
+    {
+      "baseline": {
+        "label": "final-block-02-baseline",
+        "checkpoint": "$R10/run/ck60000.bin",
+        "windows": 207,
+        "loss_micronats": 1234650,
+        "bpb_micro": 460745
+      },
+      "selected": {
+        "label": "final-block-02-selected",
+        "checkpoint": "$R10/run/ck60000.bin",
+        "windows": 207,
+        "loss_micronats": 1234650,
+        "bpb_micro": 460745
+      }
+    },
+    {
+      "baseline": {
+        "label": "final-block-03-baseline",
+        "checkpoint": "$R10/run/ck60000.bin",
+        "windows": 207,
+        "loss_micronats": 1228623,
+        "bpb_micro": 456928
+      },
+      "selected": {
+        "label": "final-block-03-selected",
+        "checkpoint": "$R10/run/ck60000.bin",
+        "windows": 207,
+        "loss_micronats": 1228623,
+        "bpb_micro": 456928
+      }
+    },
+    {
+      "baseline": {
+        "label": "final-block-04-baseline",
+        "checkpoint": "$R10/run/ck60000.bin",
+        "windows": 207,
+        "loss_micronats": 1184719,
+        "bpb_micro": 440041
+      },
+      "selected": {
+        "label": "final-block-04-selected",
+        "checkpoint": "$R10/run/ck60000.bin",
+        "windows": 207,
+        "loss_micronats": 1184719,
+        "bpb_micro": 440041
+      }
+    },
+    {
+      "baseline": {
+        "label": "final-block-05-baseline",
+        "checkpoint": "$R10/run/ck60000.bin",
+        "windows": 207,
+        "loss_micronats": 1234524,
+        "bpb_micro": 459427
+      },
+      "selected": {
+        "label": "final-block-05-selected",
+        "checkpoint": "$R10/run/ck60000.bin",
+        "windows": 207,
+        "loss_micronats": 1234524,
+        "bpb_micro": 459427
+      }
+    },
+    {
+      "baseline": {
+        "label": "final-block-06-baseline",
+        "checkpoint": "$R10/run/ck60000.bin",
+        "windows": 207,
+        "loss_micronats": 1220744,
+        "bpb_micro": 455827
+      },
+      "selected": {
+        "label": "final-block-06-selected",
+        "checkpoint": "$R10/run/ck60000.bin",
+        "windows": 207,
+        "loss_micronats": 1220744,
+        "bpb_micro": 455827
+      }
+    },
+    {
+      "baseline": {
+        "label": "final-block-07-baseline",
+        "checkpoint": "$R10/run/ck60000.bin",
+        "windows": 208,
+        "loss_micronats": 1191341,
+        "bpb_micro": 443374
+      },
+      "selected": {
+        "label": "final-block-07-selected",
+        "checkpoint": "$R10/run/ck60000.bin",
+        "windows": 208,
+        "loss_micronats": 1191341,
+        "bpb_micro": 443374
+      }
+    },
+    {
+      "baseline": {
+        "label": "final-block-08-baseline",
+        "checkpoint": "$R10/run/ck60000.bin",
+        "windows": 207,
+        "loss_micronats": 1237001,
+        "bpb_micro": 461145
+      },
+      "selected": {
+        "label": "final-block-08-selected",
+        "checkpoint": "$R10/run/ck60000.bin",
+        "windows": 207,
+        "loss_micronats": 1237001,
+        "bpb_micro": 461145
+      }
+    },
+    {
+      "baseline": {
+        "label": "final-block-09-baseline",
+        "checkpoint": "$R10/run/ck60000.bin",
+        "windows": 207,
+        "loss_micronats": 1193951,
+        "bpb_micro": 448562
+      },
+      "selected": {
+        "label": "final-block-09-selected",
+        "checkpoint": "$R10/run/ck60000.bin",
+        "windows": 207,
+        "loss_micronats": 1193951,
+        "bpb_micro": 448562
+      }
+    },
+    {
+      "baseline": {
+        "label": "final-block-10-baseline",
+        "checkpoint": "$R10/run/ck60000.bin",
+        "windows": 207,
+        "loss_micronats": 1205298,
+        "bpb_micro": 447118
+      },
+      "selected": {
+        "label": "final-block-10-selected",
+        "checkpoint": "$R10/run/ck60000.bin",
+        "windows": 207,
+        "loss_micronats": 1205298,
+        "bpb_micro": 447118
+      }
+    },
+    {
+      "baseline": {
+        "label": "final-block-11-baseline",
+        "checkpoint": "$R10/run/ck60000.bin",
+        "windows": 207,
+        "loss_micronats": 1214938,
+        "bpb_micro": 456213
+      },
+      "selected": {
+        "label": "final-block-11-selected",
+        "checkpoint": "$R10/run/ck60000.bin",
+        "windows": 207,
+        "loss_micronats": 1214938,
+        "bpb_micro": 456213
+      }
+    },
+    {
+      "baseline": {
+        "label": "final-block-12-baseline",
+        "checkpoint": "$R10/run/ck60000.bin",
+        "windows": 207,
+        "loss_micronats": 1169833,
+        "bpb_micro": 437443
+      },
+      "selected": {
+        "label": "final-block-12-selected",
+        "checkpoint": "$R10/run/ck60000.bin",
+        "windows": 207,
+        "loss_micronats": 1169833,
+        "bpb_micro": 437443
+      }
+    },
+    {
+      "baseline": {
+        "label": "final-block-13-baseline",
+        "checkpoint": "$R10/run/ck60000.bin",
+        "windows": 207,
+        "loss_micronats": 1155512,
+        "bpb_micro": 434962
+      },
+      "selected": {
+        "label": "final-block-13-selected",
+        "checkpoint": "$R10/run/ck60000.bin",
+        "windows": 207,
+        "loss_micronats": 1155512,
+        "bpb_micro": 434962
+      }
+    },
+    {
+      "baseline": {
+        "label": "final-block-14-baseline",
+        "checkpoint": "$R10/run/ck60000.bin",
+        "windows": 207,
+        "loss_micronats": 1199147,
+        "bpb_micro": 449731
+      },
+      "selected": {
+        "label": "final-block-14-selected",
+        "checkpoint": "$R10/run/ck60000.bin",
+        "windows": 207,
+        "loss_micronats": 1199147,
+        "bpb_micro": 449731
+      }
+    },
+    {
+      "baseline": {
+        "label": "final-block-15-baseline",
+        "checkpoint": "$R10/run/ck60000.bin",
+        "windows": 208,
+        "loss_micronats": 1217105,
+        "bpb_micro": 454878
+      },
+      "selected": {
+        "label": "final-block-15-selected",
+        "checkpoint": "$R10/run/ck60000.bin",
+        "windows": 208,
+        "loss_micronats": 1217105,
+        "bpb_micro": 454878
+      }
+    }
+  ],
+  "original_hashes_unchanged": true
+}

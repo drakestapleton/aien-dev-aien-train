@@ -1,0 +1,56 @@
+{
+  "selected_before_final_evaluation": {
+    "label": "calibration-1000-1000",
+    "checkpoint": "$R10/run/ck60000.bin",
+    "windows": 1650,
+    "loss_micronats": 1196691,
+    "bpb_micro": 446445,
+    "alpha": 1000,
+    "gain": 1000
+  },
+  "calibration_trials": [
+    {
+      "label": "calibration-1000-1000",
+      "checkpoint": "$R10/run/ck60000.bin",
+      "windows": 1650,
+      "loss_micronats": 1196691,
+      "bpb_micro": 446445,
+      "alpha": 1000,
+      "gain": 1000
+    },
+    {
+      "label": "calibration-900-1000",
+      "checkpoint": "$RUN2/checkpoints/alpha-900-gain-1000.ck",
+      "windows": 1650,
+      "loss_micronats": 1290081,
+      "bpb_micro": 481286,
+      "alpha": 900,
+      "gain": 1000
+    },
+    {
+      "label": "calibration-750-1000",
+      "checkpoint": "$RUN2/checkpoints/alpha-750-gain-1000.ck",
+      "windows": 1650,
+      "loss_micronats": 2013795,
+      "bpb_micro": 751280,
+      "alpha": 750,
+      "gain": 1000
+    },
+    {
+      "label": "calibration-500-1000",
+      "checkpoint": "$RUN2/checkpoints/alpha-500-gain-1000.ck",
+      "windows": 1650,
+      "loss_micronats": 3451507,
+      "bpb_micro": 1287642,
+      "alpha": 500,
+      "gain": 1000
+    }
+  ],
+  "original_hashes": {
+    "$R8/run/ck60000.bin": "45a73a3aed21aeec184563010182e545c317f760d70abd5e9db1b75967241c3a",
+    "$R10/run/ck60000.bin": "a53ced7265818c8f6197449315e9ca4082721665022fec4f81d4538e8d6c2d0f",
+    "$R10/ollm-gb10": "54fb8233c62a13c0b3bac13a38dd5b583943e9e9097342baaa57fc22db2ceb49",
+    "$DATA/merges4096.bin": "73a29baf97619a746a21232c403bf08af71a76e48b3b2cde6d64dab766083882"
+  },
+  "selected_sha256": "a53ced7265818c8f6197449315e9ca4082721665022fec4f81d4538e8d6c2d0f"
+}

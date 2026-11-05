@@ -1,0 +1,3 @@
+WolframLanguageEvaluator query: N[100 {1 - 1210277/1210473, 1 - 1204325/1204466, 1 - 1203149/1203286}, 8]
+Units: percent relative loss reduction; order: fresh final, published held, calibration.
+Result: 0.016192017500596874 percent, 0.011706432560155289 percent, 0.011385489401522165 percent. Small changes below the preregistered 0.1 percent preference; no substantial upgrade established.
