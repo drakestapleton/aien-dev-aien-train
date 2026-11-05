@@ -3,10 +3,10 @@
 # reference the UEFI run's OUT.TXT is compared with.
 # Usage: sh tests/omegallm/efi-ref.sh BIN JOB DIR
 # Prints, per job, `> line` and the command's output (with a line feed added when it does not end in
-# one), like OUT.TXT without its `OLLM efi`, `J` and `OLLM DONE` lines; stops at the first command
-# that exits nonzero (as the UEFI app does) and then prints `rc=N`. As in eio.om main: empty lines and
-# lines starting with # are skipped; a line of only spaces and tabs has no tokens, so it is echoed
-# as `> line` and runs nothing (no output, no J line in OUT.TXT, not counted as a job).
+# one), like OUT.TXT without its `OLLM efi`, `ID` (identity), `J` and `OLLM DONE` lines; stops at the
+# first command that exits nonzero (as the UEFI app does) and then prints `rc=N`. As in eio.om main:
+# empty lines and lines starting with # are skipped; a line of only spaces and tabs has no tokens, so
+# it is echoed as `> line` and runs nothing (no output, no J line in OUT.TXT, not counted as a job).
 # Env: CORE (taskset core, default 6). The job lines are trusted (shell-split).
 set -u
 [ $# -eq 3 ] || { echo "usage: efi-ref.sh BIN JOB DIR" >&2; exit 2; }
