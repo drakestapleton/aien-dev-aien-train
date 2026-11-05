@@ -223,6 +223,7 @@ byte for byte, what the console shows (the console shows bytes outside 9, 10, 13
 
 ```
 OLLM efi <JOB.TXT bytes>
+ID cpu=<brand> fw=<vendor> fwrev=<revision> smbios=<manufacturer>/<product>/<version>
 > <job line>
 <the command's stdout, as on Linux, plus LF when it does not end in LF>
 J <wall milliseconds>
@@ -237,8 +238,26 @@ the open `efi 12` file before returning to the firmware, so the bytes written be
 on the volume (`evidence/OMEGALLM/efi/ckbad/`: a refused checkpoint, and OUT.TXT equal to the Linux
 body). Differences from `lio.om`: there is no rename, so a refused or interrupted checkpoint write
 can leave a partial file; a path longer than 255 bytes is an I/O refusal (70). The banner
-`OLLM efi <JOB.TXT bytes>` is first, exactly one `J <ms>` follows each job, and
-`OLLM DONE <jobs> <ms>` is last. Those three are wall clock or the job-file size and are not part of
-the body comparison. Every other OUT.TXT line, including a line shaped like `J n` or `OLLM DONE a b`
-inside a job, must equal what a Linux build prints for the same lines (`tests/omegallm/efi-ref.sh`,
-checked in that order by `tests/omegallm/efi-check.sh`).
+`OLLM efi <JOB.TXT bytes>` is first, the identity line `ID ...` is second, exactly one `J <ms>`
+follows each job, and `OLLM DONE <jobs> <ms>` is last. Those four are wall clock, the job-file size
+or the machine and are not part of the body comparison. Every other OUT.TXT line, including a line
+shaped like `J n` or `OLLM DONE a b` inside a job, must equal what a Linux build prints for the same
+lines (`tests/omegallm/efi-ref.sh`, checked in that order by `tests/omegallm/efi-check.sh`).
+
+The identity line is read from the firmware with `efi 14` (omega-mv PR #1022 commit `cf9fbda1a7be`,
+branch `feat/x86efi-ident`):
+`cpu=` is the CPUID brand string (leaves 0x80000002–0x80000004) without leading or trailing spaces
+and NULs; `fw=` is the SystemTable FirmwareVendor, one byte per UCS-2 code unit; `fwrev=` is the
+SystemTable FirmwareRevision as 8 lowercase hex digits; `smbios=` is the SMBIOS type 1 (System
+Information) Manufacturer, Product Name and Version strings, found through the SMBIOS 3 entry point
+when the firmware publishes one, else the SMBIOS 2 one. A field the firmware does not provide is `-`;
+a byte outside 32–126 is `?`. `efi 14` copies the table's first 64 KiB, so the serial number and UUID
+are in memory, but they are never printed, and no MAC address is printed. The prefix is `ID`, not
+`M`, so no identity line shares a prefix with mathck's `M e` and `M l` lines. Every SMBIOS read stays
+below the copied length: a string number past the structure's string set, a type 1 field or string
+cut off at that length, and a type 1 structure starting beyond it print `-`, and a brand string of
+only blanks or NULs prints `cpu=-` (`tests/omegallm/efi-ident.sh EFI OUTDIR` boots these five cases
+under QEMU; receipts in `evidence/OMEGALLM/efi-ident/`). Under QEMU 8.2 with Ubuntu OVMF
+and `-smbios type=1,manufacturer=OmegaTest,product=IdentBox,version=7.1` the line is
+`ID cpu=QEMU TCG CPU version 2.5+ fw=Ubuntu distribution of EDK II fwrev=00010000
+smbios=OmegaTest/IdentBox/7.1` (one line).

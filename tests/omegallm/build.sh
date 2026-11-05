@@ -3,14 +3,15 @@
 # Usage: sh tests/omegallm/build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p|t|r|x|q|w|u|l|o|v|n|y | --variant h5|h7|r0|bx]
 # Env: TARGET (aarch64, the default, gb10, x86linux or x86efi), OMC (default ../omega-mv/seed/out/omc
 #      beside this clone for aarch64 and gb10, ../omega-mv-x86/seed/out/omc for x86linux,
-#      ../omega-efi/seed/out/omc for x86efi), OUT (default ../build beside it), CORE (taskset core,
+#      ../omega-efi-ident/seed/out/omc for x86efi), OUT (default ../build beside it), CORE (taskset core,
 #      default 6).
 # Each target has its own pinned omc: aarch64 is omega-mv e5b32567 (the v0 pin); x86linux is
 # omega-mv main ba5559d9, whose omc has the x86-64 Linux backend with SSE2 floats (docs/X86-LINUX.md);
-# x86efi is omega-mv main d3d1b1bc (PR #1015, merged 2026-11-04; docs/X86-EFI.md), whose omc adds the
-# UEFI x86-64 backend with efi 12 (files) and efi 13 (console). The receipts in evidence/OMEGALLM/efi
-# and imac were built with the same omc b4f45121 from #1015's commit 5ce9ecaa, an ancestor of d3d1b1bc
-# (evidence/OMEGALLM/efi/repin-d3d1b1bc.txt).
+# x86efi is omega-mv PR #1022 commit cf9fbda1a7be33964070a4ba3e2f89ab7aaa21e7 (branch feat/x86efi-ident:
+# omega-mv main d3d1b1bc, where PR #1015's x86efi backend merged on 2026-11-04, plus efi 14, docs/X86-EFI.md),
+# whose omc adds the UEFI x86-64 backend with efi 12 (files), efi 13 (console) and efi 14 (identity).
+# The receipts in evidence/OMEGALLM/efi and imac were built with omc b4f45121 from #1015's commit
+# 5ce9ecaa, an ancestor of d3d1b1bc (evidence/OMEGALLM/efi/repin-d3d1b1bc.txt).
 # For x86linux and x86efi the concatenated source starts with the opt-in line `target x86linux` or
 # `target x86efi`; every later line is the same as the aarch64 source except the platform unit, which
 # is lio.om on Linux and eio.om on UEFI (CONTRACT §9). The x86efi output is ollm.efi, a PE32+ EFI
@@ -64,8 +65,8 @@ case "$TARGET" in
            OMC=${OMC:-$here/../omega-mv/seed/out/omc} lead= plat=lio.om pool=lpool.om ext= ;;
   x86linux) PIN=be8c51301307555254fc59e351d281aae1aa096d91521777e33a41c8b446448a
             OMC=${OMC:-$here/../omega-mv-x86/seed/out/omc} lead='target x86linux' plat=lio.om pool=lpool.om ext= ;;
-  x86efi) PIN=b4f45121f6c6d5d8a6ed0f5c4f3934b7cc4bec369bfa89523699bd33928f9b55
-          OMC=${OMC:-$here/../omega-efi/seed/out/omc} lead='target x86efi' plat=eio.om pool=epool.om ext=.efi ;;
+  x86efi) PIN=3ad9f10f64309e7acf8a725082b28e23a2a4aeb07e98322fb4dc0fcd8fc93194
+          OMC=${OMC:-$here/../omega-efi-ident/seed/out/omc} lead='target x86efi' plat=eio.om pool=epool.om ext=.efi ;;
   *) echo "TARGET must be aarch64, gb10, x86linux or x86efi" >&2; exit 2 ;;
 esac
 OUT=${OUT:-$here/../build}

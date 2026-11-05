@@ -75,7 +75,8 @@ a copy of `/tmp/oe45-demo-rt` gave `OE45_DEMO_PASS` 11/11.
 
 Environment: `MODE=G|U` (first decode, default G), `PORTBASE` (first loopback port, default
 14340, never 14323), `OMC` and `OMEGA` (default `/tmp/om-main`). Heavy steps run under
-`taskset -c 10-14 nice -n 19 ionice -c3`. OUT must not exist.
+`taskset -c ${AIEN_TEST_CPUS:-0-9,15-19} nice -n 19 ionice -c3`; `AIEN_TEST_CPUS` keeps them off cores 10-14,
+which the shared Spark reserves for its live service. OUT must not exist.
 
 Output: `PIN` lines (compiler, commits, runtime binaries), `BIN` lines (sha256 of every built
 binary), one `CASE <name> PASS|UNPINNED|FAIL <facts>` line per case, then `OE45_DEMO_PASS` (exit 0),

@@ -104,6 +104,12 @@ For Wolfram replay, first execute the two verification calls above, then `oracle
 
 Independent NL6 [replay receipt](https://github.com/aien-dev/benchmarks-mv/blob/e4ab4afecd62272f86d67043f74ffc8153ae703e/native/neuralese/nl1-independent.json) pins candidate `c5992ca0b015a233bca6f9af7af892a71c558403`, the exact compiler, source assembly, matching native binary and an independently emitted stream. Its stream differs in measured timing fields as expected; every selected raw-derived recovery counter matches the producer stream. The native scorer independently thresholds float carriers and enforces producer prediction/abstention consistency. Separate checker qualification reports 41/41 PASS including six guard-removal mutants; scope is HOST_SYNTHETIC_CHECKER_ONLY. This is algorithmic/checker independence, not a claim that model seats or vendors are independent. This change does not merge or activate an envelope/protocol consumer.
 
+## 2026-10-28 architectural interpretation (append-only)
+
+The historical negative result above remains unchanged. Issue [39](https://github.com/aien-dev/aien-train/issues/39) identifies a capacity obstruction in the original receiver: four affine thresholds in three real dimensions admit at most15 strict patterns, whereas accepted reconstruction requires16. The acceptance margin excludes boundary ties. The observed14/16 is not an optimality proof; the bound14 for central planes applies only when receiver biases are removed, not to the primary affine receiver.
+
+The separately preregistered [NL1R capacity experiment](nl1r/README.md), source freeze `fed670a`, preserves all historical source/evidence and distinguishes random training from hand-selected constructive witnesses. Native binary64 constructive controls for the exact four-coordinate codec, the issue39 nonlinear three-coordinate codec, and the nonlinear learned architecture each recover16/16 with no abstentions at clean,1/16 and1/32 grid settings. These fixtures demonstrate capacity, not learned success or generalization. Their raw carriers, independent Wolfram checks, gradients, atomic-update/checkpoint/refusal controls, and all new random outcomes are retained under `nl1r/evidence/`; existing receipts and verdicts are not superseded.
+
 ## NL-7: guaranteed structure versus learned structure
 
 This follow-up is frozen separately from NL-1: benchmarks-mv

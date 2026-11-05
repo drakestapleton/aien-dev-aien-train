@@ -8,7 +8,7 @@ RT=${1:?usage: baseline.sh RT EVIDENCE_DIR [PORT]}
 E=${2:?usage: baseline.sh RT EVIDENCE_DIR [PORT]}
 PORT=${3:-14330}
 . "$RT/pins.env"
-HEAVY="taskset -c 10-14 nice -n 19 ionice -c3"
+HEAVY="taskset -c ${AIEN_TEST_CPUS:-0-9,15-19} nice -n 19 ionice -c3"
 mkdir -p "$E"
 W=$(mktemp -d)
 OUT=$W/out
