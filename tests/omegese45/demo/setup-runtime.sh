@@ -27,7 +27,7 @@ SHA_UNIT_COMMIT=55845e707dac0d09bf22b5e16970a73c0a989a8c
 RECOMPUTE_PIN=d2cd7382e0dc64e49498ae3b1ceffc73f1ddcbd3ddcf93e6d607498ccd58ea12
 OMC_PINNED=${OMC_PINNED:-/home/drakestapleton/workspace/omega-mcp/build/omc}
 OMEGA_MV_GIT=${OMEGA_MV_GIT:-/tmp/om-main}
-HEAVY="taskset -c 10-14 nice -n 19 ionice -c3"
+HEAVY="taskset -c ${AIEN_TEST_CPUS:-0-9,15-19} nice -n 19 ionice -c3"
 sha() { sha256sum < "$1" | cut -c1-64; }
 mkdir -p "$RT/bin" "$RT/src" "$RT/log"
 RT=$(cd "$RT" && pwd)

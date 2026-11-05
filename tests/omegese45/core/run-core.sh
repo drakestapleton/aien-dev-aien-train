@@ -13,7 +13,7 @@ ROOT=$(cd "$(dirname "$0")/../../.." && pwd)
 : "${OUT:?set OUT to a scratch directory}"
 mkdir -p "$OUT/bin" "$OUT/run" "$OUT/w" "$OUT/mut"
 OUT=$(cd "$OUT" && pwd)
-P="taskset -c 10-14 nice -n 19 ionice -c3"
+P="taskset -c ${AIEN_TEST_CPUS:-0-9,15-19} nice -n 19 ionice -c3"
 ORA="python3 $ROOT/tests/omegese45/core/oracle.py"
 VOCAB=$ROOT/docs/omegese45/vocab.tsv
 B=$OUT/bin
