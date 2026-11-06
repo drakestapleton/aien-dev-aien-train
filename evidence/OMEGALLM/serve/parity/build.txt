@@ -1,0 +1,4 @@
+omc 2c82480596bbdc50cda9626866209ef662d5834f278f839ff4ce0250c495029f (omega-mv e5b32567)
+aarch64 BUILD_OK 59a244e682f10e4a3dd9617dfbd72f11b65997edee683401749496cb60362480 /dev/shm/hive/OllmServe/b1-aarch64/ollm source_sha256 b5a9485ef2d3ce55c784bb316c398792ab10ff5ed048dbf34c5d1b1867dc58be
+gb10 BUILD_OK c35798fdeb5818f07aaf0979676469be366655dfcf77d3baa8092c3ee539a257 /dev/shm/hive/OllmServe/b1-gb10/ollm-gb10 source_sha256 3a15298d5d3084f8162cb2fe901a7f575042e25b5529ffb7b89e432873741200 (noserve.om; same binary as main ac4a7c1)
+x86linux, x86efi NOT_RUN: they take noserve.om (unchanged); their omc pins are not this omc
