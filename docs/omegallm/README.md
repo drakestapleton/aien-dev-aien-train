@@ -25,6 +25,7 @@ ollm init CK V T D H F L B SEED TOTAL LRMICRO [G]
 ollm train CK TOKS UNTIL EVERY [K]     # K worker processes, G mod K = 0 (Linux only)
 ollm eval CK HELD W MERGES             # MERGES required when V > 256
 ollm sample CK SEED N TEMPMILLI PROMPT MERGES
+ollm tune CK OUT TOTAL LRMICRO        # fine-tune: keep weights, step 0, new TOTAL and lr, Adam m = v = 0
 ```
 
 | What | Status | Receipt |

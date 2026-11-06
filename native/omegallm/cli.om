@@ -6,7 +6,7 @@ note FromDigits[Reverse[ToCharacterCode[w]],256]): prep 1885696624, init 1953066
 note grad 1684107879, train 474214396532, eval 1818326629, base 1702060386, sample 111516417089907,
 note gcheck 118074647274343, mathck 118074698391917, adamck 118074781033569; v1: bpefit
 note 127996038312034, bpeenc 109325798699106, bpedec 109287127216226 (bpe.om); serve 435778905459
-note (serve.om on aarch64, noserve.om elsewhere).
+note (serve.om on aarch64, noserve.om elsewhere). Fine-tune: tune 1701737844.
 note Exit codes: 0 ok; 2 usage; 10-15 checkpoint refusals (ckpt.om); 20 data file shorter than
 note T + 1 bytes; 21 data over 2^25 bytes or OFFS not exactly 8 B bytes; 22 an OFFS offset with
 note o + T >= N; 23 eval W = 0 or W T + 1 > M; 24 prep story over 999999 bytes; 40 gcheck over
@@ -81,6 +81,10 @@ ret 0
 end
 if eq w 435778905459
 cmdserve
+ret 0
+end
+if eq w 1701737844
+cmdtune
 ret 0
 end
 exit 2
@@ -636,6 +640,32 @@ oputc 32
 oputx get og add 52 b
 oputc 32
 oputl long mul bitcast f64 get og add 52 b 1e18
+oputc 10
+oflush
+end
+
+note tune CK OUT TOTAL LRMICRO: fine-tune entry. Load CK (any checkpoint ckpt.om accepts), keep
+note its shapes, G and weights, and start a new schedule on them: step 0, the given TOTAL and
+note lr = f64(LRMICRO)/1000000.0, Adam moments m = v = 0 (so warmup and bias correction restart).
+note Save to OUT with the loaded magic and print `U P`. train, gtrain and gtrainf then continue
+note from OUT on any token file. TOTAL 0 or over 999999 exits 12; wrong argument count exits 2.
+fn cmdtune to void
+if ne oargc 6
+exit 2
+end
+ockload 2
+tt = oargu 4
+if or eq tt 0 gt tt 999999
+exit 12
+end
+put og 41 0
+put og 42 tt
+put og 43 bitcast ulong div f64 oargu 5 1000000.0
+ozerom mul 2 get og 8
+ocksave 3
+oputc 85
+oputc 32
+oputu get og 8
 oputc 10
 oflush
 end

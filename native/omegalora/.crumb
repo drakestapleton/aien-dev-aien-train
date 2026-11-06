@@ -1,0 +1,5 @@
+{
+  "schema_version": "1.0.0",
+  "name": "omegalora",
+  "purpose": "LoRA fine-tuning core v1: frozen W plus s B A adapters, RMSNorm, SiLU, softmax CE, AdamW in f64 Omega with gradient check and three mutant controls; host CPU only, reference for GPU and omegallm adapters"
+}
