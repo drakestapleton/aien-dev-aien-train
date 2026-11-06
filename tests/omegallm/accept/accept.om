@@ -2995,7 +2995,7 @@ note acnlog: nc[0, k) is a line of the log in pa slot 1
 fn acnlog pa edit uchar PAN sv view ulong SVN nc view uchar 128 k ulong to bool
 lg = new uchar 65536 0
 m = acxpath pa sv 1 kdlog
-x = acreadf view part pa PB m lg
+x = acreadf view part pa add PB 1024 m lg
 if lt x 1
 ret false
 end
@@ -4222,10 +4222,17 @@ end
 put sv SCRL ulong r
 end
 
-note acrdopt: SUITEDIR + s into wk[o, o + 65536) when present (an optional system text); its length or 0
+note acrdopt: SUITEDIR + s into wk[o, o + cap) when present (an optional system text or tool set); its length or 0
 fn acrdopt wk edit uchar WKN pa edit uchar PAN sv view ulong SVN s view uchar * o ulong to ulong
+cap = ulong 65536
+if lt o WS1
+cap = 32768
+end
+if eq o WT2
+cap = 16384
+end
 n = acpth pa PSD get sv SSDL s 0
-r = acreadf view part pa PB n part wk o 65536
+r = acreadf view part pa PB n part wk o cap
 if lt r 1
 ret 0
 end
@@ -4263,7 +4270,7 @@ note run HOST PORT SUITEDIR OUTDIR OMC MODEL TEMPMILLI SEED WORKER NWORKERS [MUT
 note Writes OUTDIR/results-WORKER.tsv; `accept sum` aggregates every worker's file.
 fn cmdrun to void
 na = ulong argcnt
-if and ne na 11 ne na 12
+if and ne na 12 ne na 13
 exit 2
 end
 pa = new uchar PAN 0
@@ -4303,7 +4310,7 @@ if or eq get sv SNW 0 ge get sv SWI get sv SNW
 exit 2
 end
 put sv SMUT 0
-if eq na 12
+if eq na 13
 n = acgeta 12 pa PMU
 put sv SMUT acopc view part pa PMU n
 if eq get sv SMUT 0
@@ -4311,9 +4318,9 @@ exit 2
 end
 end
 x = makedir pa POD get sv SODL 493
-put sv ST0L acrdwk wk pa acpth pa PSD get sv SSDL fth 0 WT0
-put sv add ST0L 1 acrdwk wk pa acpth pa PSD get sv SSDL fto 0 WT1
-put sv add ST0L 2 acrdwk wk pa acpth pa PSD get sv SSDL ftf 0 WT2
+put sv ST0L acrdopt wk pa sv fth WT0
+put sv add ST0L 1 acrdopt wk pa sv fto WT1
+put sv add ST0L 2 acrdopt wk pa sv ftf WT2
 put sv SW2L acrdopt wk pa sv fhvs WS2
 put sv SW1L acrdopt wk pa sv fcos WS1
 acrdcr wk sv pa

@@ -1,0 +1,23 @@
+rm -rf
+rm -fr
+rm /tmp/aien-gb10.lock
+rm -f /tmp/aien-gb10.lock
+unlink /tmp/aien-gb10.lock
+fuser -k
+lsof -t -i
+kill -9
+kill $(
+pkill
+killall
+git push --force
+git push -f
+git push origin +
+--force-with-lease
+git reset --hard
+--no-verify
+mkfs
+dd if=
+chmod -R 777
+tee ~/handoffs/BOARD.md
+tee ~/handoffs/CLAIMS.md
+taskset -c 0-19
