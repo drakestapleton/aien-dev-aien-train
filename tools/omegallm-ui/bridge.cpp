@@ -114,6 +114,9 @@ struct ModelProcess {
     }
     // Fixed checkpoint names only; never user text. The voice checkpoint is private and lives only in the guest.
     std::string checkpoint = "omega-v2-edited-20261104.ck";
+    // The voice model uses the cached sampler (samplekv, feat/astra-inference-cache): same bytes, about 10x faster.
+    std::string runner = "ollm-ui";
+    std::string command = "sample";
     void start(const std::string &prompt, int tokens, int temp, unsigned seed) {
         if (firmware) {
             fd = firmware_socket("serial.sock");
@@ -134,9 +137,9 @@ struct ModelProcess {
         }
         pid = spawn({LIMA, "shell", "omega-llm", "sh", "-c",
             "cd ~/omega && exec setsid --wait sh -c 'echo $$ > \"$1\"; shift; "
-            "ck=$1; shift; exec timeout --foreground -k 2 120 ./ollm-ui sample \"$ck\" \"$@\" merges4096.bin' "
-            "sh \"/tmp/omega-ui-$1.pid\" \"$6\" \"$2\" \"$3\" \"$4\" \"$5\"",
-            "sh", ticket, std::to_string(seed), std::to_string(tokens), std::to_string(temp), prompt, checkpoint}, &fd);
+            "ck=$1; r=$2; c=$3; shift 3; exec timeout --foreground -k 2 120 ./$r $c \"$ck\" \"$@\" merges4096.bin' "
+            "sh \"/tmp/omega-ui-$1.pid\" \"$6\" \"$7\" \"$8\" \"$2\" \"$3\" \"$4\" \"$5\"",
+            "sh", ticket, std::to_string(seed), std::to_string(tokens), std::to_string(temp), prompt, checkpoint, runner, command}, &fd);
     }
 };
 
@@ -218,6 +221,17 @@ static json upstream_props() {
     auto r = client.Get("/props");
     if (!r || r->status != 200) throw std::runtime_error("Start Qwen through Omega to load the llama UI");
     return json::parse(r->body);
+}
+
+// True once the reply is complete: a blank line or a line that cannot start with "me:" follows it.
+static bool voice_done(const std::string &raw) {
+    static const std::string me = "me:";
+    for (size_t at = raw.find('\n'); at != std::string::npos; at = raw.find('\n', at + 1)) {
+        auto rest = raw.substr(at + 1, 3);
+        if (rest.empty()) return false;
+        if (rest[0] == '\n' || me.compare(0, rest.size(), rest) != 0) return true;
+    }
+    return false;
 }
 
 // Drake's reply ends where the other person's next line (or a blank line) begins. Later bubbles drop "me:".
@@ -341,7 +355,7 @@ static void completion(const httplib::Request &req, httplib::Response &res) {
     if (!busy.compare_exchange_strong(expected, true)) { error(res, 429, "Omega is already generating. Stop that response or wait for it to finish."); return; }
     auto lease = std::make_shared<Lease>();
     auto child = std::make_shared<ModelProcess>();
-    if (voice) child->checkpoint = VOICE_CK;
+    if (voice) { child->checkpoint = VOICE_CK; child->runner = "ollm-kv"; child->command = "samplekv"; }
     child->start(prompt, tokens, int(temperature * 1000), unsigned(seed));
     std::string id = "omega-" + child->ticket;
     auto created = std::time(nullptr);
@@ -360,11 +374,13 @@ static void completion(const httplib::Request &req, httplib::Response &res) {
             };
             if (!send(chunk({{"role", "assistant"}, {"content", ""}}))) return false;
             std::string held;
+            bool enough = false;
             int rc = generate(*child, [&](const std::string &text) {
                 if (closed()) return false;
-                if (voice && !text.empty()) { held += text; return true; }
+                if (voice && !text.empty()) { held += text; enough = voice_done(held); return !enough; }
                 return text.empty() ? sink.write(": generating\n\n", 14) : send(chunk({{"content", text}}));
             });
+            if (enough) rc = 0;
             if (rc == 130) return false;
             if (voice && !rc && !send(chunk({{"content", voice_reply(held)}}))) return false;
             if (rc) send(chunk({{"content", "\n\n[Omega runtime error: generation failed or timed out. Try a shorter story beginning.]"}}));
@@ -375,7 +391,13 @@ static void completion(const httplib::Request &req, httplib::Response &res) {
         });
     } else {
         std::string text;
-        int rc = generate(*child, [&](const std::string &part) { text += part; return !req.is_connection_closed(); });
+        bool enough = false;
+        int rc = generate(*child, [&](const std::string &part) {
+            text += part;
+            if (voice && voice_done(text)) { enough = true; return false; }
+            return !req.is_connection_closed();
+        });
+        if (enough) rc = 0;
         if (rc) { error(res, 502, "Omega generation failed or timed out"); return; }
         if (voice) text = voice_reply(text);
         reply(res, {{"id", id}, {"object", "chat.completion"}, {"created", created}, {"model", served},

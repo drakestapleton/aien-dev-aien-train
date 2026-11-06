@@ -30,7 +30,10 @@ about the last 700 bytes at a line boundary and ends the prompt with `me:`. It
 holds back the generated text and returns Drake's reply only, which ends at the
 first blank line or line that does not start with `me:`. Later `me:` lines
 become new lines in the same reply, so a streamed reply arrives as one chunk.
-Aienux does not offer this model.
+It runs `ollm-kv samplekv`, the cached sampler from `feat/astra-inference-cache`
+(aarch64 build, omc 2c824805). On Drake's MacBook guest it gave the same bytes as
+`sample`, in about 2.2 s instead of 21 s for 32 tokens. Sampling stops as soon as the reply is
+complete. Aienux does not offer this model.
 
 ## Build and operate
 
