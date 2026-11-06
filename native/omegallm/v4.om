@@ -20,9 +20,15 @@ note P = V D + L LSTR + D. Master mapping 0 (private): params [0,P), m [P,2P), v
 note Mapping 1 (shared, train4/gcheck4): G gradient regions of P values, then B sequence losses.
 note Mapping 2 (private, lazy): saved activations of the staged layers, ASTR4 per layer.
 note Mapping 3 (private, lazy): the KV cache of the staged decode layers, 2 T D per layer.
-note Compute windows: ow holds wte at 0 (klogit reads it there), gf at V D, then RW resident
-note layers from WS = V D + D and, when RW < L, one staging slot after them; ogr has the same layout
-note for the gradients. oa holds the activations (training layout xga, decode layout xgd).
+note Compute windows: ow holds gf at 0, then RW resident layers from WS = D and, when RW < L, one
+note staging slot after them; ogr has the same layout for the gradients. wte and its gradient live
+note in two banks each, in the v3 pools that v4 does not otherwise use (wide4, CONTRACT-V4 section 2):
+note rows [0, R1) of wte in opa at c D and of dwte in ogb at c D; rows [R1, V) of wte in oww at
+note RT + (c - R1) D (RT = T E, after the RoPE table) and of dwte in oab at (c - R1) D, with
+note R1 = min(V, floor(XWB1 / D)). Every row sits in one bank, and the sums that run over rows
+note (dz = dl wte) carry one accumulator from bank 1 into bank 2, so the bits are the one-window
+note bits. oa holds the activations (training layout xga, decode layout xgd); the training layout
+note is checked only by the commands that run the training forward (xneeda).
 note xg slots: 0 V 1 T 2 D 3 H 4 F 5 L 6 B 7 E 8 P 9 LSTR 10 G 11 K 12 seed 13 step 14 TOTAL
 note 15 lr bits 16 rope base bits 17 WS 18 RW 19 staged weight layer (L none) 20 RA (resident
 note activation layers) 21 ASTR4 22 AB 23 staged activation layer 24 forward only 25 X 26 DH 27 DQ
@@ -30,7 +36,8 @@ note 28 DK 29 DU 30 SF 31 RA row 32 RB 33 RO 34 RZ 35 RDZ 36 RF 37 LG 38 SC 39 S
 note 41 first sequence of the block 43 sc bits 44 RK (resident KV layers) 45 KVB 46 staged KV
 note layer 47 CV (cache valid) 48 CT (context count) 49 XR 50 HN 51 QR 52 OR 53 HMR 54 RLR 55 SS
 note 56 hash mode 57 mismatches 59 T D 60-63 gcheck stats 65 gf virtual index 66 master mapped
-note 67 KV mapped 68 activations mapped 70-71 ropeck counts.
+note 67 KV mapped 68 activations mapped 69 training layout fits (1) 70-71 ropeck counts 72 R1 73 RT
+note 74 V D 75 token mode (V > 256 without merges: u16 prompt file and output, bits per token).
 note Per-layer activation slot (ASTR4 = 6 T D + 2 T + T F + H T): HIN, Q, K (after RoPE), U, O,
 note HMID (T D each), S1[T], S2[T], RL[T][F] (post-ReLU; its sign is the backward mask), LSE[H][T].
 
@@ -39,6 +46,15 @@ note 1 in the product, 0 in the mutant. ropeck's shift check and gcheck4 must ca
 const OMUTI ulong 1
 note Mutant z (the backward applies R instead of R^T to dQ and dK): gcheck4 must catch it.
 const OMUTZ ulong 1
+note wte banks: bank 1 (opa for wte, ogb for dwte) holds XWB1 values, at most min(OPAN, OGBN);
+note bank 2 (oww after the RoPE table, oab) at most min(OWWN - T E, OABN) = XWB2 at T E = 0.
+note build.sh --variant wx shrinks XWB1 (with bx's window sizes) so a small shape crosses the bank
+note boundary. Limit: (V - R1) D <= XWB2 and T E + (V - R1) D <= OWWN; V 32768 D 768 fits.
+const XWB1 ulong 14161920
+const XWB2 ulong 15733760
+note Mutant j (the dz = dl wte column sums restart at 0 at the bank-2 rows, dropping bank 1): 1 in
+note the product, 0 in the mutant. gcheck4 on the wx crossing shape must catch it.
+const OMUTJ ulong 1
 note magics: "OLLMCK03" (Wolfram -> 3688530847248174159), CK01, CK02 (ckpt.om)
 const XCK3 ulong 3688530847248174159
 const XCK1 ulong 3544415659172318287
@@ -262,7 +278,27 @@ end
 if not xgw
 ret false
 end
-ret xga
+put xg 69 0
+if xga
+put xg 69 1
+end
+ret xgdok
+end
+
+note the decode layout (xgd) holds one KV slot: 8 D + 2 F + 4 + V + T + 2 T D <= OAC
+fn xgdok to bool
+d = get xg 2
+o = add add mul 8 d mul 2 get xg 4 4
+o = add add o get xg 0 get xg 1
+ret le add o mul 2 get xg 59 OAC
+end
+
+note the training layout must fit for the commands that run the training forward (train4, eval4,
+note gcheck4, kvck); exit 12 otherwise (init4, tune4 and sample4 need only the weights and xgd)
+fn xneeda to void
+if eq get xg 69 0
+exit 12
+end
 end
 
 fn xgrng to bool
@@ -301,20 +337,20 @@ end
 ret true
 end
 
-note weight windows: WS, RW (all L when every layer fits, else one slot less for staging)
+note weight windows: WS = D (gf at 0), RW (all L when every layer fits, else one slot less for
+note staging); then the wte banks (xgwb)
 fn xgw to bool
 d = get xg 2
-ws = add mul get xg 0 d d
-put xg 17 ws
+put xg 17 d
 cw = OWC
 if lt OGC cw
 cw = OGC
 end
 lsr = get xg 9
-if gt add ws lsr cw
+if gt add d lsr cw
 ret false
 end
-r = div sub cw ws lsr
+r = div sub cw d lsr
 l = get xg 5
 if ge r l
 put xg 18 l
@@ -322,7 +358,27 @@ else
 put xg 18 sub r 1
 end
 put xg 19 l
-ret true
+ret xgwb
+end
+
+note wte banks: R1 = min(V, floor(XWB1 / D)) rows in bank 1; the V - R1 rows past it must fit bank 2
+note (oab, and oww after the RoPE table of T E values)
+fn xgwb to bool
+d = get xg 2
+v = get xg 0
+put xg 74 mul v d
+r1 = div XWB1 d
+if gt r1 v
+r1 = v
+end
+put xg 72 r1
+rt = mul get xg 1 get xg 7
+put xg 73 rt
+n2 = mul sub v r1 d
+if gt n2 XWB2
+ret false
+end
+ret le add rt n2 OWWN
 end
 
 note training activation layout in oa: X DH DQ DK DU (T D each), SF[T], rows RA RB RO RZ RDZ (D),
@@ -609,18 +665,388 @@ xm2w 0 xvl l xwl l get xg 9
 put xg 19 l
 end
 
-note wte, gf and the resident layers from the master (after a load or an Adam step)
+note wte (into its banks), gf and the resident layers from the master (after a load or an Adam step)
 fn xldw to void
 d = get xg 2
-vd = mul get xg 0 d
-xm2w 0 0 0 vd
-xm2w 0 get xg 65 vd d
+r1 = get xg 72
+n1 = mul r1 d
+xm2p n1
+xm2o n1 get xg 73 sub get xg 74 n1
+xm2w 0 get xg 65 0 d
 lsr = get xg 9
 ws = get xg 17
 for l ulong get xg 18
 xm2w 0 xvl l add ws mul l lsr lsr
 end
 put xg 19 get xg 5
+end
+
+note opa[i] = master[i], i < n (wte bank 1)
+fn xm2p n ulong to void
+for q ulong ocn n
+i = mul q OCH
+ie = oce q n
+while lt i ie bound 999999
+put opa i xmg 0 i
+i = add i 1
+end
+end
+end
+
+note oww[o + i] = master[mo + i], i < n (wte bank 2)
+fn xm2o mo ulong o ulong n ulong to void
+for q ulong ocn n
+i = mul q OCH
+ie = oce q n
+while lt i ie bound 999999
+put oww add o i xmg 0 add mo i
+i = add i 1
+end
+end
+end
+
+note map k [mo + i] = ogb[i], i < n (dwte bank 1)
+fn xb2m k ulong mo ulong n ulong to void
+for q ulong ocn n
+i = mul q OCH
+ie = oce q n
+while lt i ie bound 999999
+xmp k add mo i get ogb i
+i = add i 1
+end
+end
+end
+
+note map k [mo + i] = oab[i], i < n (dwte bank 2)
+fn xc2m k ulong mo ulong n ulong to void
+for q ulong ocn n
+i = mul q OCH
+ie = oce q n
+while lt i ie bound 999999
+xmp k add mo i get oab i
+i = add i 1
+end
+end
+end
+
+note zero dwte: ogb[0, n1) and oab[0, n2)
+fn xzwg n1 ulong n2 ulong to void
+for q ulong ocn n1
+i = mul q OCH
+ie = oce q n1
+while lt i ie bound 999999
+put ogb i 0.0f64
+i = add i 1
+end
+end
+for q2 ulong ocn n2
+j = mul q2 OCH
+je = oce q2 n2
+while lt j je bound 999999
+put oab j 0.0f64
+j = add j 1
+end
+end
+end
+
+note ---- wte rows in the banks ----
+
+note oa[o + i] = wte[c][i], i < D
+fn xcpe o ulong c ulong to void
+d = get xg 2
+r1 = get xg 72
+if lt c r1
+s = mul c d
+for i ulong d
+put oa add o i get opa add s i
+end
+ret
+end
+s2 = add get xg 73 mul sub c r1 d
+for j ulong d
+put oa add o j get oww add s2 j
+end
+end
+
+note dwte[c][i] += 1.0 oa[x + i], i < D (kaxpg's expression)
+fn xembg c ulong x ulong to void
+d = get xg 2
+r1 = get xg 72
+if lt c r1
+s = mul c d
+for i ulong d
+k = add s i
+a = mul 1.0f64 get oa add x i
+put ogb k add get ogb k a
+end
+ret
+end
+s2 = mul sub c r1 d
+for j ulong d
+k2 = add s2 j
+a2 = mul 1.0f64 get oa add x j
+put oab k2 add get oab k2 a2
+end
+end
+
+note wte at virtual index i (i < V D) set to v (gcheck4)
+fn xpwte i ulong v f64 to void
+d = get xg 2
+c = div i d
+r1 = get xg 72
+if lt c r1
+put opa i v
+ret
+end
+put oww add get xg 73 sub i mul r1 d v
+end
+
+note p[c] = z . wte[c] for c < V (klogit over the banks; z, p in oa); each output one ascending sum
+fn xlogit zo ulong po ulong to void
+d = get xg 2
+ze = add zo d
+r1 = get xg 72
+c = ulong 0
+while le add c 4 r1 bound 999999
+xdt4p zo ze mul c d d
+kput4 add po c
+c = add c 4
+end
+while lt c r1 bound 4
+put oa add po c xdt1p zo ze mul c d
+c = add c 1
+end
+xlogw zo po r1
+end
+
+fn xlogw zo ulong po ulong c ulong to void
+d = get xg 2
+ze = add zo d
+v = get xg 0
+r1 = get xg 72
+while le add c 4 v bound 999999
+w = add get xg 73 mul sub c r1 d
+xdt4w zo ze w d
+kput4 add po c
+c = add c 4
+end
+while lt c v bound 4
+w2 = add get xg 73 mul sub c r1 d
+put oa add po c xdt1w zo ze w2
+c = add c 1
+end
+end
+
+note kdot4 / kdot1 with W in opa (xdt4p, xdt1p) or oww (xdt4w, xdt1w)
+fn xdt4p xo ulong xe ulong wi ulong c ulong to void
+s0 = 0.0f64
+s1 = 0.0f64
+s2 = 0.0f64
+s3 = 0.0f64
+w2 = add wi add c c
+while lt xo xe bound 999999
+a = get oa xo
+s0 = add s0 mul a get opa wi
+s1 = add s1 mul a get opa add wi c
+s2 = add s2 mul a get opa w2
+s3 = add s3 mul a get opa add w2 c
+wi = add wi 1
+w2 = add w2 1
+xo = add xo 1
+end
+put oq 0 s0
+put oq 1 s1
+put oq 2 s2
+put oq 3 s3
+end
+
+fn xdt1p xo ulong xe ulong wi ulong to f64
+s = 0.0f64
+while lt xo xe bound 999999
+a = get oa xo
+s = add s mul a get opa wi
+wi = add wi 1
+xo = add xo 1
+end
+ret s
+end
+
+fn xdt4w xo ulong xe ulong wi ulong c ulong to void
+s0 = 0.0f64
+s1 = 0.0f64
+s2 = 0.0f64
+s3 = 0.0f64
+w2 = add wi add c c
+while lt xo xe bound 999999
+a = get oa xo
+s0 = add s0 mul a get oww wi
+s1 = add s1 mul a get oww add wi c
+s2 = add s2 mul a get oww w2
+s3 = add s3 mul a get oww add w2 c
+wi = add wi 1
+w2 = add w2 1
+xo = add xo 1
+end
+put oq 0 s0
+put oq 1 s1
+put oq 2 s2
+put oq 3 s3
+end
+
+fn xdt1w xo ulong xe ulong wi ulong to f64
+s = 0.0f64
+while lt xo xe bound 999999
+a = get oa xo
+s = add s mul a get oww wi
+wi = add wi 1
+xo = add xo 1
+end
+ret s
+end
+
+note dz[j] = sum over c < V of dl[c] wte[c][j], j < D (kvm lg 0 dz V D over the banks): four
+note columns per pass; each sum runs over bank 1's rows then on over bank 2's in the same
+note accumulator (mutant j restarts it at bank 2)
+fn xdz lo ulong zo ulong to void
+d = get xg 2
+j = ulong 0
+while le add j 4 d bound 999999
+xdz4 lo j
+kput4 add zo j
+j = add j 4
+end
+while lt j d bound 4
+put oa add zo j xdz1 lo j
+j = add j 1
+end
+end
+
+fn xdz4 lo ulong j ulong to void
+for m ulong 4
+put oq m 0.0f64
+end
+r1 = get xg 72
+le1 = add lo r1
+xvb4p lo le1 j
+if eq OMUTJ 0
+for m2 ulong 4
+put oq m2 0.0f64
+end
+end
+le2 = add lo get xg 0
+w = add get xg 73 j
+xvb4w le1 le2 w
+end
+
+fn xdz1 lo ulong j ulong to f64
+r1 = get xg 72
+le1 = add lo r1
+s = xvb1p lo le1 j
+if eq OMUTJ 0
+s = 0.0f64
+end
+le2 = add lo get xg 0
+w = add get xg 73 j
+ret xvb1w le1 le2 w s
+end
+
+note oq[m] += sum over xo <= i < xe of x[i] W[wi + m + (i - xo) D], m < 4; W in opa (xvb4p) or
+note oww (xvb4w); the sums continue from oq
+fn xvb4p xo ulong xe ulong wi ulong to void
+c = get xg 2
+s0 = get oq 0
+s1 = get oq 1
+s2 = get oq 2
+s3 = get oq 3
+while lt xo xe bound 999999
+a = get oa xo
+s0 = add s0 mul a get opa wi
+s1 = add s1 mul a get opa add wi 1
+s2 = add s2 mul a get opa add wi 2
+s3 = add s3 mul a get opa add wi 3
+wi = add wi c
+xo = add xo 1
+end
+put oq 0 s0
+put oq 1 s1
+put oq 2 s2
+put oq 3 s3
+end
+
+fn xvb4w xo ulong xe ulong wi ulong to void
+c = get xg 2
+s0 = get oq 0
+s1 = get oq 1
+s2 = get oq 2
+s3 = get oq 3
+while lt xo xe bound 999999
+a = get oa xo
+s0 = add s0 mul a get oww wi
+s1 = add s1 mul a get oww add wi 1
+s2 = add s2 mul a get oww add wi 2
+s3 = add s3 mul a get oww add wi 3
+wi = add wi c
+xo = add xo 1
+end
+put oq 0 s0
+put oq 1 s1
+put oq 2 s2
+put oq 3 s3
+end
+
+fn xvb1p xo ulong xe ulong wi ulong to f64
+c = get xg 2
+s = 0.0f64
+while lt xo xe bound 999999
+a = get oa xo
+s = add s mul a get opa wi
+wi = add wi c
+xo = add xo 1
+end
+ret s
+end
+
+fn xvb1w xo ulong xe ulong wi ulong s f64 to f64
+c = get xg 2
+while lt xo xe bound 999999
+a = get oa xo
+s = add s mul a get oww wi
+wi = add wi c
+xo = add xo 1
+end
+ret s
+end
+
+note dwte[c][j] += dl[c] z[j] for c < V, j < D (kger lg z 0 V D over the banks)
+fn xgerw lo ulong zo ulong to void
+d = get xg 2
+r1 = get xg 72
+for c ulong r1
+xger1b get oa add lo c mul c d zo
+end
+n2 = sub get xg 0 r1
+for c2 ulong n2
+x = get oa add add lo r1 c2
+xger1c x mul c2 d zo
+end
+end
+
+fn xger1b xv f64 gi ulong yi ulong to void
+d = get xg 2
+for i ulong d
+k = add gi i
+a = mul xv get oa add yi i
+put ogb k add get ogb k a
+end
+end
+
+fn xger1c xv f64 gi ulong yi ulong to void
+d = get xg 2
+for i ulong d
+k = add gi i
+a = mul xv get oa add yi i
+put oab k add get oab k a
+end
 end
 
 note activation slot of layer l
@@ -690,8 +1116,7 @@ x = get xg 25
 tt = get xg 1
 for t ulong tt
 o = add x mul t d
-s = mul get xtk t d
-xcpw o s d
+xcpe o get xtk t
 end
 end
 
@@ -926,9 +1351,8 @@ xo = add get xg 25 r
 sf = add get xg 30 t
 z = get xg 34
 lg = get xg 37
-x = mul v d
-frms xo x z sf
-klogit z lg v d
+frms xo 0 z sf
+xlogit z lg
 if eq get xg 56 1
 x = xhash lg v
 put xkh t x
@@ -949,9 +1373,9 @@ lg = get xg 37
 c = bitcast f64 get xg 43
 kdlog lg v y c
 z = get xg 34
-kger lg z 0 v d
+xgerw lg z
 z = get xg 35
-kvm lg 0 z v d
+xdz lg z
 xhb2 xo sf r
 end
 
@@ -959,9 +1383,8 @@ fn xhb2 xo ulong sf ulong r ulong to void
 d = get xg 2
 dh = add get xg 26 r
 ozero dh d
-x = mul get xg 0 d
 dz = get xg 35
-brms xo x sf dz dh
+brms xo 0 sf dz dh
 end
 
 note ---- backward ----
@@ -1182,9 +1605,8 @@ fn xembb to void
 d = get xg 2
 tt = get xg 1
 for t ulong tt
-o = mul get xtk t d
 x = add get xg 26 mul t d
-kaxpg o x 1.0f64 d
+xembg get xtk t x
 end
 end
 fn xseq to f64
@@ -1225,6 +1647,8 @@ fn xblock j ulong to void
 put xg 40 j
 put xg 41 1
 xzg 0 add get xg 17 mul get xg 18 get xg 9
+n1 = mul get xg 72 get xg 2
+xzwg n1 sub get xg 74 n1
 r = div get xg 6 get xg 10
 s = get xg 13
 lb = mul get xg 10 get xg 8
@@ -1242,9 +1666,10 @@ note the resident gradient windows into region j
 fn xstres j ulong to void
 jp = mul j get xg 8
 d = get xg 2
-vd = mul get xg 0 d
-xg2m 1 jp 0 vd
-xg2m 1 add jp get xg 65 vd d
+n1 = mul get xg 72 d
+xb2m 1 jp n1
+xc2m 1 add jp n1 sub get xg 74 n1
+xg2m 1 add jp get xg 65 0 d
 lsr = get xg 9
 ws = get xg 17
 for l ulong get xg 18
@@ -1597,6 +2022,7 @@ cmdtrain
 ret
 end
 xload 2
+xneeda
 odopen 3
 un = oargu 4
 ev = oargu 5
@@ -1647,13 +2073,15 @@ cmdeval
 ret
 end
 xload 2
+xneeda
 ww = oargu 4
 v = get xg 0
 if gt v 256
 if eq na 5
-exit 2
-end
+put xg 75 1
+else
 obload 5 v
+end
 end
 odopen 3
 tt = get xg 1
@@ -1669,13 +2097,13 @@ nb = ulong 0
 for w ulong ww
 xrow mul w tt
 ls = add ls xseq
-if gt v 256
+if xbyte v
 nb = add nb xevnb
 end
 end
 lo = div ls f64 ww
 bp = div lo 0.6931471805599453
-if gt v 256
+if xbyte v
 bp = div mul bp f64 mul ww tt f64 nb
 end
 oputc 69
@@ -1689,6 +2117,14 @@ oputc 32
 oputl rmic bp
 oputc 10
 oflush
+end
+
+note true when V > 256 and merges were given (bits per byte); token mode (xg 75) keeps bits per token
+fn xbyte v ulong to bool
+if le v 256
+ret false
+end
+ret eq get xg 75 0
 end
 
 fn xevnb to ulong
@@ -1776,14 +2212,14 @@ note one decode position t (token xtk[t]) through every layer; logits into LG wh
 fn xdpos t ulong hd bool to void
 d = get xg 2
 xr = get xg 49
-xcpw xr mul get xtk t d d
+xcpe xr get xtk t
 for l ulong get xg 5
 xdlay l t
 end
 if hd
 z = get xg 34
-frms xr mul get xg 0 d z add get xg 55 2
-klogit z get xg 37 get xg 0 d
+frms xr 0 z add get xg 55 2
+xlogit z get xg 37
 end
 end
 
@@ -1888,9 +2324,10 @@ tm = oargu 5
 v = get xg 0
 if gt v 256
 if eq na 7
-exit 2
-end
+put xg 75 1
+else
 obload 7 v
+end
 end
 xgd
 put xg 48 0
@@ -1906,7 +2343,7 @@ if eq c 0
 break
 end
 if gt v 256
-obtput c
+xtokput c
 else
 oputc c
 end
@@ -1916,7 +2353,46 @@ end
 oflush
 end
 
+note a generated token: decoded bytes (merges given) or, in token mode, u16 little-endian
+fn xtokput c ulong to void
+if eq get xg 75 1
+oputc and c 255
+oputc shr c 8
+else
+obtput c
+end
+end
+
+note token-mode prompt: argument 6 is a file of u16 little-endian tokens, each < V, at most T of
+note them (exit 21 odd length, 2 empty or longer than T, 25 a token >= V)
+fn xprom16 v ulong to void
+n = ofsz 6
+if ne rem n 2 0
+exit 21
+end
+m = div n 2
+if or eq m 0 gt m get xg 1
+exit 2
+end
+r = oprd 6 0 0 n
+if ne r n
+exit 70
+end
+put og 49 2
+for i ulong m
+c = odtk i
+if ge c v
+exit 25
+end
+xpush c
+end
+end
+
 fn xprompt v ulong to void
+if eq get xg 75 1
+xprom16 v
+ret
+end
 r = oargr 6
 if gt v 256
 if or lt r 0 gt r 4000
@@ -1944,6 +2420,7 @@ if ne oargc 4
 exit 2
 end
 xload 2
+xneeda
 odopen 3
 xrow 0
 put xg 24 1
@@ -1987,6 +2464,7 @@ cmdgchk
 ret
 end
 xload 2
+xneeda
 odopen 3
 g = get xg 10
 xmap 1 add mul g get xg 8 get xg 6 1
@@ -2046,14 +2524,14 @@ end
 note a parameter's new value in the master and in its window (a staged layer is restaged)
 fn xpp i ulong v f64 to void
 xmp 0 i v
-vd = mul get xg 0 get xg 2
+vd = get xg 74
 if lt i vd
-put ow i v
+xpwte i v
 ret
 end
 gf = get xg 65
 if ge i gf
-put ow add vd sub i gf v
+put ow sub i gf v
 ret
 end
 lsr = get xg 9
