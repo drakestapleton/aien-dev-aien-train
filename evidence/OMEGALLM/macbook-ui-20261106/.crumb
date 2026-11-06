@@ -1,0 +1,19 @@
+{
+  "extensions": {
+    "generated": {
+      "children": [],
+      "children_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "compiled_at": "2026-11-06T16:38:25Z",
+      "compiler": "crumb-compile/1",
+      "digest": "sha256:1eef03c5f9a78a49018d97c25f77233758a595ead1e8a21ce507327abafc30b8",
+      "evidence_files": 8,
+      "evidence_root": "sha256:e14d20f963baafdbb04aaa4834a9a671e7e2c9b874f655fd9326bc235234859c",
+      "files": 8,
+      "generated_at_commit": "77cffb6d6698f59b0644552bcbfe0b639da94abe",
+      "source_tree": "sha256:25010a1a10e4dc75ce9c0d07c13f5b0f2abd8d9a12476a7dbb9287b54f53f114"
+    }
+  },
+  "name": "macbook-ui-20261106",
+  "purpose": "Local UI streaming, refusal, sampling parity, Aienux resume and pinned artifact evidence",
+  "schema_version": "1.0.0"
+}

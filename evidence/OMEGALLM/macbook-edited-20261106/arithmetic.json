@@ -1,0 +1,16 @@
+{
+  "case": "arithmetic",
+  "prompt": "Question: What is 17 plus 25?\nAnswer:",
+  "checkpoint_sha256": "131f7e3f26f5494a9882d8107096d4209651978a5bf35eccb3f953203d1f07d6",
+  "seed": 42,
+  "tokens": 32,
+  "temperature_milli": 0,
+  "omega_edited": {
+    "text": " \"It's 12!\"\nAnabelle was so excited. She wanted to know more.\nAnabelle",
+    "stderr": "",
+    "exit": 0,
+    "wall_seconds": 23.20632570795715
+  },
+  "original_evidence": "../macbook-20261106/arithmetic.json",
+  "qwen_omega_evidence": "../macbook-20261106/arithmetic-omega-backend.json"
+}

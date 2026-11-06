@@ -1,0 +1,25 @@
+{
+  "case": "extraction",
+  "prompt": "Read this: Maya has three red apples.\nQuestion: How many apples does Maya have? Answer with only the number.\nAnswer:",
+  "qwen": {
+    "text": " 3",
+    "wall_seconds": 0.17388849996495992,
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 26,
+      "prompt_ms": 152.139,
+      "prompt_per_token_ms": 5.851500000000001,
+      "prompt_per_second": 170.8963513628984,
+      "predicted_n": 3,
+      "predicted_ms": 18.994,
+      "predicted_per_token_ms": 9.497,
+      "predicted_per_second": 105.29640939243971
+    }
+  },
+  "omega": {
+    "text": " \"These apples are five apples.\"\nAnswer: \"These apples are five apples.\"\nAnswer:",
+    "stderr": "",
+    "exit": 0,
+    "wall_seconds": 34.84761262498796
+  }
+}

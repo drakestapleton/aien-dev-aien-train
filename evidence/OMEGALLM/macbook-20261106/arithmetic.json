@@ -1,0 +1,25 @@
+{
+  "case": "arithmetic",
+  "prompt": "Question: What is 17 plus 25?\nAnswer:",
+  "qwen": {
+    "text": " 17 + 25 = 42\nTherefore, the answer is 42.",
+    "wall_seconds": 0.34758412500377744,
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 14,
+      "prompt_ms": 131.258,
+      "prompt_per_token_ms": 9.37557142857143,
+      "prompt_per_second": 106.66016547562813,
+      "predicted_n": 22,
+      "predicted_ms": 213.908,
+      "predicted_per_token_ms": 10.186095238095238,
+      "predicted_per_second": 98.17304635637751
+    }
+  },
+  "omega": {
+    "text": " \"It's 12!\"\nAnabelle was so excited. She wanted to know more.\nAnabelle",
+    "stderr": "",
+    "exit": 0,
+    "wall_seconds": 22.09368458308745
+  }
+}

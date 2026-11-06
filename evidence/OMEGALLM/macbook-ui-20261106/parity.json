@@ -1,0 +1,14 @@
+[
+  {
+    "temp": 0,
+    "tokens": 8,
+    "equal": true,
+    "text": " The kitten was sad and scared. The"
+  },
+  {
+    "temp": 800,
+    "tokens": 8,
+    "equal": true,
+    "text": " The kitten was sad and hungry. The"
+  }
+]

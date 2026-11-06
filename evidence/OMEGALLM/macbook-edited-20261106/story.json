@@ -1,0 +1,16 @@
+{
+  "case": "story",
+  "prompt": "Once upon a time, a little robot found a lost kitten.",
+  "checkpoint_sha256": "131f7e3f26f5494a9882d8107096d4209651978a5bf35eccb3f953203d1f07d6",
+  "seed": 42,
+  "tokens": 32,
+  "temperature_milli": 0,
+  "omega_edited": {
+    "text": " The kitten was sad and scared. The robot wanted to help the kitten find its home. So, the robot and the kitten went on a journey to find the",
+    "stderr": "",
+    "exit": 0,
+    "wall_seconds": 17.245647500036284
+  },
+  "original_evidence": "../macbook-20261106/story.json",
+  "qwen_omega_evidence": "../macbook-20261106/story-omega-backend.json"
+}

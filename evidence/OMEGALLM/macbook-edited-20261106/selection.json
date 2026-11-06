@@ -1,0 +1,20 @@
+{
+  "source_commit": "77cffb6d6698f59b0644552bcbfe0b639da94abe",
+  "runner_sha256": "5e20559a9db131b8859fc15c67ac69b598884485ee452d7456d6444e606af149",
+  "source_sha256": "415a69ec083378dfbfb72513f23a21384f4686f9e124baf53d92f1ca19baf283",
+  "merges_sha256": "73a29baf97619a746a21232c403bf08af71a76e48b3b2cde6d64dab766083882",
+  "hardware": "MacBook Air M2, 8 GB",
+  "execution": "Lima 2.2.0, Apple Virtualization.framework, Debian ARM64, 2 vCPUs, 2 GiB RAM",
+  "notes": "Operator selected Astra\u2019s November 4 inference edit for local exploration. Original checkpoint preserved. Runner and tokenizer unchanged. No new training. Published 0.016192% story-loss gain does not establish math or reasoning improvement. Three prompts are exploratory, not a benchmark.",
+  "original_checkpoint_sha256": "a53ced7265818c8f6197449315e9ca4082721665022fec4f81d4538e8d6c2d0f",
+  "checkpoint_sha256": "131f7e3f26f5494a9882d8107096d4209651978a5bf35eccb3f953203d1f07d6",
+  "checkpoint_filename": "omega-v2-edited-20261104.ck",
+  "experiment_candidate": "alpha-950-gain-1000.ck",
+  "experiment_pr": "https://github.com/aien-dev/aien-train/pull/63",
+  "alpha_milli": 950,
+  "gain_milli": 1000,
+  "local_copy_hash_verified": true,
+  "guest_copy_hash_verified": true,
+  "load_eval_output": "E 60000 1 1024131 375240",
+  "launcher_syntax_and_startup": "pass"
+}

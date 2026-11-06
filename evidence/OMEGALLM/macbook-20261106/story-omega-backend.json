@@ -1,0 +1,18 @@
+{
+  "case": "story",
+  "prompt": "Once upon a time, a little robot found a lost kitten.",
+  "backend": "explicit Omega device, zero GPU layers, flash attention off",
+  "text": " The kitten was very cute and the little robot loved it very much. The little robot decided to take the kitten home. The kitten was very happy and the little",
+  "wall_seconds": 3.15671624999959,
+  "timings": {
+    "cache_n": 0,
+    "prompt_n": 13,
+    "prompt_ms": 707.016,
+    "prompt_per_token_ms": 54.38584615384615,
+    "prompt_per_second": 18.387136924765493,
+    "predicted_n": 32,
+    "predicted_ms": 2430.825,
+    "predicted_per_token_ms": 78.41370967741935,
+    "predicted_per_second": 12.752871967336192
+  }
+}
