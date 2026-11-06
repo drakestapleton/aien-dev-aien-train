@@ -1977,14 +1977,20 @@ ocpush c
 end
 
 note svmlog: the next-token logits into oa[og 27, og 27 + V). v4 decodes the positions the cache
-note lacks (xg 47 .. xg 48), the head only at the last; v3 runs the whole forward (cmdsamp's osstep)
-fn svmlog sv edit ulong 64 to void
+note lacks (xg 47 .. xg 48), the head only at the last (every 32 positions of a long
+note prefill the side connections and the queue are served, as between tokens); v3 runs the whole
+note forward (cmdsamp's osstep)
+fn svmlog sv edit ulong 64 bd edit uchar 983040 to void
 if eq get sv 41 4
 cn = get xg 48
 while lt get xg 47 cn bound 65537
 cv = get xg 47
 xdpos cv eq cv sub cn 1
 put xg 47 add cv 1
+if eq and cv 31 31
+svside bd sv 0
+svqpoll
+end
 end
 ret
 end
@@ -2090,12 +2096,13 @@ put sv 50 0
 tmo = long mul get sv 27 1000000
 for g ulong lim
 svside bd sv tmo
+svqpoll
 if svgone cs
 put sv 8 4
 put sv 21 499
 ret -104
 end
-if not svtake wb sv
+if not svtake wb sv bd
 break
 end
 r = svpend cs io ob wb sv 0
@@ -2122,8 +2129,8 @@ end
 
 note svtake: one sampled token into the context and the content; false when it ends the output
 note (sv8: 1 an end token (svisend) or a stop string, 2 the content would pass its 65536 bytes)
-fn svtake wb edit uchar 1073664 sv edit ulong 64 to bool
-c = svdraw sv
+fn svtake wb edit uchar 1073664 sv edit ulong 64 bd edit uchar 983040 to bool
+c = svdraw sv bd
 if svisend sv c
 put sv 8 1
 ret false
@@ -2205,7 +2212,7 @@ end
 
 note svdraw: the next token (cmdsamp's step osstep, or svdrawf with top_k/top_p on, or the forced
 note tokens of ollm_test_output then 0), advancing the seed stream when sampling
-fn svdraw sv edit ulong 64 to ulong
+fn svdraw sv edit ulong 64 bd edit uchar 983040 to ulong
 if eq get sv 25 1
 g = get sv 7
 if lt g get sv 24
@@ -2216,7 +2223,7 @@ ret 256
 end
 ret 0
 end
-svmlog sv
+svmlog sv bd
 if eq get sv 7 0
 put sv 49 svlhash
 end
@@ -2546,6 +2553,226 @@ put sv 33 q
 put sv 8 3
 end
 
+note ======== request queue (one generation slot, FIFO of SVQCAP waiting chat completions)
+
+note A chat completion that arrives while another generates is read whole (the pending-slot and
+note head/body deadline protections of svwait and svside2 apply first), then waits in one of
+note SVQCAP = 32 queue slots (its connection state cs, io and body copied there; the descriptor stays
+note open) and is served in arrival order once the generation ends: the main loop takes the oldest
+note waiting entry before it accepts new connections. Only with all 32 slots taken is the request
+note answered 503 queue_full with Retry-After: 1. A waiting client that leaves (svqpoll: a peek
+note reads end of stream or an error, checked between generated tokens) frees its slot at once,
+note logged as status 499 finish 4. Health reports in_flight, queued and capacity. Why 32: an
+note agent fleet of a few clients each holding at most one request in flight stays far below it,
+note and the slots cost 32 x (2560 + 131072 + 983040) bytes = 35.7 MB of globals (the bodies at
+note full jsmaxn size, so any request the idle server accepts can also wait).
+const SVQCAP ulong 32
+global svqcs ulong 10240
+global svqio uchar 4194304
+note the bodies: slots 0 .. 15 in svqb0, 16 .. 31 in svqb1 (an array holds at most 2^24 elements)
+global svqb0 uchar 15728640
+global svqb1 uchar 15728640
+note per slot: 0 free / 1 waiting, body length, arrival sequence, arrival monons
+global svqst ulong 32
+global svqln ulong 32
+global svqsq ulong 32
+global svqat ulong 32
+note 0 waiting count, 1 next sequence, 2 in flight (0 or 1)
+global svqn ulong 4
+text svtq503 "{\"error\":{\"message\":\"the request queue is full (32 waiting chat completions): retry after 1 s\",\"type\":\"server_error\",\"param\":null,\"code\":\"queue_full\"}}"
+text svthl1 "{\"status\":\"ok\",\"in_flight\":"
+text svthl2 ",\"queued\":"
+text svthl3 ",\"capacity\":"
+text svthl4 ",\"busy\":"
+text svttru "true}"
+text svtfal "false}"
+
+note svqput: the request read on cs/io with body bd[0, n) into a free slot; false when all are taken
+fn svqput cs edit ulong 320 io edit uchar 131072 bd edit uchar 983040 n ulong to bool
+s = jsnone
+for i ulong SVQCAP
+if eq get svqst i 0
+s = i
+break
+end
+end
+if eq s jsnone
+ret false
+end
+b = mul s 320
+for k ulong 320
+put svqcs add b k get cs k
+end
+b = mul s 131072
+for k ulong 131072
+put svqio add b k get io k
+end
+b = mul and s 15 983040
+if lt s 16
+for k ulong n
+put svqb0 add b k get bd k
+end
+else
+for k ulong n
+put svqb1 add b k get bd k
+end
+end
+put svqln s n
+put svqsq s get svqn 1
+put svqat s ulong monons
+put svqst s 1
+put svqn 1 add get svqn 1 1
+put svqn 0 add get svqn 0 1
+ret true
+end
+
+note svqold: the waiting slot of the lowest sequence, or jsnone
+fn svqold to ulong
+s = jsnone
+q = jsnone
+for i ulong SVQCAP
+if eq get svqst i 1
+if lt get svqsq i q
+q = get svqsq i
+s = i
+end
+end
+end
+ret s
+end
+
+note svqget: slot s back into cs, io and bd; frees it; the body length
+fn svqget s ulong cs edit ulong 320 io edit uchar 131072 bd edit uchar 983040 to ulong
+b = mul s 320
+for k ulong 320
+put cs k get svqcs add b k
+end
+b = mul s 131072
+for k ulong 131072
+put io k get svqio add b k
+end
+n = get svqln s
+b = mul and s 15 983040
+if lt s 16
+for k ulong n
+put bd k get svqb0 add b k
+end
+else
+for k ulong n
+put bd k get svqb1 add b k
+end
+end
+put svqst s 0
+put svqn 0 sub get svqn 0 1
+ret n
+end
+
+note svqpoll: close and free every waiting slot whose client has left (logged 499)
+fn svqpoll to void
+if eq get svqn 0 0
+ret
+end
+for i ulong SVQCAP
+if eq get svqst i 1
+fd = get svqcs mul i 320
+r = recv int fd svpk 0 1 66
+gone = eq r 0
+if and lt r 0 and ne r -11 ne r -4
+gone = true
+end
+if gone
+y = fclose int fd
+put svqst i 0
+put svqn 0 sub get svqn 0 1
+svlogq 499 4 div sub ulong monons get svqat i 1000000
+end
+end
+end
+end
+
+fn svlogq st ulong fin ulong ms ulong to void
+oputc 67
+oputc 32
+oputu st
+oputc 32
+oputc 48
+oputc 32
+oputc 48
+oputc 32
+oputu fin
+oputc 32
+oputu ms
+oputc 32
+oputc 48
+oputc 32
+oputc 48
+oputc 32
+oputu ms
+oputc 10
+oflush
+end
+
+note svq503: queue_full with Retry-After: 1
+fn svq503 cs edit ulong 320 io edit uchar 131072 to long
+r = hrspst cs io 503
+r = hfe r hhname cs io svtctyp
+r = hfe r hhval cs io svtjson
+r = hfe r hhname cs io svtra
+r = hfe r hhval cs io svone
+r = hfe r hhend cs io 0 len svtq503
+r = hfe r hput cs io svtq503
+ret hfe r hwfin cs io
+end
+
+note svhb: text t into b at p; the next p
+fn svhb b edit uchar 160 p ulong t view uchar * to ulong
+q = p
+for i ulong len t
+put b q get t i
+q = add q 1
+end
+ret q
+end
+
+fn svhd b edit uchar 160 p ulong v ulong to ulong
+d = new uchar 20 0
+i = ulong 20
+x = v
+for it ulong 20
+i = sub i 1
+put d i uchar add rem x 10 48
+x = div x 10
+if eq x 0
+break
+end
+end
+q = p
+for k ulong sub 20 i
+put b q get d add i k
+q = add q 1
+end
+ret q
+end
+
+note svhlth: GET /health {"status":"ok","in_flight":N,"queued":Q,"capacity":32,"busy":B}
+fn svhlth cs edit ulong 320 io edit uchar 131072 to long
+b = new uchar 160 0
+f = get svqn 2
+p = svhb b 0 svthl1
+p = svhd b p f
+p = svhb b p svthl2
+p = svhd b p get svqn 0
+p = svhb b p svthl3
+p = svhd b p SVQCAP
+p = svhb b p svthl4
+if eq f 1
+p = svhb b p svttru
+else
+p = svhb b p svtfal
+end
+ret svstat cs io 200 view part b 0 p
+end
+
 note ======== requests during a generation
 
 note svwait: wait up to tmo ns for the listener or a pending connection (svpfd); the connection to
@@ -2652,7 +2879,9 @@ c = svwait sv 0
 end
 end
 
-note svside2: one request while a completion generates: health busy, models, else 503 (logged)
+note svside2: one request while a completion generates: health, models, a chat completion into the
+note queue (svqput; 503 queue_full when full), else 503 server_busy (logged; a queued one is not
+note logged or closed here: its slot owns the descriptor)
 fn svside2 c long bd edit uchar 983040 sv edit ulong 64 to void
 cs = new ulong 320 0
 io = new uchar 131072 0
@@ -2669,6 +2898,9 @@ r = hreqrd cs io
 if gt r 0
 put cs HKEEP 0
 st = svbusy cs io bd
+if eq st 0
+ret
+end
 svlogs st
 else
 if lt r 0
@@ -2680,8 +2912,25 @@ end
 
 fn svbusy cs edit ulong 320 io edit uchar 131072 bd edit uchar 983040 to ulong
 if and hispath cs io svphlth hismeth cs io svmget
-x = svstat cs io 200 svthbsy
+x = svhlth cs io
 ret 200
+end
+if and hispath cs io svpchat hismeth cs io svmpost
+n = hbodyall cs io bd
+if lt n 0
+put cs HKEEP 0
+if eq n HEBIG
+x = hrsperr cs io 413
+ret 413
+end
+x = hrsperr cs io 400
+ret 400
+end
+if svqput cs io bd ulong n
+ret 0
+end
+x = svq503 cs io
+ret 503
 end
 if and hispath cs io svpmods hismeth cs io svmget
 x = svstat cs io 200 svtmods
@@ -2697,7 +2946,7 @@ fn svlogs st ulong to void
 oputc 67
 oputc 32
 oputu st
-for i ulong 6
+for i ulong 7
 oputc 32
 oputc 48
 end
@@ -2731,6 +2980,8 @@ oputc 32
 oputu get sv 44
 oputc 32
 oputu get sv 45
+oputc 32
+oputu get sv 54
 oputc 10
 oflush
 end
@@ -2784,9 +3035,17 @@ put sv 21 400
 svlog sv
 ret hrsperr cs io 400
 end
+put svqn 2 1
+r = svchatb cs io bd ulong n wb sv
+put svqn 2 0
+ret r
+end
+
+note svchatb: a chat completion whose body bd[0, n) has been read (svchat, or svqrun for a queued one)
+fn svchatb cs edit ulong 320 io edit uchar 131072 bd edit uchar 983040 n ulong wb edit uchar 1073664 sv edit ulong 64 to long
 note generation outlasts the 60 s body deadline: only the idle limit applies from here
 hsetdl cs 0
-e = svparse bd ulong n wb sv
+e = svparse bd n wb sv
 if eq e 0
 e = svprep wb sv
 end
@@ -2856,7 +3115,10 @@ ret svend cs io wb sv 15 405
 end
 if hispath cs io svphlth
 if hismeth cs io svmget
-ret svok cs io sv svthlth
+put sv 21 200
+r = svhlth cs io
+svlog sv
+ret r
 end
 ret svend cs io wb sv 15 405
 end
@@ -2877,6 +3139,7 @@ put sv 7 0
 put sv 8 0
 put sv 44 0
 put sv 45 0
+put sv 54 0
 end
 
 note svend: error code e with status st, logged
@@ -2924,6 +3187,20 @@ put cs HKEEP 0
 x = svroute cs io bd wb sv
 end
 x = hclose cs
+end
+
+note svqrun: serve queued slot s (its clock from its arrival; sv54 the wait in ms), then close it
+fn svqrun s ulong cs edit ulong 320 io edit uchar 131072 bd edit uchar 983040 wb edit uchar 1073664 sv edit ulong 64 to void
+ta = get svqat s
+n = svqget s cs io bd
+hsettmo cs 10000000000 10000000000
+svbeg sv
+put sv 11 ta
+put sv 54 div sub ulong monons ta 1000000
+put svqn 2 1
+x = svchatb cs io bd n wb sv
+put svqn 2 0
+y = hclose cs
 end
 
 note svpre: whether the argument in oarg (length n) starts with t
@@ -3036,8 +3313,23 @@ end
 oputu port
 oputc 10
 oflush
+svloop cs io bd wb sv mx
+y = fclose int lf
+end
+
+note svloop: serve until mx requests (queued first, oldest first; then new connections)
+fn svloop cs edit ulong 320 io edit uchar 131072 bd edit uchar 983040 wb edit uchar 1073664 sv edit ulong 64 mx ulong to void
 nc = ulong 0
 for j ulong 999999999
+s = svqold
+if ne s jsnone
+svqrun s cs io bd wb sv
+nc = add nc 1
+if ge nc mx
+break
+end
+continue
+end
 c = svwait sv 60000000000
 if ge c 0
 svconn c cs io bd wb sv
@@ -3047,7 +3339,6 @@ break
 end
 end
 end
-y = fclose int lf
 end
 
 note ======== chatenc MERGES IN.jsonl OUT.u16 [MASK.u8]
