@@ -1653,7 +1653,7 @@ if gt v 256
 if eq na 5
 exit 2
 end
-obload 5 v
+otload 5 v
 end
 odopen 3
 tt = get xg 1
@@ -1694,7 +1694,7 @@ end
 fn xevnb to ulong
 s = ulong 0
 for t ulong get xg 1
-s = add s obtlen get xtk add t 1
+s = add s otlen get xtk add t 1
 end
 ret s
 end
@@ -1890,23 +1890,23 @@ if gt v 256
 if eq na 7
 exit 2
 end
-obload 7 v
+otload 7 v
 end
 xgd
 put xg 48 0
 put xg 47 0
-xpush 0
+xpush otstart
 xprompt v
 for g ulong nn
 c = xdstep st tm
 if ne tm 0
 st = add st 11400714819323198485
 end
-if eq c 0
+if otstop c
 break
 end
 if gt v 256
-obtput c
+otput c
 else
 oputc c
 end
@@ -1922,7 +1922,7 @@ if gt v 256
 if or lt r 0 gt r 4000
 exit 2
 end
-np = obprompt 6
+np = otprompt 6
 for i ulong np
 xpush get obtk i
 end

@@ -66,11 +66,11 @@ here=$(cd "$(dirname "$0")/../.." && pwd)
 TARGET=${TARGET:-aarch64}
 case "$TARGET" in
   aarch64|gb10) PIN=2c82480596bbdc50cda9626866209ef662d5834f278f839ff4ce0250c495029f
-           OMC=${OMC:-$here/../omega-mv/seed/out/omc} lead= plat=lio.om pool=lpool.om v4=v4.om ext= ;;
+           OMC=${OMC:-$here/../omega-mv/seed/out/omc} lead= plat=lio.om pool=lpool.om v4=v4.om tk=1 ext= ;;
   x86linux) PIN=be8c51301307555254fc59e351d281aae1aa096d91521777e33a41c8b446448a
-            OMC=${OMC:-$here/../omega-mv-x86/seed/out/omc} lead='target x86linux' plat=lio.om pool=lpool.om v4=v4.om ext= ;;
+            OMC=${OMC:-$here/../omega-mv-x86/seed/out/omc} lead='target x86linux' plat=lio.om pool=lpool.om v4=v4.om tk=1 ext= ;;
   x86efi) PIN=3ad9f10f64309e7acf8a725082b28e23a2a4aeb07e98322fb4dc0fcd8fc93194
-          OMC=${OMC:-$here/../omega-efi-ident/seed/out/omc} lead='target x86efi' plat=eio.om pool=epool.om v4=no4.om ext=.efi ;;
+          OMC=${OMC:-$here/../omega-efi-ident/seed/out/omc} lead='target x86efi' plat=eio.om pool=epool.om v4=no4.om tk= ext=.efi ;;
   *) echo "TARGET must be aarch64, gb10, x86linux or x86efi" >&2; exit 2 ;;
 esac
 OUT=${OUT:-$here/../build}
@@ -100,7 +100,9 @@ fi
   [ -z "$lead" ] || printf '%s\n' "$lead"
   # shellcheck disable=SC2086
   [ -z "$pre" ] || cat $pre
-  cat "$src/math.om" "$src/data.om" "$src/$pool" "$src/model.om" "$src/adam.om" "$src/ckpt.om" "$src/bpe.om" "$src/cli.om" "$src/$v4" "$src/$plat" "$post"
+  cat "$src/math.om" "$src/data.om" "$src/$pool" "$src/model.om" "$src/adam.om" "$src/ckpt.om" "$src/bpe.om" "$src/cli.om"
+  [ -z "$tk" ] || cat "$src/tok/tkcore.om" "$src/otok.om"
+  cat "$src/$v4" "$src/$plat" "$post"
   [ "$TARGET" = gb10 ] || cat "$src/nogpu.om"
 } > "$OUT/ollm.om"
 if [ "$TARGET" = gb10 ]; then
