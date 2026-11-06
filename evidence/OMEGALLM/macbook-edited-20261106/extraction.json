@@ -1,0 +1,16 @@
+{
+  "case": "extraction",
+  "prompt": "Read this: Maya has three red apples.\nQuestion: How many apples does Maya have? Answer with only the number.\nAnswer:",
+  "checkpoint_sha256": "131f7e3f26f5494a9882d8107096d4209651978a5bf35eccb3f953203d1f07d6",
+  "seed": 42,
+  "tokens": 32,
+  "temperature_milli": 0,
+  "omega_edited": {
+    "text": " \"These apples are five apples. They are all red.\"\nRaya: \"But I want one more apple. They are so",
+    "stderr": "",
+    "exit": 0,
+    "wall_seconds": 33.34238437504973
+  },
+  "original_evidence": "../macbook-20261106/extraction.json",
+  "qwen_omega_evidence": "../macbook-20261106/extraction-omega-backend.json"
+}

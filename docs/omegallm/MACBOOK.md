@@ -5,7 +5,33 @@ VM using Apple Virtualization.framework. This is local CPU execution, not a
 native macOS executable or Apple GPU acceleration. The model was trained on
 Spark; inference uses the MacBook only. No new training is claimed.
 
-## Reproduce
+## Active checkpoint on Drake's MacBook
+
+At the operator's request, the local `Omega LLM.command` launcher now selects
+Astra's November 4 inference experiment: `alpha-950-gain-1000.ck`, installed as
+`omega-v2-edited-20261104.ck`. This is the 95% final / 5% midpoint weight edit
+from [the weight-edit experiment](WEIGHT-EDIT.md), with final gain 1.00.
+The original `omega-v2.ck` is preserved alongside it. The runner and tokenizer
+are unchanged. No new training or change to the repository's recommended
+training checkpoint is implied.
+
+The edited file's SHA-256 is
+`131f7e3f26f5494a9882d8107096d4209651978a5bf35eccb3f953203d1f07d6`.
+The Mac and guest copies match. Its one-window local load/evaluation returns
+`E 60000 1 1024131 375240`; this smoke check is not a quality benchmark.
+The experiment's complete held-out result improved story loss by only
+0.016192%, below its 0.1% preference threshold. It did not establish better
+arithmetic or reasoning. Edited checkpoints are for inference, not training
+continuation with the preserved optimizer state.
+
+Local fixed-prompt checks for this selection are in
+`evidence/OMEGALLM/macbook-edited-20261106/`. The edited model still answers
+17 + 25 with 12 and describes three apples as five. These probes do not show
+a math or extraction improvement. The original results below remain unchanged
+for comparison. To reproduce with the active edited model, substitute
+`omega-v2-edited-20261104.ck` for `omega-v2.ck` in the commands below.
+
+## Reproduce the original baseline
 
 Build the current CPU runner on Linux ARM64 with the pinned compiler using
 `OMC=/path/to/pinned/omc OUT=/path/to/output sh tests/omegallm/build.sh`.
