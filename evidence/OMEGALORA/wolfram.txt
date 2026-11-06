@@ -1,0 +1,18 @@
+Wolfram Language evaluation, 2026-11-06 (WolframLanguageEvaluator). Query:
+  {N[1/Log[2],20], N[Log[2],20], N[Sqrt[2],20], N[E,20], N[Log[10],20], 2^52, 2^52-1,
+   1023*2^52, 2047*2^52, N[2*Log[2]^15/15!,6], N[(Sqrt[2]-1)/(Sqrt[2]+1),10],
+   N[With[{s=(Sqrt[2]-1)/(Sqrt[2]+1)}, 2 s^43/(43 (1-s^2))],6]}
+Result:
+  1/ln2                 1.4426950408889634074
+  ln2                   0.69314718055994530942
+  sqrt2                 1.4142135623730950488
+  e                     2.7182818284590452354
+  ln10                  2.3025850929940456840
+  2^52                  4503599627370496
+  2^52 - 1              4503599627370495         (f64 mantissa mask)
+  1023 * 2^52           4607182418800017408      (bits of 1.0)
+  2047 * 2^52           9218868437227405312      (bits of +inf)
+  exp remainder bound   6.26487e-15              (degree 14 Taylor on [0, ln2), e^ln2 ln2^15 / 15!)
+  log |s| max           0.1715728753             ((sqrt2 - 1)/(sqrt2 + 1), mantissa folded to [sqrt2/2, sqrt2])
+  log tail bound        5.77868e-35              (atanh series cut after s^41)
+lora.om uses these constants verbatim; its gate 13 checks fexp(1) and flog(10) against e and ln10 above to 1e-14.
