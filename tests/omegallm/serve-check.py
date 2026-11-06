@@ -23,6 +23,7 @@ import time
 PORT, OLLM, CK, MERGES = int(sys.argv[1]), sys.argv[2], sys.argv[3], sys.argv[4]
 TPORT = int(sys.argv[5]) if len(sys.argv) > 5 else 0
 ALLEN = sys.argv[6] if len(sys.argv) > 6 else "/opt/allen-chat/system-prompt.txt"
+TLOG = os.environ.get("SERVE_TLOG", "")
 HOST = "127.0.0.1"
 results = []
 LAST = {}
@@ -196,6 +197,7 @@ for name, sv in (("refuse_stop_empty", ""), ("refuse_stop_nine", ["a"] * 9), ("r
 s8 = dict(base, temperature=0.8)
 check("sample_differs_from_greedy", sample8 != greedy, f"sample={sample8!r} greedy={greedy!r}")
 for name, extra, want in (("top_k1_is_greedy", '"top_k": 1', greedy), ("top_p_min_is_greedy", '"top_p": 0.000001', greedy),
+                          ("top_p0_is_greedy", '"top_p": 0', greedy),
                           ("top_k0_is_sample", '"top_k": 0', sample8), ("top_k_neg1_is_sample", '"top_k": -1', sample8),
                           ("top_p1_is_sample", '"top_p": 1', sample8), ("top_k_V_is_sample", '"top_k": 4096', sample8)):
     st, ch, out = post(None, raw=raw_with(s8, extra))
@@ -208,7 +210,7 @@ c1 = ch1.get("message", {}).get("content")
 check("top_kp_repeat_and_sse", st == 200 and st2 == 200 and c1 == ch2.get("message", {}).get("content") and ok and text == c1,
       f"json={c1!r} sse={text!r}")
 check("top_kp_filters_control", c1 is not None and c1 != sample8, f"filtered={c1!r} unfiltered={sample8!r}")
-for name, extra, word in (("refuse_top_p0", '"top_p": 0', "top_p"), ("refuse_top_p_big", '"top_p": 1.5', "top_p"),
+for name, extra, word in (("refuse_top_p_neg", '"top_p": -0.1', "top_p"), ("refuse_top_p_big", '"top_p": 1.5', "top_p"),
                           ("refuse_top_p_exp", '"top_p": 1e-3', "top_p"), ("refuse_top_k_str", '"top_k": "x"', "top_k"),
                           ("refuse_top_k_frac", '"top_k": 1.5', "top_k"), ("refuse_top_k_neg2", '"top_k": -2', "top_k")):
     check(name, *refused(None, word, raw=raw_with(s8, extra)))
@@ -296,6 +298,13 @@ while True:
 s.close()
 check("refuse_413", resp.startswith(b"HTTP/1.1 413") and b"request_too_large" in resp, f"{resp[:120]!r}")
 
+# the JSON parser's tape holds 65532 tokens: past it the body is 413 request_too_large, not invalid_json
+for name, n, want in (("refuse_json_tokens", 70000, 413), ("json_tokens_under_cap_control", 60000, 200)):
+    st, ct, out, _ = call("POST", "/v1/chat/completions", {"messages": msgs, "max_tokens": 1, "temperature": 0, "x": [0] * n})
+    code, msg, typ = err_code(out) if st != 200 else (None, "", None)
+    ok = st == 413 and code == "request_too_large" and "65532 JSON tokens" in msg if want == 413 else st == 200
+    check(name, ok, f"zeros={n} {st} {code} {msg!r}")
+
 # One request per connection: a client that keeps its connection open (allen-chat pools one)
 # must not hold the serial listener; the next client is answered at once.
 held = http.client.HTTPConnection(HOST, PORT, timeout=30)
@@ -310,13 +319,31 @@ held.close()
 check("held_conn_not_blocking", conn_hdr == "close" and st == 200 and dt < 2,
       f"Connection={conn_hdr!r} next={st} in {dt:.3f}s")
 
-# A connection that never sends a head is dropped after the 10 s head deadline.
+# A connection that sends nothing waits in a pending slot: the next client is answered at once, and
+# the silent one is closed unanswered 10 s after its accept. Control: a connection that started a
+# head does hold the serial listener, up to its 10 s head deadline (the documented bound).
 silent = socket.create_connection((HOST, PORT), timeout=30)
+t_s = time.monotonic()
+time.sleep(0.1)
 t0 = time.monotonic()
 st, ct, out, _ = call("GET", "/health", timeout=30)
 dt = time.monotonic() - t0
+check("silent_conn_not_blocking", st == 200 and dt < 1, f"next={st} after {dt:.3f}s")
+partial = socket.create_connection((HOST, PORT), timeout=30)
+partial.sendall(b"GET /health HTTP/1.1\r\n")
+time.sleep(0.1)
+t0 = time.monotonic()
+st, ct, out, _ = call("GET", "/health", timeout=30)
+dt = time.monotonic() - t0
+partial.close()
+check("partial_head_holds_control", st == 200 and 7 < dt < 15, f"next={st} after {dt:.3f}s")
+try:
+    eof = silent.recv(64)
+except OSError as e:
+    eof = repr(e).encode()
+dts = time.monotonic() - t_s
 silent.close()
-check("silent_conn_dropped", st == 200 and 8 < dt < 15, f"next={st} after {dt:.3f}s")
+check("silent_conn_closed_10s", eof == b"" and 8 < dts < 20, f"recv={eof!r} after {dts:.3f}s")
 
 st, ct, out, _ = call("GET", "/health")
 check("alive_after_negatives", st == 200, f"{st}")
@@ -396,6 +423,63 @@ if TPORT:
     check("t_busy_stream_whole", ok and text == slow and fin == "stop", f"text={text!r} fin={fin}")
     st, ct, out, _ = call("GET", "/health", port=TPORT)
     check("t_health_after", st == 200 and json.loads(out).get("in_flight") == 0, f"{out!r}")
+
+    slowb = {"messages": user, "max_tokens": 200, "temperature": 0, "ollm_test_output": slow, "ollm_test_delay_ms": 300}
+    # side connections during a generation: silent ones wait in pending slots and cost it nothing;
+    # control: one that started a head stalls the side channel up to its 250 ms head deadline
+    box = {}
+    th = threading.Thread(target=lambda: box.update(r=post_sse(slowb, port=TPORT)))
+    th.start()
+    time.sleep(1.0)
+    sil = [socket.create_connection((HOST, TPORT), timeout=30) for _ in range(3)]
+    time.sleep(0.3)
+    t0 = time.monotonic()
+    st, ct, out, _ = call("GET", "/health", port=TPORT)
+    d1 = time.monotonic() - t0
+    hb1 = json.loads(out) if st == 200 else {}
+    part = socket.create_connection((HOST, TPORT), timeout=30)
+    part.sendall(b"GET /health HTTP/1.1\r\n")
+    t0 = time.monotonic()
+    st, ct, out, _ = call("GET", "/health", port=TPORT)
+    d2 = time.monotonic() - t0
+    hb2 = json.loads(out) if st == 200 else {}
+    th.join()
+    part.close()
+    for s_ in sil:
+        s_.close()
+    ok, text, fin, _ = box.get("r", (False, "", None, []))
+    check("t_side_silent_no_stall", hb1.get("busy") is True and d1 < 0.2 and ok and text == slow,
+          f"health {d1:.3f}s {hb1} stream_ok={ok} text_ok={text == slow}")
+    check("t_side_partial_head_control", hb2.get("busy") is True and 0.15 < d2 < 1.5, f"health {d2:.3f}s {hb2}")
+
+    # a non-streaming client that leaves mid-generation frees the slot at the next token
+    # (svgone); control: a client that stays gets its whole answer and the slot stays busy
+    body = json.dumps(slowb).encode()
+    gone = socket.create_connection((HOST, TPORT), timeout=30)
+    gone.sendall(b"POST /v1/chat/completions HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nContent-Length: "
+                 + str(len(body)).encode() + b"\r\n\r\n" + body)
+    time.sleep(1.0)
+    gone.close()
+    time.sleep(1.0)
+    st, ct, out, _ = call("GET", "/health", port=TPORT)
+    hg = json.loads(out) if st == 200 else {}
+    check("t_disconnect_frees_slot", hg == {"status": "ok", "in_flight": 0, "busy": False}, f"{st} {out!r}")
+    if TLOG:
+        with open(TLOG) as f:
+            lines = [l.split() for l in f if l.startswith("C 499 ")]
+        check("t_disconnect_logged", len(lines) == 1 and lines[0][4] == "4", f"{lines}")
+    else:
+        print("NOT_RUN t_disconnect_logged SERVE_TLOG unset", flush=True)
+    box = {}
+    th = threading.Thread(target=lambda: box.update(r=post(slowb, port=TPORT)))
+    th.start()
+    time.sleep(2.0)
+    st, ct, out, _ = call("GET", "/health", port=TPORT)
+    hk = json.loads(out) if st == 200 else {}
+    th.join()
+    stk, chk, outk = box.get("r", (0, {}, b""))
+    check("t_connected_stays_control", hk.get("in_flight") == 1 and stk == 200 and chk.get("message", {}).get("content") == slow
+          and chk.get("finish_reason") == "stop", f"health={hk} {stk} {outk[:120]!r}")
     st, ch, out = post(base, port=TPORT)
     check("t_idle_not_busy_control", st == 200 and ch["message"]["content"] == greedy, f"{out[:200]!r}")
 

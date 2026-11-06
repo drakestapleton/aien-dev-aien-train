@@ -3,24 +3,29 @@ note omegallm serve.om (aien-train DRA-119): `ollm serve PORT CK MERGES [MAXCONN
 note [test=1]`, an OpenAI-compatible HTTP/1.1 server for a v1 BPE checkpoint (V > 256) on
 note 127.0.0.1:PORT only. aarch64 only: build.sh composes it under one `om2` line after the
 note omega-mv e5b32567 units net/http.om, net/json.om and net/jsonw.om (vendored unmodified); the
-note other targets take noserve.om. It prints `PORT n`, then serves one connection at a time, one
-note request each (Connection: close), until MAXCONN connections (default 1000000) have been
-note served. tplmax=N (256 .. 983040, default 65536) caps the chat template in bytes; test=1
-note enables the test-only members ollm_test_output and ollm_test_delay_ms (refused otherwise).
+note other targets take noserve.om. It prints `PORT n`, then serves one request at a time, one
+note request per connection (Connection: close), until MAXCONN connections (default 1000000) have
+note been served. A connection is served once its first bytes arrive; a silent one waits in one
+note of 8 pending slots and is closed unanswered 10 s after its accept (svwait). tplmax=N
+note (256 .. 983040, default 65536) caps the chat template in bytes; test=1 enables the test-only
+note members ollm_test_output and ollm_test_delay_ms (refused otherwise).
 note Routes: GET /health {"status":"ok","in_flight":0,"busy":false}; GET /v1/models;
 note POST /v1/chat/completions with JSON or SSE (stream true) responses; other paths 404, other
-note methods 405. While a completion generates, the listener is polled between tokens: GET
-note /health answers {"status":"ok","in_flight":1,"busy":true}, GET /v1/models the list, and
-note every other request 503 server_busy with Retry-After: 1 (one generation slot).
+note methods 405. in_flight counts the generating chat completions (0 or 1, one slot); busy is
+note in_flight 1. While a completion generates, the listener and pending connections are served
+note between tokens: GET /health answers {"status":"ok","in_flight":1,"busy":true}, GET
+note /v1/models the list, and every other request 503 server_busy with Retry-After: 1. A client
+note that leaves (svgone) stops its generation: nothing more is sent, logged as status 499.
 note Request: messages (non-empty array of objects with a string role of at most 32 bytes and a
 note content that is a string, null, or an array of {"type":"text","text":string} parts joined
 note with no separator; other part types are 400; content may be absent beside tool_calls),
 note optional max_tokens or max_completion_tokens (1 .. 999999), temperature (0 .. 2 without
 note exponent, used to 0.001; default 1), seed (unsigned, default 1), top_k (integer -1 ..
-note 999999; -1, 0 and K >= V are off), top_p (0 < p <= 1 without exponent, used to 0.000001;
-note 1 is off), stop (null, a string or an array of at most 8 strings of 1 .. 128 bytes), tools
-note (array of at most 128 {"type":"function","function":{"name":1 .. 64 bytes, ...}}),
-note tool_choice ("none", "auto", "required" or a {"type":"function"} object), stream,
+note 999999; -1, 0 and K >= V are off), top_p (0 <= p <= 1 without exponent, used to 0.000001;
+note 0 keeps only the most probable token, 1 is off), stop (null, a string or an array of at most
+note 8 strings of 1 .. 128 bytes), tools (array of at most 128
+note {"type":"function","function":{"name":1 .. 64 bytes, ...}}), tool_choice ("none", "auto",
+note "required" or a {"type":"function"} object), stream,
 note stream_options.include_usage and n (only 1). Other members (model, ...) are ignored.
 note Interim chat template (until DRA-123 fixes one shared template): when tools is non-empty,
 note `tools: ` and the request's tools JSON text as sent, then `\n`; then `role: content\n` for
@@ -45,7 +50,8 @@ note possible marker and trailing whitespace, then sends the tool_calls in one d
 note Decoded bytes are sent as UTF-8: a sequence cut by a token boundary waits for the next token,
 note an ill-formed one (or one cut by the end) becomes U+FFFD. One line per routed response (and
 note per 413 at the head, and per request answered during a generation) goes to stdout: `C status
-note prompt_tokens completion_tokens finish(0 none, 1 stop, 2 length, 3 tool_calls) ms`.
+note prompt_tokens completion_tokens finish(0 none, 1 stop, 2 length, 3 tool_calls, 4 client left)
+note ms`. A body over 65532 JSON tokens is 413 request_too_large.
 note Exit codes: 2 usage; 27 merges (bpe.om); 71 the port cannot be bound.
 note wb layout: raw token bytes [0, 8192), content [8192, 73728), stop strings [73728, 74752) (8 x
 note 128), markers [74752, 74784), message [81920, 82176), response id [82176, 82240), call id
@@ -145,7 +151,7 @@ text secbig "request_too_large"
 text secnf "not_found"
 text secmeth "method_not_allowed"
 text secint "internal_error"
-text sem1 "request body is not valid JSON (RFC 8259) or has over 65532 JSON tokens"
+text sem1 "request body is not valid JSON (RFC 8259)"
 text sem2 "the request must be a JSON object"
 text sem3 "messages must be a non-empty array of objects"
 text sem4 "message content must be a string, null or an array of text parts (absent only beside tool_calls)"
@@ -164,11 +170,12 @@ text sem16 "response construction failed"
 text sem17 "message content parts must be {\"type\":\"text\",\"text\":string}; image_url, input_audio, file and other part types are not supported"
 text sem18 "stop must be null, a string or an array of at most 8 strings of 1 to 128 bytes"
 text sem19 "top_k must be an integer from -1 to 999999 (-1 and 0 turn it off)"
-text sem20 "top_p must be a number above 0 and at most 1 without exponent (resolution 0.000001)"
+text sem20 "top_p must be a number from 0 to 1 without exponent (resolution 0.000001; 0 keeps only the most probable token)"
 text sem21 "tools must be an array of at most 128 {\"type\":\"function\",\"function\":{\"name\":string of 1 to 64 bytes}} objects"
 text sem22 "tool_choice must be \"none\", \"auto\", \"required\" or a {\"type\":\"function\"} object"
 text sem23 "tool_calls must be an array of {\"function\":{\"name\":string,\"arguments\":string or object}} objects"
 text sem24 "ollm_test_output (a string of at most 16384 bytes) and ollm_test_delay_ms (0 to 10000) need a server started with test=1"
+text sem25 "the request body has over 65532 JSON tokens (values, keys and closers), the JSON parser's limit"
 text sem11a "prompt is "
 text sem11b " tokens including the start token; the context window is "
 text sem11c " tokens, so no room is left for output"
@@ -179,6 +186,13 @@ global svmk uchar 4096
 global svstl ulong 8
 global svtnl ulong 128
 global svtcx ulong 32
+note pending connections (svwait): descriptor + 1 (0 free), accept time, record slot; pollfd records;
+note the svgone peek byte
+global svpfd ulong 8
+global svpat ulong 8
+global svpix ulong 8
+global svpl uchar 72
+global svpk uchar 1
 
 note ======== small byte helpers over wb
 
@@ -497,7 +511,7 @@ end
 ret sub svemsg2 wb e p z b
 end
 
-note svemsg2: the messages of error codes 17 .. 24 at p; the end
+note svemsg2: the messages of error codes 17 .. 25 at p; the end
 fn svemsg2 wb edit uchar 1073664 e ulong p ulong z ulong to ulong
 if eq e 17
 ret svmcat wb p z sem17
@@ -523,6 +537,9 @@ end
 if eq e 24
 ret svmcat wb p z sem24
 end
+if eq e 25
+ret svmcat wb p z sem25
+end
 ret p
 end
 
@@ -535,7 +552,7 @@ if eq e 11
 svwt ob secctx
 ret
 end
-if eq e 13
+if or eq e 13 eq e 25
 svwt ob secbig
 ret
 end
@@ -811,8 +828,8 @@ end
 ret m
 end
 
-note svtopp: the top_p token's lexeme at bd[o, o + n) in millionths (used to 0.000001), or 0
-note when it is not a number above 0 and at most 1
+note svtopp: the top_p token's lexeme at bd[o, o + n) in millionths (used to 0.000001), or jsnone
+note when it is not a number from 0 to 1
 fn svtopp bd edit uchar 983040 o ulong n ulong to ulong
 ip = ulong 0
 fr = ulong 0
@@ -822,12 +839,12 @@ for i ulong n
 c = ulong get bd add o i
 if eq c 46
 if dot
-ret 0
+ret jsnone
 end
 dot = true
 else
 if or lt c 48 gt c 57
-ret 0
+ret jsnone
 end
 if dot
 if lt fd 6
@@ -836,7 +853,7 @@ fd = add fd 1
 end
 else
 if ge ip 10
-ret 0
+ret jsnone
 end
 ip = add mul ip 10 sub c 48
 end
@@ -850,7 +867,7 @@ end
 end
 m = add mul ip 1000000 fr
 if gt m 1000000
-ret 0
+ret jsnone
 end
 ret m
 end
@@ -1439,7 +1456,7 @@ if ne and js_nflags tp v 5 0
 ret 20
 end
 m = svtopp bd js_off tp v js_span tp v
-if eq m 0
+if eq m jsnone
 ret 20
 end
 put sv 29 m
@@ -1475,6 +1492,9 @@ tp = new uint 262144 0
 x = js_init tp 983040 64
 r = js_parse bd tp n
 if lt r 0
+if eq r neg long jsetok
+ret 25
+end
 ret 1
 end
 if ne js_type tp 0 1
@@ -1569,8 +1589,9 @@ end
 note ======== generation
 
 note svgen: sample up to min(sv1, T - CT0) tokens; streams chunks when sv0 is 1. 0, or negative
-note when a chunk could not be sent (the client left). Between tokens the listener is polled
-note (svside), waiting up to ollm_test_delay_ms.
+note when a chunk could not be sent or the client left (svgone: finish 4, status 499). Between
+note tokens the listener and pending connections are served (svside), waiting up to
+note ollm_test_delay_ms.
 fn svgen cs edit ulong 320 io edit uchar 131072 ob edit uchar 409600 wb edit uchar 1073664 sv edit ulong 64 bd edit uchar 983040 to long
 lim = sub get sv 19 get sv 6
 if lt get sv 1 lim
@@ -1585,6 +1606,11 @@ put sv 17 0
 tmo = long mul get sv 27 1000000
 for g ulong lim
 svside bd sv tmo
+if svgone cs
+put sv 8 4
+put sv 21 499
+ret -104
+end
 if not svtake wb sv
 break
 end
@@ -2013,11 +2039,107 @@ end
 
 note ======== requests during a generation
 
-note svside: poll the listener once (waiting up to tmo ns); a connection gets svside2
+note svwait: wait up to tmo ns for the listener or a pending connection (svpfd); the connection to
+note serve now (bytes arrived, or it closed or failed), or -1. A new connection whose first byte
+note does not arrive within 20 ms waits in a free pending slot (8; all taken: new connections stay
+note in the listen backlog), so a connection that sends nothing costs the caller 20 ms once, not a
+note head deadline. A pending connection is closed unanswered 10 s after its accept.
+fn svwait sv edit ulong 64 tmo long to long
+now = ulong monons
+iv = tmo
+n = ulong 0
+for i ulong 8
+f = get svpfd i
+if ne f 0
+age = sub now get svpat i
+if ge age 10000000000
+y = fclose int sub f 1
+put svpfd i 0
+else
+rm = long sub 10000000000 age
+if or lt iv 0 lt rm iv
+iv = rm
+end
+svprec n sub f 1
+put svpix n i
+n = add n 1
+end
+end
+end
+fr = lt n 8
+m = n
+if fr
+svprec n get sv 36
+m = add n 1
+end
+r = pollfds svpl 0 mul m 8 iv
+if le r 0
+ret -1
+end
+for j ulong n
+if ne get svpl add mul j 8 6 0
+s = get svpix j
+cp = long sub get svpfd s 1
+put svpfd s 0
+ret cp
+end
+end
+if not fr
+ret -1
+end
+c = haccept int get sv 36 0
+if lt c 0
+ret -1
+end
+w = waitio int c 1 long 20000000
+if ne w 0
+ret c
+end
+for k ulong 8
+if eq get svpfd k 0
+put svpfd k ulong add c 1
+put svpat k ulong monons
+ret -1
+end
+end
+y2 = fclose int c
+ret -1
+end
+
+note svprec: pollfd record j for descriptor fd, events POLLIN
+fn svprec j ulong fd ulong to void
+b = mul j 8
+put svpl b uchar and fd 255
+put svpl add b 1 uchar and shr fd 8 255
+put svpl add b 2 uchar and shr fd 16 255
+put svpl add b 3 uchar and shr fd 24 255
+put svpl add b 4 1
+put svpl add b 5 0
+put svpl add b 6 0
+put svpl add b 7 0
+end
+
+note svgone: whether the client of the generating request has left: a non-blocking peek (MSG_PEEK |
+note MSG_DONTWAIT) of its socket reads end of stream or an error. Request bytes stay unread. A
+note client that half-closes its sending side after the request counts as gone.
+fn svgone cs edit ulong 320 to bool
+r = recv int get cs HFD svpk 0 1 66
+if eq r 0
+ret true
+end
+ret and lt r 0 and ne r -11 ne r -4
+end
+
+note svside: serve the connections svwait yields (the first wait up to tmo ns, then without waiting;
+note at most 9 per call) with svside2
 fn svside bd edit uchar 983040 sv edit ulong 64 tmo long to void
-c = haccept int get sv 36 tmo
-if ge c 0
+c = svwait sv tmo
+for k ulong 9
+if lt c 0
+ret
+end
 svside2 c bd sv
+c = svwait sv 0
 end
 end
 
@@ -2030,8 +2152,9 @@ if lt r 0
 x = hclose cs
 ret
 end
-hsettmo cs 2000000000 2000000000
-hsetbdl cs 2000000000
+note bytes have arrived (svwait), so a head or body that stalls costs at most 250 ms or 1 s
+hsettmo cs 250000000 250000000
+hsetbdl cs 1000000000
 put cs HBCAP 983040
 r = hreqrd cs io
 if gt r 0
@@ -2145,7 +2268,11 @@ e = svprep wb sv
 end
 if ne e 0
 put sv 16 e
-r = svfail cs io wb sv 400
+st = ulong 400
+if eq e 25
+st = ulong 413
+end
+r = svfail cs io wb sv st
 svlog sv
 ret r
 end
@@ -2176,6 +2303,10 @@ svlog sv
 ret r
 end
 r = svgen cs io ob wb sv bd
+if lt r 0
+svlog sv
+ret r
+end
 m = svfull ob wb sv bd
 if lt m 0
 put sv 16 16
@@ -2238,7 +2369,8 @@ end
 note svconn: one accepted connection c carries one request, answered with Connection: close.
 note Connections are served one at a time, so a kept-alive idle connection would hold the listener:
 note allen-chat pools its upstream connection, and its next request queued 30 s behind the pooled
-note one (the old idle limit) until this change. The head must arrive within 10 s.
+note one (the old idle limit) until this change. svwait hands over a connection only once its first
+note bytes arrived; the rest of the head must arrive within 10 s.
 fn svconn c long cs edit ulong 320 io edit uchar 131072 bd edit uchar 983040 wb edit uchar 1073664 sv edit ulong 64 to void
 r = hinit cs io int c 1
 if lt r 0
@@ -2361,7 +2493,7 @@ oputc 10
 oflush
 nc = ulong 0
 for j ulong 999999999
-c = haccept int lf 60000000000
+c = svwait sv 60000000000
 if ge c 0
 svconn c cs io bd wb sv
 nc = add nc 1

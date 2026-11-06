@@ -62,7 +62,7 @@ stop() {
 
 start server "$PORT"
 start server-test "$TPORT" tplmax=4000 test=1
-taskset -c "$CORES" nice -n 10 $bw python3 "$here/serve-check.py" "$PORT" "$OLLM" "$CK" "$MERGES" "$TPORT" "$ALLEN" | tee "$OUT/referee.txt"
+SERVE_TLOG="$OUT/server-test.log" taskset -c "$CORES" nice -n 10 $bw python3 "$here/serve-check.py" "$PORT" "$OLLM" "$CK" "$MERGES" "$TPORT" "$ALLEN" | tee "$OUT/referee.txt"
 rc=$?
 grep -q "^SUMMARY pass=[0-9]* fail=0$" "$OUT/referee.txt" || rc=1
 stop
