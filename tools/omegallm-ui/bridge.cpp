@@ -272,7 +272,13 @@ static void completion(const httplib::Request &req, httplib::Response &res) {
     }
     const bool voice = !firmware && selected == VOICE;
     if (selected != OMEGA && !voice) { error(res, 404, "Unknown local model"); return; }
-    for (auto key : {"tools", "stop", "grammar", "response_format"}) {
+    // The llama UI offers its built-in tools with every message. Omega cannot call them, so an offer
+    // is ignored and the model answers in text. A request that forces a tool call is still refused.
+    if (body.contains("tool_choice") && !body["tool_choice"].is_null() &&
+        !(body["tool_choice"].is_string() && (body["tool_choice"] == "auto" || body["tool_choice"] == "none"))) {
+        error(res, 400, "Omega models cannot call tools"); return;
+    }
+    for (auto key : {"stop", "grammar", "response_format"}) {
         if (body.contains(key) && !body[key].is_null() && !body[key].empty()) {
             error(res, 400, std::string("Omega's story model does not support ") + key); return;
         }
@@ -435,7 +441,7 @@ int main(int argc, char **argv) {
         reply(res, props);
     });
     server.Get("/slots", [](const auto &, auto &res) { reply(res, json::array()); });
-    server.Get("/tools", [](const auto &, auto &res) { reply(res, {{"tools", json::array()}}); });
+    server.Get("/tools", [](const auto &, auto &res) { reply(res, json::array()); });
     server.Get("/models/sse", [](const auto &req, auto &res) {
         auto closed = req.is_connection_closed;
         res.set_chunked_content_provider("text/event-stream", [closed](size_t, httplib::DataSink &sink) {

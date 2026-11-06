@@ -62,7 +62,8 @@ is slower than keeping a reusable cancelled context but prevents stale output
 from being mistaken for the next response. Qwen requests use the existing
 server separately. After a successful firmware request the adapter pauses its VM;
 the next request resumes it. This prevents UEFI idle polling from consuming a
-Mac CPU core. Tool use, structured output and multimodal inputs are refused.
+Mac CPU core. Tools offered by the UI are ignored and the model answers in text; a request
+that forces a tool call, structured output and multimodal inputs are refused.
 
 ## Evidence and harness boundary
 
