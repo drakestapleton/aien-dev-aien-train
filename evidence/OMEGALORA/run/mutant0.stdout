@@ -1,0 +1,7 @@
+exp(1) 2.718281828459
+log(10) 2.302585092994
+gradient check, worst relative error 0.000000018729
+loss before 2.000809231083
+loss after 0.000382919481
+accuracy before 0.312500000000
+accuracy after 1.000000000000
