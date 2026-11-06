@@ -3,17 +3,17 @@
     "generated": {
       "children": [],
       "children_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "compiled_at": "2026-11-06T16:33:15Z",
+      "compiled_at": "2026-11-06T19:11:36Z",
       "compiler": "crumb-compile/1",
-      "digest": "sha256:0cc8e708c29750c9ebcfe82e8d452143b51343e84f03c7aa8f96dbe8531f15de",
+      "digest": "sha256:4bb8469bacfef69d06ace9e287aecaab639ccae59895be996f0fec812582efa7",
       "evidence_files": 0,
       "evidence_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "files": 19,
-      "generated_at_commit": "77cffb6d6698f59b0644552bcbfe0b639da94abe",
-      "source_tree": "sha256:48832e6ede5b63704c12615057a42a0045091df19d83ee8c3284ec177d3cd3ab"
+      "files": 21,
+      "generated_at_commit": "70d048c0e1e36150d0ad2998fef992c129914551",
+      "source_tree": "sha256:533cc090082cd8448680b3e61982db91219db9d7b9329a84b4d1689839035b01"
     }
   },
   "name": "omegallm",
-  "purpose": "Omega LLM v0 (aien-train#52): byte-level 119104-parameter decoder-only transformer trained from random init in seeded .om (units math, data, model, adam, ckpt, cli; concatenated in that order); CPU only, no GPU",
+  "purpose": "Omega LLM v0 (aien-train#52): byte-level 119104-parameter decoder-only transformer trained from random init in seeded .om (units math, data, model, adam, ckpt, cli; concatenated in that order); CPU only, no GPU; opt-in resident inference retains validated weights, computes final-position logits, rebuilds KV state on position rollover, and supplies ordered ARM vector kernels",
   "schema_version": "1.0.0"
 }

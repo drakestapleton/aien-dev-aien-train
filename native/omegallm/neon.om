@@ -1,0 +1,6 @@
+note ARM64 vector matrix block. Each lane retains kvmb's exact row and rounding order.
+note vdot4 emits distinct binary64 FMUL/FADD instructions; no FMA or horizontal reduction.
+note Opt-in composition replaces only kvmb call sites, keeping scalar source as the oracle.
+fn kvmbneon xo ulong xe ulong wi ulong c ulong to void
+vdot4 oq oa xo ow wi sub xe xo c
+end

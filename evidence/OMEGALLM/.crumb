@@ -3,21 +3,27 @@
     "generated": {
       "children": [
         {
+          "digest": "1eef03c5f9a78a49018d97c25f77233758a595ead1e8a21ce507327abafc30b8",
+          "last_commit": "70d048c",
+          "name": "macbook-ui-20261106",
+          "purpose": "Local UI streaming, refusal, sampling parity, Aienux resume and pinned artifact evidence"
+        },
+        {
           "digest": "23313e447c8d991fb8d07504af03bb76bb5e57bca04f1612f1e19717f3daac99",
           "last_commit": "2b7c345",
           "name": "weight-edit-20261104",
           "purpose": "Retained direct checkpoint-edit experiments, candidate selection and controls; no overwritten so"
         }
       ],
-      "children_root": "sha256:48230f4dbfce2ab107ddc816dac447164b9d129313ce11246d65a914a108d25f",
-      "compiled_at": "2026-11-05T22:55:16Z",
+      "children_root": "sha256:56360058be49969c97f294fe4e2552661175b0885f28048ce1957301cca857d1",
+      "compiled_at": "2026-11-06T19:11:36Z",
       "compiler": "crumb-compile/1",
-      "digest": "sha256:e310ffa47162b112b69b7d4df01cbb531ea74f59d7ba5c8b0752cb778da00355",
-      "evidence_files": 1221,
-      "evidence_root": "sha256:c3330fb14e8ed837957354216a91cb675842f35569d370b8789debc38dae9ac6",
-      "files": 1221,
-      "generated_at_commit": "cf6bef1823fe0ea53d397956e91233941e52c8ce",
-      "source_tree": "sha256:de13841fdd44483a323d2fa967adc2bf33128f947f707e85626ac0b9e0cf9fc4"
+      "digest": "sha256:d8f66afedbb595209fda6a7f375bfa57d29ee5f3706a7e44e91dd1ffbea0213b",
+      "evidence_files": 1242,
+      "evidence_root": "sha256:1552f6b22d5035fec7a5ac4a313cd9e8e4ef4e70698eebdb0377a09f0744a1cd",
+      "files": 1242,
+      "generated_at_commit": "70d048c0e1e36150d0ad2998fef992c129914551",
+      "source_tree": "sha256:12c4e090763ecec06c95f9787b2f9f0640ee214e84f90d4401d3079424d5cbba"
     }
   },
   "name": "omegallm-evidence",

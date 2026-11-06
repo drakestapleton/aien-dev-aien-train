@@ -416,3 +416,9 @@ Run them only inside a `spark-window`. The checkpoint format is unchanged, so CP
 The γ_R gate, the ReLU kink cases that the night shape exposes, the Adam residual, the windows and all
 timings are in `evidence/OMEGALLM/gpu/README.md`. Not QUALIFIED: no quiet-machine timing, one chip, and
 a bitwise comparison with the CPU path is not expected (f32 against f64).
+
+## Resident inference candidate
+
+[Resident inference and ordered ARM kernels](INFERENCE.md) describes the opt-in
+cache, resident protocol, scalar/NEON parity gates and separate performance
+acceptance. Existing training and scalar sampling remain available.

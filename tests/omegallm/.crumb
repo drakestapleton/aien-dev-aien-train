@@ -3,14 +3,14 @@
     "generated": {
       "children": [],
       "children_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "compiled_at": "2026-11-05T22:55:16Z",
+      "compiled_at": "2026-11-06T19:11:36Z",
       "compiler": "crumb-compile/1",
-      "digest": "sha256:7e05c4b47c11287040aa268d58b1566202eb279be7b12c7a8872084255b9e3f2",
+      "digest": "sha256:0894baa9081c310a564ab49ff99df7105a1beb61ccc34c9443819a46b4aa0c5a",
       "evidence_files": 0,
       "evidence_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "files": 23,
-      "generated_at_commit": "cf6bef1823fe0ea53d397956e91233941e52c8ce",
-      "source_tree": "sha256:54be6ee079c3aca05be9ca52f3eb1f3c7bf3d95bf2ec909d00d153b805b388f8"
+      "files": 27,
+      "generated_at_commit": "70d048c0e1e36150d0ad2998fef992c129914551",
+      "source_tree": "sha256:644f692f3a1cdf00c31a645cd82f4c091cd2013b720e39ff218f53adfa0a24ad"
     }
   },
   "name": "omegallm-tests",

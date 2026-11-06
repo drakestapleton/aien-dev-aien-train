@@ -1,0 +1,35 @@
+note Test driver: MODE CHECKPOINT. Prints exact logits and seeded draws across requests and shifts.
+note Compiled independently with each path so scalar execution cannot repair the candidate cache.
+fn main to int
+mode = oargu 1
+put oimode 0 mode
+ockload 2
+for job ulong 3
+put oicount 0 0
+put og 9 0
+ocpush 0
+for step ulong add get og 1 4
+ocpush rem add mul step 17 job get og 0
+if eq mode 0
+loss = ofwd 0
+olast
+else
+oifwd
+end
+iplog
+draw = odraw add step mul job 1024 0.7
+oputu draw
+oputc 10
+oflush
+end
+end
+ret 0
+end
+
+fn iplog to void
+for c ulong get og 0
+oputh bitcast ulong get oa add get og 27 c
+oputc 32
+end
+oputc 10
+end

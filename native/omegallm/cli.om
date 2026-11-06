@@ -66,6 +66,12 @@ if eq w 111516417089907
 cmdsamp
 ret 0
 end
+note Wolfram FromDigits[Reverse[ToCharacterCode["samplekv"]],256] = 8533025435400626547.
+if eq w 8533025435400626547
+put oimode 0 1
+cmdsamp
+ret 0
+end
 if eq w 118074647274343
 cmdgchk
 ret 0
@@ -288,6 +294,7 @@ if lt cn tt
 put obx cn c
 put og 9 add cn 1
 else
+put oicount 0 0
 for i ulong sub tt 1
 put obx i get obx add i 1
 end
@@ -326,12 +333,15 @@ end
 
 note Embedding entry: checkpoint and tokenizer already loaded; argument 6 supplies the prompt.
 note The caller keeps exclusive ownership of the model pools until this returns.
-fn osampleloaded seed ulong nn ulong tm ulong to void
-if gt nn 999999
-exit 2
-end
-st = seed
+global osseed ulong 1
+global ostemp ulong 1
+note Split sampling entry points keep model ownership with the caller between tokens.
+fn osaminit seed ulong tm ulong to void
+put osseed 0 seed
+put ostemp 0 tm
 v = get og 0
+put oicount 0 0
+put oicancel 0 0
 put og 9 0
 ocpush 0
 if gt v 256
@@ -352,18 +362,28 @@ for i ulong ulong r
 ocpush ulong get oarg i
 end
 end
-for g ulong nn
+end
+fn osamnext to bool
+v = get og 0
+tm = get ostemp 0
+if eq get oimode 0 0
 lf = ofwd 0
 olast
+else
+oifwd
+end
+if ne get oicancel 0 0
+ret false
+end
 c = ulong 0
 if eq tm 0
 c = oargmax
 else
-c = odraw st div f64 tm 1000.0
-st = add st 11400714819323198485
+c = odraw get osseed 0 div f64 tm 1000.0
+put osseed 0 add get osseed 0 11400714819323198485
 end
 if eq c 0
-break
+ret false
 end
 if gt v 256
 obtput c
@@ -373,6 +393,17 @@ end
 note Flush each decoded token so interactive consumers see progress. Bytes and sampling stay unchanged.
 oflush
 ocpush c
+ret true
+end
+fn osampleloaded seed ulong nn ulong tm ulong to void
+if gt nn 999999
+exit 2
+end
+osaminit seed tm
+for g ulong nn
+if not osamnext
+break
+end
 end
 oflush
 end

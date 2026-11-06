@@ -45,6 +45,17 @@ global oa f64 15016192
 const OPAN ulong 16777216
 global opa f64 16777216
 
+note Opt-in inference state. Training and the scalar sample command leave oimode zero.
+note oicount is the number of cached positions, invalidated on every request and window shift.
+global oimode ulong 1
+global oicount ulong 1
+global oicancel ulong 1
+
+note Embedders replace this hook with a bounded cancellation/transport poll.
+fn oipoll to bool
+ret false
+end
+
 note gradient pool element i (i < 2 P)
 fn ogrg i ulong to f64
 p = get og 8
@@ -257,11 +268,16 @@ if not ogab u
 ret false
 end
 p = get og 8
+if eq get oimode 0 0
 if gt p add OGC OGBN
 ret false
 end
 if gt mul 3 p ocsinit
 ret false
+end
+end
+if ne get oimode 0 0
+ret true
 end
 ret le mul get og 5 get og 29 OPAN
 end
@@ -302,6 +318,14 @@ fn ogab td ulong to bool
 ll = get og 5
 st = get og 14
 put og 38 ll
+if ne get oimode 0 0
+note One shared row workspace, persistent K/U per layer, then final normalization and logits.
+hf = add st mul mul 2 ll td
+ogeom3 td hf
+put og 27 add get og 17 td
+put og 28 add get og 27 OTMP
+ret le get og 28 OAC
+end
 put og 39 mul ll st
 ogeom3 td mul ll st
 ogeom2 td
@@ -407,6 +431,9 @@ end
 
 note activation offsets of layer l (layers from LAA in the two windows at AW)
 fn oahin l ulong to ulong
+if ne get oimode 0 0
+ret 0
+end
 if lt l get og 38
 ret add get og 13 mul l get og 14
 end
@@ -422,9 +449,15 @@ fn oaq l ulong to ulong
 ret add oahin l oatd 2
 end
 fn oak l ulong to ulong
+if ne get oimode 0 0
+ret add get og 14 mul mul 2 l oatd 1
+end
 ret add oahin l oatd 3
 end
 fn oau l ulong to ulong
+if ne get oimode 0 0
+ret add oak l oatd 1
+end
 ret add oahin l oatd 4
 end
 fn oao l ulong to ulong
@@ -777,6 +810,9 @@ end
 
 note offset in opa of PA[n][t][0] of layer l
 fn opar l ulong n ulong t ulong to ulong
+if ne get oimode 0 0
+ret 0
+end
 tt = get og 1
 p = add mul n tt t
 ret add mul l get og 29 mul p tt
@@ -995,6 +1031,68 @@ for l ulong get og 5
 olayf l
 end
 ret ohead b
+end
+
+note Inference uses the existing scalar kernels and their original ascending reductions.
+note Each new row attends to all earlier K/U rows. Learned positions restart after ocpush
+note shifts the window, so callers must invalidate oicount on a shift, not rotate the cache.
+note Banked activation windows cannot retain every layer's K/U; use full prefill there.
+fn oifwd to void
+ct = get og 9
+if eq ct 0
+exit 2
+end
+if lt get og 38 get og 5
+put oicount 0 0
+oemb 0
+for l ulong get og 5
+olayf l
+end
+else
+start = get oicount 0
+if gt start ct
+exit 2
+end
+for t ulong sub ct start
+oirow add start t
+if ne get oicancel 0 0
+put oicount 0 0
+ret
+end
+end
+end
+oihead sub ct 1
+olast
+put oicount 0 ct
+end
+
+fn oihead t ulong to void
+r = mul t get og 2
+hf = add get og 15 r
+z = add get og 17 r
+frms hf get og 33 z add get og 16 t
+end
+
+note Populate a single causal position using exactly the reference's expressions.
+fn oirow t ulong to void
+d = get og 2
+r = mul t d
+wr = mul get obx t d
+pr = add get og 30 r
+kadd3w add oahin 0 r wr pr d
+for l ulong get og 5
+if oipoll
+put oicancel 0 1
+ret
+end
+ostw l
+olayf1 l t
+for n ulong get og 3
+fatts l n t
+fatto l n t
+end
+olayf2 l t
+end
 end
 
 note backward of the head for row t: dl = (p - onehot(y)) sc; dwte += dl z; dz = dl . wte;

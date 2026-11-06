@@ -1,0 +1,152 @@
+note CPU-only resident inference driver for paired runtime tests. No HTTP or browser claim.
+note argv: resident CHECKPOINT MERGES. The model and tokenizer are loaded once.
+note Input: G, four little-endian u32 values (prompt bytes, output tokens, temperature milli,
+note seed), then prompt bytes. C cancels the active request. No other pipelining while busy.
+note Output: tag plus little-endian u32 payload length, then payload. R ready, D decoded bytes,
+note E complete, C cancelled, X malformed request. R/E/C/X have empty payloads.
+global orhead uchar 16
+global orwire uchar 5
+global orprompt uchar 4000
+global orlen ulong 1
+global oreof ulong 1
+
+fn orget p ulong to ulong
+v = ulong 0
+for i ulong 4
+v = or v shl ulong get orhead add p i mul i 8
+end
+ret v
+end
+
+fn orframe tag uchar n ulong to void
+put orwire 0 tag
+for i ulong 4
+put orwire add i 1 uchar and shr n mul i 8 255
+end
+p = ulong 0
+while lt p 5 bound 5
+w = write 1 orwire p sub 5 p
+if le w 0
+exit 70
+end
+p = add p ulong w
+end
+end
+
+fn oflush to void
+n = get oon 0
+if eq n 0
+ret
+end
+orframe 68 n
+p = ulong 0
+while lt p n bound 4096
+w = write 1 oout p sub n p
+if le w 0
+exit 70
+end
+p = add p ulong w
+end
+put oon 0 0
+end
+
+fn oargr i ulong to long
+if ne i 6
+ret argread i oarg 0 4096
+end
+n = get orlen 0
+for j ulong n
+put oarg j get orprompt j
+end
+ret long n
+end
+
+fn oipoll to bool
+w = waitio 0 1 0
+if eq w 0
+ret false
+end
+if lt w 0
+exit 70
+end
+r = read 0 orwire 0 1
+if eq r 0
+put oreof 0 1
+ret true
+end
+if ne r 1
+exit 70
+end
+if ne get orwire 0 67
+exit 2
+end
+ret true
+end
+
+fn orrequest to bool
+p = ulong 0
+while lt p 16 bound 16
+r = read 0 orhead p sub 16 p
+if le r 0
+ret false
+end
+p = add p ulong r
+end
+n = orget 0
+if gt n 4000
+orframe 88 0
+ret false
+end
+p = 0
+while lt p n bound 4000
+r = read 0 orprompt p sub n p
+if le r 0
+ret false
+end
+p = add p ulong r
+end
+put orlen 0 n
+nn = orget 4
+tm = orget 8
+if or or eq nn 0 gt nn 128 gt tm 2000
+orframe 88 0
+ret true
+end
+osampleloaded orget 12 nn tm
+if ne get oicancel 0 0
+put oicount 0 0
+orframe 67 0
+else
+orframe 69 0
+end
+ret eq get oreof 0 0
+end
+
+fn main to int
+if ne argcnt 3
+ret 2
+end
+put oimode 0 1
+ockload 1
+if gt get og 0 256
+obload 2 get og 0
+end
+orframe 82 0
+for job ulong 999999
+r = read 0 orwire 0 1
+if eq r 0
+ret 0
+end
+if ne r 1
+ret 70
+end
+if ne get orwire 0 71
+orframe 88 0
+ret 2
+end
+if not orrequest
+ret 0
+end
+end
+ret 0
+end

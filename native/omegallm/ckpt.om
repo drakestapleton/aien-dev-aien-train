@@ -114,6 +114,10 @@ owp add i j bitcast f64 opw8 mul j 8
 end
 ret
 end
+note Inference authenticates optimizer bytes in ocklp but does not retain them.
+if ne get oimode 0 0
+ret
+end
 o = add get og add 10 k i
 for j ulong m
 omvp add o j bitcast f64 opw8 mul j 8
@@ -175,6 +179,7 @@ end
 
 note load the checkpoint named by argv[ai] into og, ow (params) and omv (m, v)
 fn ockload ai ulong to void
+put oicount 0 0
 n = ofsz ai
 if gt n OCKCAP
 exit 15
