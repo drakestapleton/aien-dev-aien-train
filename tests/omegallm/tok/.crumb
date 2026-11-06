@@ -1,0 +1,19 @@
+{
+  "extensions": {
+    "generated": {
+      "children": [],
+      "children_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "compiled_at": "2026-11-06T22:13:40Z",
+      "compiler": "crumb-compile/1",
+      "digest": "sha256:27258cc23b849f47d7e2fde68aa9917e3d8b3a396553b106f0e3662d1724736a",
+      "evidence_files": 0,
+      "evidence_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "files": 0,
+      "generated_at_commit": "ac4a7c1ed20e8aea37f604e91f438b06e4511c8b",
+      "source_tree": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "name": "tok-tests",
+  "purpose": "Build, oracle check, compression measurement and format spec of the own BPE tokenizer ollm-tok: build.sh, check.sh (Python test oracle oracle.py), ratio.sh, FORMAT.md, synthetic fixtures chat.txt and unicode.txt.",
+  "schema_version": "1.0.0"
+}

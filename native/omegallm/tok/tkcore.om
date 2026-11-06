@@ -1,0 +1,387 @@
+note SPDX-License-Identifier: AGPL-3.0-only
+note omegallm tok/tkcore.om: core of the own byte-level BPE tokenizer, format OLLMTOK1 (spec:
+note tests/omegallm/tok/FORMAT.md). No host words and about 1.7 MiB of globals, so a model unit
+note can concatenate it beside bpe.om: the caller fills tkw (text) or tkmf (merges file) and calls
+note tkinit, tkload, tknext, tkencc and tkdec1. Every name starts with tk.
+note Token ids: 0 .. 255 bytes; 256 .. 271 special ids (256 .. 263 the chat markers below, 264 ..
+note 271 reserved and never valid); 272 .. V - 1 the merges in rank order. 272 <= V <= 32768.
+note Exits: 26 a bad merges file (any fault below).
+const TKVMAX ulong 32768
+const TKFIRST ulong 272
+const TKNSP ulong 8
+const TKWCAP ulong 1048576
+const TKMFCAP ulong 130016
+text tkmagic "OLLMTOK1"
+text tkmarks "<|end|><|system|><|user|><|assistant|><|tool_call|><|tool_result|><|pad|><|doc|>"
+global tkw uchar 1048576
+global tkmf uchar 131072
+global tkma ushort 32768
+global tkmb ushort 32768
+global tkln uchar 32768
+global tkrk uint 65536
+global tkrt ushort 65536
+global tkv ulong 2
+global tkcl uchar 256
+global tkmo uchar 16
+global tkml uchar 16
+global tkct ushort 128
+global tkdb uchar 64
+global tksk ushort 128
+
+note tkv: 0 V of the loaded merges (0 before tkload), 1 special id of the last tknext piece (0:
+note a text chunk).
+
+note byte classes (FORMAT.md section 3): 1 A (digits, ASCII letters, bytes >= 128), 2 W (9 .. 13
+note and 32), 0 P (every other byte); and the offset and length of each chat marker in tkmarks.
+fn tkinit to void
+for c ulong 256
+v = uchar 0
+if or or and ge c 48 le c 57 and ge c 65 le c 90 or and ge c 97 le c 122 ge c 128
+v = uchar 1
+end
+if or and ge c 9 le c 13 eq c 32
+v = uchar 2
+end
+put tkcl c v
+end
+o = ulong 0
+k = ulong 0
+for j ulong len tkmarks
+if eq get tkmarks j 62
+put tkmo k uchar o
+put tkml k uchar sub add j 1 o
+o = add j 1
+k = add k 1
+end
+end
+put tkv 0 0
+end
+
+note 256 + k when chat marker k starts at tkw[i] and ends by n; 0 when none does
+fn tkmark i ulong n ulong to ulong
+if ne get tkw i 60
+ret 0
+end
+for k ulong TKNSP
+l = ulong get tkml k
+if le add i l n
+o = ulong get tkmo k
+hit = true
+for j ulong l
+if ne get tkw add i j get tkmarks add o j
+hit = false
+end
+end
+if hit
+ret add 256 k
+end
+end
+end
+ret 0
+end
+
+note length (1 .. 64) of the chunk at tkw[i] in a text ending at n > i (FORMAT.md section 3).
+note Reads at most tkw[i .. i + 65).
+fn tkclen i ulong n ulong to ulong
+c = ulong get tkw i
+k = ulong get tkcl c
+e = add i 64
+if lt n e
+e = n
+end
+j = add i 1
+sp = false
+if eq c 32
+if lt j n
+if ne get tkcl get tkw j 2
+sp = true
+end
+end
+end
+if sp
+k = ulong get tkcl get tkw j
+j = add j 1
+end
+while lt j e bound 64
+if ne ulong get tkcl get tkw j k
+break
+end
+j = add j 1
+end
+if and eq k 2 lt j n
+if ne get tkcl get tkw j 2
+if and ge sub j i 2 eq get tkw sub j 1 32
+j = sub j 1
+end
+end
+end
+ret sub j i
+end
+
+note the next piece at tkw[i] of a text ending at n > i: in chat mode a marker (its length; tkv 1
+note = its special id), else a chunk (tkv 1 = 0) that ends before the next marker. Reads at most
+note tkw[i .. i + 80): a caller streaming a file keeps 80 bytes ahead of i until the file ends.
+fn tknext i ulong n ulong chat bool to ulong
+put tkv 1 0
+e = add i 65
+if lt n e
+e = n
+end
+if chat
+m = tkmark i n
+if ne m 0
+put tkv 1 m
+ret ulong get tkml sub m 256
+end
+j = add i 1
+while lt j e bound 65
+if eq get tkw j 60
+if ne tkmark j n 0
+e = j
+break
+end
+end
+j = add j 1
+end
+end
+ret tkclen i e
+end
+
+note u16 and u64 little-endian at tkmf[p]
+fn tkrd16 p ulong to ulong
+ret or ulong get tkmf p shl ulong get tkmf add p 1 8
+end
+fn tkrd64 p ulong to ulong
+v = ulong 0
+for k ulong 8
+v = or v shl ulong get tkmf add p k mul k 8
+end
+ret v
+end
+fn tkwr64 p ulong v ulong to void
+for k ulong 8
+put tkmf add p k uchar and shr v mul k 8 255
+end
+end
+
+note FNV-1a 64 of a merges file of n bytes: bytes 0 .. 23, then 32 .. n - 1 (all but the field)
+fn tkfnv n ulong to ulong
+h = ulong 14695981039346656037
+for k ulong 24
+h = mul xor h ulong get tkmf k 1099511628211
+end
+for k ulong sub n 32
+h = mul xor h ulong get tkmf add 32 k 1099511628211
+end
+ret h
+end
+
+note header of a merges file of V = v whose pairs are already at tkmf[32 ..); returns its length
+fn tkseal v ulong to ulong
+for k ulong 8
+put tkmf k get tkmagic k
+end
+tkwr64 8 v
+tkwr64 16 16
+n = add 32 mul 4 sub v TKFIRST
+tkwr64 24 tkfnv n
+ret n
+end
+
+note may pair member a appear in merge token t? (a byte, or an earlier merge; never a special)
+fn tkpok a ulong t ulong to bool
+ret or lt a 256 and ge a TKFIRST lt a t
+end
+
+note rank table: slot of key a 32768 + b
+fn tkslot key ulong to ulong
+ret shr mul add key 1 ulong 11400714819323198485 48
+end
+
+note put pair key -> merge token t in the rank table; false when the key is there already
+fn tkrins key ulong t ulong to bool
+s = tkslot key
+for q ulong 65536
+k = ulong get tkrk s
+if eq k 0
+put tkrk s uint add key 1
+put tkrt s ushort t
+ret true
+end
+if eq k add key 1
+ret false
+end
+s = and add s 1 65535
+end
+ret false
+end
+
+note merge token of pair (a, b), or 65535 when (a, b) is not a merge
+fn tkrank a ulong b ulong to ulong
+key = or shl a 15 b
+s = tkslot key
+for q ulong 65536
+k = ulong get tkrk s
+if eq k 0
+ret 65535
+end
+if eq k add key 1
+ret ulong get tkrt s
+end
+s = and add s 1 65535
+end
+ret 65535
+end
+
+note check merge k of a file being loaded (tkmf[32 + 4 k ..)) and use it; exit 26 on a fault
+fn tkld1 k ulong to void
+p = add 32 mul 4 k
+a = tkrd16 p
+b = tkrd16 add p 2
+t = add TKFIRST k
+if not and tkpok a t tkpok b t
+exit 26
+end
+l = add ulong get tkln a ulong get tkln b
+if gt l 64
+exit 26
+end
+if not tkrins or shl a 15 b t
+exit 26
+end
+put tkma t ushort a
+put tkmb t ushort b
+put tkln t uchar l
+end
+
+note check tkmf[0 .. n) as an OLLMTOK1 merges file (FORMAT.md section 2) and use it; returns its
+note V. Exit 26 on any fault: length, magic, V, special count, length for V, checksum, a pair
+note member that is a special or not below its own token, a token longer than 64 bytes, a pair
+note that is already a merge.
+fn tkload n ulong to ulong
+put tkv 0 0
+if or lt n 32 gt n TKMFCAP
+exit 26
+end
+for k ulong 8
+if ne get tkmf k get tkmagic k
+exit 26
+end
+end
+v = tkrd64 8
+if or lt v TKFIRST gt v TKVMAX
+exit 26
+end
+if ne tkrd64 16 16
+exit 26
+end
+if ne n add 32 mul 4 sub v TKFIRST
+exit 26
+end
+if ne tkfnv n tkrd64 24
+exit 26
+end
+for s ulong 65536
+put tkrk s 0
+end
+for t ulong 256
+put tkln t 1
+end
+for k ulong 16
+put tkln add 256 k 0
+end
+for k ulong TKNSP
+put tkln add 256 k get tkml k
+end
+for k ulong sub v TKFIRST
+tkld1 k
+end
+put tkv 0 v
+ret v
+end
+
+note is t a token of the loaded merges? (below V and not a reserved special)
+fn tkvalid t ulong to bool
+if ge t get tkv 0
+ret false
+end
+ret or lt t add 256 TKNSP ge t TKFIRST
+end
+
+note replace in tkct[0 .. m) every pair of merge token t, left to right without overlap
+fn tkrepl m ulong t ulong to ulong
+a = get tkma t
+b = get tkmb t
+w = ulong 0
+j = ulong 0
+while lt j m bound 128
+x = get tkct j
+z = ushort 65535
+if lt add j 1 m
+z = get tkct add j 1
+end
+if and eq x a eq z b
+put tkct w ushort t
+j = add j 2
+else
+put tkct w x
+j = add j 1
+end
+w = add w 1
+end
+ret w
+end
+
+note encode the chunk tkw[i .. i + l) (l <= 64) into tkct (FORMAT.md section 4: the present merge
+note of lowest rank, until none is left); returns the token count
+fn tkencc i ulong l ulong to ulong
+for k ulong l
+put tkct k ushort get tkw add i k
+end
+m = l
+dn = false
+while and not dn gt m 1 bound 64
+best = ulong 65535
+for j ulong sub m 1
+r = tkrank ulong get tkct j ulong get tkct add j 1
+if lt r best
+best = r
+end
+end
+if eq best 65535
+dn = true
+else
+m = tkrepl m best
+end
+end
+ret m
+end
+
+note the bytes of valid token t into tkdb; returns their count (1 .. 64)
+fn tkdec1 t ulong to ulong
+if and ge t 256 lt t TKFIRST
+k = sub t 256
+o = ulong get tkmo k
+l = ulong get tkml k
+for j ulong l
+put tkdb j get tkmarks add o j
+end
+ret l
+end
+put tksk 0 ushort t
+sp = ulong 1
+w = ulong 0
+while gt sp 0 bound 200
+sp = sub sp 1
+x = ulong get tksk sp
+if lt x 256
+put tkdb w uchar x
+w = add w 1
+else
+put tksk sp get tkmb x
+put tksk add sp 1 get tkma x
+sp = add sp 2
+end
+end
+ret w
+end
