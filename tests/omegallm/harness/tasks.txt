@@ -1,0 +1,361 @@
+# tests/omegallm/harness/tasks.txt: the harness tasks (format: TASKS.md). 20 tasks + 2 controls.
+# SPLIT train: families the SFT generator (native/omegallm/sftgen.om) may produce.
+# SPLIT heldout: families it never produces (sha256, replace_word, sort_lines, uppercase, concat,
+# arith); the accept sibling owns the frozen held-out evaluation built on them.
+# SPLIT control: deliberately wrong expectations; they must FAIL even when the work is right.
+# Expected values: sha256 digests and the product checked with Wolfram
+# (Hash[...,"SHA256"], 1234*5678 -> 7006652).
+
+@task t01 create train
+@prompt
+Create a file named notes.txt containing exactly the text: hello world
+@end
+@ref
+printf 'hello world\n' > notes.txt
+@end
+@expect trim notes.txt
+hello world
+@end
+
+@task t02 create train
+@prompt
+Create a file called greeting.txt whose only line is: good morning, Omega
+@end
+@ref
+echo 'good morning, Omega' > greeting.txt
+@end
+@expect trim greeting.txt
+good morning, Omega
+@end
+
+@task t03 append train
+@file log.txt
+first
+second
+@end
+@prompt
+Append a new line with the text third to the end of log.txt.
+@end
+@ref
+echo third >> log.txt
+@end
+@expect exact log.txt
+first
+second
+third
+@end
+
+@task t04 append train
+@file todo.txt
+buy milk
+@end
+@prompt
+Add the line "call mom" at the end of todo.txt, keeping what is already there.
+@end
+@ref
+echo 'call mom' >> todo.txt
+@end
+@expect exact todo.txt
+buy milk
+call mom
+@end
+
+@task t05 count_lines train
+@file data.txt
+red
+green
+blue
+cyan
+magenta
+yellow
+black
+@end
+@prompt
+Count the lines in data.txt and write only the number to count.txt.
+@end
+@ref
+wc -l < data.txt > count.txt
+@end
+@expect trim count.txt
+7
+@end
+
+@task t06 count_lines train
+@file items.csv
+id,name
+1,apple
+2,banana
+3,cherry
+4,date
+5,elderberry
+6,fig
+7,grape
+8,honeydew
+9,kiwi
+10,lemon
+11,mango
+@end
+@prompt
+How many lines does items.csv have? Save just that number in lines.txt.
+@end
+@ref
+wc -l < items.csv > lines.txt
+@end
+@expect trim lines.txt
+12
+@end
+
+@task t07 list_dir train
+@file box/a.txt
+alpha
+@end
+@file box/b.txt
+beta
+@end
+@file box/c.txt
+gamma
+@end
+@prompt
+List the names of the files in the directory box, one per line, into the file listing.txt.
+@end
+@ref
+ls box > listing.txt
+@end
+@expect trim listing.txt
+a.txt
+b.txt
+c.txt
+@end
+
+@task t08 rename train
+@file old.txt
+keep me
+@end
+@prompt
+Rename old.txt to new.txt.
+@end
+@ref
+mv old.txt new.txt
+@end
+@expect absent old.txt
+@expect exact new.txt
+keep me
+@end
+
+@task t09 copy train
+@file src.txt
+line one
+line two
+@end
+@prompt
+Make a copy of src.txt named dst.txt.
+@end
+@ref
+cp src.txt dst.txt
+@end
+@expect exact src.txt
+line one
+line two
+@end
+@expect exact dst.txt
+line one
+line two
+@end
+
+@task t10 mkdir_file train
+@prompt
+Create a directory named reports and inside it a file summary.txt containing the text: done
+@end
+@ref
+mkdir -p reports && echo done > reports/summary.txt
+@end
+@expect dir reports
+@expect trim reports/summary.txt
+done
+@end
+
+@task t11 first_line train
+@file poem.txt
+Roses are red
+Violets are blue
+Sugar is sweet
+And so are you
+@end
+@prompt
+Write the first line of poem.txt into first.txt.
+@end
+@ref
+head -n 1 poem.txt > first.txt
+@end
+@expect trim first.txt
+Roses are red
+@end
+
+@task t12 delete train
+@file junk.txt
+remove this
+@end
+@file keep.txt
+keep this
+@end
+@prompt
+Delete the file junk.txt but keep keep.txt.
+@end
+@ref
+rm junk.txt
+@end
+@expect absent junk.txt
+@expect exact keep.txt
+keep this
+@end
+
+@task t13 count_words train
+@file words.txt
+one two three four five
+six seven eight
+nine
+@end
+@prompt
+Count the words in words.txt and write only the number to wc.txt.
+@end
+@ref
+wc -w < words.txt > wc.txt
+@end
+@expect trim wc.txt
+9
+@end
+
+@task t14 sha256 heldout
+@file blob.txt
+omega
+@end
+@prompt
+Compute the SHA-256 hash of blob.txt and write the hex digest to hash.txt.
+@end
+@ref
+sha256sum blob.txt > hash.txt
+@end
+@expect contains hash.txt
+3eeb0cea8bf176427633a47a62ee8c813844d574d48554a0d715e12dcbbaeda6
+@end
+
+@task t15 sha256 heldout
+@file fox.txt
+The quick brown fox jumps over the lazy dog
+@end
+@prompt
+Save the sha256 checksum of fox.txt in fox.sha256.
+@end
+@ref
+sha256sum fox.txt > fox.sha256
+@end
+@expect contains fox.sha256
+c03905fcdab297513a620ec81ed46ca44ddb62d41cbbd83eb4a5a3592be26a69
+@end
+
+@task t16 replace_word heldout
+@file story.txt
+the cat sat on the mat
+the cat slept
+@end
+@prompt
+In story.txt replace every occurrence of the word cat with dog.
+@end
+@ref
+sed -i 's/cat/dog/g' story.txt
+@end
+@expect exact story.txt
+the dog sat on the mat
+the dog slept
+@end
+
+@task t17 sort_lines heldout
+@file names.txt
+mallory
+alice
+trent
+bob
+eve
+@end
+@prompt
+Sort the lines of names.txt alphabetically and save the result to sorted.txt.
+@end
+@ref
+sort names.txt > sorted.txt
+@end
+@expect exact sorted.txt
+alice
+bob
+eve
+mallory
+trent
+@end
+
+@task t18 uppercase heldout
+@file shout.txt
+make me loud
+@end
+@prompt
+Write the contents of shout.txt converted to uppercase into loud.txt.
+@end
+@ref
+tr a-z A-Z < shout.txt > loud.txt
+@end
+@expect exact loud.txt
+MAKE ME LOUD
+@end
+
+@task t19 concat heldout
+@file part1.txt
+first half
+@end
+@file part2.txt
+second half
+@end
+@prompt
+Concatenate part1.txt and then part2.txt into a new file whole.txt.
+@end
+@ref
+cat part1.txt part2.txt > whole.txt
+@end
+@expect exact whole.txt
+first half
+second half
+@end
+
+@task t20 arith heldout
+@prompt
+Compute 1234 multiplied by 5678 and write only the result to product.txt.
+@end
+@ref
+echo $((1234 * 5678)) > product.txt
+@end
+@expect trim product.txt
+7006652
+@end
+
+@task c01 create control
+@prompt
+Create a file named notes.txt containing exactly the text: hello world
+@end
+@ref
+printf 'hello world\n' > notes.txt
+@end
+@expect trim notes.txt
+hello world!
+@end
+
+@task c02 rename control
+@file old.txt
+keep me
+@end
+@prompt
+Rename old.txt to new.txt.
+@end
+@ref
+mv old.txt new.txt
+@end
+@expect absent old.txt
+@expect exact new.txt
+keep me too
+@end
