@@ -1,0 +1,503 @@
+note SPDX-License-Identifier: AGPL-3.0-only
+note omegalora lora.om (core v1): LoRA fine-tuning on a frozen base, written in Omega from scratch.
+note Network (one transformer MLP block shape): h0 = rmsnorm(x); p1 = (W1 + s*B1*A1) h0; a1 = silu(p1);
+note n1 = rmsnorm(a1); z = (W2 + s*B2*A2) n1; loss = mean cross-entropy(z, label).
+note W1, W2 are frozen. Only the LoRA factors A1 B1 A2 B2 learn (AdamW). Everything is f64 so this
+note file is the reference the GPU kernels are checked against.
+note stdin selects a deliberately broken build: 1 silu grad, 2 rmsnorm grad, 3 adam sign. 0 or empty = real.
+note exit 0 pass; 13 exp/log; 10 gradient check; 11 loss did not drop; 12 accuracy did not rise.
+note Constants (Wolfram, 2026-11-06, evidence/OMEGALORA/wolfram.txt): 1/ln2 1.4426950408889634,
+note   ln2 0.6931471805599453, sqrt2 1.4142135623730951, bits(1.0) 4607182418800017408,
+note   bits(+inf) 9218868437227405312, 2^52 - 1 4503599627370495. exp: degree 14 Taylor on [0, ln2),
+note   remainder bound 2 ln2^15/15! = 6.26e-15. log: atanh series to s^41, |s| <= 0.1716, tail 5.8e-35.
+note pool layout (f64 slots): W1 0, W2 384, params 1024 (A1 +0, B1 +64, A2 +160, B2 +256; 304 total),
+note grads 2048, adam m 3072, adam v 4096, inputs 5120, activations 8192 (128 per sample),
+note backward scratch 16384, teacher W1t 20000, W2t 20480, factor temp 21000, matvec temp 30000, adam powers 31000.
+global m f64 32768
+global lab ulong 64
+global rs ulong 1
+global mut ulong 1
+global ob uchar 64
+fn putc c ulong to void
+put ob 0 uchar c
+w = write 1 ob 0 1
+end
+fn putu n ulong to void
+tmp = new uchar 24 0
+k = ulong 0
+x = n
+if eq x 0
+putc 48
+ret
+end
+while gt x 0
+put tmp k uchar add 48 rem x 10
+x = div x 10
+k = add k 1
+end
+while gt k 0
+k = sub k 1
+putc ulong get tmp k
+end
+end
+fn putf x f64 to void
+v = x
+if lt v 0.0f64
+putc 45
+v = neg v
+end
+ip = ulong v
+putu ip
+putc 46
+fr = sub v f64 ip
+for i ulong 12
+fr = mul fr 10.0f64
+d = ulong fr
+putc add 48 d
+fr = sub fr f64 d
+end
+putc 10
+end
+text tex "exp(1) "
+text tlg "log(10) "
+text tgc "gradient check, worst relative error "
+text tl0 "loss before "
+text tl1 "loss after "
+text ta0 "accuracy before "
+text ta1 "accuracy after "
+fn say t ulong to void
+w = long 0
+if eq t 0
+w = write 1 tex 0 len tex
+end
+if eq t 1
+w = write 1 tlg 0 len tlg
+end
+if eq t 2
+w = write 1 tgc 0 len tgc
+end
+if eq t 3
+w = write 1 tl0 0 len tl0
+end
+if eq t 4
+w = write 1 tl1 0 len tl1
+end
+if eq t 5
+w = write 1 ta0 0 len ta0
+end
+if eq t 6
+w = write 1 ta1 0 len ta1
+end
+end
+fn fexp x f64 to f64
+if lt x -708.0f64
+ret 0.0f64
+end
+if gt x 709.0f64
+ret bitcast f64 ulong 9218868437227405312
+end
+t = mul x 1.4426950408889634f64
+k = long t
+if gt f64 k t
+k = sub k 1
+end
+r = sub x mul f64 k 0.6931471805599453f64
+p = 1.0f64
+c = long 14
+while gt c 0
+p = add 1.0f64 div mul p r f64 c
+c = sub c 1
+end
+e = bitcast f64 shl ulong add k 1023 52
+ret mul p e
+end
+fn flog x f64 to f64
+b = bitcast ulong x
+ex = sub long and shr b 52 2047 1023
+mm = bitcast f64 or and b 4503599627370495 4607182418800017408
+if gt mm 1.4142135623730951f64
+mm = mul mm 0.5f64
+ex = add ex 1
+end
+s = div sub mm 1.0f64 add mm 1.0f64
+s2 = mul s s
+acc = 0.0f64
+c = long 41
+while gt c 0
+acc = add div 1.0f64 f64 c mul s2 acc
+c = sub c 2
+end
+ret add mul 2.0f64 mul s acc mul f64 ex 0.6931471805599453f64
+end
+fn rnd to f64
+x = get rs 0
+x = xor x shl x 13
+x = xor x shr x 7
+x = xor x shl x 17
+put rs 0 x
+ret sub div f64 shr x 11 4503599627370496.0f64 1.0f64
+end
+fn fill off ulong n ulong sc f64 to void
+for i ulong n
+put m add off i mul sc rnd
+end
+end
+fn zero off ulong n ulong to void
+for i ulong n
+put m add off i 0.0f64
+end
+end
+note sum over i < n of a[i*sa] * b[i]
+fn sdot a ulong sa ulong b ulong n ulong to f64
+s = 0.0f64
+ai = a
+for i ulong n
+av = get m ai
+s = add s mul av get m add b i
+ai = add ai sa
+end
+ret s
+end
+note y[i] += c * x[i] for i < n
+fn axpy y ulong x ulong n ulong c f64 to void
+for i ulong n
+yi = add y i
+xv = mul c get m add x i
+put m yi add get m yi xv
+end
+end
+note y = W x, W is rows x cols row-major
+fn mv w ulong x ulong y ulong rows ulong cols ulong to void
+for r ulong rows
+put m add y r sdot add w mul r cols 1 x cols
+end
+end
+note o += W^T g
+fn mvtacc w ulong g ulong o ulong rows ulong cols ulong to void
+for c ulong cols
+oi = add o c
+put m oi add get m oi sdot add w c cols g rows
+end
+end
+note dw += sc * g x^T
+fn outacc g ulong x ulong dw ulong rows ulong cols ulong sc f64 to void
+for r ulong rows
+axpy add dw mul r cols x cols mul sc get m add g r
+end
+end
+fn rmsn a ulong o ulong n ulong to f64
+ss = 0.0f64
+for i ulong n
+v = get m add a i
+ss = add ss mul v v
+end
+r = fsqrt add div ss f64 n 0.000001f64
+for i ulong n
+put m add o i div get m add a i r
+end
+ret r
+end
+fn sig p f64 to f64
+ret div 1.0f64 add 1.0f64 fexp neg p
+end
+note forward for sample i; lora adds s*B*A on both layers (s = alpha/r = 8/4 = 2)
+note sample slots: h0 +0 (16), t1 +16 (4), p1 +20 (24), a1 +44 (24), n1 +68 (24), r1 +92, t2 +93 (4), z +97 (12)
+fn base i ulong to ulong
+ret add 8192 mul i 128
+end
+fn silu a ulong p ulong n ulong to void
+for k ulong n
+v = get m add p k
+put m add a k mul v sig v
+end
+end
+fn fwd i ulong w1 ulong w2 ulong lora bool to void
+b = base i
+q = rmsn add 5120 mul i 16 b 16
+mv w1 b add b 20 24 16
+if lora
+mv 1024 b add b 16 4 16
+mv 1088 add b 16 30000 24 4
+axpy add b 20 30000 24 2.0f64
+end
+silu add b 44 add b 20 24
+put m add b 92 rmsn add b 44 add b 68 24
+mv w2 add b 68 add b 97 12 24
+if lora
+mv 1184 add b 68 add b 93 4 24
+mv 1280 add b 93 30000 12 4
+axpy add b 97 30000 12 2.0f64
+end
+end
+fn amax z ulong n ulong to ulong
+best = ulong 0
+for k ulong n
+if gt get m add z k get m add z best
+best = k
+end
+end
+ret best
+end
+fn lossi i ulong to f64
+z = add add 8192 mul i 128 97
+mx = get m add z amax z 12
+se = 0.0f64
+for k ulong 12
+se = add se fexp sub get m add z k mx
+end
+ret sub add mx flog se get m add z get lab i
+end
+fn total to f64
+s = 0.0f64
+for i ulong 64
+fwd i 0 384 true
+s = add s lossi i
+end
+ret div s 64.0f64
+end
+fn accuracy to f64
+c = 0.0f64
+for i ulong 64
+fwd i 0 384 true
+if eq amax add add 8192 mul i 128 97 12 get lab i
+c = add c 1.0f64
+end
+end
+ret div c 64.0f64
+end
+note backward for sample i (fwd i must have run with lora); adds into grads at 2048
+note backward scratch: dz 16384 (12), dt2 16400 (4), dn1 16404 (24), da1 16428 (24), dp1 16452 (24), dt1 16476 (4)
+fn scal y ulong n ulong c f64 to void
+for k ulong n
+put m add y k mul c get m add y k
+end
+end
+note dz = (softmax(z) - onehot(label)) / batch
+fn bce i ulong to void
+z = add base i 97
+mx = get m add z amax z 12
+se = 0.0f64
+for k ulong 12
+se = add se fexp sub get m add z k mx
+end
+y = get lab i
+for k ulong 12
+g = div fexp sub get m add z k mx se
+if eq k y
+g = sub g 1.0f64
+end
+put m add 16384 k div g 64.0f64
+end
+end
+note rmsnorm backward: da = (dn - n * mean(dn * n)) / r
+fn brms i ulong to void
+n1 = add base i 68
+r1 = get m add base i 92
+dot = div sdot 16404 1 n1 24 24.0f64
+mu = get mut 0
+for k ulong 24
+dn = get m add 16404 k
+nv = mul get m add n1 k dot
+v = sub dn nv
+if eq mu 2
+v = add dn nv
+end
+put m add 16428 k div v r1
+end
+end
+note silu backward: d silu(p) = sig(p) (1 + p (1 - sig(p)))
+fn bsilu i ulong to void
+p1 = add base i 20
+mu = get mut 0
+for k ulong 24
+p = get m add p1 k
+sg = sig p
+d = mul sg add 1.0f64 mul p sub 1.0f64 sg
+if eq mu 1
+d = mul sg sub 1.0f64 mul p sub 1.0f64 sg
+end
+dv = mul get m add 16428 k d
+put m add 16452 k dv
+end
+end
+fn back i ulong to void
+b = base i
+bce i
+outacc 16384 add b 93 2304 12 4 2.0f64
+zero 16400 4
+mvtacc 1280 16384 16400 12 4
+scal 16400 4 2.0f64
+outacc 16400 add b 68 2208 4 24 1.0f64
+zero 16404 24
+mvtacc 384 16384 16404 12 24
+mvtacc 1184 16400 16404 4 24
+brms i
+bsilu i
+outacc 16452 add b 16 2112 24 4 2.0f64
+zero 16476 4
+mvtacc 1088 16452 16476 24 4
+scal 16476 4 2.0f64
+outacc 16476 b 2048 4 16 1.0f64
+end
+fn grads to f64
+zero 2048 304
+s = 0.0f64
+for i ulong 64
+fwd i 0 384 true
+s = add s lossi i
+back i
+end
+ret div s 64.0f64
+end
+note AdamW: beta1 0.9, beta2 0.999, eps 1e-8, weight decay 0.01. b1t, b2t = beta^t
+fn adam1 j ulong lr f64 b1t f64 b2t f64 to void
+g = get m add 2048 j
+mo = mul 0.9f64 get m add 3072 j
+mo = add mo mul 0.1f64 g
+vo = mul 0.999f64 get m add 4096 j
+g = mul g g
+vo = add vo mul 0.001f64 g
+put m add 3072 j mo
+put m add 4096 j vo
+mo = div mo sub 1.0f64 b1t
+vo = div vo sub 1.0f64 b2t
+vo = add fsqrt vo 0.00000001f64
+pj = get m add 1024 j
+g = add div mo vo mul 0.01f64 pj
+g = mul lr g
+if eq get mut 0 3
+put m add 1024 j add pj g
+else
+put m add 1024 j sub pj g
+end
+end
+fn adam lr f64 to void
+b1t = mul get m 31000 0.9f64
+b2t = mul get m 31001 0.999f64
+put m 31000 b1t
+put m 31001 b2t
+for j ulong 304
+adam1 j lr b1t b2t
+end
+end
+fn fabsd x f64 to f64
+if lt x 0.0f64
+ret neg x
+end
+ret x
+end
+note teacher entry: t = w + sum_q u[r,q] v[q,c], u is rows x 4, v is 4 x cols
+fn tent w ulong u ulong v ulong cols ulong r ulong c ulong to f64
+s = get m add w add mul r cols c
+ret add s sdot add v c cols add u mul r 4 4
+end
+fn teach to void
+for r ulong 24
+for c ulong 16
+put m add 20000 add mul r 16 c tent 0 21000 21100 16 r c
+end
+end
+for r ulong 12
+for c ulong 24
+put m add 20480 add mul r 24 c tent 384 21200 21300 24 r c
+end
+end
+for i ulong 64
+fwd i 20000 20480 false
+put lab i amax add base i 97 12
+end
+end
+note relative error of the analytic gradient of parameter j against a central difference
+fn gerr j ulong to f64
+pi = add 1024 j
+p0 = get m pi
+put m pi add p0 0.00001f64
+lp = total
+put m pi sub p0 0.00001f64
+lmn = total
+put m pi p0
+num = div sub lp lmn 0.00002f64
+an = get m add 2048 j
+den = fmax add fabsd num fabsd an 0.00000001f64
+ret div fabsd sub num an den
+end
+fn gcheck to f64
+fill 1024 304 0.3f64
+ld = grads
+worst = 0.0f64
+j = ulong 0
+while lt j 304
+worst = fmax worst gerr j
+j = add j 3
+end
+ret worst
+end
+fn tinit to void
+fill 1024 64 0.1f64
+zero 1088 96
+fill 1184 96 0.1f64
+zero 1280 48
+zero 3072 304
+zero 4096 304
+put m 31000 1.0f64
+put m 31001 1.0f64
+end
+fn main to int
+k = read 0 ob 0 1
+if eq k 1
+put mut 0 ulong sub ulong get ob 0 48
+end
+put rs 0 ulong 88172645463325252
+note 1. exp and log against known constants
+say 0
+putf fexp 1.0f64
+say 1
+putf flog 10.0f64
+if gt fabsd sub fexp 1.0f64 2.718281828459045f64 0.00000000000001f64
+ret 13
+end
+if gt fabsd sub flog 10.0f64 2.302585092994046f64 0.00000000000001f64
+ret 13
+end
+note 2. data: frozen base, a hidden low-rank teacher change, inputs and teacher labels
+fill 0 384 0.5f64
+fill 384 288 0.5f64
+fill 5120 1024 1.0f64
+fill 21000 96 0.6f64
+fill 21100 64 0.6f64
+fill 21200 48 0.6f64
+fill 21300 96 0.6f64
+teach
+note 3. gradient check at a random point (B nonzero), every 3rd parameter
+worst = gcheck
+say 2
+putf worst
+if gt worst 0.000001f64
+ret 10
+end
+note 4. train from the base model (B zero) with AdamW
+tinit
+l0 = total
+a0 = accuracy
+for step ulong 400
+ld = grads
+adam 0.02f64
+end
+l1 = total
+a1 = accuracy
+say 3
+putf l0
+say 4
+putf l1
+say 5
+putf a0
+say 6
+putf a1
+if gt l1 mul 0.5f64 l0
+ret 11
+end
+if lt a1 add a0 0.2f64
+ret 12
+end
+ret 0
+end
