@@ -1,0 +1,48 @@
+{
+  "port": 8099,
+  "results": [
+    {
+      "case": "stream-parity",
+      "model": "Omega-Astra-Aienux",
+      "text": " The",
+      "first_text_seconds": 14.251059166970663,
+      "total_seconds": 14.251757082995027,
+      "pass": true
+    },
+    {
+      "case": "unknown-model",
+      "status": 404,
+      "pass": true
+    },
+    {
+      "case": "empty-prompt",
+      "status": 400,
+      "pass": true
+    },
+    {
+      "case": "foreign-origin",
+      "status": 403,
+      "pass": true
+    },
+    {
+      "case": "foreign-host",
+      "status": 403,
+      "pass": true
+    },
+    {
+      "case": "tools",
+      "status": 400,
+      "pass": true
+    },
+    {
+      "case": "ui-assets",
+      "sha256": "4c351e70d8f5d7aee2e4a59b2af818ceceffd100f990a4b8f1e4ed474735c3cd",
+      "pass": true
+    },
+    {
+      "case": "qwen-route",
+      "text": "42",
+      "pass": true
+    }
+  ]
+}

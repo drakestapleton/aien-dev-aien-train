@@ -1,0 +1,19 @@
+{
+  "extensions": {
+    "generated": {
+      "children": [],
+      "children_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "compiled_at": "2026-11-06T16:37:55Z",
+      "compiler": "crumb-compile/1",
+      "digest": "sha256:737e8871d5cdacdf9b717d0a739048706ccaed9c6ba83e9701e2aba392a8aeb9",
+      "evidence_files": 0,
+      "evidence_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "files": 5,
+      "generated_at_commit": "77cffb6d6698f59b0644552bcbfe0b639da94abe",
+      "source_tree": "sha256:c2b677edd5dc89fc6c557e70878afbdd7577da7c52e0e61c75e7619449c99bc4"
+    }
+  },
+  "name": "omegallm-ui",
+  "purpose": "Opt-in Mac llama UI compatibility adapter; Omega model inference in Linux or Aienux firmware",
+  "schema_version": "1.0.0"
+}

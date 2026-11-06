@@ -315,17 +315,30 @@ exit 2
 end
 tm = oargu 5
 v = get og 0
-put og 9 0
-ocpush 0
 if gt v 256
 if eq na 7
 exit 2
 end
+obload 7 v
+end
+osampleloaded st nn tm
+end
+
+note Embedding entry: checkpoint and tokenizer already loaded; argument 6 supplies the prompt.
+note The caller keeps exclusive ownership of the model pools until this returns.
+fn osampleloaded seed ulong nn ulong tm ulong to void
+if gt nn 999999
+exit 2
+end
+st = seed
+v = get og 0
+put og 9 0
+ocpush 0
+if gt v 256
 r = oargr 6
 if or lt r 0 gt r 4000
 exit 2
 end
-obload 7 v
 np = obprompt 6
 for i ulong np
 ocpush get obtk i
@@ -357,6 +370,8 @@ obtput c
 else
 oputc c
 end
+note Flush each decoded token so interactive consumers see progress. Bytes and sampling stay unchanged.
+oflush
 ocpush c
 end
 oflush

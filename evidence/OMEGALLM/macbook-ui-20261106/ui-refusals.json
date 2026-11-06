@@ -1,0 +1,62 @@
+[
+  {
+    "port": 8098,
+    "case": "unknown-model",
+    "status": 404,
+    "pass": true
+  },
+  {
+    "port": 8098,
+    "case": "empty-prompt",
+    "status": 400,
+    "pass": true
+  },
+  {
+    "port": 8098,
+    "case": "foreign-origin",
+    "status": 403,
+    "pass": true
+  },
+  {
+    "port": 8098,
+    "case": "foreign-host",
+    "status": 403,
+    "pass": true
+  },
+  {
+    "port": 8098,
+    "case": "tools",
+    "status": 400,
+    "pass": true
+  },
+  {
+    "port": 8099,
+    "case": "unknown-model",
+    "status": 404,
+    "pass": true
+  },
+  {
+    "port": 8099,
+    "case": "empty-prompt",
+    "status": 400,
+    "pass": true
+  },
+  {
+    "port": 8099,
+    "case": "foreign-origin",
+    "status": 403,
+    "pass": true
+  },
+  {
+    "port": 8099,
+    "case": "foreign-host",
+    "status": 403,
+    "pass": true
+  },
+  {
+    "port": 8099,
+    "case": "tools",
+    "status": 400,
+    "pass": true
+  }
+]

@@ -1,0 +1,10 @@
+{
+  "checkpoint_sha256": "131f7e3f26f5494a9882d8107096d4209651978a5bf35eccb3f953203d1f07d6",
+  "linux_runner_sha256": "1291225aa92c12d185c98f5f5539068aa3b3ae6fb8c670a9a6718f3806458bcd",
+  "linux_compiler_sha256": "2c82480596bbdc50cda9626866209ef662d5834f278f839ff4ce0250c495029f",
+  "host_adapter_sha256": "cc2901c24d8bd8503f2686d890b58907d39a408abcb1cf03886e50bf6d347fd2",
+  "host_adapter_source_sha256": "71324c3d01696e5707a5ff67d402feeb46c755e39b843fd93b9a8cd303189066",
+  "llama_cpp_revision": "7aca0d2ea8d92b56911233b822db01f9fbb1ae50",
+  "browser_visual_automation": "NOT_RUN; required browser tool unavailable",
+  "harness_all_omega_host_migration": "OPEN; temporary C++ adapter has no successor compiler PR"
+}
