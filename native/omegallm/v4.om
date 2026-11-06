@@ -55,6 +55,9 @@ const XWB2 ulong 15733760
 note Mutant j (the dz = dl wte column sums restart at 0 at the bank-2 rows, dropping bank 1): 1 in
 note the product, 0 in the mutant. gcheck4 on the wx crossing shape must catch it.
 const OMUTJ ulong 1
+note Mutant jd (the decode embedding of a bank-2 token reads its neighbour row c xor 1; the training
+note forward is unchanged): kvck on the wx crossing shape must catch it (44).
+const OMUTJD ulong 1
 note magics: "OLLMCK03" (Wolfram -> 3688530847248174159), CK01, CK02 (ckpt.om)
 const XCK3 ulong 3688530847248174159
 const XCK1 ulong 3544415659172318287
@@ -2212,7 +2215,13 @@ note one decode position t (token xtk[t]) through every layer; logits into LG wh
 fn xdpos t ulong hd bool to void
 d = get xg 2
 xr = get xg 49
-xcpe xr get xtk t
+c = get xtk t
+if eq OMUTJD 0
+if ge c get xg 72
+c = xor c 1
+end
+end
+xcpe xr c
 for l ulong get xg 5
 xdlay l t
 end
