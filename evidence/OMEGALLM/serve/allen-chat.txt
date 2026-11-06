@@ -1,0 +1,69 @@
+== POST /allen/api/chat: What is Omega?
+event: start
+data: {"model":"qwen3.6-35b-a3b-fp8","queued_ms":0,"remembered":false}
+
+event: meta
+data: {"source":"cold"}
+
+data: ""
+
+data: "\""
+
+data: "I"
+
+data: " am"
+
+data: " O"
+
+data: "kay"
+
+data: "."
+
+data: " I"
+
+data: " am"
+
+event: done
+data: {"prompt_tokens":43,"completion_tokens":8,"finish":"length","upstream_ttft_ms":2088,"upstream_ms":11421,"source":"cold","tool_rounds":0}
+
+== curl rc=0
+== POST /allen/api/chat: Tell me a story.
+event: start
+data: {"model":"qwen3.6-35b-a3b-fp8","queued_ms":0,"remembered":false}
+
+event: meta
+data: {"source":"cold"}
+
+data: ""
+
+data: "\""
+
+data: "What"
+
+data: " kind"
+
+data: " of"
+
+data: " story"
+
+data: " do"
+
+data: " you"
+
+data: " want"
+
+event: done
+data: {"prompt_tokens":42,"completion_tokens":8,"finish":"length","upstream_ttft_ms":843,"upstream_ms":7754,"source":"cold","tool_rounds":0}
+
+== curl rc=0
+--- ollm.log
+PORT 18292
+C 200 0 0 0 0
+C 200 43 8 2 11420
+C 200 0 0 0 0
+C 200 42 8 2 7754
+--- allen.log
+allen-chat listening on 127.0.0.1:18293, upstream 127.0.0.1:18292, cap 2, system prompt sha256 3d718b5b7cf53fa633fd02e92d92451536efd79312b2edb3030a2a8e3af7cd66, console off
+launchers 3662509 3664641 servers 3662517 3664645
+after: 0 0
+rc=0

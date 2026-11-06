@@ -23,6 +23,8 @@ const BQPMSK ulong 1048575
 const BQNCAP ulong 4194304
 const BQLCAP ulong 1099511627776
 global obtk ulong 4096
+global obo uchar 4096
+global obon ulong 1
 global obm uchar 15384
 global bqma ushort 4096
 global bqmb ushort 4096
@@ -779,7 +781,8 @@ end
 put bqv 0 v
 end
 
-note write the decoded bytes of token t to stdout (mode 0) or to output 0 (mode 1)
+note write the decoded bytes of token t to stdout (mode 0), to output 0 (mode 1) or to the capture
+note buffer obo (mode 2, serve.om; bytes past obo's 4096 are dropped, so callers check obtlen first)
 fn bpexp t ulong mode ulong to void
 put bqsk 0 ushort t
 sp = ulong 1
@@ -793,7 +796,15 @@ if lt x 256
 if eq mode 0
 oputc x
 else
+if eq mode 1
 owbyte 0 x
+else
+n = get obon 0
+if lt n 4096
+put obo n uchar x
+put obon 0 add n 1
+end
+end
 end
 else
 put bqsk sp get bqmb x
@@ -887,6 +898,12 @@ fn obtput t ulong to void
 bpexp t 0
 end
 
+note the decoded bytes of token t into obo[0 .. obon[0]) (serve.om)
+fn obtcap t ulong to void
+put obon 0 0
+bpexp t 2
+end
+
 note section 8: encode argument ai (at most 4000 bytes, CONTRACT 7.2; longer exit 2) into obtk;
 note returns the token count
 fn obprompt ai ulong to ulong
@@ -894,6 +911,11 @@ n = oargp ai
 if gt n 4000
 exit 2
 end
+ret obpenc n
+end
+
+note encode oarg[0 .. n), n <= 4000, into obtk; returns the token count (obprompt, serve.om)
+fn obpenc n ulong to ulong
 i = ulong 0
 m = ulong 0
 while lt i n bound 4097

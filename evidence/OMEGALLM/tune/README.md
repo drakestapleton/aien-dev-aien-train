@@ -15,3 +15,8 @@ closes), tune keeps the weights (eval loss and bpb equal), resets the step, zero
 fine-tuning then lowers eval loss (4.901318 to 4.816743 nats after 20 steps), resume is
 bit-identical, tune is deterministic, bad TOTAL, argument count and a truncated checkpoint are
 refused with no output, and a build with the moment reset removed is caught.
+
+Rerun after merging `ollm serve` (aien-train#71, branch `feat/ollm-serve-http`): the same command on
+the merged aarch64 build, `ollm` sha256 `318573b6cc65bb6dbb0e63ab23c0afffdc45eab10823ccf5d1a98433842f113d`
+(source `154ec398`), Spark cores 8-9 in bwrap, exit 0, TUNE_PASS, output in `check-merged-serve.txt`
+(MEASURED, 2026-11-06).

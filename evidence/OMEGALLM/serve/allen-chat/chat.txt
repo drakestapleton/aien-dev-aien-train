@@ -1,0 +1,58 @@
+== POST /allen/api/chat: What is Omega?
+event: start
+data: {"model":"qwen3.6-35b-a3b-fp8","queued_ms":0,"remembered":false}
+
+event: meta
+data: {"source":"cold"}
+
+data: ""
+
+data: "\""
+
+data: "I"
+
+data: " am"
+
+data: " O"
+
+data: "kay"
+
+data: "."
+
+data: " I"
+
+data: " am"
+
+event: done
+data: {"prompt_tokens":43,"completion_tokens":8,"finish":"length","upstream_ttft_ms":2088,"upstream_ms":11421,"source":"cold","tool_rounds":0}
+
+== curl rc=0
+== POST /allen/api/chat: Tell me a story.
+event: start
+data: {"model":"qwen3.6-35b-a3b-fp8","queued_ms":0,"remembered":false}
+
+event: meta
+data: {"source":"cold"}
+
+data: ""
+
+data: "\""
+
+data: "What"
+
+data: " kind"
+
+data: " of"
+
+data: " story"
+
+data: " do"
+
+data: " you"
+
+data: " want"
+
+event: done
+data: {"prompt_tokens":42,"completion_tokens":8,"finish":"length","upstream_ttft_ms":843,"upstream_ms":7754,"source":"cold","tool_rounds":0}
+
+== curl rc=0
