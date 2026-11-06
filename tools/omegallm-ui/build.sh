@@ -15,7 +15,7 @@ fetch() {
 fetch httplib.h "$base/cpp-httplib/httplib.h" a595e3f0d864e1606f9455ed4a8738de66fc8ef4abf7164e6570fe0e0393080b
 fetch httplib.cpp "$base/cpp-httplib/httplib.cpp" 516c58994baa9bcc3b5616f453710c0b4d2d341ac473f788fcfb029f8548caa5
 fetch json.hpp "$base/nlohmann/json.hpp" 08f19bbcc66ff3082f5caf58867b1232987dba98d82e2b29d870722fce42776b
-curl --fail --location "$base/cpp-httplib/LICENSE" -o "$out/deps/httplib-LICENSE"
+fetch httplib-LICENSE "$base/cpp-httplib/LICENSE" 4b45cbe16d7b71b89ae6127e26e0d90a029198ca5e958ad8e3d0b8bbed364d8b
 # nlohmann/json's MIT notice is embedded in json.hpp. Keep both notices with the binary.
 c++ -std=c++17 -O1 -pthread -Wall -Wextra -I "$out/deps" \
  "$here/bridge.cpp" "$out/deps/httplib.cpp" -o "$out/omega-ui-bridge"
