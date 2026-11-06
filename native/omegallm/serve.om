@@ -176,6 +176,7 @@ text sem22 "tool_choice must be \"none\", \"auto\", \"required\" or a {\"type\":
 text sem23 "tool_calls must be an array of {\"function\":{\"name\":string,\"arguments\":string or object}} objects"
 text sem24 "ollm_test_output (a string of at most 16384 bytes) and ollm_test_delay_ms (0 to 10000) need a server started with test=1"
 text sem25 "the request body has over 65532 JSON tokens (values, keys and closers), the JSON parser's limit"
+text sem26 "message role must be system, developer, user, assistant or tool (CHAT1 template)"
 text sem11a "prompt is "
 text sem11b " tokens including the start token; the context window is "
 text sem11c " tokens, so no room is left for output"
@@ -511,7 +512,7 @@ end
 ret sub svemsg2 wb e p z b
 end
 
-note svemsg2: the messages of error codes 17 .. 25 at p; the end
+note svemsg2: the messages of error codes 17 .. 26 at p; the end
 fn svemsg2 wb edit uchar 1073664 e ulong p ulong z ulong to ulong
 if eq e 17
 ret svmcat wb p z sem17
@@ -539,6 +540,9 @@ ret svmcat wb p z sem24
 end
 if eq e 25
 ret svmcat wb p z sem25
+end
+if eq e 26
+ret svmcat wb p z sem26
 end
 ret p
 end
@@ -1185,6 +1189,10 @@ ret r
 end
 e = js_enext tp e
 end
+if eq get sv 40 1
+put sv 48 add a 1
+ret 0
+end
 if not svpcat wb sv svtlp
 ret 6
 end
@@ -1484,6 +1492,9 @@ put sv add 24 i 0
 end
 put sv 29 1000000
 put sv 31 1
+put sv 48 0
+put sv 51 0
+put sv 52 0
 end
 
 note svparse: the request body bd[0, n) into sv and the template; 0 or an error code
@@ -1526,17 +1537,489 @@ end
 if eq get sv 30 0
 put sv 31 0
 end
+if eq get sv 40 1
+ret c1conv bd tp ma wb sv
+end
 ret svmsgs bd tp ma wb sv
+end
+
+note ======== CHAT1 (DRA-123: the one chat template of serving, training data and evaluation)
+
+note With OLLMTOK1 merges (sv40 = 1) a request's conversation becomes token ids directly (svparse
+note calls c1conv; `ollm chatenc` runs the same svparse per JSONL line, so both produce the same
+note tokens): 263 <|doc|>; per message system/developer 257, user 258, assistant 259, tool 261, then
+note raw(content) (FORMAT.md section 6 raw mode, so content can never forge a special); the first
+note system message also gets raw("\n\n# Tools\n" + the tools JSON text as sent) when tools is
+note non-empty (no system message: a system turn of only that section right after 263); an
+note assistant message adds, per tool call, 260 then raw({"name":NAME,"arguments":ARGS}) with NAME
+note the name's JSON string as sent and ARGS the decoded string, the object's JSON text as sent, or
+note {} when absent; every message ends with 256 <|end|> (one per assistant turn). serve appends the
+note generation prompt 259. svpm marks the assistant tokens after 259 (content, calls, the closing
+note 256): the training loss mask. Other roles are 400 (error 26).
+text c1th "\n\n# Tools\n"
+text c1rbr "}"
+text c1rsys "system"
+text c1rdev "developer"
+text c1ruse "user"
+text c1rtol "tool"
+note svpt prompt tokens, svpm their loss mask, svpn 0 count (counting on past the 65536 stored) 1
+note the mask of the next token; svtcp the content positions of generated <|tool_call|> tokens
+global svpt ulong 65536
+global svpm uchar 65536
+global svpn ulong 4
+global svtcp ulong 16
+
+note c1put: token t onto the prompt buffer (mask svpn 1)
+fn c1put t ulong to void
+m = get svpn 0
+if lt m 65536
+put svpt m t
+put svpm m uchar get svpn 1
+end
+put svpn 0 add m 1
+end
+
+note c1seg: raw-encode the template bytes wb[90624, 90624 + sv5) onto the prompt; sv5 back to 0
+fn c1seg wb edit uchar 1073664 sv edit ulong 64 to void
+n = get sv 5
+for i ulong n
+put tkw i get wb add 90624 i
+end
+i = ulong 0
+while lt i n bound 999999
+l = tknext i n false
+c = tkencc i l
+for j ulong c
+c1put ulong get tkct j
+end
+i = add i l
+end
+put sv 5 0
+end
+
+note c1role: 1 system or developer, 2 user, 3 assistant, 4 tool, 0 another role (string at bd[o ..))
+fn c1role bd edit uchar 983040 o ulong to ulong
+if or js_streq bd o c1rsys js_streq bd o c1rdev
+ret 1
+end
+if js_streq bd o c1ruse
+ret 2
+end
+if js_streq bd o svasst
+ret 3
+end
+if js_streq bd o c1rtol
+ret 4
+end
+ret 0
+end
+
+note c1sp: the special id that starts a turn of role kind r
+fn c1sp r ulong to ulong
+if eq r 1
+ret 257
+end
+if eq r 2
+ret 258
+end
+if eq r 3
+ret 259
+end
+ret 261
+end
+
+note c1tools: the pending tools section (sv48 = tools token + 1) as one raw segment; sv48 cleared
+fn c1tools bd edit uchar 983040 tp edit uint 262144 wb edit uchar 1073664 sv edit ulong 64 to ulong
+a = get sv 48
+if eq a 0
+ret 0
+end
+put sv 48 0
+put sv 5 0
+if not svpcat wb sv c1th
+ret 6
+end
+if not svpraw bd tp sub a 1 wb sv
+ret 6
+end
+c1seg wb sv
+ret 0
+end
+
+note c1tc1: one assistant tool call e as 260 raw({"name":N,"arguments":A})
+fn c1tc1 bd edit uchar 983040 tp edit uint 262144 e ulong wb edit uchar 1073664 sv edit ulong 64 to ulong
+f = svmem bd tp e skfunc
+if eq f jsnone
+ret 23
+end
+nm = svmem bd tp f sknam
+if eq nm jsnone
+ret 23
+end
+if ne js_type tp nm 6
+ret 23
+end
+ar = svmem bd tp f skargs
+aty = ulong 0
+if ne ar jsnone
+aty = js_type tp ar
+end
+if and and ne aty 0 ne aty 6 ne aty 1
+ret 23
+end
+put sv 5 0
+ok = svpcat wb sv svtcn
+ok = and ok svpraw bd tp nm wb sv
+ok = and ok svpcat wb sv svtca
+if eq aty 6
+ok = and ok svpstr bd tp ar wb sv
+end
+if eq aty 1
+ok = and ok svpraw bd tp ar wb sv
+end
+if eq aty 0
+ok = and ok svpcat wb sv svempt
+end
+ok = and ok svpcat wb sv c1rbr
+if not ok
+ret 6
+end
+c1put 260
+c1seg wb sv
+ret 0
+end
+
+note c1tcs: an assistant message's tool_calls array a
+fn c1tcs bd edit uchar 983040 tp edit uint 262144 a ulong wb edit uchar 1073664 sv edit ulong 64 to ulong
+if ne js_type tp a 3
+ret 23
+end
+e = js_first tp a
+for it ulong js_nkids tp a
+if eq e jsnone
+break
+end
+r = c1tc1 bd tp e wb sv
+if ne r 0
+ret r
+end
+e = js_enext tp e
+end
+ret 0
+end
+
+note c1body: the content value co (type ct; 10 none) as one raw segment
+fn c1body bd edit uchar 983040 tp edit uint 262144 co ulong ct ulong wb edit uchar 1073664 sv edit ulong 64 to ulong
+put sv 5 0
+if eq ct 6
+if not svpstr bd tp co wb sv
+ret 6
+end
+end
+if eq ct 3
+r = svparts bd tp co wb sv
+if ne r 0
+ret r
+end
+end
+c1seg wb sv
+ret 0
+end
+
+note c1msg: one message object e; 0 or an error code
+fn c1msg bd edit uchar 983040 tp edit uint 262144 e ulong wb edit uchar 1073664 sv edit ulong 64 to ulong
+if ne js_type tp e 1
+ret 3
+end
+ro = svmem bd tp e skrole
+if eq ro jsnone
+ret 5
+end
+if or ne js_type tp ro 6 gt js_slen tp ro 32
+ret 5
+end
+r = c1role bd js_off tp ro
+if eq r 0
+ret 26
+end
+co = svmem bd tp e skcont
+tc = svmem bd tp e sktcall
+if ne tc jsnone
+if eq js_type tp tc 10
+tc = jsnone
+end
+end
+ct = ulong 10
+if ne co jsnone
+ct = js_type tp co
+end
+if and eq co jsnone eq tc jsnone
+ret 4
+end
+if and and ne ct 6 ne ct 10 ne ct 3
+ret 4
+end
+put svpn 1 0
+c1put c1sp r
+if eq r 3
+put svpn 1 1
+end
+x = c1body bd tp co ct wb sv
+if ne x 0
+ret x
+end
+if eq r 1
+x = c1tools bd tp wb sv
+if ne x 0
+ret x
+end
+end
+if and eq r 3 ne tc jsnone
+x = c1tcs bd tp tc wb sv
+if ne x 0
+ret x
+end
+end
+c1put 256
+put svpn 1 0
+ret 0
+end
+
+note c1hsys: whether the messages array a has a system or developer message
+fn c1hsys bd edit uchar 983040 tp edit uint 262144 a ulong to bool
+e = js_first tp a
+for it ulong js_nkids tp a
+if eq e jsnone
+break
+end
+if eq js_type tp e 1
+ro = svmem bd tp e skrole
+if ne ro jsnone
+if eq js_type tp ro 6
+if eq c1role bd js_off tp ro 1
+ret true
+end
+end
+end
+end
+e = js_enext tp e
+end
+ret false
+end
+
+note c1conv: the messages array a as CHAT1 tokens into svpt (no generation prompt); 0 or a code
+fn c1conv bd edit uchar 983040 tp edit uint 262144 a ulong wb edit uchar 1073664 sv edit ulong 64 to ulong
+put svpn 0 0
+put svpn 1 0
+if ne js_type tp a 3
+ret 3
+end
+n = js_nkids tp a
+if eq n 0
+ret 3
+end
+c1put 263
+if ne get sv 48 0
+if not c1hsys bd tp a
+c1put 257
+x = c1tools bd tp wb sv
+if ne x 0
+ret x
+end
+c1put 256
+end
+end
+e = js_first tp a
+for it ulong n
+if eq e jsnone
+break
+end
+r = c1msg bd tp e wb sv
+if ne r 0
+ret r
+end
+e = js_enext tp e
+end
+ret 0
+end
+
+note c1fenc: the test output wb[8192, 8192 + n) in chat mode (its exact markers become specials:
+note test-only text, never a request's content) into the forced tokens; the count (at most 4096)
+fn c1fenc wb edit uchar 1073664 n ulong to ulong
+for i ulong n
+put tkw i get wb add 8192 i
+end
+i = ulong 0
+m = ulong 0
+while lt i n bound 999999
+l = tknext i n true
+s = get tkv 1
+if ne s 0
+if lt m 4096
+put svft m s
+end
+m = add m 1
+else
+c = tkencc i l
+for j ulong c
+if lt m 4096
+put svft m ulong get tkct j
+end
+m = add m 1
+end
+end
+i = add i l
+end
+if gt m 4096
+ret 4096
+end
+ret m
+end
+
+note c1tcall: CHAT1 tool calls in the output: with detection on and 1 .. 8 generated <|tool_call|>
+note tokens (content positions svtcp), each call's text (to the next marker or the end, whitespace
+note around dropped) must be a JSON object naming a declared tool; else the output stays content
+fn c1tcall wb edit uchar 1073664 sv edit ulong 64 bd edit uchar 983040 to void
+k = get sv 50
+if or eq k 0 gt k 8
+ret
+end
+n = get sv 13
+for i ulong k
+s = add get svtcp i 13
+e = n
+if lt add i 1 k
+e = get svtcp add i 1
+end
+if or gt s e gt e n
+put sv 32 0
+ret
+end
+s = svskws wb s e
+e = svtrim wb s e
+if not svtc1 wb sv bd s sub e s
+put sv 32 0
+ret
+end
+end
+put sv 33 get svtcp 0
+put sv 8 3
+end
+
+note c1mark: a generated <|tool_call|> (its 13 marker bytes end the content) at content n - 13
+fn c1mark sv edit ulong 64 to void
+k = get sv 50
+if lt k 16
+if ge get sv 13 13
+put svtcp k sub get sv 13 13
+put sv 50 add k 1
+end
+end
+end
+
+note ======== the model: v3 (CK01, CK02: model.om, a full forward per token) or v4 (CK03: v4.om's
+note KV-cache decode, xdpos, so a token costs O(context) and a prompt only its new positions)
+
+note svmld: the prompt svpt[0, np) into the model's context. v3: the context is rebuilt. v4 (prefix
+note reuse): the cache keeps the positions [0, p) of the last sequence whose tokens equal the
+note prompt's, p <= np - 1 so the last prompt position is always decoded for its logits; the
+note positions from p on are invalidated and prefilled at the first step (sv44 reused, sv45
+note prefilled). Mutant j (OMUTJ 0) skips the invalidation: the stale positions stay cached.
+const OMUTJ ulong 1
+fn svmld sv edit ulong 64 to void
+np = get svpn 0
+if ne get sv 41 4
+put og 9 0
+for i ulong np
+ocpush get svpt i
+end
+put sv 44 0
+put sv 45 np
+ret
+end
+cv = get xg 47
+if eq get sv 52 1
+cv = 0
+end
+lim = sub np 1
+if lt cv lim
+lim = cv
+end
+p = ulong 0
+while lt p lim bound 65537
+if ne get xtk p get svpt p
+break
+end
+p = add p 1
+end
+if eq OMUTJ 1
+put xg 47 p
+else
+put xg 47 lim
+end
+for i ulong np
+put xtk i get svpt i
+end
+put xg 48 np
+put sv 44 get xg 47
+put sv 45 sub np get xg 47
+end
+
+note svmpush: generated token c onto the context (never past T: generation stops at T - np)
+fn svmpush sv edit ulong 64 c ulong to void
+if eq get sv 41 4
+cn = get xg 48
+put xtk cn c
+put xg 48 add cn 1
+ret
+end
+ocpush c
+end
+
+note svmlog: the next-token logits into oa[og 27, og 27 + V). v4 decodes the positions the cache
+note lacks (xg 47 .. xg 48), the head only at the last; v3 runs the whole forward (cmdsamp's osstep)
+fn svmlog sv edit ulong 64 to void
+if eq get sv 41 4
+cn = get xg 48
+while lt get xg 47 cn bound 65537
+cv = get xg 47
+xdpos cv eq cv sub cn 1
+put xg 47 add cv 1
+end
+ret
+end
+lf = ofwd 0
+olast
+end
+
+note svlhash: word-wise FNV-1a 64 of the V logits' f64 bit patterns (test=1 ollm_test_info)
+fn svlhash to ulong
+o = get og 27
+h = ulong 14695981039346656037
+for c ulong get og 0
+h = mul xor h bitcast ulong get oa add o c 1099511628211
+end
+ret h
+end
+
+note svisend: whether sampled token c ends the output: v1 token 0; OLLMTOK1 <|end|> (256) and every
+note other special or reserved id 257 .. 271 except <|tool_call|> 260 (a turn start ends the turn)
+fn svisend sv edit ulong 64 c ulong to bool
+if eq get sv 40 0
+ret eq c 0
+end
+if and ge c 256 lt c 272
+ret ne c 260
+end
+ret false
 end
 
 note ======== encoding
 
-note svemit: token t, the m-th of an encoding: md 0 onto the context, md 1 into the forced tokens
+note svemit: token t, the m-th of an encoding: md 0 onto the prompt (svpt), md 1 into the forced tokens
 fn svemit md ulong m ulong t ulong to void
 if eq md 0
-if lt get og 9 get og 1
-ocpush t
-end
+c1put t
 ret
 end
 if lt m 4096
@@ -1603,6 +2086,7 @@ put sv 12 0
 put sv 13 0
 put sv 14 0
 put sv 17 0
+put sv 50 0
 tmo = long mul get sv 27 1000000
 for g ulong lim
 svside bd sv tmo
@@ -1637,10 +2121,10 @@ ret r
 end
 
 note svtake: one sampled token into the context and the content; false when it ends the output
-note (sv8: 1 token 0 or a stop string, 2 the content would pass its 65536 bytes)
+note (sv8: 1 an end token (svisend) or a stop string, 2 the content would pass its 65536 bytes)
 fn svtake wb edit uchar 1073664 sv edit ulong 64 to bool
 c = svdraw sv
-if eq c 0
+if svisend sv c
 put sv 8 1
 ret false
 end
@@ -1651,6 +2135,9 @@ end
 svcap wb sv c
 p = get sv 13
 svclean wb sv 0
+if and eq c 260 eq get sv 40 1
+c1mark sv
+end
 if svstopc wb sv p
 ret false
 end
@@ -1695,6 +2182,13 @@ h = sub n k
 end
 end
 if eq get sv 31 1
+if eq get sv 40 1
+if gt get sv 50 0
+if lt get svtcp 0 h
+h = get svtcp 0
+end
+end
+else
 q = svfind wb lo n 74752 11
 if lt q h
 h = q
@@ -1702,6 +2196,7 @@ end
 k2 = svpsuf wb lo n 74752 11
 if lt sub n k2 h
 h = sub n k2
+end
 end
 h = svtrim wb lo h
 end
@@ -1716,13 +2211,24 @@ g = get sv 7
 if lt g get sv 24
 ret get svft g
 end
+if eq get sv 40 1
+ret 256
+end
 ret 0
+end
+svmlog sv
+if eq get sv 7 0
+put sv 49 svlhash
 end
 st = get sv 3
 tm = get sv 2
 c = ulong 0
 if or eq tm 0 not svfon sv
-c = osstep st tm
+if eq tm 0
+c = oargmax
+else
+c = odraw st div f64 tm 1000.0
+end
 else
 c = svdrawf st div f64 tm 1000.0 get sv 28 get sv 29
 end
@@ -1755,10 +2261,9 @@ end
 ret r
 end
 
-note svlogit: the next-token logits divided by tau, then made probabilities (as odraw does)
+note svlogit: the next-token logits (svmlog, already computed) divided by tau, then made
+note probabilities (as odraw does)
 fn svlogit tau f64 to void
-lf = ofwd 0
-olast
 o = get og 27
 v = get og 0
 m = bitcast f64 ulong 18442240474082181120
@@ -1827,7 +2332,7 @@ end
 note svfits: whether token c's bytes fit the raw buffer (8192) and, as up to three content bytes
 note each, the content (65536)
 fn svfits sv edit ulong 64 c ulong to bool
-tl = obtlen c
+tl = otlen c
 rn = add get sv 12 tl
 gn = add get sv 13 mul rn 3
 ret not or or gt rn 8192 gt tl 4096 gt gn 65536
@@ -1835,13 +2340,13 @@ end
 
 note svcap: token c's bytes onto the raw buffer, c onto the context
 fn svcap wb edit uchar 1073664 sv edit ulong 64 c ulong to void
-obtcap c
+otcap c
 rn = get sv 12
 for i ulong get obon 0
 put wb add rn i get obo i
 end
 put sv 12 add rn get obon 0
-ocpush c
+svmpush sv c
 put sv 7 add get sv 7 1
 end
 
@@ -2006,6 +2511,10 @@ fn svtcall wb edit uchar 1073664 sv edit ulong 64 bd edit uchar 983040 to void
 put sv 32 0
 put sv 34 0
 if eq get sv 31 0
+ret
+end
+if eq get sv 40 1
+c1tcall wb sv bd
 ret
 end
 n = get sv 13
@@ -2188,7 +2697,7 @@ fn svlogs st ulong to void
 oputc 67
 oputc 32
 oputu st
-for i ulong 4
+for i ulong 6
 oputc 32
 oputc 48
 end
@@ -2218,23 +2727,38 @@ oputc 32
 oputu get sv 8
 oputc 32
 oputu div sub ulong monons get sv 11 1000000
+oputc 32
+oputu get sv 44
+oputc 32
+oputu get sv 45
 oputc 10
 oflush
 end
 
-note svprep: the context (token 0, then the template's encoding) and the forced tokens; 0 or 11
+note svprep: the prompt tokens (v1: token 0, then the template's encoding; CHAT1: c1conv's tokens
+note then 259) and the forced tokens; 0 or 11 (prompt + 1 > T)
 fn svprep wb edit uchar 1073664 sv edit ulong 64 to ulong
-put og 9 0
-ocpush 0
+if eq get sv 40 0
+put svpn 0 0
+put svpn 1 0
+c1put 0
 np = svenc view part wb 90624 get sv 5 get sv 5 0
-put sv 6 add np 1
+else
+put svpn 1 0
+c1put 259
+end
+put sv 6 get svpn 0
 if ge get sv 6 get sv 19
 ret 11
 end
 if eq get sv 25 1
 c = ulong 0
 if gt get sv 26 0
+if eq get sv 40 1
+c = c1fenc wb get sv 26
+else
 c = svenc view part wb 8192 get sv 26 get sv 26 1
+end
 end
 if gt c 4096
 c = 4096
@@ -2265,6 +2789,9 @@ hsetdl cs 0
 e = svparse bd ulong n wb sv
 if eq e 0
 e = svprep wb sv
+end
+if eq e 0
+svmld sv
 end
 if ne e 0
 put sv 16 e
@@ -2348,6 +2875,8 @@ put sv 11 ulong monons
 put sv 6 0
 put sv 7 0
 put sv 8 0
+put sv 44 0
+put sv 45 0
 end
 
 note svend: error code e with status st, logged
@@ -2438,6 +2967,7 @@ if or lt v 256 gt v 983040
 exit 2
 end
 put sv 23 v
+put sv 53 1
 else
 if and eq n len svopte svpre n svopte
 put sv 22 1
@@ -2468,9 +2998,24 @@ end
 sv = new ulong 64 0
 put sv 23 65536
 mx = svcli sv na
+if eq xpeek 3 XCK3
+xload 3
+xgd
+put xg 47 0
+put xg 48 0
+put sv 41 4
+else
 ockload 3
+put sv 41 3
+end
 v = get og 0
-obload 4 v
+otload 4 v
+if otison
+put sv 40 1
+if eq get sv 53 0
+put sv 23 983040
+end
+end
 cs = new ulong 320 0
 io = new uchar 131072 0
 bd = new uchar 983040 0
@@ -2503,4 +3048,208 @@ end
 end
 end
 y = fclose int lf
+end
+
+note ======== chatenc MERGES IN.jsonl OUT.u16 [MASK.u8]
+
+note chatenc: each non-empty line of IN.jsonl, one OpenAI-format JSON object {"messages":[...],
+note "tools":[...]} (other members as a chat request's, checked the same way), through svparse's
+note CHAT1 path (c1conv: exactly the tokens serve builds before its generation prompt 259), appended
+note to OUT.u16 as u16 little-endian; MASK.u8 gets one byte per token, 1 for the assistant tokens
+note after each 259 (content, tool calls, the closing 256), else 0. Prints `H lines tokens masked`.
+note OUT and MASK are written in place (created, emptied). Exits: 2 usage; 26 MERGES not OLLMTOK1 or
+note bad; 21 a line over 983040 bytes or a conversation over 65536 tokens; 22 a line refused
+note (stdout `F line code`, the code as serve's error codes); 70 I/O. Mutant c1 (OMUTC1 0) drops
+note each conversation's first token in chatenc's writer only (serve's path keeps it), the shift
+note the DRA-123 shared-template test must catch.
+const OMUTC1 ulong 1
+global c1ob uchar 65536
+global c1mb uchar 32768
+global c1st ulong 8
+
+note c1st: 0 OUT fd, 1 MASK fd (0 none), 2 bytes in c1ob, 3 bytes in c1mb, 4 lines, 5 tokens,
+note 6 masked tokens; IN window: opw[0, 7)
+
+note c1open: create/empty the file named by argument ai; its descriptor
+fn c1open ai ulong to ulong
+pl = oargp ai
+if gt pl 2000
+exit 2
+end
+fd = int fopen oarg 0 pl 577 420
+if lt fd 0
+exit 70
+end
+ret ulong fd
+end
+
+fn c1wall fd ulong n ulong mk ulong to void
+p = ulong 0
+while lt p n bound 999999
+w = long 0
+if eq mk 0
+w = write int fd c1ob p sub n p
+else
+w = write int fd c1mb p sub n p
+end
+if le w 0
+exit 70
+end
+p = add p ulong w
+end
+end
+
+fn c1flush to void
+c1wall get c1st 0 get c1st 2 0
+put c1st 2 0
+if ne get c1st 1 0
+c1wall get c1st 1 get c1st 3 1
+end
+put c1st 3 0
+end
+
+note c1emit: the conversation svpt[0, np) to the outputs
+fn c1emit to void
+np = get svpn 0
+if gt np 65536
+exit 21
+end
+s = ulong 0
+if eq OMUTC1 0
+s = 1
+end
+for i ulong sub np s
+j = add i s
+if ge get c1st 2 65536
+c1flush
+end
+b = get c1st 2
+t = get svpt j
+put c1ob b uchar and t 255
+put c1ob add b 1 uchar shr t 8
+put c1st 2 add b 2
+m = get c1st 3
+k = get svpm j
+put c1mb m k
+put c1st 3 add m 1
+put c1st 6 add get c1st 6 ulong k
+end
+put c1st 5 add get c1st 5 np
+end
+
+note c1line: one line opw[a, a + n) (n > 0); exits 21 or 22 when refused
+fn c1line a ulong n ulong bd edit uchar 983040 wb edit uchar 1073664 sv edit ulong 64 to void
+if gt n 983040
+exit 21
+end
+for i ulong n
+put bd i get opw add a i
+end
+put c1st 4 add get c1st 4 1
+e = svparse bd n wb sv
+if ne e 0
+oputc 70
+oputc 32
+oputu get c1st 4
+oputc 32
+oputu e
+oputc 10
+oflush
+exit 22
+end
+c1emit
+end
+
+note c1fill: move opw[a, have) to the front and read on from file position pos; the new fill
+fn c1fill a ulong have ulong pos ulong to ulong
+m = sub have a
+for i ulong m
+put opw i get opw add a i
+end
+r = oprd 3 add pos m m sub 2097152 m
+ret add m r
+end
+
+fn cmdchatenc to void
+na = oargc
+if and ne na 5 ne na 6
+exit 2
+end
+if not otis1 2
+exit 26
+end
+otload 2 tkrdv 2
+sv = new ulong 64 0
+bd = new uchar 983040 0
+wb = new uchar 1073664 0
+put sv 40 1
+put sv 23 983040
+for k ulong 8
+put c1st k 0
+end
+put c1st 0 c1open 4
+if eq na 6
+put c1st 1 c1open 5
+end
+c1scan bd wb sv
+c1flush
+oputc 72
+oputc 32
+oputu get c1st 4
+oputc 32
+oputu get c1st 5
+oputc 32
+oputu get c1st 6
+oputc 10
+oflush
+end
+
+note c1scan: the lines of IN (argument 3) through a 2 MiB window of opw
+fn c1scan bd edit uchar 983040 wb edit uchar 1073664 sv edit ulong 64 to void
+pos = ulong 0
+have = oprd 3 0 0 2097152
+a = ulong 0
+eof = lt have 2097152
+for it ulong 999999999
+if ge a have
+if eof
+ret
+end
+end
+q = a
+while and lt q have le sub q a 983040 bound 999999
+if eq get opw q 10
+break
+end
+q = add q 1
+end
+if lt q have
+if gt q a
+c1line a sub q a bd wb sv
+end
+a = add q 1
+else
+if eof
+c1line a sub have a bd wb sv
+ret
+end
+if eq a 0
+exit 21
+end
+pos = add pos a
+have = c1fill a have pos
+a = 0
+eof = lt have 2097152
+end
+end
+end
+
+note tkrdv: V of the OLLMTOK1 file argument ai (bytes 8 .. 15), read through opw
+fn tkrdv ai ulong to ulong
+r = oprd ai 0 0 16
+v = ulong 0
+for k ulong 8
+v = or v shl ulong get opw add 8 k mul k 8
+end
+ret v
 end
