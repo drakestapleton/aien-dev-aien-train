@@ -88,7 +88,7 @@ own `.om` and docs (byte tokens; u16 copies for V > 256):
 | `OLLMCK04` header on `eval4`/`train4`; v3 `eval` on CK03 | rc 11 each |
 | T = 2048 (D128 H4 F512 L2): `eval4` forward, 2 `train4` steps | rc 0; 2.95 s; 19.97 s |
 | over 1 GiB: V256 T64 D1024 H16 F4096 L12, P 151,282,688 (CK 3.63 GB) | `init4`, `eval4`, one `train4` step rc 0 (101 s, 4.99 GB RSS) |
-| V 32768 D384 H6 F1536 L6 (P 23,204,736) | `init4` rc 0; byte data refused rc 21 (u16 required) |
+| V 32768 T256 D384 H6 F1536 L6 B4 G2 (P 23,204,736), u16 data, K = 2 | 3 `train4` steps rc 0, loss 10.407 → 9.701, 289.7 s (≈10.6 tok/s incl. load); `kvck` rc 0, 0 of 256 positions differ; byte data refused rc 21 |
 
 NOT_RUN: x86linux and x86efi builds (no x86 pin on Spark), GB10 kernels for v4, `sample4` at
 V > 4096 (needs the 32k tokenizer unit), a long training run.
