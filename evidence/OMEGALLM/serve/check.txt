@@ -1,0 +1,31 @@
+PASS health 200 b'{"status":"ok","in_flight":0}'
+PASS models 200 ['ollm']
+PASS chat_json_t0 200 usage={'prompt_tokens': 17, 'completion_tokens': 12, 'total_tokens': 29} finish=length s=10.34 content='"I am here to help you."\nOme' oracle='"I am here to help you."\nOme'
+PASS chat_sse_t0 200 events=15 done=True usage=[{'prompt_tokens': 17, 'completion_tokens': 12, 'total_tokens': 29}] text='"I am here to help you."\nOme'
+PASS chat_json_t800 200 usage={'prompt_tokens': 17, 'completion_tokens': 12, 'total_tokens': 29} finish=length s=10.76 content='"Because I want to go to the park with' oracle='"Because I want to go to the park with'
+PASS chat_sse_t800 200 events=15 done=True usage=[{'prompt_tokens': 17, 'completion_tokens': 12, 'total_tokens': 29}] text='"Because I want to go to the park with'
+PASS allen_chat_shape 200 b'{"id":"chatcmpl-ollm-5","object":"chat.completion","created":1793998139,"model":"ollm","choices":[{"index":0,"message":{"role":"assistant","content":"\\"I will help"},"finish_reason":"length"}],"usage"'
+PASS refuse_context 400 context_length_exceeded 'prompt is 2453 tokens including the start token; the context window is 256 tokens, so no room is left for output'
+PASS refuse_template_bytes 400 invalid_request 'the chat template is over 4000 bytes'
+PASS refuse_bad_json 400 invalid_json 'request body is not valid JSON (RFC 8259) or has over 65532 JSON tokens'
+PASS refuse_not_object 400 invalid_request 'the request must be a JSON object'
+PASS refuse_trailing 400 invalid_json 'request body is not valid JSON (RFC 8259) or has over 65532 JSON tokens'
+PASS refuse_empty_messages 400 invalid_request 'messages must be a non-empty array of objects'
+PASS refuse_array_content 400 invalid_request 'message content must be a string or null'
+PASS refuse_no_role 400 invalid_request 'message role must be a string of at most 32 bytes'
+PASS refuse_neg_temp 400 invalid_request 'temperature must be a number from 0 to 2 without exponent'
+PASS refuse_hot_temp 400 invalid_request 'temperature must be a number from 0 to 2 without exponent'
+PASS refuse_zero_max 400 invalid_request 'max_tokens must be an integer from 1 to 999999'
+PASS refuse_n2 400 invalid_request 'only n = 1 is supported'
+PASS refuse_stream_str 400 invalid_request 'stream must be true or false'
+PASS refuse_exp_temp 400 invalid_request 'temperature must be a number from 0 to 2 without exponent'
+PASS refuse_404 404 b'{"error":{"message":"no such path; routes: GET /health, GET /v1/models, POST /v1/chat/completions","type":"invalid_request_error","param":null,"code":"not_found"}}'
+PASS refuse_405 405 b'{"error":{"message":"method not allowed on this path","type":"invalid_request_error","param":null,"code":"method_not_allowed"}}'
+PASS refuse_413 b'HTTP/1.1 413 Content Too Large\r\nContent-Type: application/json\r\nContent-Length: 132\r\nConnection: close\r\n\r\n{"error":{"mes'
+PASS held_conn_not_blocking Connection='close' next=200 in 0.000s
+PASS silent_conn_dropped next=200 after 10.050s
+PASS alive_after_negatives 200
+SUMMARY pass=27 fail=0
+bind_loopback_only 1 LISTEN 0      16     127.0.0.1:18291 0.0.0.0:* users:(("ollm",pid=3587711,fd=3))
+SERVE_CHECK PASS
+rc=0

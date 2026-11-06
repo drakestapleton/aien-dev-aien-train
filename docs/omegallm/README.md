@@ -136,6 +136,38 @@ Never commit the data or the `.bin` and `.ck` files. Every receipt in the table 
 with `sh tests/omegallm/core-receipts.sh`; set `CORE`, `BUILD`, `DATA` or `WORK` to override the
 defaults. The exit codes are listed in CONTRACT §7.
 
+## Serve (DRA-119)
+
+```sh
+ollm serve PORT CK MERGES [MAXCONN]   # AArch64 Linux only; prints "PORT n" once listening
+```
+
+`serve.om` (aarch64 builds only; gb10 and the x86 targets get `noserve.om`, which exits 2) answers
+OpenAI-style chat requests on 127.0.0.1:PORT with omega-mv's `seed/net/http.om` and
+`seed/json/{json,jsonw}.om`, vendored byte for byte from omega-mv `e5b32567` into
+`native/omegallm/net/`. `build.sh` checks their sha256 (`NET_PIN_MISMATCH`, exit 3) and puts `om2`
+first. One connection at a time and one request per connection (`Connection: close`), so a pooled
+idle client cannot hold the listener; 10 s head and 60 s body deadlines.
+
+- `GET /health` → `{"status":"ok","in_flight":0}`; `GET /v1/models` → one model, `ollm`.
+- `POST /v1/chat/completions`: `messages` (string or null content), `max_tokens` or
+  `max_completion_tokens` (1 to 999999), `temperature` (0 to 2, no exponent; 0 is argmax), `seed`,
+  `stream`, `stream_options.include_usage`, `n` = 1; other members are ignored (`tools`, `model`).
+  JSON or SSE (`data:` chunks: role, content, finish, optional usage, `[DONE]`).
+- Interim template, until DRA-123 fixes a shared one: `role: content\n` per message, then
+  `assistant: `, at most 4000 bytes. The context is token 0 plus its encoding; when that reaches T
+  the answer is 400 `context_length_exceeded`. Output is at most min(max_tokens, T − prompt tokens)
+  tokens drawn with `sample`'s step (`osstep`), so the same SEED and TEMPMILLI give `sample`'s
+  bytes. Bytes are sent as UTF-8; an ill-formed sequence becomes U+FFFD.
+- Refusals are JSON `{"error":{...}}`: 400 (`invalid_json`, `invalid_request`,
+  `context_length_exceeded`), 404, 405, and 413 for a body over 983040 bytes (the JSON parser's
+  limit), refused at the head.
+- stdout gets one line per response: `C status prompt_tokens completion_tokens finish ms`.
+
+`tests/omegallm/serve-check.sh` starts the server under taskset/nice/bwrap, referees it with
+`serve-check.py` (27 checks; the content oracle is the same binary's `sample`, decoded with
+Python's `errors="replace"`) and stops the PIDs it started. Receipts: `evidence/OMEGALLM/serve/`.
+
 ## iMac
 
 `tests/omegallm/efi-receipts.sh` leaves the boot image at `$WORK/ollm.img` (`scratch-efi/ollm.img`;

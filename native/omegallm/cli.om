@@ -5,7 +5,8 @@ note Command words are matched as little-endian u64 packings of their bytes (Wol
 note FromDigits[Reverse[ToCharacterCode[w]],256]): prep 1885696624, init 1953066601,
 note grad 1684107879, train 474214396532, eval 1818326629, base 1702060386, sample 111516417089907,
 note gcheck 118074647274343, mathck 118074698391917, adamck 118074781033569; v1: bpefit
-note 127996038312034, bpeenc 109325798699106, bpedec 109287127216226 (bpe.om).
+note 127996038312034, bpeenc 109325798699106, bpedec 109287127216226 (bpe.om); serve 435778905459
+note (serve.om on aarch64, noserve.om elsewhere).
 note Exit codes: 0 ok; 2 usage; 10-15 checkpoint refusals (ckpt.om); 20 data file shorter than
 note T + 1 bytes; 21 data over 2^25 bytes or OFFS not exactly 8 B bytes; 22 an OFFS offset with
 note o + T >= N; 23 eval W = 0 or W T + 1 > M; 24 prep story over 999999 bytes; 40 gcheck over
@@ -76,6 +77,10 @@ ret 0
 end
 if eq w 118074781033569
 cmdadamck
+ret 0
+end
+if eq w 435778905459
+cmdserve
 ret 0
 end
 exit 2
@@ -340,13 +345,8 @@ ocpush ulong get oarg i
 end
 end
 for g ulong nn
-lf = ofwd 0
-olast
-c = ulong 0
-if eq tm 0
-c = oargmax
-else
-c = odraw st div f64 tm 1000.0
+c = osstep st tm
+if ne tm 0
 st = add st 11400714819323198485
 end
 if eq c 0
@@ -360,6 +360,17 @@ end
 ocpush c
 end
 oflush
+end
+
+note one sampling step (cmdsamp, serve.om): the next token from the logits at the last context
+note position, argmax when TEMPMILLI tm is 0, else a draw with the splitmix64 stream state st.
+fn osstep st ulong tm ulong to ulong
+lf = ofwd 0
+olast
+if eq tm 0
+ret oargmax
+end
+ret odraw st div f64 tm 1000.0
 end
 
 note logits of the last context position into TMP[0..V) (oa)

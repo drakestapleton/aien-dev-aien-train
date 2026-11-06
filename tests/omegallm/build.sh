@@ -48,6 +48,10 @@
 # The pool file (CONTRACT-V3 section 2) follows data.om: lpool.om holds the bank-B globals oww, ogb
 # and oab on the Linux targets, epool.om one-element placeholders on x86efi (its v3 limit is the
 # v2 bank-A capacity).
+# serve (DRA-119, native/omegallm/serve.om): aarch64 starts with the line `om2` and concatenates
+# net/http.om, net/json.om and net/jsonw.om (vendored unmodified from omega-mv e5b32567 seed/net/http.om,
+# seed/json/json.om and seed/json/jsonw.om; sha256 below, checked at build) before the ollm units and
+# serve.om after them. gb10, x86linux and x86efi take noserve.om, whose cmdserve exits 2.
 # Mutants (ollm-mut-X, one changed line) plant a defect the checks must catch. Variants (ollm-var-X)
 # h5 and h7 (two changed lines) set both gcheck steps GCH and GCH2 to 1e-5 (h5) or 1e-7 (h7), the step
 # sizes that the README's GCH section rejects; r0 (gk.om OKREU 0, one changed line) clears the GEMM FFMA
@@ -81,9 +85,22 @@ got=$(sha256sum "$OMC" | cut -d' ' -f1)
 mkdir -p "$OUT"
 src=$here/native/omegallm
 name=ollm
+if [ "$TARGET" = aarch64 ]; then
+  ( cd "$src/net" && sha256sum -c --quiet - ) <<'EOF' || { echo "NET_PIN_MISMATCH" >&2; exit 3; }
+aff258ecd3858454056811a5e6fe1f660f9d650a7207d6c41885105110e046a7  http.om
+456254fc754ea35103ced480407b24fc1a3896d094b90ae0e9623e7b6594e2d2  json.om
+464f649e8207495f5d67fe8795d31e42ea3ccebd9ed547274dab802d4f7c5f21  jsonw.om
+EOF
+  lead=om2
+  pre="$src/net/http.om $src/net/json.om $src/net/jsonw.om" post=$src/serve.om
+else
+  pre= post=$src/noserve.om
+fi
 {
   [ -z "$lead" ] || printf '%s\n' "$lead"
-  cat "$src/math.om" "$src/data.om" "$src/$pool" "$src/model.om" "$src/adam.om" "$src/ckpt.om" "$src/bpe.om" "$src/cli.om" "$src/$plat"
+  # shellcheck disable=SC2086
+  [ -z "$pre" ] || cat $pre
+  cat "$src/math.om" "$src/data.om" "$src/$pool" "$src/model.om" "$src/adam.om" "$src/ckpt.om" "$src/bpe.om" "$src/cli.om" "$src/$plat" "$post"
   [ "$TARGET" = gb10 ] || cat "$src/nogpu.om"
 } > "$OUT/ollm.om"
 if [ "$TARGET" = gb10 ]; then
