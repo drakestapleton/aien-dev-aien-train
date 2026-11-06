@@ -1,0 +1,18 @@
+{
+  "case": "arithmetic",
+  "prompt": "Question: What is 17 plus 25?\nAnswer:",
+  "backend": "explicit Omega device, zero GPU layers, flash attention off",
+  "text": " 17 + 25 = 42\nTherefore, the answer is 42.",
+  "wall_seconds": 2.2797779589891434,
+  "timings": {
+    "cache_n": 0,
+    "prompt_n": 14,
+    "prompt_ms": 781.324,
+    "prompt_per_token_ms": 55.80885714285714,
+    "prompt_per_second": 17.918302778360836,
+    "predicted_n": 22,
+    "predicted_ms": 1496.046,
+    "predicted_per_token_ms": 71.24028571428572,
+    "predicted_per_second": 14.037001536049024
+  }
+}

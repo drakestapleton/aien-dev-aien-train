@@ -1,0 +1,18 @@
+{
+  "case": "extraction",
+  "prompt": "Read this: Maya has three red apples.\nQuestion: How many apples does Maya have? Answer with only the number.\nAnswer:",
+  "backend": "explicit Omega device, zero GPU layers, flash attention off",
+  "text": " 3",
+  "wall_seconds": 1.4914680829970166,
+  "timings": {
+    "cache_n": 0,
+    "prompt_n": 26,
+    "prompt_ms": 1359.971,
+    "prompt_per_token_ms": 52.306576923076925,
+    "prompt_per_second": 19.11805472322572,
+    "predicted_n": 3,
+    "predicted_ms": 127.66,
+    "predicted_per_token_ms": 63.83,
+    "predicted_per_second": 15.666614444618519
+  }
+}

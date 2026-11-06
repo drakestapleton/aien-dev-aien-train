@@ -1,0 +1,25 @@
+{
+  "case": "story",
+  "prompt": "Once upon a time, a little robot found a lost kitten.",
+  "qwen": {
+    "text": " The kitten was very cute and the little robot loved it very much. The little robot decided to take the kitten home. The kitten was very happy and the little",
+    "wall_seconds": 0.5438835840905085,
+    "timings": {
+      "cache_n": 0,
+      "prompt_n": 13,
+      "prompt_ms": 180.506,
+      "prompt_per_token_ms": 13.885076923076923,
+      "prompt_per_second": 72.01976665595603,
+      "predicted_n": 32,
+      "predicted_ms": 323.397,
+      "predicted_per_token_ms": 10.43216129032258,
+      "predicted_per_second": 95.85741364329293
+    }
+  },
+  "omega": {
+    "text": " The kitten was sad and scared. The robot wanted to help the kitten find its home. So, the robot and the kitten went on a journey to find the",
+    "stderr": "",
+    "exit": 0,
+    "wall_seconds": 17.61757670796942
+  }
+}
