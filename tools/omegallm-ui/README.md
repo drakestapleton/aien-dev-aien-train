@@ -18,6 +18,20 @@ The Mac's `Applications/Omega/Aienux` directory holds its private QEMU disk,
 firmware, process identifier and Unix sockets. The Aienux launcher verifies the
 installed image digests before starting it.
 
+## Private voice model
+
+On the Linux port, the adapter also lists `Omega-Drake-Voice`. It is a private
+fine-tune of the rung-10 checkpoint, made with `ollm tune` and `gtrainb`, and it
+uses the same `merges4096.bin`. Its checkpoint, `drake-voice.ck`, exists only
+in the guest's `~/omega` directory and is never committed. For this model the
+adapter turns user messages into `them: ` lines and assistant messages into
+`me: ` lines, one line per text bubble, and skips system messages. It keeps
+about the last 700 bytes at a line boundary and ends the prompt with `me:`. It
+holds back the generated text and returns Drake's reply only, which ends at the
+first blank line or line that does not start with `me:`. Later `me:` lines
+become new lines in the same reply, so a streamed reply arrives as one chunk.
+Aienux does not offer this model.
+
 ## Build and operate
 
 ```sh

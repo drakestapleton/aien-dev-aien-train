@@ -20,6 +20,9 @@ using Clock = std::chrono::steady_clock;
 extern char **environ;
 static const char *OMEGA = "Omega-Astra-2026-11-04";
 static constexpr auto QWEN = "build-mac/qwen.gguf";
+// Drake's private voice fine-tune of the rung-10 checkpoint. Linux guest only; trained on "them: / me: " lines.
+static constexpr auto VOICE = "Omega-Drake-Voice";
+static constexpr auto VOICE_CK = "drake-voice.ck";
 static constexpr auto LIMA = "/opt/homebrew/bin/limactl";
 static std::atomic<bool> busy{false};
 static std::atomic<unsigned> sequence{0};
@@ -109,6 +112,8 @@ struct ModelProcess {
         if (!finished) { kill(pid, SIGTERM); waitpid(pid, nullptr, 0); }
         if (fd >= 0) close(fd);
     }
+    // Fixed checkpoint names only; never user text. The voice checkpoint is private and lives only in the guest.
+    std::string checkpoint = "omega-v2-edited-20261104.ck";
     void start(const std::string &prompt, int tokens, int temp, unsigned seed) {
         if (firmware) {
             fd = firmware_socket("serial.sock");
@@ -129,9 +134,9 @@ struct ModelProcess {
         }
         pid = spawn({LIMA, "shell", "omega-llm", "sh", "-c",
             "cd ~/omega && exec setsid --wait sh -c 'echo $$ > \"$1\"; shift; "
-            "exec timeout --foreground -k 2 120 ./ollm-ui sample omega-v2-edited-20261104.ck \"$@\" merges4096.bin' "
-            "sh \"/tmp/omega-ui-$1.pid\" \"$2\" \"$3\" \"$4\" \"$5\"",
-            "sh", ticket, std::to_string(seed), std::to_string(tokens), std::to_string(temp), prompt}, &fd);
+            "ck=$1; shift; exec timeout --foreground -k 2 120 ./ollm-ui sample \"$ck\" \"$@\" merges4096.bin' "
+            "sh \"/tmp/omega-ui-$1.pid\" \"$6\" \"$2\" \"$3\" \"$4\" \"$5\"",
+            "sh", ticket, std::to_string(seed), std::to_string(tokens), std::to_string(temp), prompt, checkpoint}, &fd);
     }
 };
 
@@ -215,6 +220,27 @@ static json upstream_props() {
     return json::parse(r->body);
 }
 
+// Drake's reply ends where the other person's next line (or a blank line) begins. Later bubbles drop "me:".
+static std::string voice_reply(const std::string &raw) {
+    std::string out;
+    size_t at = 0;
+    bool first = true;
+    while (at < raw.size()) {
+        size_t nl = raw.find('\n', at);
+        if (nl == std::string::npos) nl = raw.size();
+        auto line = raw.substr(at, nl - at);
+        at = nl + 1;
+        if (!first) {
+            if (line.empty() || line.rfind("me:", 0) != 0) break;
+            line.erase(0, 3);
+        }
+        while (!line.empty() && line.front() == ' ') line.erase(0, 1);
+        if (!line.empty()) out += (out.empty() ? "" : "\n") + line;
+        first = false;
+    }
+    return out;
+}
+
 static void completion(const httplib::Request &req, httplib::Response &res) {
     json body = json::parse(req.body);
     auto selected = body.value("model", std::string(OMEGA));
@@ -244,7 +270,8 @@ static void completion(const httplib::Request &req, httplib::Response &res) {
         }
         return;
     }
-    if (selected != OMEGA) { error(res, 404, "Unknown local model"); return; }
+    const bool voice = !firmware && selected == VOICE;
+    if (selected != OMEGA && !voice) { error(res, 404, "Unknown local model"); return; }
     for (auto key : {"tools", "stop", "grammar", "response_format"}) {
         if (body.contains(key) && !body[key].is_null() && !body[key].empty()) {
             error(res, 400, std::string("Omega's story model does not support ") + key); return;
@@ -266,8 +293,27 @@ static void completion(const httplib::Request &req, httplib::Response &res) {
             }
         } else { error(res, 400, "Message content must be text"); return; }
         if (text.empty()) continue;
+        if (voice) {
+            if (role == "system") continue;
+            // Same shape as the training text: one "them: " or "me: " line per text bubble.
+            std::string who = role == "user" ? "them: " : "me: ";
+            size_t at = 0;
+            while (at <= text.size()) {
+                size_t nl = text.find('\n', at);
+                if (nl == std::string::npos) nl = text.size();
+                auto line = text.substr(at, nl - at);
+                if (!line.empty()) prompt += who + line + "\n";
+                at = nl + 1;
+            }
+            continue;
+        }
         if (!prompt.empty()) prompt += "\n";
         prompt += text;
+    }
+    if (voice && !prompt.empty()) {
+        // The checkpoint sees 256 tokens. Keep the latest lines and ask for Drake's reply.
+        if (prompt.size() > 700) { auto cut = prompt.find('\n', prompt.size() - 700); prompt = prompt.substr(cut == std::string::npos ? 0 : cut + 1); }
+        prompt += "me:";
     }
     if (prompt.empty() || prompt.size() > 4000 || prompt.find('\0') != std::string::npos) {
         error(res, 400, "Enter a story beginning or shorten this conversation to at most 4000 UTF-8 bytes"); return;
@@ -289,27 +335,32 @@ static void completion(const httplib::Request &req, httplib::Response &res) {
     if (!busy.compare_exchange_strong(expected, true)) { error(res, 429, "Omega is already generating. Stop that response or wait for it to finish."); return; }
     auto lease = std::make_shared<Lease>();
     auto child = std::make_shared<ModelProcess>();
+    if (voice) child->checkpoint = VOICE_CK;
     child->start(prompt, tokens, int(temperature * 1000), unsigned(seed));
     std::string id = "omega-" + child->ticket;
     auto created = std::time(nullptr);
-    auto chunk = [id, created](const json &delta, const json &reason = nullptr) {
-        return json{{"id", id}, {"object", "chat.completion.chunk"}, {"created", created}, {"model", OMEGA},
+    std::string served = voice ? VOICE : OMEGA;
+    auto chunk = [id, created, served](const json &delta, const json &reason = nullptr) {
+        return json{{"id", id}, {"object", "chat.completion.chunk"}, {"created", created}, {"model", served},
             {"choices", json::array({{{"index", 0}, {"delta", delta}, {"finish_reason", reason}}})}};
     };
     if (streaming) {
         res.set_header("Cache-Control", "no-cache");
         auto closed = req.is_connection_closed;
-        res.set_chunked_content_provider("text/event-stream", [lease, child, chunk, closed](size_t, httplib::DataSink &sink) {
+        res.set_chunked_content_provider("text/event-stream", [lease, child, chunk, closed, voice](size_t, httplib::DataSink &sink) {
             auto send = [&](const json &j) {
                 auto s = "data: " + j.dump(-1, ' ', false, json::error_handler_t::replace) + "\n\n";
                 return !closed() && sink.write(s.data(), s.size());
             };
             if (!send(chunk({{"role", "assistant"}, {"content", ""}}))) return false;
+            std::string held;
             int rc = generate(*child, [&](const std::string &text) {
                 if (closed()) return false;
+                if (voice && !text.empty()) { held += text; return true; }
                 return text.empty() ? sink.write(": generating\n\n", 14) : send(chunk({{"content", text}}));
             });
             if (rc == 130) return false;
+            if (voice && !rc && !send(chunk({{"content", voice_reply(held)}}))) return false;
             if (rc) send(chunk({{"content", "\n\n[Omega runtime error: generation failed or timed out. Try a shorter story beginning.]"}}));
             else send(chunk(json::object(), "stop"));
             sink.write("data: [DONE]\n\n", 14);
@@ -320,7 +371,8 @@ static void completion(const httplib::Request &req, httplib::Response &res) {
         std::string text;
         int rc = generate(*child, [&](const std::string &part) { text += part; return !req.is_connection_closed(); });
         if (rc) { error(res, 502, "Omega generation failed or timed out"); return; }
-        reply(res, {{"id", id}, {"object", "chat.completion"}, {"created", created}, {"model", OMEGA},
+        if (voice) text = voice_reply(text);
+        reply(res, {{"id", id}, {"object", "chat.completion"}, {"created", created}, {"model", served},
             {"choices", json::array({{{"index", 0}, {"message", {{"role", "assistant"}, {"content", text}}}, {"finish_reason", "stop"}}})}});
     }
 }
@@ -359,15 +411,15 @@ int main(int argc, char **argv) {
         return httplib::Server::HandlerResponse::Unhandled;
     });
     server.Get("/health", [](const auto &, auto &res) { reply(res, {{"status", "ok"}, {"service", "omega-ui-bridge"}, {"runtime", firmware ? "aienux-firmware" : "linux"}, {"omega_busy", busy.load()}}); });
-    server.Get("/v1/models", [](const auto &, auto &res) { reply(res, {{"object", "list"}, {"data", {model(OMEGA), model(QWEN)}}}); });
+    server.Get("/v1/models", [](const auto &, auto &res) { reply(res, {{"object", "list"}, {"data", firmware ? json::array({model(OMEGA), model(QWEN)}) : json::array({model(OMEGA), model(VOICE), model(QWEN)})}}); });
     server.Get("/props", [](const auto &req, auto &res) {
         auto props = upstream_props();
         auto selected = req.get_param_value("model");
         if (selected.empty()) props["role"] = "router";
-        else if (selected != OMEGA && selected != QWEN) { error(res, 404, "Unknown model"); return; }
+        else if (selected != OMEGA && selected != QWEN && (firmware || selected != VOICE)) { error(res, 404, "Unknown model"); return; }
         if (selected != QWEN) {
-            props["model_alias"] = OMEGA;
-            props["model_path"] = OMEGA;
+            props["model_alias"] = selected == VOICE ? VOICE : OMEGA;
+            props["model_path"] = selected == VOICE ? VOICE : OMEGA;
             props.erase("model_ftype");
             props["bos_token"] = "";
             props["eos_token"] = "";
