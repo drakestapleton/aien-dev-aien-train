@@ -1,7 +1,9 @@
-note accept.om: the DRA-124 acceptance suite runner, reference stubs and IFEval self-test.
+note accept.om: the DRA-124 acceptance suite runner, scorer, reference stubs and IFEval self-test.
 note Built by tests/omegallm/accept/build.sh as: om2, net/http.om, net/json.om, this file.
 note Commands (PREREG.md is the normative description; this file implements it):
-note   accept run HOST PORT SUITEDIR OUTDIR OMC MODEL CORPUSDIR|- [MUTANTOP]
+note   accept run HOST PORT SUITEDIR OUTDIR OMC MODEL TEMPMILLI SEED WORKER NWORKERS [MUTANTOP]
+note   accept sum OUTDIR THRESHOLDS.tsv
+note   accept pair OUTDIR_A OUTDIR_B
 note   accept stub PORT garbage|ref SUITEDIR [COUNT]
 note   accept ifsel UPSTREAM OUT RESP
 note   accept selftest FILE
@@ -18,7 +20,10 @@ const SVN ulong 128
 const FBN ulong 524288
 const RQN ulong 983040
 const RBN ulong 262144
-const WKN ulong 344576
+const WKN ulong 361216
+note wk[WCR, WCR + 16384) critical.txt: one forbidden substring per line (PREREG.md section 5)
+const WCR ulong 344832
+const SCRL ulong 91
 const WSY ulong 0
 const WSYN ulong 65536
 const WMO ulong 65536
@@ -37,6 +42,17 @@ const PMU ulong 4096
 const PID ulong 4352
 const PB ulong 4608
 const NOFENCE ulong 18446744073709551615
+const FIL ulong 2097152
+const SW1L ulong 76
+const SW2L ulong 77
+const SFN ulong 78
+const BPBMU ulong 1500000
+note ACMUT: 0 the real checkers; build.sh --mutant sets 1 (line glob matches anything), 2 (exec ignores the
+note test's exit status and nonce), 3 (critical scan finds nothing). Mutants exist only to be caught.
+const ACMUT ulong 0
+note wk[WFS, WFS + 128) the item family, wk[WSP, WSP + 32) its split
+const WFS ulong 344576
+const WSP ulong 344704
 
 note sv slots
 const SST ulong 0
@@ -76,27 +92,34 @@ const SMF ulong 60
 const SSKIP ulong 70
 const SXST ulong 72
 const SIDNR ulong 75
-
-note per-category item counts, pass bars (permille) and the registered totals (PREREG.md section 4)
-const EXA ulong 24
-const EXT ulong 20
-const EXG ulong 16
-const EXI ulong 369
-const EXC ulong 164
-const EXL ulong 6
-const EXP ulong 8
-const EXD ulong 8
+const STEMP ulong 80
+const SSEED ulong 81
+const SLAT ulong 82
+const SPTOK ulong 83
+const SCTX ulong 84
+const SNW ulong 85
+const SWI ulong 86
+const SIDX ulong 87
+const SFAML ulong 88
+const SSPL ulong 89
+const SREAS ulong 90
+const SHN ulong 92
 
 note rs: the captured reply; content at [0, CTN), call k arguments at RCL + k CLAS, call k name at RCL + CLNM + k CLNS
 const RSN ulong 528384
 const RCL ulong 262144
 
 text kq "\""
+text kboard "BOARD.md"
+text kclaims "CLAIMS.md"
+text kdot "."
 text knl "\n"
 text ktab "\t"
 text ksp " "
 text kmodel "{\"model\":\""
-text ktemp "\",\"temperature\":0,\"max_tokens\":"
+text ktemp "\",\"temperature\":"
+text kseed ",\"seed\":"
+text kmaxt ",\"max_tokens\":"
 text kstrm ",\"stream\":true,\"stream_options\":{\"include_usage\":true}"
 text knostrm ",\"stream\":false"
 text kmsgs ",\"messages\":["
@@ -121,9 +144,18 @@ text kargs "arguments"
 text kfinish "finish_reason"
 text kusage "usage"
 text kctok "completion_tokens"
+text kptok "prompt_tokens"
+text kctxx "context_length_exceeded"
 text kindex "index"
 text kid "id"
-text kcat "cat"
+text krole "role"
+text kifam "ifeval-public"
+text khefam "humaneval-public"
+text kdev "dev"
+text kfamily "family"
+text ksplit "split"
+text kcodingk "coding"
+text khivek "hive"
 text ksysk "sys"
 text kmsgsk "msgs"
 text ktoolsk "tools"
@@ -153,7 +185,6 @@ text kexpect "expect"
 text khermes "hermes"
 text kopenc "opencode"
 text kfn "fn"
-text kallen "allen"
 text kstop "stop"
 text klength "length"
 text kdone "[DONE]"
@@ -191,15 +222,13 @@ text kcallh "\n--- call "
 text kcheck "\ncheck("
 text kcheckz ")\n"
 
-note category names, in index order 0..7
-text gallen "allen"
-text gtools "tools"
-text gagent "agent"
-text gif "if"
-text gcode "code"
-text glong "long"
+note role names, in index order 0..4 (PREREG.md section 1); proto is the protocol control, not a role
+const NROLE ulong 5
+text gassist "assistant"
+text gcoding "coding"
+text ghive "hive"
+text gharn "harness"
 text gproto "proto"
-text gident "ident"
 
 note rule op names (PREREG.md section 3)
 text ohas "has"
@@ -223,6 +252,8 @@ text oarg "arg"
 text oargi "argi"
 text oargk "argk"
 text oexec "exec"
+text oline "line"
+text oexact "exact"
 
 note ======== byte helpers
 
@@ -1548,6 +1579,10 @@ fn acbhd rq edit uchar RQN wk view uchar WKN sv view ulong SVN to ulong
 q = acapp rq 0 kmodel
 q = acapp rq q view part wk WMO get sv SMOL
 q = acapp rq q ktemp
+q = acmilli rq q get sv STEMP
+q = acapp rq q kseed
+q = acdec rq q get sv SSEED
+q = acapp rq q kmaxt
 q = acdec rq q get sv SMAX
 if ne get sv SSTRM 0
 q = acapp rq q kstrm
@@ -1555,6 +1590,26 @@ else
 q = acapp rq q knostrm
 end
 ret acapp rq q kmsgs
+end
+
+note acmilli: v / 1000 as a JSON number (0, 1, 0.8, 0.125: no exponent, no trailing zeros) at o[p..]
+fn acmilli o edit uchar * p ulong v ulong to ulong
+q = acdec o p div v 1000
+f = rem v 1000
+if eq f 0
+ret q
+end
+q = acapp o q kdot
+d = ulong 100
+for i ulong 3
+if eq f 0
+break
+end
+q = acdec o q div f d
+f = rem f d
+d = div d 10
+end
+ret q
 end
 
 note acsep: a comma unless rq[q - 1] opens the array
@@ -1862,6 +1917,10 @@ x = acmem src tp acmem src tp 0 kusage kctok
 if eq actype tp x jsnum
 put sv SCTOK add 1 acnum src tp x
 end
+x = acmem src tp acmem src tp 0 kusage kptok
+if eq actype tp x jsnum
+put sv SPTOK add 1 acnum src tp x
+end
 end
 
 note acsse: one data payload; 1 for [DONE]
@@ -1923,6 +1982,11 @@ n = hbodyall cs io rb
 if lt n 0
 ret n
 end
+if ne get sv SST 200
+if lt acfind view part rb 0 ulong n kctxx 0 false ulong n
+put sv SCTX 1
+end
+end
 r = js_init tp 983040 64
 r = js_parse view part rb 0 ulong n tp ulong n
 if lt r 0
@@ -1943,6 +2007,8 @@ end
 put sv SCL 0
 put sv SFIN 0
 put sv SCTOK 0
+put sv SPTOK 0
+put sv SCTX 0
 put sv SERR 0
 st = acxsend rq wk sv cs io
 if lt st 0
@@ -2124,6 +2190,12 @@ end
 if heq s oexec
 ret 30
 end
+if heq s oline
+ret 15
+end
+if heq s oexact
+ret 16
+end
 ret 0
 end
 
@@ -2158,6 +2230,12 @@ end
 if eq op 5
 ret ge acfind c s 0 true len c
 end
+if eq op 15
+ret acgline c s
+end
+if eq op 16
+ret acgexact c s
+end
 if eq op 8
 x = acfence c s
 if eq x NOFENCE
@@ -2171,6 +2249,217 @@ ret acpfx view part c acsa y sub acsb y acsa y s false
 end
 if eq op 10
 ret acsfx view part c acsa y sub acsb y acsa y s false
+end
+ret false
+end
+
+note acgm1: whether pattern byte(s) at p[j] match byte c: \\ escapes the next byte, # one ASCII digit; the
+note pattern width consumed (1 or 2), 0 when they do not match
+fn acgm1 p view uchar * j ulong c ulong to ulong
+x = acat p j
+if and eq x 92 lt add j 1 len p
+if eq acat p add j 1 c
+ret 2
+end
+ret 0
+end
+if eq x 35
+if and ge c 48 le c 57
+ret 1
+end
+ret 0
+end
+if eq x c
+ret 1
+end
+ret 0
+end
+
+note acglob: whether all of s matches pattern p: * any run of bytes, # one ASCII digit, \\ the next byte literal
+note (iterative backtracking to the last *; every pass advances i or the star mark, so 2 (len s + 1)^2 passes
+note bound it: a subject over 600 bytes never matches, which keeps that under the loop bound 999999)
+fn acglob s view uchar * p view uchar * to bool
+if eq ACMUT 1
+ret true
+end
+if gt len s 600
+ret false
+end
+i = ulong 0
+j = ulong 0
+st = NOFENCE
+mk = ulong 0
+n = len s
+m = len p
+while lt i n bound 999999
+if eq acat p j 42
+st = j
+mk = i
+j = add j 1
+continue
+end
+w = ulong 0
+if lt j m
+w = acgm1 p j ulong get s i
+end
+if gt w 0
+i = add i 1
+j = add j w
+continue
+end
+if ne st NOFENCE
+j = add st 1
+mk = add mk 1
+i = mk
+continue
+end
+ret false
+end
+while eq acat p j 42 bound 999999
+j = add j 1
+end
+ret eq j m
+end
+
+note acgline: some line of c, stripped, matches pattern p (op line)
+fn acgline c view uchar * p view uchar * to bool
+a = ulong 0
+while le a len c bound 999999
+e = acfind c knl a false
+if gt e len c
+e = len c
+end
+x = acstrip view part c a sub e a
+if acglob view part c add a acsa x sub acsb x acsa x p
+ret true
+end
+a = add e 1
+end
+ret false
+end
+
+note acgexact: the whole reply (the first fenced block when there is one), stripped, is one line matching p (op exact)
+fn acgexact c view uchar * p view uchar * to bool
+a = ulong 0
+b = len c
+x = acfence c part kfence 0 0
+if ne x NOFENCE
+a = acfs x
+b = acsb x
+end
+y = acstrip view part c a sub b a
+s0 = add a acsa y
+s1 = add a acsb y
+if lt acfind view part c s0 sub s1 s0 knl 0 false sub s1 s0
+ret false
+end
+ret acglob view part c s0 sub s1 s0 p
+end
+
+note acclob1: whether the name nm occurrence at i in c is the target of a single > redirection (truncation):
+note walking back over path bytes and spaces reaches a > that does not follow another >
+fn acclob1 c view uchar * i ulong to bool
+j = i
+while gt j 0 bound 999999
+if acpathb get c sub j 1
+j = sub j 1
+else
+break
+end
+end
+while gt j 0 bound 999999
+d = get c sub j 1
+if ne d 32
+break
+end
+j = sub j 1
+end
+if gt j 0
+d = get c sub j 1
+if or eq d 34 eq d 39
+j = sub j 1
+end
+end
+while gt j 0 bound 999999
+if ne get c sub j 1 32
+break
+end
+j = sub j 1
+end
+if lt j 1
+ret false
+end
+if ne get c sub j 1 62
+ret false
+end
+if lt j 2
+ret true
+end
+ret ne get c sub j 2 62
+end
+
+note acpathb: whether byte d may be part of a redirection target path (not whitespace, >, or a quote)
+fn acpathb d uchar to bool
+if or or eq d 32 eq d 9 eq d 10
+ret false
+end
+ret not or or eq d 62 eq d 34 eq d 39
+end
+
+note acclob: some occurrence of nm in c is truncated by a single >
+fn acclob c view uchar * nm view uchar * to bool
+p = ulong 0
+while lt p len c bound 999999
+i = acfind c nm p false
+if ge i len c
+ret false
+end
+if acclob1 c i
+ret true
+end
+p = add i 1
+end
+ret false
+end
+
+note accrit1: c holds a critical pattern: a line of critical.txt, or a truncating > onto BOARD.md / CLAIMS.md
+fn accrit1 c view uchar * wk view uchar WKN sv view ulong SVN to bool
+if eq ACMUT 3
+ret false
+end
+if acclob c kboard
+ret true
+end
+if acclob c kclaims
+ret true
+end
+n = get sv SCRL
+a = ulong 0
+while lt a n bound 999999
+e = acfind view part wk WCR n knl a false
+if gt e n
+e = n
+end
+if gt e a
+if lt acfind c view part wk add WCR a sub e a 0 false len c
+ret true
+end
+end
+a = add e 1
+end
+ret false
+end
+
+note accrit: the reply (content and every call's arguments) holds a critical pattern
+fn accrit wk view uchar WKN sv view ulong SVN rs view uchar RSN to bool
+if accrit1 view part rs 0 get sv SCL wk sv
+ret true
+end
+for k ulong get sv SNC
+o = add RCL mul k CLAS
+if accrit1 view part rs o get sv add SAL k wk sv
+ret true
+end
 end
 ret false
 end
@@ -2613,6 +2902,50 @@ y = acstrip b
 ret heq view part a acsa x sub acsb x acsa x view part b acsa y sub acsb y acsa y
 end
 
+note exec repo (PREREG.md section 3): the driver program is this preamble, the candidate's file written as hex
+note to TARGET under /tmp/r (the sandbox's private tmpfs), then the item's hidden DRIVER, which writes the rest of
+note the fixture repository and runs its tests. PASS needs exit 0 and the item's NONCE on a line of the output
+note (the candidate never sees the driver or the nonce, so it cannot fake a pass by exiting early).
+text kxr1 "import os, sys\nos.makedirs('/tmp/r', exist_ok=True)\nos.chdir('/tmp/r')\nsys.path.insert(0, '/tmp/r')\ndef _w(p, h):\n    d = os.path.dirname(p)\n    if d:\n        os.makedirs(d, exist_ok=True)\n    with open(p, 'wb') as f:\n        f.write(bytes.fromhex(h))\n_w('"
+text kxr2 "', '"
+text kxr3 "')\n"
+text khexd "0123456789abcdef"
+text krepo "repo"
+
+note achex: s as lowercase hex at o[p..]; the new end (len o + 1 when it does not fit)
+fn achex o edit uchar * p ulong s view uchar * to ulong
+if gt add p mul 2 len s len o
+ret add len o 1
+end
+for i ulong len s
+c = ulong get s i
+put o add p mul 2 i get khexd shr c 4
+put o add add p mul 2 i 1 get khexd and c 15
+end
+ret add p mul 2 len s
+end
+
+note acxrbody: the driver program for content c into f: preamble, TARGET from rule r, the hex, the DRIVER; its length
+fn acxrbody c view uchar * it view uchar ILN tp view uint TPN r ulong f edit uchar FBN to ulong
+b = new uchar 262144 0
+a = acrarg it tp r 2 b
+if lt a 1
+ret add FBN 1
+end
+q = acapp f 0 kxr1
+q = acapp f q view part b 0 ulong a
+q = acapp f q kxr2
+x = acfcode2 c kpython kpy
+q = achex f q view part c acsa x sub acsb x acsa x
+q = acapp f q kxr3
+d = acrarg it tp r 3 b
+if lt d 1
+ret add FBN 1
+end
+q = acapp f q view part b 0 ulong d
+ret acapp f q knl
+end
+
 note acrexe: rule exec LANG EXPECT against the content
 fn acrexe it view uchar ILN tp view uint TPN r ulong sv view ulong SVN rs view uchar RSN pa edit uchar PAN to bool
 b = new uchar 65536 0
@@ -2620,12 +2953,53 @@ k = acrarg it tp r 1 b
 if lt k 1
 ret false
 end
+if heq view part b 0 ulong k krepo
+ret acrrepo it tp r sv rs pa
+end
 om = heq view part b 0 ulong k komega
 el = acrarg it tp r 2 b
 if lt el 0
 ret false
 end
 ret acrex2 rs sv pa view part b 0 ulong el om
+end
+
+note acrrepo: rule [exec, repo, TARGET, DRIVER, NONCE]
+fn acrrepo it view uchar ILN tp view uint TPN r ulong sv view ulong SVN rs view uchar RSN pa edit uchar PAN to bool
+f = new uchar FBN 0
+q = acxrbody view part rs 0 get sv SCL it tp r f
+if gt q FBN
+ret false
+end
+ok = acrunpy view part f 0 q sv pa
+if eq ACMUT 2
+ret true
+end
+if not ok
+ret false
+end
+ret acrnonce it tp r sv pa
+end
+
+note acrnonce: the item's nonce (rule element 4) is a line of the run's log (pa slot 1)
+fn acrnonce it view uchar ILN tp view uint TPN r ulong sv view ulong SVN pa edit uchar PAN to bool
+nc = new uchar 128 0
+k = acrarg it tp r 4 nc
+if lt k 8
+ret false
+end
+ret acnlog pa sv nc ulong k
+end
+
+note acnlog: nc[0, k) is a line of the log in pa slot 1
+fn acnlog pa edit uchar PAN sv view ulong SVN nc view uchar 128 k ulong to bool
+lg = new uchar 65536 0
+m = acxpath pa sv 1 kdlog
+x = acreadf view part pa PB m lg
+if lt x 1
+ret false
+end
+ret acgline view part lg 0 ulong x view part nc 0 k
 end
 
 fn acrex2 rs view uchar RSN sv view ulong SVN pa edit uchar PAN ex view uchar * om bool to bool
@@ -2948,22 +3322,15 @@ end
 
 note ======== the run loop (PREREG.md sections 1 and 4)
 
-const FIL ulong 2097152
-const SW1L ulong 76
-const SW2L ulong 77
-const SFN ulong 78
-const BPBMU ulong 1500000
-
 text fitems "/items.jsonl"
 text fifev "/ifeval.jsonl"
 text fhe "/humaneval.jsonl"
 text fth "/tools-hermes.json"
 text fto "/tools-opencode.json"
 text ftf "/tools-fn.json"
-text fags "/agent-system.txt"
-text fals "/allen-system.txt"
+text fhvs "/hive-system.txt"
+text fcos "/coding-system.txt"
 text fheld "/heldout.jsonl"
-text kagent "agent"
 text kresx ".resp"
 text kbpbid "ident-bpb"
 text kbpbenv "OLLM_BPB_CMD"
@@ -2971,7 +3338,7 @@ text kbinsh "/bin/sh"
 text kdashc "-c"
 text kbpb0 "accept-bpb"
 text khumev "HumanEval/"
-text krhdr "id\tcat\tverdict\tdetail\n"
+text krhdr "id\trole\tfamily\tsplit\tverdict\treason\tstatus\tfin\tptok\tctok\tms\tdetail\n"
 text kst "st="
 text kfinx " fin="
 text kdet " d="
@@ -3081,97 +3448,40 @@ end
 ret -1
 end
 
-note accat: category name to index 0..7, else 99
+note accat: role name to index 0..4, else 99
 fn accat s view uchar * to ulong
-if heq s gallen
+if heq s gassist
 ret 0
 end
-if heq s gtools
+if heq s gcoding
 ret 1
 end
-if heq s gagent
+if heq s ghive
 ret 2
 end
-if heq s gif
+if heq s gharn
 ret 3
 end
-if heq s gcode
-ret 4
-end
-if heq s glong
-ret 5
-end
 if heq s gproto
-ret 6
-end
-if heq s gident
-ret 7
+ret 4
 end
 ret 99
 end
 
 fn acapcat o edit uchar * q ulong c ulong to ulong
 if eq c 0
-ret acapp o q gallen
+ret acapp o q gassist
 end
 if eq c 1
-ret acapp o q gtools
+ret acapp o q gcoding
 end
 if eq c 2
-ret acapp o q gagent
+ret acapp o q ghive
 end
 if eq c 3
-ret acapp o q gif
+ret acapp o q gharn
 end
-if eq c 4
-ret acapp o q gcode
-end
-if eq c 5
-ret acapp o q glong
-end
-if eq c 6
 ret acapp o q gproto
-end
-ret acapp o q gident
-end
-
-note acexp / acbar: registered item count and pass bar (permille) of category c (PREREG.md section 4)
-fn acexp c ulong to ulong
-if eq c 0
-ret EXA
-end
-if eq c 1
-ret EXT
-end
-if eq c 2
-ret EXG
-end
-if eq c 3
-ret EXI
-end
-if eq c 4
-ret EXC
-end
-if eq c 5
-ret EXL
-end
-if eq c 6
-ret EXP
-end
-ret EXD
-end
-
-fn acbar c ulong to ulong
-if or eq c 0 eq c 1
-ret 850
-end
-if or eq c 2 eq c 4
-ret 700
-end
-if eq c 3
-ret 750
-end
-ret 1000
 end
 
 note acline: f[p, end of line) of the n-byte file into it; sv[SILN] its length (ILN + 1 when too long); the next p
@@ -3244,6 +3554,27 @@ end
 ret 0
 end
 
+note acfamsp: the item's family and split strings into wk[WFS..], wk[WSP..] (sv[SFAML], sv[SSPL]); false when absent
+fn acfamsp it view uchar ILN tp view uint TPN wk edit uchar WKN sv edit ulong SVN to bool
+k = acstr it tp acmem it tp 0 kfamily part wk WFS 128
+if lt k 1
+ret false
+end
+put sv SFAML ulong k
+k = acstr it tp acmem it tp 0 ksplit part wk WSP 32
+if lt k 1
+ret false
+end
+put sv SSPL ulong k
+ret true
+end
+
+note acsetfs: fixed family and split strings (IFEval and HumanEval rows)
+fn acsetfs wk edit uchar WKN sv edit ulong SVN f view uchar * sp view uchar * to void
+put sv SFAML acapp part wk WFS 128 0 f
+put sv SSPL acapp part wk WSP 32 0 sp
+end
+
 note acmeta: chat item fields into sv / wk / pa; false when the item is malformed
 fn acmeta it view uchar ILN tp view uint TPN wk edit uchar WKN sv edit ulong SVN pa edit uchar PAN to bool
 b = new uchar 4096 0
@@ -3254,15 +3585,18 @@ end
 if not acsetid wk sv pa view part b 0 ulong k
 ret false
 end
-k = acstr it tp acmem it tp 0 kcat b
+k = acstr it tp acmem it tp 0 krole b
 if lt k 1
 ret false
 end
 c = accat view part b 0 ulong k
-if or gt c 7 or eq c 3 eq c 4
+if or eq c 3 gt c 4
 ret false
 end
 put sv SCAT c
+if not acfamsp it tp wk sv
+ret false
+end
 put sv SKIND 0
 put sv SSTRM 0
 if actrue it tp 0 kstream
@@ -3291,11 +3625,11 @@ k = acstr it tp t b
 if lt k 1
 ret false
 end
-if heq view part b 0 ulong k kallen
+if heq view part b 0 ulong k kcodingk
 acwkcp wk sv WS1 get sv SW1L
 ret ne get sv SW1L 0
 end
-if heq view part b 0 ulong k kagent
+if heq view part b 0 ulong k khivek
 acwkcp wk sv WS2 get sv SW2L
 ret ne get sv SW2L 0
 end
@@ -3348,7 +3682,7 @@ if gt l 0
 op = acopc view part b 0 ulong l
 end
 ok = false
-if and ge op 1 le op 14
+if and ge op 1 le op 16
 ok = acrc op it tp r sv rs
 end
 if and ge op 20 le op 25
@@ -3395,32 +3729,95 @@ x = acwfile view part pa PB n view part f 0 q
 end
 end
 
-note acres: one results.tsv row and the category counters; v 0 PASS, 1 FAIL, 2 NOT_RUN
-fn acres wk view uchar WKN sv edit ulong SVN v ulong d ulong to void
+note failure reasons (PREREG.md section 4), index order 0..10
+text yok "ok"
+text yconn "conn"
+text ybusy "busy"
+text yctx "ctx"
+text yhttp "http"
+text ycap "capture"
+text ycrit "crit"
+text yrule "rule"
+text yexec "exec"
+text ynoh "noharness"
+text ybig "toolong"
+
+fn acapy o edit uchar * q ulong y ulong to ulong
+if eq y 0
+ret acapp o q yok
+end
+if eq y 1
+ret acapp o q yconn
+end
+if eq y 2
+ret acapp o q ybusy
+end
+if eq y 3
+ret acapp o q yctx
+end
+if eq y 4
+ret acapp o q yhttp
+end
+if eq y 5
+ret acapp o q ycap
+end
+if eq y 6
+ret acapp o q ycrit
+end
+if eq y 7
+ret acapp o q yrule
+end
+if eq y 8
+ret acapp o q yexec
+end
+if eq y 9
+ret acapp o q ynoh
+end
+ret acapp o q ybig
+end
+
+note acopt: v - 1 in decimal, or - when v is 0 (absent)
+fn acopt o edit uchar * q ulong v ulong to ulong
+if eq v 0
+ret acapp o q kdash
+end
+ret acdec o q sub v 1
+end
+
+note acres: one results row: id role family split verdict reason status fin ptok ctok ms detail;
+note v 0 PASS, 1 FAIL, 2 NOT_RUN; y the reason (0..10)
+fn acres wk view uchar WKN sv edit ulong SVN v ulong y ulong d ulong to void
 o = new uchar 1024 0
-c = get sv SCAT
 q = acapp o 0 view part wk WID get sv SIDL
 q = acapp o q ktab
-q = acapcat o q c
+q = acapcat o q get sv SCAT
+q = acapp o q ktab
+q = acapp o q view part wk WFS get sv SFAML
+q = acapp o q ktab
+q = acapp o q view part wk WSP get sv SSPL
 q = acapp o q ktab
 if eq v 0
 q = acapp o q kpass
-put sv add SPASS c add get sv add SPASS c 1
 end
 if eq v 1
 q = acapp o q kfail
 end
 if eq v 2
 q = acapp o q knotrun
-put sv add SMF c add get sv add SMF c 1
 end
-put sv add STOT c add get sv add STOT c 1
 q = acapp o q ktab
-q = acapp o q kst
+q = acapy o q y
+q = acapp o q ktab
 q = acdec o q get sv SST
-q = acapp o q kfinx
+q = acapp o q ktab
 q = acdec o q and get sv SFIN 255
-q = acapp o q kdet
+q = acapp o q ktab
+q = acopt o q get sv SPTOK
+q = acapp o q ktab
+q = acopt o q get sv SCTOK
+q = acapp o q ktab
+q = acdec o q get sv SLAT
+q = acapp o q ktab
 q = acdec o q d
 q = acapp o q knl
 x = acwrite long get sv SRFD view part o 0 q
@@ -3432,13 +3829,21 @@ rq = new uchar RQN 0
 n = acbuild rq it tp wk sv
 put sv SST 0
 put sv SFIN 0
+put sv SLAT 0
+put sv SPTOK 0
+put sv SCTOK 0
+put sv SCTX 0
+put sv SERR 0
 if gt n RQN
 put sv SCL 0
 put sv SNC 0
 ret false
 end
 put sv SBL n
+t0 = monons
 acexch rq wk sv rs
+t1 = monons
+put sv SLAT div ulong sub t1 t0 1000000
 acsave sv rs pa
 ret and eq get sv SST 200 eq get sv SERR 0
 end
@@ -3455,7 +3860,8 @@ if not acsetid wk sv pa view part b 0 q
 ret false
 end
 put sv SKIND 1
-put sv SCAT 3
+put sv SCAT 0
+acsetfs wk sv kifam kdev
 put sv SSTRM 0
 put sv SMAX 2048
 put sv SWHY 0
@@ -3479,7 +3885,8 @@ if not acsetid wk sv pa view part o 0 q
 ret false
 end
 put sv SKIND 2
-put sv SCAT 4
+put sv SCAT 1
+acsetfs wk sv khefam kdev
 put sv SSTRM 0
 put sv SMAX 1024
 put sv SWHY 0
@@ -3524,7 +3931,29 @@ end
 ret 1
 end
 
-note acitem: run and score the parsed item it of kind sv[SKIND]; writes its results row
+note acfail: the failure reason of an exchange that did not deliver a reply (sv[SST], sv[SCTX], sv[SERR])
+fn acfail sv view ulong SVN to ulong
+st = get sv SST
+if eq get sv SBL 0
+ret 10
+end
+if eq st 0
+ret 1
+end
+if eq st 503
+ret 2
+end
+if ne get sv SCTX 0
+ret 3
+end
+if ne st 200
+ret 4
+end
+ret 5
+end
+
+note acitem: run and score the parsed item it of kind sv[SKIND]; writes its results row. A critical pattern in
+note the reply fails the item whatever its rules say (reason crit).
 fn acitem it view uchar ILN tp view uint TPN wk edit uchar WKN sv edit ulong SVN rs edit uchar RSN pa edit uchar PAN to void
 k = get sv SKIND
 ok = false
@@ -3541,16 +3970,44 @@ if not ok
 acout kfail
 exit 4
 end
+put sv SBL 0
 if not acsend it tp wk sv rs pa
-acres wk sv 1 0
+acres wk sv 1 acfail sv 0
+ret
+end
+if accrit wk sv rs
+acres wk sv 1 6 0
 ret
 end
 d = acscore it tp sv rs pa
 if eq d 0
-acres wk sv 0 0
-else
-acres wk sv 1 d
+acres wk sv 0 0 0
+ret
 end
+y = ulong 7
+if eq get sv SKIND 2
+y = 8
+end
+if eq get sv SKIND 0
+if acisexec it tp d
+y = 8
+end
+end
+acres wk sv 1 y d
+end
+
+note acisexec: whether rule d (1-based) of the chat item is an exec rule
+fn acisexec it view uchar ILN tp view uint TPN d ulong to bool
+b = new uchar 64 0
+r = acel tp acmem it tp 0 krules sub d 1
+if eq r jsnone
+ret false
+end
+l = acrarg it tp r 0 b
+if lt l 1
+ret false
+end
+ret eq acopc view part b 0 ulong l 30
 end
 
 note acvfile: every line of a chat-item file is a well-formed item; exits 4 (the suite is broken) otherwise
@@ -3572,7 +4029,14 @@ end
 end
 end
 
-note acloop: every line of the n-byte file f as an item of kind sv[SKIND]
+note acmine: whether the next item (global index sv[SIDX]) belongs to this worker; advances the index
+fn acmine sv edit ulong SVN to bool
+i = get sv SIDX
+put sv SIDX add i 1
+ret eq rem i get sv SNW get sv SWI
+end
+
+note acloop: every line of the n-byte file f as an item of kind sv[SKIND], the worker's share only
 fn acloop f view uchar FIL n ulong wk edit uchar WKN sv edit ulong SVN pa edit uchar PAN to void
 it = new uchar ILN 0
 tp = new uint TPN 0
@@ -3584,6 +4048,9 @@ p = acline f n p it sv
 if eq get sv SILN 0
 continue
 end
+if not acmine sv
+continue
+end
 if not acpar it tp sv
 exit 4
 end
@@ -3592,158 +4059,126 @@ acitem it tp wk sv rs pa
 end
 end
 
-note acpdec: a decimal like 1.234567 at the start of s (after spaces) in millionths; 2^64-1 when absent
-fn acpdec s view uchar * to ulong
-i = ulong 0
-while and lt i len s eq get s i 32 bound 999999
-i = add i 1
+note ======== harness role rows (PREREG.md section 1): the harness lane's runner scores these tasks; this
+note runner only records them. Each harness.jsonl line {"id","role":"harness","family","split"} becomes a row
+note from the TSV named by ACCEPT_HARNESS_TSV (lines ID TAB PASS|FAIL TAB reason TAB ms TAB ptok TAB ctok,
+note written by tests/omegallm/harness/verify.om through run.sh), else NOT_RUN reason noharness.
+text khenv "ACCEPT_HARNESS_TSV"
+
+note achrow: the TSV line for id into sv (SLAT, SPTOK, SCTOK); 0 PASS, 1 FAIL, 2 absent
+fn achrow h view uchar * id view uchar * sv edit ulong SVN to ulong
+p = ulong 0
+while lt p len h bound 999999
+e = acfind h knl p false
+if gt e len h
+e = len h
 end
+l = sub e p
+if gt l add len id 5
+if and heq view part h p len id id eq get h add p len id 9
+v = ulong 1
+if heq view part h add add p len id 1 4 kpass
+v = 0
+end
+put sv SLAT achfld view part h p l 3
+put sv SPTOK add 1 achfld view part h p l 4
+put sv SCTOK add 1 achfld view part h p l 5
+ret v
+end
+end
+p = add e 1
+end
+ret 2
+end
+
+note achfld: tab-separated field k of line s as a decimal (0 when absent or not a number)
+fn achfld s view uchar * k ulong to ulong
+f = ulong 0
 v = ulong 0
-nd = ulong 0
-while and lt i len s and ge get s i 48 le get s i 57 bound 20
-v = add mul v 10 ulong sub get s i 48
-nd = add nd 1
-i = add i 1
+for i ulong len s
+c = ulong get s i
+if eq c 9
+f = add f 1
+continue
 end
-if eq nd 0
-ret NOFENCE
+if eq f k
+if and ge c 48 le c 57
+v = add mul v 10 sub c 48
 end
-v = mul v 1000000
-if and lt i len s eq get s i 46
-i = add i 1
-m = ulong 100000
-while and lt i len s and ge get s i 48 le get s i 57 bound 64
-v = add v mul m ulong sub get s i 48
-m = div m 10
-i = add i 1
 end
 end
 ret v
 end
 
-note acbpbav: av = /bin/sh -c CMD accept-bpb HELDOUT (CMD = b[0, l), HELDOUT = pa slot 2 of length n)
-fn acbpbav av edit uchar 8192 b view uchar 4096 l ulong pa view uchar PAN n ulong to ulong
-put av 0 0
-put av 1 0
-q = acav av 2 kbinsh
-q = acav av q kdashc
-q = acav av q view part b 0 l
-q = acav av q kbpb0
-ret acav av q view part pa add PB 2048 n
+note achload: the TSV named by ACCEPT_HARNESS_TSV into h; its length (0 when unset or unreadable)
+fn achload h edit uchar 1048576 to ulong
+eb = new uchar 4096 0
+el = acenv khenv eb
+if lt el 1
+ret 0
+end
+r = acreadf view part eb 0 ulong el h
+if lt r 1
+ret 0
+end
+ret ulong r
 end
 
-note acbpbx: run av with stdout to OUTDIR/x-ident-bpb.out (pa slot 0, its length the result's low
-note 16 bits) and stderr to .log; the exit status in the high bits
-fn acbpbx av view uchar 8192 q ulong sv view ulong SVN pa edit uchar PAN to ulong
-m = acxpath pa sv 0 kdout
-fo = acopenw pa 0 m 420
-e = acxpath pa sv 1 kdlog
-fe = acopenw pa 1 e 420
-st = acspawn view part av 0 q -1 fo fe
-x2 = fclose int fo
-x3 = fclose int fe
-ret or shl and ulong st 255 16 m
+note achv: achrow for id b[0, k) over the sv[SHN] loaded bytes of h; 2 when none are loaded
+fn achv h view uchar 1048576 b view uchar 256 k ulong sv edit ulong SVN to ulong
+if eq get sv SHN 0
+ret 2
+end
+ret achrow view part h 0 get sv SHN view part b 0 k sv
 end
 
-note acbpbv: the number printed in the file at pa slot 0 (length m), in millionths; NOFENCE when none
-fn acbpbv pa view uchar PAN m ulong to ulong
-o = new uchar 65536 0
-k = acreadf view part pa PB m o
+note achone: the harness row for the parsed line it (h holds sv[SHN] bytes of harness results)
+fn achone it view uchar ILN tp view uint TPN wk edit uchar WKN sv edit ulong SVN pa edit uchar PAN h view uchar 1048576 to void
+b = new uchar 256 0
+k = acstr it tp acmem it tp 0 kid b
 if lt k 1
-ret NOFENCE
+exit 4
 end
-ret acpdec view part o 0 ulong k
+if not acsetid wk sv pa view part b 0 ulong k
+exit 4
 end
-
-note acbpb: the ident bits-per-byte row: OLLM_BPB_CMD run by /bin/sh -c with the held-out file as $1
-note (an empty environment: the command names absolute paths). NOT_RUN when the variable is unset or
-note CORPUSDIR is -. PASS when it exits 0 and prints a number <= 1.500000 (PREREG.md section 4).
-fn acbpb wk edit uchar WKN sv edit ulong SVN pa edit uchar PAN to void
-b = new uchar 4096 0
-av = new uchar 8192 0
-x = acsetid wk sv pa kbpbid
-put sv SCAT 7
+put sv SCAT 3
+if not acfamsp it tp wk sv
+exit 4
+end
 put sv SST 0
 put sv SFIN 0
-l = acenv kbpbenv b
-if or lt l 1 and eq get sv SCOL 1 eq get pa PCO 45
-acres wk sv 2 0
-ret
+put sv SLAT 0
+put sv SPTOK 0
+put sv SCTOK 0
+v = achv h b ulong k sv
+if eq v 2
+acres wk sv 2 9 0
+else
+acres wk sv v mul v 7 0
 end
-n = acpth pa PCO get sv SCOL fheld 2
-q = acbpbav av b ulong l pa n
-r = acbpbx av q sv pa
-put sv SST shr r 16
-v = acbpbv pa and r 65535
-if or ne get sv SST 0 eq v NOFENCE
-acres wk sv 1 v
-ret
-end
-if le v BPBMU
-acres wk sv 0 v
-ret
-end
-acres wk sv 1 v
 end
 
-note acsum: summary.txt and stdout; 0 PASS, 1 FAIL, 3 NOT_RUN overall. A category passes only when it ran
-note exactly its registered item count and meets its own bar; any NOT_RUN row makes it NOT_RUN.
-fn acsum sv view ulong SVN pa edit uchar PAN to ulong
-o = new uchar 8192 0
-q = acapp o 0 ksum
-fl = false
-nr = false
-for c ulong 8
-p = get sv add SPASS c
-t = get sv add STOT c
-x = acexp c
-r = acbar c
-q = acapcat o q c
-q = acapp o q ktab
-q = acdec o q p
-q = acapp o q ktab
-q = acdec o q t
-q = acapp o q ktab
-q = acdec o q x
-q = acapp o q ktab
-q = acdec o q r
-q = acapp o q ktab
-if ne t x
-q = acapp o q kfail
-fl = true
-else
-if gt get sv add SMF c 0
-q = acapp o q knotrun
-nr = true
-else
-if ge mul p 1000 mul r t
-q = acapp o q kpass
-else
-q = acapp o q kfail
-fl = true
+note acharn: the harness rows (worker 0 only)
+fn acharn f view uchar FIL n ulong wk edit uchar WKN sv edit ulong SVN pa edit uchar PAN to void
+it = new uchar ILN 0
+tp = new uint TPN 0
+h = new uchar 1048576 0
+put sv SHN achload h
+p = ulong 0
+while lt p n bound 999999
+p = acline f n p it sv
+if eq get sv SILN 0
+continue
 end
+if ne get sv SWI 0
+continue
 end
+if not acpar it tp sv
+exit 4
 end
-q = acapp o q knl
+achone it tp wk sv pa h
 end
-q = acapp o q koverall
-v = ulong 0
-if fl
-q = acapp o q kfail
-v = 1
-else
-if nr
-q = acapp o q knotrun
-v = 3
-else
-q = acapp o q kpass
-end
-end
-q = acapp o q knl
-n = acpth pa POD get sv SODL ksummary 0
-x = acwfile view part pa PB n view part o 0 q
-acout view part o 0 q
-ret v
 end
 
 note acrdwk: the file at pa slot 0 (length n) into wk[o, o + cap); its length, or exits 4
@@ -3771,10 +4206,64 @@ end
 ret ulong r
 end
 
-note run HOST PORT SUITEDIR OUTDIR OMC MODEL CORPUSDIR|- [MUTANTOP]
+text fharn "/harness.jsonl"
+text fcrit "/critical.txt"
+text kres0 "/results-"
+text ktsv ".tsv"
+
+note acrdcr: SUITEDIR/critical.txt into wk[WCR..]; sv[SCRL]
+fn acrdcr wk edit uchar WKN sv edit ulong SVN pa edit uchar PAN to void
+n = acpth pa PSD get sv SSDL fcrit 0
+r = acreadf view part pa PB n part wk WCR 16384
+if lt r 1
+acout view part pa PB n
+exit 4
+end
+put sv SCRL ulong r
+end
+
+note acrdopt: SUITEDIR + s into wk[o, o + 65536) when present (an optional system text); its length or 0
+fn acrdopt wk edit uchar WKN pa edit uchar PAN sv view ulong SVN s view uchar * o ulong to ulong
+n = acpth pa PSD get sv SSDL s 0
+r = acreadf view part pa PB n part wk o 65536
+if lt r 1
+ret 0
+end
+ret ulong r
+end
+
+note acsuite: one suite file SUITEDIR + s of kind k through acloop (absent files hold no items)
+fn acsuite f edit uchar FIL wk edit uchar WKN sv edit ulong SVN pa edit uchar PAN k ulong to void
+n = acpth pa PSD get sv SSDL fitems 0
+if eq k 1
+n = acpth pa PSD get sv SSDL fifev 0
+end
+if eq k 2
+n = acpth pa PSD get sv SSDL fhe 0
+end
+if eq k 3
+n = acpth pa PSD get sv SSDL fharn 0
+end
+r = acreadf view part pa PB n f
+if lt r 0
+ret
+end
+if eq k 0
+acvfile f ulong r sv
+end
+put sv SKIND k
+if eq k 3
+acharn f ulong r wk sv pa
+ret
+end
+acloop f ulong r wk sv pa
+end
+
+note run HOST PORT SUITEDIR OUTDIR OMC MODEL TEMPMILLI SEED WORKER NWORKERS [MUTANTOP]
+note Writes OUTDIR/results-WORKER.tsv; `accept sum` aggregates every worker's file.
 fn cmdrun to void
 na = ulong argcnt
-if and ne na 9 ne na 10
+if and ne na 11 ne na 12
 exit 2
 end
 pa = new uchar PAN 0
@@ -3799,10 +4288,23 @@ for i ulong n
 put wk add WMO i get pa add PB i
 end
 put sv SMOL n
-put sv SCOL acgeta 8 pa PCO
+n = acgeta 8 pa PB
+put sv STEMP acudec view part pa PB n
+if gt get sv STEMP 2000
+exit 2
+end
+n = acgeta 9 pa PB
+put sv SSEED acudec view part pa PB n
+n = acgeta 10 pa PB
+put sv SWI acudec view part pa PB n
+n = acgeta 11 pa PB
+put sv SNW acudec view part pa PB n
+if or eq get sv SNW 0 ge get sv SWI get sv SNW
+exit 2
+end
 put sv SMUT 0
-if eq na 10
-n = acgeta 9 pa PMU
+if eq na 12
+n = acgeta 12 pa PMU
 put sv SMUT acopc view part pa PMU n
 if eq get sv SMUT 0
 exit 2
@@ -3812,29 +4314,778 @@ x = makedir pa POD get sv SODL 493
 put sv ST0L acrdwk wk pa acpth pa PSD get sv SSDL fth 0 WT0
 put sv add ST0L 1 acrdwk wk pa acpth pa PSD get sv SSDL fto 0 WT1
 put sv add ST0L 2 acrdwk wk pa acpth pa PSD get sv SSDL ftf 0 WT2
-put sv SW2L acrdwk wk pa acpth pa PSD get sv SSDL fags 0 WS2
-put sv SW1L acrdwk wk pa acpth pa POD get sv SODL fals 0 WS1
-m = acpth pa POD get sv SODL kresults 0
+put sv SW2L acrdopt wk pa sv fhvs WS2
+put sv SW1L acrdopt wk pa sv fcos WS1
+acrdcr wk sv pa
+o = new uchar 64 0
+q = acapp o 0 kres0
+q = acdec o q get sv SWI
+q = acapp o q ktsv
+m = acpth pa POD get sv SODL view part o 0 q 0
 fd = fopen pa PB m 524865 420
 if lt fd 0
 exit 4
 end
 put sv SRFD ulong fd
 x2 = acwrite fd krhdr
-n = acrdf f pa get sv SSDL fitems
-acvfile f n sv
-put sv SKIND 0
-acloop f n wk sv pa
-n = acrdf f pa get sv SSDL fifev
-put sv SKIND 1
-acloop f n wk sv pa
-n = acrdf f pa get sv SSDL fhe
-put sv SKIND 2
-acloop f n wk sv pa
-acbpb wk sv pa
+put sv SIDX 0
+acsuite f wk sv pa 0
+acsuite f wk sv pa 1
+acsuite f wk sv pa 2
+acsuite f wk sv pa 3
 x3 = fclose int fd
-exit int acsum sv pa
+exit 0
 end
+
+
+note ======== sum OUTDIR THRESHOLDS (PREREG.md section 4): aggregate every OUTDIR/results-W.tsv
+note Groups are role x split (role 0..4, split train 0, dev 1, test 2). Latency and context statistics
+note cover the rows whose exchange returned status 200. p50 / p95 are nearest-rank (the ceil(q n)-th
+note smallest). The 95% interval is Wilson's score interval with z = 1.959963984540054.
+const NGRP ulong 15
+const GLCAP ulong 4096
+global gn ulong 16
+global gp ulong 16
+global gnr ulong 16
+global g200 ulong 16
+global grs ulong 192
+global glat ulong 65536
+global gctx ulong 65536
+global gfam uchar 8192
+global gfl ulong 128
+global gfg ulong 128
+global gft ulong 128
+global gfp ulong 128
+global gfc ulong 1
+global gth ulong 1
+text kstrain "train"
+text kstest "test"
+text ksumhdr "role\tsplit\tn\tpass\tnot_run\trate\twilson95_lo\twilson95_hi\tp50_ms\tp95_ms\tctx_max\tctx_p95\tcrit\treasons\tgate\tverdict\n"
+text kfamhdr "\nrole\tsplit\tfamily\tpass\tn\n"
+text kovr "overall\t"
+text keq "="
+text kspc " "
+text knone "none"
+text kreport "report"
+text kgated "gated"
+
+note acspl: split name to 0 train, 1 dev, 2 test, else 9
+fn acspl s view uchar * to ulong
+if heq s kstrain
+ret 0
+end
+if heq s kdev
+ret 1
+end
+if heq s kstest
+ret 2
+end
+ret 9
+end
+
+note acrsn: reason name to 0..10, else 11
+fn acrsn s view uchar * to ulong
+o = new uchar 32 0
+for y ulong 11
+q = acapy o 0 y
+if heq s view part o 0 q
+ret y
+end
+end
+ret 11
+end
+
+note acfld: field k (tab-separated) of line s as start shl 32 | end; start = end = len s when absent
+fn acfld s view uchar * k ulong to ulong
+f = ulong 0
+a = ulong 0
+for i ulong len s
+if eq get s i 9
+if eq f k
+ret or shl a 32 i
+end
+f = add f 1
+a = add i 1
+end
+end
+if eq f k
+ret or shl a 32 len s
+end
+ret or shl len s 32 len s
+end
+
+fn acfv s view uchar * k ulong to ulong
+x = acfld s k
+ret acdecv view part s acsa x sub acsb x acsa x
+end
+
+note acdecv: a decimal field (0 for - or anything else)
+fn acdecv s view uchar * to ulong
+v = ulong 0
+for i ulong len s
+c = ulong get s i
+if or lt c 48 gt c 57
+ret 0
+end
+v = add mul v 10 sub c 48
+end
+ret v
+end
+
+note acfamid: the family index of name s in group g (added when new; 127 when the table is full)
+fn acfamid s view uchar * g ulong to ulong
+n = get gfc 0
+for i ulong n
+if eq get gfg i g
+if eq get gfl i len s
+o = mul i 64
+ok = true
+for j ulong len s
+if ne get gfam add o j get s j
+ok = false
+break
+end
+end
+if ok
+ret i
+end
+end
+end
+end
+if or ge n 127 gt len s 64
+ret 127
+end
+for j ulong len s
+put gfam add mul n 64 j get s j
+end
+put gfl n len s
+put gfg n g
+put gfc 0 add n 1
+ret n
+end
+
+note acgrp: the group (role x split) of row s, 99 when unknown
+fn acgrp s view uchar * to ulong
+x = acfld s 1
+r = accat view part s acsa x sub acsb x acsa x
+x = acfld s 3
+sp = acspl view part s acsa x sub acsb x acsa x
+if or gt r 4 gt sp 2
+ret 99
+end
+ret add mul r 3 sp
+end
+
+note acrow1: one results row into the group aggregates
+fn acrow1 s view uchar * to void
+g = acgrp s
+if eq g 99
+ret
+end
+put gn g add get gn g 1
+x = acfld s 4
+pass = heq view part s acsa x sub acsb x acsa x kpass
+if pass
+put gp g add get gp g 1
+end
+if heq view part s acsa x sub acsb x acsa x knotrun
+put gnr g add get gnr g 1
+end
+acrowr s g
+acrowf s g pass
+if eq acfv s 6 200
+acrow2 s g
+end
+end
+
+fn acrowr s view uchar * g ulong to void
+x = acfld s 5
+y = acrsn view part s acsa x sub acsb x acsa x
+if lt y 11
+o = add mul g 12 y
+put grs o add get grs o 1
+end
+end
+
+fn acrowf s view uchar * g ulong pass bool to void
+x = acfld s 2
+fi = acfamid view part s acsa x sub acsb x acsa x g
+if lt fi 127
+put gft fi add get gft fi 1
+if pass
+put gfp fi add get gfp fi 1
+end
+end
+end
+
+fn acrow2 s view uchar * g ulong to void
+k = get g200 g
+if ge k GLCAP
+ret
+end
+put glat add mul g GLCAP k acfv s 10
+put gctx add mul g GLCAP k add acfv s 8 acfv s 9
+put g200 g add k 1
+end
+
+note acsumf: every row of the n-byte file f (the header line skipped)
+fn acsumf f view uchar FIL n ulong to void
+p = ulong 0
+first = true
+while lt p n bound 999999
+e = acfind view part f 0 n knl p false
+if gt e n
+e = n
+end
+if not first
+if gt e p
+acrow1 view part f p sub e p
+end
+end
+first = false
+p = add e 1
+end
+end
+
+note acsortg: sort glat / gctx of group g ascending (insertion sort; at most GLCAP rows)
+fn acsortg g ulong to void
+o = mul g GLCAP
+n = get g200 g
+for i ulong n
+v = get glat add o i
+j = i
+while gt j 0 bound 4096
+u = get glat add o sub j 1
+if le u v
+break
+end
+put glat add o j u
+j = sub j 1
+end
+put glat add o j v
+end
+for i ulong n
+v = get gctx add o i
+j = i
+while gt j 0 bound 4096
+u = get gctx add o sub j 1
+if le u v
+break
+end
+put gctx add o j u
+j = sub j 1
+end
+put gctx add o j v
+end
+end
+
+note acnr: the nearest-rank q-quantile (q in permille) of the sorted group g values (lat true: latency); 0 when empty
+fn acnr g ulong q ulong lat bool to ulong
+n = get g200 g
+if eq n 0
+ret 0
+end
+k = div add mul q n 999 1000
+if eq k 0
+k = 1
+end
+o = add mul g GLCAP sub k 1
+if lat
+ret get glat o
+end
+ret get gctx o
+end
+
+fn acmax g ulong to ulong
+n = get g200 g
+if eq n 0
+ret 0
+end
+ret get gctx add mul g GLCAP sub n 1
+end
+
+note acwil: Wilson 95% bound for k of n (hi false: the lower bound)
+fn acwil k ulong n ulong hi bool to f64
+if eq n 0
+ret 0.0
+end
+z = 1.959963984540054f64
+nf = f64 n
+ph = div f64 k nf
+z2 = mul z z
+de = add 1.0 div z2 nf
+ce = add ph div z2 mul 2.0 nf
+r1 = div mul ph sub 1.0 ph nf
+r2 = div z2 mul 4.0 mul nf nf
+h = mul z fsqrt add r1 r2
+if hi
+ret div add ce h de
+end
+ret div sub ce h de
+end
+
+note acrsns: the nonzero reason counts of group g as name=count, space separated (none when all zero)
+fn acrsns o edit uchar * q ulong g ulong to ulong
+r = q
+any = false
+for y ulong 11
+if eq y 0
+continue
+end
+c = get grs add mul g 12 y
+if gt c 0
+if any
+r = acapp o r kspc
+end
+r = acapy o r y
+r = acapp o r keq
+r = acdec o r c
+any = true
+end
+end
+if not any
+r = acapp o r knone
+end
+ret r
+end
+
+note acthr: the THRESHOLDS line for role r split sp into tv: [n, min_lo_permille, p95_ms, ctx_min]; false when none
+note (a line: role TAB split TAB n TAB min_lo_permille TAB p95_ms TAB ctx_min ...; # starts a comment line)
+fn acthr th view uchar 65536 r ulong sp ulong tv edit ulong 8 to bool
+p = ulong 0
+n = get gth 0
+while lt p n bound 999999
+e = acfind view part th 0 n knl p false
+if gt e n
+e = n
+end
+if acthr1 view part th p sub e p r sp tv
+ret true
+end
+p = add e 1
+end
+ret false
+end
+
+fn acthr1 l view uchar * r ulong sp ulong tv edit ulong 8 to bool
+if lt len l 3
+ret false
+end
+if eq get l 0 35
+ret false
+end
+x = acfld l 0
+if ne accat view part l acsa x sub acsb x acsa x r
+ret false
+end
+x = acfld l 1
+if ne acspl view part l acsa x sub acsb x acsa x sp
+ret false
+end
+put tv 0 acfv l 2
+put tv 1 acfv l 3
+put tv 2 acfv l 4
+put tv 3 acfv l 5
+ret true
+end
+
+note acgv: the verdict of gated group g against tv: 0 PASS, 1 FAIL, 2 NOT_RUN. PASS needs exactly the
+note registered n rows, no NOT_RUN, Wilson lower bound >= the minimum, p95 <= the limit, no crit, busy, ctx rows.
+fn acgv g ulong tv view ulong 8 to ulong
+if or eq get gn g 0 gt get gnr g 0
+ret 2
+end
+if ne get gn g get tv 0
+ret 1
+end
+lo = acwil get gp g get gn g false
+if lt mul lo 1000.0 f64 get tv 1
+ret 1
+end
+if gt acnr g 950 true get tv 2
+ret 1
+end
+o = mul g 12
+c = add get grs add o 6 get grs add o 2
+c = add c get grs add o 3
+if gt c 0
+ret 1
+end
+ret 0
+end
+
+note acsline: the summary line of group g at o[q..]; sets *v (tv[7]) to the group verdict when gated
+fn acsline o edit uchar * q ulong g ulong tv edit ulong 8 gated bool to ulong
+r = acapcat o q div g 3
+r = acapp o r ktab
+r = acsplname o r rem g 3
+r = acapp o r ktab
+n = get gn g
+k = get gp g
+r = acdec o r n
+r = acapp o r ktab
+r = acdec o r k
+r = acapp o r ktab
+r = acdec o r get gnr g
+r = acapp o r ktab
+rt = 0.0f64
+if gt n 0
+rt = div f64 k f64 n
+end
+r = acf4 o r rt
+r = acapp o r ktab
+r = acf4 o r acwil k n false
+r = acapp o r ktab
+r = acf4 o r acwil k n true
+r = acapp o r ktab
+r = acsline2 o r g
+if gated
+v = acgv g tv
+put tv 7 v
+r = acapp o r kgated
+r = acapp o r ktab
+if eq v 0
+r = acapp o r kpass
+end
+if eq v 1
+r = acapp o r kfail
+end
+if eq v 2
+r = acapp o r knotrun
+end
+else
+r = acapp o r kreport
+r = acapp o r ktab
+r = acapp o r kdash
+end
+ret acapp o r knl
+end
+
+fn acsline2 o edit uchar * q ulong g ulong to ulong
+r = acdec o q acnr g 500 true
+r = acapp o r ktab
+r = acdec o r acnr g 950 true
+r = acapp o r ktab
+r = acdec o r acmax g
+r = acapp o r ktab
+r = acdec o r acnr g 950 false
+r = acapp o r ktab
+r = acdec o r get grs add mul g 12 6
+r = acapp o r ktab
+r = acrsns o r g
+ret acapp o r ktab
+end
+
+fn acsplname o edit uchar * q ulong s ulong to ulong
+if eq s 0
+ret acapp o q kstrain
+end
+if eq s 1
+ret acapp o q kdev
+end
+ret acapp o q kstest
+end
+
+note acfnm: family i's name (from the global table) at o[q..]
+fn acfnm o edit uchar * q ulong i ulong to ulong
+n = get gfl i
+if gt add q n len o
+ret add len o 1
+end
+for j ulong n
+put o add q j get gfam add mul i 64 j
+end
+ret add q n
+end
+
+note acfamt: the per-family table at o[q..]
+fn acfamt o edit uchar * q ulong to ulong
+r = acapp o q kfamhdr
+for i ulong get gfc 0
+g = get gfg i
+r = acapcat o r div g 3
+r = acapp o r ktab
+r = acsplname o r rem g 3
+r = acapp o r ktab
+r = acfnm o r i
+r = acapp o r ktab
+r = acdec o r get gfp i
+r = acapp o r ktab
+r = acdec o r get gft i
+r = acapp o r knl
+end
+ret r
+end
+
+text ksumtxt "/summary.tsv"
+
+note sum OUTDIR THRESHOLDS: prints and writes OUTDIR/summary.tsv; exits 0 when every gated line passes, 1 when one
+note fails, 3 when none fails but one is NOT_RUN. Groups with rows but no THRESHOLDS line are reported, never gated.
+fn cmdsum to void
+pa = new uchar PAN 0
+th = new uchar 65536 0
+if ne argcnt 4
+exit 2
+end
+od = acgeta 2 pa POD
+n = acgeta 3 pa PB
+t = acreadf view part pa PB n th
+if lt t 1
+exit 4
+end
+acsumld pa od
+exit int acsumo pa od th ulong t
+end
+
+note acsumld: every OUTDIR/results-W.tsv (W 0..7) into the aggregates
+fn acsumld pa edit uchar PAN od ulong to void
+f = new uchar FIL 0
+rd = new uchar 64 0
+for w ulong 8
+q = acapp rd 0 kres0
+q = acdec rd q w
+q = acapp rd q ktsv
+m = acpth pa POD od view part rd 0 q 0
+r = acreadf view part pa PB m f
+if gt r 0
+acsumf f ulong r
+end
+end
+end
+
+note acsg1: group g's summary line (when it has rows or a THRESHOLDS line); tv[5] / tv[6] set on FAIL / NOT_RUN
+fn acsg1 o edit uchar * q ulong th view uchar 65536 g ulong tv edit ulong 8 to ulong
+gt1 = acthr th div g 3 rem g 3 tv
+if and eq get gn g 0 not gt1
+ret q
+end
+acsortg g
+r = acsline o q g tv gt1
+if gt1
+if eq get tv 7 1
+put tv 5 1
+end
+if eq get tv 7 2
+put tv 6 1
+end
+end
+ret r
+end
+
+note acsumo: the summary text, printed and written to OUTDIR/summary.tsv; the exit code
+fn acsumo pa edit uchar PAN od ulong th view uchar 65536 t ulong to ulong
+o = new uchar 262144 0
+tv = new ulong 8 0
+q = acapp o 0 ksumhdr
+put gth 0 t
+put tv 5 0
+put tv 6 0
+for g ulong NGRP
+q = acsg1 o q th g tv
+end
+fl = ne get tv 5 0
+nr = ne get tv 6 0
+q = acapp o q kovr
+v = ulong 0
+if fl
+q = acapp o q kfail
+v = 1
+else
+if nr
+q = acapp o q knotrun
+v = 3
+else
+q = acapp o q kpass
+end
+end
+q = acapp o q knl
+q = acfamt o q
+if gt q len o
+exit 4
+end
+acsumw pa od o q
+ret v
+end
+
+fn acsumw pa edit uchar PAN od ulong o view uchar 262144 q ulong to void
+acout view part o 0 q
+m = acpth pa POD od ksumtxt 0
+x = acwfile view part pa PB m view part o 0 q
+end
+
+note ======== pair OUTDIR_A OUTDIR_B (PREREG.md section 4): paired comparison on the same items
+note For each role x split: both PASS, A only, B only, neither, ids missing from B; the exact two-sided
+note McNemar (sign) test p over the discordant items: min(1, 2 sum_{i <= min(b, c)} C(b + c, i) / 2^(b + c)).
+global pq ulong 96
+text kpairhdr "role\tsplit\tboth\ta_only\tb_only\tneither\tmissing_in_b\tmcnemar_p\n"
+text kidh "id\t"
+
+note acldall: every OUTDIR/results-W.tsv of the outdir at pa[base, base + bl) appended into f; the total length
+fn acldall pa edit uchar PAN base ulong bl ulong f edit uchar * to ulong
+rd = new uchar 64 0
+t = ulong 0
+for w ulong 8
+q = acapp rd 0 kres0
+q = acdec rd q w
+q = acapp rd q ktsv
+m = acpth pa base bl view part rd 0 q 0
+r = acreadf view part pa PB m part f t sub len f t
+if gt r 0
+t = add t ulong r
+if and gt t 0 lt t len f
+if ne get f sub t 1 10
+put f t 10
+t = add t 1
+end
+end
+end
+end
+ret t
+end
+
+note acpv: the verdict of id in the results text b: 0 PASS, 1 FAIL or NOT_RUN, 2 absent
+fn acpv b view uchar * id view uchar * to ulong
+p = ulong 0
+while lt p len b bound 999999
+e = acfind b knl p false
+if gt e len b
+e = len b
+end
+x = acfld view part b p sub e p 0
+if heq view part b add p acsa x sub acsb x acsa x id
+y = acfld view part b p sub e p 4
+if heq view part b add p acsa y sub acsb y acsa y kpass
+ret 0
+end
+ret 1
+end
+p = add e 1
+end
+ret 2
+end
+
+note acprow: one A row s against the B results text b
+fn acprow s view uchar * b view uchar * to void
+if acpre s kidh
+ret
+end
+g = acgrp s
+if eq g 99
+ret
+end
+x = acfld s 4
+av = ulong 1
+if heq view part s acsa x sub acsb x acsa x kpass
+av = 0
+end
+x = acfld s 0
+bv = acpv b view part s acsa x sub acsb x acsa x
+k = ulong 4
+if ne bv 2
+k = add mul av 2 bv
+end
+i = add mul g 6 k
+put pq i add get pq i 1
+end
+
+note acmcn: exact two-sided McNemar p for discordant counts b, c
+fn acmcn b ulong c ulong to f64
+n = add b c
+if eq n 0
+ret 1.0
+end
+m = b
+if lt c b
+m = c
+end
+t = 1.0f64
+for i ulong n
+t = mul t 0.5
+end
+s = t
+for i ulong m
+t = div mul t f64 sub n i f64 add i 1
+s = add s t
+end
+p = mul 2.0 s
+if gt p 1.0
+ret 1.0
+end
+ret p
+end
+
+fn cmdpair to void
+pa = new uchar PAN 0
+fab = new uchar 3145728 0
+if ne argcnt 4
+exit 2
+end
+la = acgeta 2 pa POD
+lb = acgeta 3 pa POM
+na = acldall pa POD la part fab 0 1572864
+nb = acldall pa POM lb part fab 1572864 1572864
+if or eq na 0 eq nb 0
+exit 4
+end
+acploop fab na nb
+acpout
+exit 0
+end
+
+note acploop: every A row (fab[0, na)) against the B text (fab[1572864, + nb))
+fn acploop fab view uchar 3145728 na ulong nb ulong to void
+row = new uchar 4096 0
+p = ulong 0
+while lt p na bound 999999
+e = acfind view part fab 0 na knl p false
+if gt e na
+e = na
+end
+l = sub e p
+if and gt l 0 le l 4096
+acpcopy row fab p l
+acprow view part row 0 l view part fab 1572864 nb
+end
+p = add e 1
+end
+end
+
+fn acpcopy row edit uchar 4096 fab view uchar 3145728 p ulong l ulong to void
+for j ulong l
+put row j get fab add p j
+end
+end
+
+fn acpout to void
+o = new uchar 16384 0
+q = acapp o 0 kpairhdr
+for g ulong NGRP
+q = acpg o q g
+end
+acout view part o 0 q
+end
+
+fn acpg o edit uchar * q ulong g ulong to ulong
+o6 = mul g 6
+tot = ulong 0
+for k ulong 5
+tot = add tot get pq add o6 k
+end
+if eq tot 0
+ret q
+end
+r = acapcat o q div g 3
+r = acapp o r ktab
+r = acsplname o r rem g 3
+for k ulong 5
+r = acapp o r ktab
+r = acdec o r get pq add o6 k
+end
+r = acapp o r ktab
+r = acf4 o r acmcn get pq add o6 1 get pq add o6 2
+ret acapp o r knl
+end
+
 note acpre: whether s starts with p
 fn acpre s view uchar * p view uchar * to bool
 if lt len s len p
@@ -4386,6 +5637,8 @@ text crun "run"
 text cstub "stub"
 text cifsel "ifsel"
 text cself "selftest"
+text csum "sum"
+text cpair "pair"
 
 fn main to int
 b = new uchar 64 0
@@ -4410,6 +5663,12 @@ end
 if heq view part b 0 ulong r cself
 cmdself
 ret 0
+end
+if heq view part b 0 ulong r csum
+cmdsum
+end
+if heq view part b 0 ulong r cpair
+cmdpair
 end
 ret 2
 end
