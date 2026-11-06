@@ -5,7 +5,7 @@ note Launch shape: 64 threads per block, R4 = ctaid.x 64 + tid.x, R3 = ctaid.y, 
 note arg 0 is the R4 bound (threads at or past it exit). Registers: R8-R23 pointers and ints,
 note R24-R29 constants, R26 = 1, R30 loop counter, R31 = -1, R32-R63 data, R64-R69 scalars.
 global grd ulong 8
-note grd: 0 V 1 T 2 D 3 H 4 F 5 B
+note grd: 0 V 1 T 2 D 3 H 4 F 5 B 6 v4 mode (1: g4.om, CONTRACT-V4-GB10; 0: every v3 slot as before)
 fn grf v f64 to uint
 ret bitcast uint f32 v
 end
@@ -575,6 +575,156 @@ gkstg 12 33 0 true
 gkstg 14 34 0 true
 gkexit
 end
+note ---- v4 kernels (g4.om, docs/omegallm/CONTRACT-V4-GB10.md), emitted only in v4 mode (grd 6 = 1) ----
+note 12 ROPE (v4): rotate the pairs (2j, 2j + 1) of row z T + t of X by the table entry (c, s) at
+note tab[t D/2 + j]: y0 = x0 c - x1 s, y1 = x0 s + x1 c. Grid (D/128, T, Z); args D/2 X tab. The
+note forward table holds (cos, sin) of t w_(j mod E/2), the inverse table (cos, -sin) (R^T, the backward).
+fn grrope to void
+d = uint get grd 2
+t = uint get grd 1
+h2 = div d 2
+grpro
+gkimadi 8 7 t 3
+gkimadi 20 8 h2 4
+grptr 10 1 20 8
+gkimadi 21 3 h2 4
+grptr 12 3 21 8
+gkldg 32 10 0 false
+gkldg 33 10 4 true
+gkldg 34 12 0 true
+gkldg 35 12 4 true
+gkfmulf 36 32 34
+gkfmulf 37 33 35
+grfsub 38 36 37
+gkfmulf 36 32 35
+gkfmulf 37 33 34
+grfadd 39 36 37
+gkstg 10 38 0 false
+gkstg 10 39 4 true
+gkexit
+end
+note looped causal rows (v4, T a multiple of 256): R30 = t/256 + 1 chunks of 256 columns, R20 = the
+note column of the lane's first word; grlcol masks word u (column R20) above t (R21) with R27 (-inf
+note or RZ) and advances R20 by 32
+fn grlcnt to void
+gkshr 30 21 8
+gkiadd 30 30 26
+gkimadi 20 22 1 255
+end
+fn grlrow r uint i uint tt uint to void
+grptr r i 8 mul tt 4
+gkimadw r 22 4 r
+end
+fn grlmask b uint z uint to void
+for u uint 8
+gkisetp 1 20 21 4
+grfsel add b u z add b u 1
+gkiadd 20 20 23
+end
+end
+note 17 SOFTFL (v4): causal softmax of row t of score block z in place, three passes over the
+note chunks c <= t/256 (max; sum of e = 2^(l log2e - m log2e); store e/sum), columns above t read as
+note -inf and store 0; later chunks are neither read nor written (the causal GEMMs read a row only
+note to the end of its 64-column diagonal tile). m stays in R43 (grwred uses R65). args T*32 P
+fn grsoftfl to void
+tt = uint get grd 1
+grsrow tt false
+gkmovi 27 4286578688
+gkmovi 28 grf 1.4426950408889634f64
+gkmovi 29 grf neg 1.4426950408889634f64
+gkmovi 23 32
+gkmovi 64 4286578688
+grlcnt
+top = div get gkat 0 16
+grldw 32 10 8 true
+grlmask 32 27
+for u uint 8
+grfmax 64 64 add 32 u
+end
+gradv 10 1024
+grbot 30 top
+grwred 1 0
+grfadd 43 64 255
+gkfmulf 65 43 29
+grlrow 10 1 tt
+grlcnt
+gkmovz 64
+top2 = div get gkat 0 16
+grldw 32 10 8 true
+grlmask 32 27
+for u uint 8
+gkffmaf add 32 u add 32 u 28 65
+grmufu add 32 u add 32 u 2048
+grfadd 64 64 add 32 u
+end
+gradv 10 1024
+grbot 30 top2
+grwred 0 0
+grmufu 67 64 4096
+gkfmulf 65 43 29
+grlrow 10 1 tt
+grlcnt
+top3 = div get gkat 0 16
+grldw 32 10 8 true
+grlmask 32 27
+for u uint 8
+gkffmaf add 32 u add 32 u 28 65
+grmufu add 32 u add 32 u 2048
+gkfmulf add 32 u add 32 u 67
+end
+grstw 10 32 8
+gradv 10 1024
+grbot 30 top3
+gkexit
+end
+fn grlmask2 a uint b uint to void
+for u uint 8
+gkisetp 1 20 21 4
+grfsel add a u 255 add a u 1
+grfsel add b u 255 add b u 1
+gkiadd 20 20 23
+end
+end
+note 18 SOFTBL (v4): ds = p (dp - sum p dp) / sqrt(E) in place over dp, two passes over the chunks
+note c <= t/256; p and dp above t read as 0 (dp there is stale: the causal DP GEMM skips those tiles,
+note and 0 times a stale NaN is NaN). args T*32 P DP
+fn grsoftbl to void
+tt = uint get grd 1
+e = div get grd 2 get grd 3
+grsrow tt true
+gkmovi 29 grf div 1.0f64 fsqrt f64 e
+gkmovi 23 32
+gkmovz 64
+grlcnt
+top = div get gkat 0 16
+grldw 32 10 8 true
+grldw 48 12 8 false
+grlmask2 32 48
+for u uint 8
+gkffmaf 64 add 32 u add 48 u 64
+end
+gradv 10 1024
+gradv 12 1024
+grbot 30 top
+grwred 0 0
+grlrow 10 1 tt
+grlrow 12 3 tt
+grlcnt
+top2 = div get gkat 0 16
+grldw 32 10 8 true
+grldw 48 12 8 false
+grlmask2 32 48
+for u uint 8
+grfsub add 48 u add 48 u 64
+gkfmulf add 48 u add 48 u add 32 u
+gkfmulf add 48 u add 48 u 29
+end
+grstw 12 48 8
+gradv 10 1024
+gradv 12 1024
+grbot 30 top2
+gkexit
+end
 note emit slots 9..24 (12, 17 and 18 empty) for dims V T D H F B; false when a kernel overflows its 16 KiB slot
 fn grset v ulong t ulong d ulong h ulong f ulong b ulong to void
 put grd 0 v
@@ -584,23 +734,48 @@ put grd 3 h
 put grd 4 f
 put grd 5 b
 end
+note v4 RMS GPR count for D > 384: highest bank register R72 + 4 D/32 - 1, plus 3, rounded up to 8
+fn grgprd to uint
+n = div get grd 2 32
+g = add 74 mul 4 n
+ret uint mul div add g 7 8 8
+end
 fn grall to bool
-note the warp-per-row RMS kernels hold D/32 columns per lane (D <= 384: four banks end at R119, grrb),
+note the warp-per-row RMS kernels hold D/32 columns per lane (D <= 384: four banks end at R119, grrb;
+note v4 mode D <= 1024, banks to R72 + 4 D/32 - 1 and the GPR count rounded up from that + 3),
 note softmax T/32, and CE steps 256 columns
 if or ne rem get grd 2 32 0 ne rem get grd 1 32 0
 ret false
 end
+v4 = eq get grd 6 1
+if v4
+if gt get grd 2 1024
+ret false
+end
+else
 if gt get grd 2 384
 ret false
+end
 end
 if ne rem get grd 0 256 0
 ret false
 end
+lng = and v4 eq rem get grd 1 256 0
+reg = or not v4 le get grd 1 512
 for k uint 16
 id = add k 9
 gkslot id
 if eq id 9
 gremb
+end
+if and v4 eq id 12
+grrope
+end
+if and lng eq id 17
+grsoftfl
+end
+if and lng eq id 18
+grsoftbl
 end
 if eq id 10
 grrmsf
@@ -614,10 +789,10 @@ end
 if eq id 14
 grcol true
 end
-if eq id 15
+if and reg eq id 15
 grsoftf
 end
-if eq id 16
+if and reg eq id 16
 grsoftb
 end
 if and ge id 19 le id 20
@@ -642,6 +817,9 @@ put gkthr id 64
 put gkgpr id 72
 if and gt get grd 2 256 or eq id 10 eq id 11
 put gkgpr id 128
+if gt get grd 2 384
+put gkgpr id grgprd
+end
 end
 put gksm id 0
 end
