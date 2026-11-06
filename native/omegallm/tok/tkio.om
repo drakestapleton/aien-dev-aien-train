@@ -1,0 +1,233 @@
+note SPDX-License-Identifier: AGPL-3.0-only
+note omegallm tok/tkio.om: the Linux platform unit of the standalone tokenizer program ollm-tok
+note (units tkcore, tkio, tkfit, tkcli, concatenated in that order: globals before their uses). It is the only tok unit
+note that uses host words: arguments, the positioned reads behind the text window, the buffered
+note output file, the atomic merges save (PATH.tmp, fsync, rename) and stdout. Exits: 2 usage, 70 I/O.
+global tkarg uchar 4100
+global tkpth uchar 4120
+global tkpk uchar 8300
+global tkob uchar 65536
+global tkobs long 2
+global tkso uchar 4096
+global tksn ulong 1
+
+note tkobs: 0 bytes in tkob, 1 output fd
+
+fn tkargc to ulong
+ret ulong argcnt
+end
+
+note argv[i] into tkarg; returns its length (1 .. 4096) or exits 2
+fn tkargp i ulong to ulong
+r = argread i tkarg 0 4096
+if or le r 0 gt r 4096
+exit 2
+end
+ret ulong r
+end
+
+fn main to int
+if lt tkargc 2
+exit 2
+end
+r = tkcmd
+tkpfl
+ret r
+end
+
+note read up to n bytes of the file argv[ai] from byte pos into tkw[off ..); returns the bytes
+note read (fewer only at the end of the file). Each pread pass adds a byte or ends.
+fn tkrdw ai ulong pos ulong off ulong n ulong to ulong
+pl = tkargp ai
+fd = int fopen tkarg 0 pl 0 0
+if lt fd 0
+exit 70
+end
+p = ulong 0
+dn = false
+for o ulong 3
+while and not dn lt p n bound 999999
+r = pread fd tkw add off p sub n p long add pos p
+if lt r 0
+exit 70
+end
+if eq r 0
+dn = true
+else
+p = add p ulong r
+end
+end
+end
+if ne fclose fd 0
+exit 70
+end
+ret p
+end
+
+note read the first 131072 bytes (or fewer) of the file argv[ai] into tkmf; returns the count
+fn tkrdm ai ulong to ulong
+pl = tkargp ai
+fd = int fopen tkarg 0 pl 0 0
+if lt fd 0
+exit 70
+end
+p = ulong 0
+dn = false
+while and not dn lt p 131072 bound 140000
+r = pread fd tkmf p sub 131072 p long p
+if lt r 0
+exit 70
+end
+if eq r 0
+dn = true
+else
+p = add p ulong r
+end
+end
+if ne fclose fd 0
+exit 70
+end
+ret p
+end
+
+note the output file argv[i], created or emptied
+fn tkwopen i ulong to void
+pl = tkargp i
+fd = fopen tkarg 0 pl 577 420
+if lt fd 0
+exit 70
+end
+put tkobs 0 0
+put tkobs 1 fd
+end
+
+fn tkwflush to void
+n = ulong get tkobs 0
+fd = int get tkobs 1
+p = ulong 0
+while lt p n bound 65537
+w = write fd tkob p sub n p
+if le w 0
+exit 70
+end
+p = add p ulong w
+end
+put tkobs 0 0
+end
+
+fn tkwb c ulong to void
+n = ulong get tkobs 0
+if ge n 65536
+tkwflush
+n = ulong 0
+end
+put tkob n uchar c
+put tkobs 0 long add n 1
+end
+
+fn tkwclose to void
+tkwflush
+fd = int get tkobs 1
+if ne fsync fd 0
+exit 70
+end
+if ne fclose fd 0
+exit 70
+end
+end
+
+note write tkmf[0 .. n) to argv[ai] as PATH.tmp, fsync, then rename over PATH
+fn tkmsave ai ulong n ulong to void
+pl = tkargp ai
+if gt pl 2000
+exit 2
+end
+for i ulong pl
+put tkpth i get tkarg i
+end
+put tkpth pl 46
+put tkpth add pl 1 116
+put tkpth add pl 2 109
+put tkpth add pl 3 112
+fd = int fopen tkpth 0 add pl 4 577 420
+if lt fd 0
+exit 70
+end
+p = ulong 0
+while lt p n bound 140000
+w = write fd tkmf p sub n p
+if le w 0
+exit 70
+end
+p = add p ulong w
+end
+if ne fsync fd 0
+exit 70
+end
+if ne fclose fd 0
+exit 70
+end
+tkren pl
+end
+
+note rename tkpth[0 .. pl + 4) to tkpth[0 .. pl) via a packed two-path list
+fn tkren pl ulong to void
+put tkpk 0 2
+put tkpk 1 0
+put tkpk 2 uchar and add pl 4 255
+put tkpk 3 uchar shr add pl 4 8
+for i ulong add pl 4
+put tkpk add 4 i get tkpth i
+end
+q = add 8 pl
+put tkpk q uchar and pl 255
+put tkpk add q 1 uchar shr pl 8
+for j ulong pl
+put tkpk add add q 2 j get tkpth j
+end
+r = renames tkpk 0 add add q 2 pl 0
+if ne r 0
+exit 70
+end
+end
+
+fn tkpfl to void
+n = get tksn 0
+p = ulong 0
+while lt p n bound 4097
+w = write 1 tkso p sub n p
+if le w 0
+exit 70
+end
+p = add p ulong w
+end
+put tksn 0 0
+end
+
+note one byte to stdout
+fn tkpc c ulong to void
+n = get tksn 0
+if ge n 4096
+tkpfl
+n = ulong 0
+end
+put tkso n uchar c
+put tksn 0 add n 1
+end
+
+note size in bytes of the file argv[ai]
+fn tkfsz ai ulong to ulong
+pl = tkargp ai
+fd = int fopen tkarg 0 pl 0 0
+if lt fd 0
+exit 70
+end
+sz = fseek fd 0 2
+if lt sz 0
+exit 70
+end
+if ne fclose fd 0
+exit 70
+end
+ret ulong sz
+end

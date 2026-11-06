@@ -1,0 +1,386 @@
+note SPDX-License-Identifier: AGPL-3.0-only
+note omegallm tok/tkcli.om: the commands of the standalone tokenizer program ollm-tok (FORMAT.md
+note section 6). No host words; tkio.om is the platform unit. Text and token files are read as a
+note stream through the window tkw: tcws 0 = file offset of tkw[0], 1 = bytes in tkw, 2 = 1 once
+note the file ended inside the window.
+note   ollm-tok toktrain MODE TEXT MERGES V MAXBYTES   learn V - 272 merges (MAXBYTES 0: all)
+note   ollm-tok tokenc MODE MERGES TEXT TOKS            encode to u16 LE tokens
+note   ollm-tok tokdec MERGES TOKS OUT                  decode
+note   ollm-tok tokinfo MERGES                          check a merges file
+note MODE is raw (every byte is text) or chat (the chat markers are special tokens).
+note Exits: 2 usage; 21 a capacity, a text of 2^33 bytes or more, or an odd token file; 25 a token
+note that is not valid for the merges; 26 a bad merges file; 28 no pair left to merge; 70 I/O.
+text tccmds "toktrain tokenc   tokdec   tokinfo  "
+text tcmodes "raw  chat "
+global tcws ulong 4
+global tcdg uchar 24
+
+note slot k (9 bytes, space padded) of the 5-byte or 9-byte name table equals argv[i]?
+fn tcis i ulong k ulong tab ulong to bool
+r = tkargp i
+w = ulong 9
+if eq tab 1
+w = ulong 5
+end
+if ge r w
+ret false
+end
+for j ulong add r 1
+c = ulong 32
+if lt j r
+c = ulong get tkarg j
+end
+d = ulong 0
+if eq tab 0
+d = ulong get tccmds add mul k w j
+else
+d = ulong get tcmodes add mul k w j
+end
+if ne c d
+ret false
+end
+end
+ret true
+end
+
+note argv[i] as raw (false) or chat (true); exit 2 otherwise
+fn tcmode i ulong to bool
+if tcis i 0 1
+ret false
+end
+if tcis i 1 1
+ret true
+end
+exit 2
+end
+
+note argv[i] as an unsigned decimal of 1 .. 19 digits
+fn tcargu i ulong to ulong
+n = tkargp i
+if gt n 19
+exit 2
+end
+v = ulong 0
+for k ulong n
+c = ulong get tkarg k
+if or lt c 48 gt c 57
+exit 2
+end
+v = add mul v 10 sub c 48
+end
+ret v
+end
+
+note unsigned decimal v to stdout
+fn tcpu v ulong to void
+n = ulong 0
+x = v
+dn = false
+while not dn bound 24
+put tcdg n uchar add 48 rem x 10
+n = add n 1
+x = div x 10
+if eq x 0
+dn = true
+end
+end
+for k ulong n
+tkpc ulong get tcdg sub sub n 1 k
+end
+end
+
+note a space, then v
+fn tcsu v ulong to void
+tkpc 32
+tcpu v
+end
+
+note window: tkw from byte 0 of argv[ai]
+fn tcwstart ai ulong to void
+wn = tkrdw ai 0 0 TKWCAP
+put tcws 0 0
+put tcws 1 wn
+put tcws 2 0
+if lt wn TKWCAP
+put tcws 2 1
+end
+end
+
+note window: move tkw[a .. wn) to the front and fill the rest from the file
+fn tcwshift ai ulong a ulong to void
+wn = get tcws 1
+cnt = sub wn a
+i = ulong 0
+for o ulong 2
+lim = mul add o 1 999999
+if gt lim cnt
+lim = cnt
+end
+while lt i lim bound 999999
+put tkw i get tkw add a i
+i = add i 1
+end
+end
+wb = add get tcws 0 a
+r = tkrdw ai add wb cnt cnt sub TKWCAP cnt
+put tcws 0 wb
+put tcws 1 add cnt r
+put tcws 2 0
+if lt r sub TKWCAP cnt
+put tcws 2 1
+end
+end
+
+note window position of i after a refill: when fewer than need bytes are left from tkw[i] and the
+note file goes on, tkw[i ..] moves to the front (0); else i
+fn tcrefil ai ulong i ulong need ulong to ulong
+if gt add i need get tcws 1
+if eq get tcws 2 0
+tcwshift ai i
+ret 0
+end
+end
+ret i
+end
+
+note token t to the output file as u16 LE
+fn tcwtok t ulong to void
+tkwb and t 255
+tkwb shr t 8
+end
+
+note encode: one chunk tkw[i .. i + l) to the output, through the type cache when it has room
+fn tcenc1 i ulong l ulong to void
+put tfst 2 add get tfst 2 1
+y = tffind i l
+c = ulong 0
+if ne y TFTCAP
+c = get tftc y
+end
+if eq c 0
+m = tkencc i l
+if ne y TFTCAP
+o = get tfst 1
+if le add o m TFSCAP
+for k ulong m
+put tfsy add o k get tkct k
+end
+put tfts y uint o
+put tftn y uchar m
+put tftc y 1
+put tfst 1 add o m
+end
+end
+for k ulong m
+tcwtok ulong get tkct k
+end
+put tfst 10 add get tfst 10 m
+else
+o = ulong get tfts y
+m = ulong get tftn y
+for k ulong m
+tcwtok ulong get tfsy add o k
+end
+put tfst 10 add get tfst 10 m
+end
+end
+
+note one piece at tkw[i] of a text ending at n: a marker is counted in tfst 4 and, in mode 1,
+note written as its special id; a chunk is counted (mode 0) or encoded (mode 1). Returns its length.
+fn tcpiece i ulong n ulong chat bool mode ulong to ulong
+l = tknext i n chat
+sp = get tkv 1
+if ne sp 0
+put tfst 4 add get tfst 4 1
+if eq mode 1
+tcwtok sp
+put tfst 10 add get tfst 10 1
+end
+else
+if eq mode 0
+tfcount i l
+else
+tcenc1 i l
+end
+end
+ret l
+end
+
+note the pieces of the first lim bytes of argv[ai] (all of it when shorter), through tcpiece.
+note tfst 3 = bytes scanned.
+fn tcscan ai ulong lim ulong chat bool mode ulong to void
+tcwstart ai
+i = ulong 0
+dn = false
+while not dn bound 999999
+q = ulong 0
+while and not dn lt q 999999 bound 999999
+q = add q 1
+i = tcrefil ai i 80
+wb = get tcws 0
+n = get tcws 1
+if lt sub lim wb n
+n = sub lim wb
+end
+if ge i n
+dn = true
+put tfst 3 add wb i
+else
+i = add i tcpiece i n chat mode
+end
+end
+end
+end
+
+note the u16 LE token at tkw[i]: exit 25 when it is not valid for the merges; mode 1 writes its bytes
+fn tcdtok i ulong mode ulong to void
+t = or ulong get tkw i shl ulong get tkw add i 1 8
+if not tkvalid t
+exit 25
+end
+if eq mode 1
+l = tkdec1 t
+for k ulong l
+tkwb ulong get tkdb k
+end
+put tfst 3 add get tfst 3 l
+end
+end
+
+note decode argv[ai] (u16 LE tokens; even length checked by the caller): mode 0 only checks every
+note token (exit 25 on the first invalid one), mode 1 writes the bytes; returns the token count
+fn tcdscan ai ulong mode ulong to ulong
+tcwstart ai
+i = ulong 0
+nt = ulong 0
+dn = false
+while not dn bound 999999
+q = ulong 0
+while and not dn lt q 999999 bound 999999
+q = add q 1
+i = tcrefil ai i 2
+if ge add i 2 add get tcws 1 1
+dn = true
+else
+tcdtok i mode
+nt = add nt 1
+i = add i 2
+end
+end
+end
+ret nt
+end
+
+note the merges file of argv[ai], checked and loaded; returns its V
+fn tcload ai ulong to ulong
+n = tkrdm ai
+ret tkload n
+end
+
+note toktrain MODE TEXT MERGES V MAXBYTES; prints T V types chunks bytes markers pairs nodes
+fn tccmdtr to void
+if ne tkargc 7
+exit 2
+end
+chat = tcmode 2
+v = tcargu 5
+if or lt v TKFIRST gt v TKVMAX
+exit 2
+end
+lim = tcargu 6
+if eq lim 0
+lim = ulong 9223372036854775807
+end
+tcscan 3 lim chat 0
+if ge get tfst 3 8589934592
+exit 21
+end
+tfinit
+tfmerge v
+n = tkseal v
+w = tkload n
+tkmsave 4 n
+tkpc 84
+tcsu w
+tcsu get tfst 0
+tcsu get tfst 2
+tcsu get tfst 3
+tcsu get tfst 4
+tcsu get tfst 5
+tcsu get tfst 7
+tkpc 10
+end
+
+note tokenc MODE MERGES TEXT TOKS; prints E V bytes chunks tokens markers
+fn tccmden to void
+if ne tkargc 6
+exit 2
+end
+chat = tcmode 2
+v = tcload 3
+tkwopen 5
+tcscan 4 9223372036854775807 chat 1
+tkwclose
+tkpc 69
+tcsu v
+tcsu get tfst 3
+tcsu get tfst 2
+tcsu get tfst 10
+tcsu get tfst 4
+tkpc 10
+end
+
+note tokdec MERGES TOKS OUT; prints D V tokens bytes. Every token is checked before OUT is opened.
+fn tccmdde to void
+if ne tkargc 5
+exit 2
+end
+v = tcload 2
+if ne and tkfsz 3 1 0
+exit 21
+end
+nt = tcdscan 3 0
+tkwopen 4
+nt = tcdscan 3 1
+tkwclose
+tkpc 68
+tcsu v
+tcsu nt
+tcsu get tfst 3
+tkpc 10
+end
+
+note tokinfo MERGES; prints I V merges FNV
+fn tccmdin to void
+if ne tkargc 3
+exit 2
+end
+v = tcload 2
+tkpc 73
+tcsu v
+tcsu sub v TKFIRST
+tcsu tkrd64 24
+tkpc 10
+end
+
+note run the command named by argv[1]
+fn tkcmd to int
+tkinit
+if tcis 1 0 0
+tccmdtr
+ret 0
+end
+if tcis 1 1 0
+tccmden
+ret 0
+end
+if tcis 1 2 0
+tccmdde
+ret 0
+end
+if tcis 1 3 0
+tccmdin
+ret 0
+end
+exit 2
+end

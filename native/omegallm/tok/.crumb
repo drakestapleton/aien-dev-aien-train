@@ -1,0 +1,19 @@
+{
+  "extensions": {
+    "generated": {
+      "children": [],
+      "children_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "compiled_at": "2026-11-06T22:13:40Z",
+      "compiler": "crumb-compile/1",
+      "digest": "sha256:30b23dd535d503990c371ceaabe3d2b53c61cdc38eb6053ef9e49f9f52e07ceb",
+      "evidence_files": 0,
+      "evidence_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "files": 0,
+      "generated_at_commit": "ac4a7c1ed20e8aea37f604e91f438b06e4511c8b",
+      "source_tree": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "name": "tok",
+  "purpose": "Own byte-level BPE tokenizer of Omega LLM in Omega: OLLMTOK1 merges format, chunker, encoder, decoder (tkcore, embeddable in ollm) and the standalone trainer program ollm-tok (tkio, tkfit, tkcli). Spec: tests/omegallm/tok/FORMAT.md.",
+  "schema_version": "1.0.0"
+}
