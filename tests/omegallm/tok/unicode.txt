@@ -1,0 +1,11 @@
+Synthetic Unicode fixture for the own BPE (written for this test; no outside text).
+Latin: café, naïve, über, façade, Ångström, smørrebrød, Łódź, İstanbul.
+Greek: λόγος και αριθμός. Cyrillic: жизнь и время. Armenian: բարեւ.
+Hebrew: שלום עולם. Arabic: مرحبا بالعالم. Devanagari: नमस्ते दुनिया.
+Thai: สวัสดีชาวโลก. CJK: 日本語の文章、中文句子、한국어 문장.
+Symbols: ∀x∈ℝ: x² ≥ 0; ½ + ¼ = ¾; €100 → £86; ©®™ ✓ ✗ ★ ☃.
+Emoji: 😀 🚀 👩‍💻 🇳🇿 👍🏽 (ZWJ and modifiers).
+Combining: e\u0301 vs é; ﬁ ligature; zero width: a​b; BOM: ﻿x; NBSP: a b.
+Wide run: ＡＢＣ１２３ and long word: Donaudampfschifffahrtsgesellschaftskapitänsmützenabzeichenträgerinnenbund.
+Mixed white space:  two  spaces,	tab,
+  indented line,    four spaces before.

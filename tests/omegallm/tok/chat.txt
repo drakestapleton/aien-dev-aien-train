@@ -1,0 +1,12 @@
+<|doc|><|system|>You are a careful assistant. Answer briefly; cite the file and line.<|end|>
+<|user|>What does `tkclen` return for "  hello" and for "\t\tx"?<|end|>
+<|assistant|>It returns the white-space run without its last space, so the space joins the word.<|end|>
+<|assistant|><|tool_call|>{"name": "read", "args": {"path": "tok/tkcore.om:85-119"}}<|end|>
+<|tool_result|>fn tkclen i ulong n ulong to ulong
+c = ulong get tkw i
+...<|end|>
+<|user|>Is "<|user" a marker? And "<|end>" or "<||>" or "<|USER|>"? What about x<|user|>y?<|end|>
+<|assistant|>Only exact markers count: <|<|end|> has one, <|end|<|end|> has one too.<|end|>
+<|pad|><|pad|><|pad|>
+Numbers 12345678901234567890 and 3.14159, punctuation !!!??? and ---- and tabs		end.
+<|end|>

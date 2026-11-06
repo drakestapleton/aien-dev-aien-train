@@ -87,7 +87,7 @@ if eq w 1701737844
 cmdtune
 ret 0
 end
-exit 2
+ret o4cmd w
 end
 
 note init CK V T D H F L B SEED TOTAL LRMICRO [G]; lr = f64(LRMICRO)/1000000.0. Without G the file

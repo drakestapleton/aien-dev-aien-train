@@ -1,32 +1,68 @@
 note SPDX-License-Identifier: AGPL-3.0-only
-note omegallm serve.om (aien-train DRA-119): `ollm serve PORT CK MERGES [MAXCONN]`, an
-note OpenAI-compatible HTTP/1.1 server for a v1 BPE checkpoint (V > 256) on 127.0.0.1:PORT only.
-note aarch64 only: build.sh composes it under one `om2` line after the omega-mv e5b32567 units
-note net/http.om, net/json.om and net/jsonw.om (vendored unmodified); the other targets take
-note noserve.om. It prints `PORT n`, then serves one connection at a time, one request each
-note (Connection: close), until MAXCONN connections (default 1000000) have been served.
-note Routes: GET /health {"status":"ok","in_flight":0}; GET /v1/models; POST /v1/chat/completions
-note with JSON or SSE (stream true) responses; other paths 404, other methods 405.
+note omegallm serve.om (aien-train DRA-119): `ollm serve PORT CK MERGES [MAXCONN] [tplmax=N]
+note [test=1]`, an OpenAI-compatible HTTP/1.1 server for a v1 BPE checkpoint (V > 256) on
+note 127.0.0.1:PORT only. aarch64 only: build.sh composes it under one `om2` line after the
+note omega-mv e5b32567 units net/http.om, net/json.om and net/jsonw.om (vendored unmodified); the
+note other targets take noserve.om. It prints `PORT n`, then serves one request at a time, one
+note request per connection (Connection: close), until MAXCONN connections (default 1000000) have
+note been served. A connection is served once its first bytes arrive; a silent one waits in one
+note of 8 pending slots and is closed unanswered 10 s after its accept (svwait). tplmax=N
+note (256 .. 983040, default 65536) caps the chat template in bytes; test=1 enables the test-only
+note members ollm_test_output and ollm_test_delay_ms (refused otherwise).
+note Routes: GET /health {"status":"ok","in_flight":0,"busy":false}; GET /v1/models;
+note POST /v1/chat/completions with JSON or SSE (stream true) responses; other paths 404, other
+note methods 405. in_flight counts the generating chat completions (0 or 1, one slot); busy is
+note in_flight 1. While a completion generates, the listener and pending connections are served
+note between tokens: GET /health answers {"status":"ok","in_flight":1,"busy":true}, GET
+note /v1/models the list, and every other request 503 server_busy with Retry-After: 1. A client
+note that leaves (svgone) stops its generation: nothing more is sent, logged as status 499.
 note Request: messages (non-empty array of objects with a string role of at most 32 bytes and a
-note string or null content), optional max_tokens or max_completion_tokens (1 .. 999999),
-note temperature (0 .. 2 without exponent, used to 0.001; default 1), seed (unsigned, default 1),
-note stream, stream_options.include_usage and n (only 1). Other members (model, tools, tool_choice)
-note are accepted and ignored: this model never calls tools.
-note Interim chat template (until DRA-123 fixes one shared template): `role: content\n` for each
-note message in order, then `assistant: `; at most 4000 bytes, else 400. The context is token 0 then
-note the template's encoding (CT0 tokens, reported as prompt_tokens); CT0 >= T is refused with 400
-note context_length_exceeded. Output runs at most min(max_tokens, T - CT0) tokens, so the T-token
-note window never slides (cmdsamp's sampling step osstep, splitmix64 seed stream); a generated
-note token 0 ends it with finish_reason stop, the limit with length. Decoded bytes are sent as
-note UTF-8: a sequence cut by a token boundary waits for the next token, an ill-formed one (or one
-note cut by the end) becomes U+FFFD. One line per routed response (and per 413 at the head) goes
-note to stdout: `C status prompt_tokens completion_tokens finish(0 none, 1 stop, 2 length) ms`.
+note content that is a string, null, or an array of {"type":"text","text":string} parts joined
+note with no separator; other part types are 400; content may be absent beside tool_calls),
+note optional max_tokens or max_completion_tokens (1 .. 999999), temperature (0 .. 2 without
+note exponent, used to 0.001; default 1), seed (unsigned, default 1), top_k (integer -1 ..
+note 999999; -1, 0 and K >= V are off), top_p (0 <= p <= 1 without exponent, used to 0.000001;
+note 0 keeps only the most probable token, 1 is off), stop (null, a string or an array of at most
+note 8 strings of 1 .. 128 bytes), tools (array of at most 128
+note {"type":"function","function":{"name":1 .. 64 bytes, ...}}), tool_choice ("none", "auto",
+note "required" or a {"type":"function"} object), stream,
+note stream_options.include_usage and n (only 1). Other members (model, ...) are ignored.
+note Interim chat template (until DRA-123 fixes one shared template): when tools is non-empty,
+note `tools: ` and the request's tools JSON text as sent, then `\n`; then `role: content\n` for
+note each message in order, an assistant's tool_calls appended to its content as
+note `<tool_call>{"name":NAME,"arguments":ARGS}</tool_call>` (NAME the JSON string as sent, ARGS
+note the decoded string or the object's JSON text as sent, {} when absent); then `assistant: `.
+note At most tplmax bytes, else 400. The context is token 0 then the template's encoding (CT0
+note tokens, reported as prompt_tokens); CT0 >= T is refused with 400 context_length_exceeded
+note stating CT0 and T. Output runs at most min(max_tokens, T - CT0) tokens, so the T-token window
+note never slides (cmdsamp's step osstep, splitmix64 seed stream; with top_k or top_p on, the
+note kept tokens are the most probable in order, ties to the lower id, up to K and until their
+note mass reaches top_p, drawn by the same uniform scaled to the kept mass); a generated token 0
+note ends it with finish_reason stop, the limit with length, the earliest stop string with stop
+note (the content cut before it; a streamed chunk never sends a byte a stop could still claim).
+note Tool calls (tools non-empty, tool_choice not "none"): when the content from the first
+note `<tool_call>` on is 1 .. 8 blocks `<tool_call>{"name":N,"arguments":A}</tool_call>` with only
+note whitespace between and after, N a declared tool name and A an object, a string or absent,
+note the answer carries tool_calls (id call_<request>_<i>, arguments the object's JSON text or the
+note string) with finish_reason tool_calls and content the text before, trailing whitespace
+note dropped, null when empty; otherwise the text is plain content. Streaming holds back a
+note possible marker and trailing whitespace, then sends the tool_calls in one delta chunk.
+note Decoded bytes are sent as UTF-8: a sequence cut by a token boundary waits for the next token,
+note an ill-formed one (or one cut by the end) becomes U+FFFD. One line per routed response (and
+note per 413 at the head, and per request answered during a generation) goes to stdout: `C status
+note prompt_tokens completion_tokens finish(0 none, 1 stop, 2 length, 3 tool_calls, 4 client left)
+note ms`. A body over 65532 JSON tokens is 413 request_too_large.
 note Exit codes: 2 usage; 27 merges (bpe.om); 71 the port cannot be bound.
-note wb layout: raw token bytes [0, 8192), content [8192, 73728), template [73728, 77824),
-note message [81920, 82176), response id [82176, 82240). sv slots: 0 stream, 1 max tokens,
-note 2 TEMPMILLI, 3 seed state, 4 include_usage, 5 template bytes, 6 CT0, 7 generated, 8 finish,
-note 9 request count, 10 created, 11 start ns, 12 raw bytes, 13 content bytes, 14 content sent,
-note 16 error code, 19 T, 21 last status.
+note wb layout: raw token bytes [0, 8192), content [8192, 73728), stop strings [73728, 74752) (8 x
+note 128), markers [74752, 74784), message [81920, 82176), response id [82176, 82240), call id
+note [82240, 82432), tool names [82432, 90624) (128 x 64), template [90624, 1073664). bd holds the
+note request, then the tool calls' names and arguments [0, 131072). sv slots: 0 stream, 1 max
+note tokens, 2 TEMPMILLI, 3 seed state, 4 include_usage, 5 template bytes, 6 CT0, 7 generated, 8
+note finish, 9 request count, 10 created, 11 start ns, 12 raw bytes, 13 content bytes, 14 content
+note sent, 15 id length, 16 error code, 17 chunk end, 19 T, 21 last status, 22 test mode, 23
+note tplmax, 24 forced tokens, 25 forced on, 26 test output bytes, 27 delay ms, 28 top_k, 29 top_p
+note millionths, 30 tools, 31 tool detection, 32 tool calls, 33 marker position, 34 bd fill,
+note 35 stop strings, 36 listen fd.
 
 text svtjson "application/json"
 text svtctyp "Content-Type"
@@ -35,8 +71,12 @@ text svpmods "/v1/models"
 text svpchat "/v1/chat/completions"
 text svmget "GET"
 text svmpost "POST"
-text svthlth "{\"status\":\"ok\",\"in_flight\":0}"
+text svthlth "{\"status\":\"ok\",\"in_flight\":0,\"busy\":false}"
+text svthbsy "{\"status\":\"ok\",\"in_flight\":1,\"busy\":true}"
 text svtmods "{\"object\":\"list\",\"data\":[{\"id\":\"ollm\",\"object\":\"model\",\"created\":0,\"owned_by\":\"aien\"}]}"
+text svt503 "{\"error\":{\"message\":\"a chat completion is in flight and this server runs one at a time: retry after 1 s\",\"type\":\"server_error\",\"param\":null,\"code\":\"server_busy\"}}"
+text svtra "Retry-After"
+text svone "1"
 text svport "PORT "
 text skmsgs "messages"
 text skrole "role"
@@ -66,6 +106,20 @@ text skerr "error"
 text sktype "type"
 text skcode "code"
 text skparam "param"
+text sktext "text"
+text sktopk "top_k"
+text sktopp "top_p"
+text sktools "tools"
+text sktchoi "tool_choice"
+text sktcall "tool_calls"
+text skfunc "function"
+text sknam "name"
+text skargs "arguments"
+text sktout "ollm_test_output"
+text sktdel "ollm_test_delay_ms"
+text sknone "none"
+text svauto "auto"
+text svreq "required"
 text svollm "ollm"
 text svasst "assistant"
 text svcc "chat.completion"
@@ -76,9 +130,20 @@ text svinv "invalid_request_error"
 text svsrv "server_error"
 text svdone "[DONE]"
 text svidp "chatcmpl-ollm-"
+text svcallp "call_"
+text svus "_"
 text svsep ": "
 text svnl "\n"
 text svaprm "assistant: "
+text svtlp "tools: "
+text svtco "<tool_call>"
+text svtcc "</tool_call>"
+text svtcn "{\"name\":"
+text svtca ",\"arguments\":"
+text svtcz "}</tool_call>"
+text svempt "{}"
+text svoptt "tplmax="
+text svopte "test=1"
 text secjson "invalid_json"
 text secreq "invalid_request"
 text secctx "context_length_exceeded"
@@ -86,12 +151,13 @@ text secbig "request_too_large"
 text secnf "not_found"
 text secmeth "method_not_allowed"
 text secint "internal_error"
-text sem1 "request body is not valid JSON (RFC 8259) or has over 65532 JSON tokens"
+text sem1 "request body is not valid JSON (RFC 8259)"
 text sem2 "the request must be a JSON object"
 text sem3 "messages must be a non-empty array of objects"
-text sem4 "message content must be a string or null"
+text sem4 "message content must be a string, null or an array of text parts (absent only beside tool_calls)"
 text sem5 "message role must be a string of at most 32 bytes"
-text sem6 "the chat template is over 4000 bytes"
+text sem6a "the chat template is over "
+text sem6b " bytes (the serve option tplmax=N sets this cap)"
 text sem7 "temperature must be a number from 0 to 2 without exponent"
 text sem8 "max_tokens must be an integer from 1 to 999999"
 text sem9 "seed must be an unsigned integer"
@@ -101,14 +167,37 @@ text sem13 "the request body is over 983040 bytes"
 text sem14 "no such path; routes: GET /health, GET /v1/models, POST /v1/chat/completions"
 text sem15 "method not allowed on this path"
 text sem16 "response construction failed"
+text sem17 "message content parts must be {\"type\":\"text\",\"text\":string}; image_url, input_audio, file and other part types are not supported"
+text sem18 "stop must be null, a string or an array of at most 8 strings of 1 to 128 bytes"
+text sem19 "top_k must be an integer from -1 to 999999 (-1 and 0 turn it off)"
+text sem20 "top_p must be a number from 0 to 1 without exponent (resolution 0.000001; 0 keeps only the most probable token)"
+text sem21 "tools must be an array of at most 128 {\"type\":\"function\",\"function\":{\"name\":string of 1 to 64 bytes}} objects"
+text sem22 "tool_choice must be \"none\", \"auto\", \"required\" or a {\"type\":\"function\"} object"
+text sem23 "tool_calls must be an array of {\"function\":{\"name\":string,\"arguments\":string or object}} objects"
+text sem24 "ollm_test_output (a string of at most 16384 bytes) and ollm_test_delay_ms (0 to 10000) need a server started with test=1"
+text sem25 "the request body has over 65532 JSON tokens (values, keys and closers), the JSON parser's limit"
 text sem11a "prompt is "
 text sem11b " tokens including the start token; the context window is "
 text sem11c " tokens, so no room is left for output"
 
+note forced tokens (test=1), top_k/top_p marks, stop lengths, tool name lengths, tool call spans
+global svft ulong 4096
+global svmk uchar 4096
+global svstl ulong 8
+global svtnl ulong 128
+global svtcx ulong 32
+note pending connections (svwait): descriptor + 1 (0 free), accept time, record slot; pollfd records;
+note the svgone peek byte
+global svpfd ulong 8
+global svpat ulong 8
+global svpix ulong 8
+global svpl uchar 72
+global svpk uchar 1
+
 note ======== small byte helpers over wb
 
 note svmcat: copy text t into wb at p, at most up to e; the next p
-fn svmcat wb edit uchar 82432 p ulong e ulong t view uchar * to ulong
+fn svmcat wb edit uchar 1073664 p ulong e ulong t view uchar * to ulong
 q = p
 for i ulong len t
 if ge q e
@@ -121,7 +210,7 @@ ret q
 end
 
 note svmdec: v in decimal into wb at p (at most 20 digits, up to e); the next p
-fn svmdec wb edit uchar 82432 p ulong e ulong v ulong to ulong
+fn svmdec wb edit uchar 1073664 p ulong e ulong v ulong to ulong
 d = new uchar 20 0
 i = ulong 20
 x = v
@@ -139,6 +228,76 @@ if ge q e
 ret q
 end
 put wb q get d add i k
+q = add q 1
+end
+ret q
+end
+
+note svat: whether the content at p starts with the pattern wb[po, po + pl) (p + pl <= content)
+fn svat wb edit uchar 1073664 p ulong po ulong pl ulong to bool
+for i ulong pl
+if ne get wb add 8192 add p i get wb add po i
+ret false
+end
+end
+ret true
+end
+
+note svfind: the first position >= s where the pattern wb[po, po + pl) lies wholly in the content
+note [0, n), or jsnone
+fn svfind wb edit uchar 1073664 s ulong n ulong po ulong pl ulong to ulong
+p = s
+while le add p pl n bound 65537
+if svat wb p po pl
+ret p
+end
+p = add p 1
+end
+ret jsnone
+end
+
+note svpsuf: the longest k < pl, k <= n - lo, with content [n - k, n) a prefix of the pattern
+fn svpsuf wb edit uchar 1073664 lo ulong n ulong po ulong pl ulong to ulong
+k = sub pl 1
+if lt sub n lo k
+k = sub n lo
+end
+m = k
+for it ulong m
+if svat wb sub n k po k
+ret k
+end
+k = sub k 1
+end
+ret 0
+end
+
+fn svisws c ulong to bool
+ret or or eq c 32 eq c 9 or eq c 10 eq c 13
+end
+
+note svtrim: h moved back over trailing whitespace of the content, not below lo
+fn svtrim wb edit uchar 1073664 lo ulong h ulong to ulong
+if le h lo
+ret h
+end
+q = h
+for it ulong sub h lo
+if not svisws ulong get wb add 8191 q
+break
+end
+q = sub q 1
+end
+ret q
+end
+
+note svskws: p moved over whitespace of the content, not past n
+fn svskws wb edit uchar 1073664 p ulong n ulong to ulong
+q = p
+for it ulong sub n p
+if not svisws ulong get wb add 8192 q
+break
+end
 q = add q 1
 end
 ret q
@@ -206,7 +365,7 @@ ret and ge b lo le b hi
 end
 
 note svrepl: U+FFFD (EF BF BD) into the content at its end
-fn svrepl wb edit uchar 82432 sv edit ulong 64 to void
+fn svrepl wb edit uchar 1073664 sv edit ulong 64 to void
 g = add 8192 get sv 13
 put wb g 239
 put wb add g 1 191
@@ -216,7 +375,7 @@ end
 
 note svclean: move the complete sequences of the raw bytes wb[0, sv12) to the content; fin 1 also
 note replaces a cut tail. The rest moves to the front of the raw bytes.
-fn svclean wb edit uchar 82432 sv edit ulong 64 fin ulong to void
+fn svclean wb edit uchar 1073664 sv edit ulong 64 fin ulong to void
 rn = get sv 12
 p = ulong 0
 for it ulong add rn 1
@@ -246,7 +405,7 @@ put sv 12 sub rn p
 end
 
 note svmove: wb[d, d + n) = wb[s, s + n), copying forward (d <= s or the ranges apart)
-fn svmove wb edit uchar 82432 d ulong s ulong n ulong to void
+fn svmove wb edit uchar 1073664 d ulong s ulong n ulong to void
 for i ulong n
 put wb add d i get wb add s i
 end
@@ -260,6 +419,18 @@ r = hfe r hhname cs io svtctyp
 r = hfe r hhval cs io svtjson
 r = hfe r hhend cs io 0 len t
 r = hfe r hput cs io t
+ret hfe r hwfin cs io
+end
+
+note svs503: the fixed server_busy error with Retry-After: 1
+fn svs503 cs edit ulong 320 io edit uchar 131072 to long
+r = hrspst cs io 503
+r = hfe r hhname cs io svtctyp
+r = hfe r hhval cs io svtjson
+r = hfe r hhname cs io svtra
+r = hfe r hhval cs io svone
+r = hfe r hhend cs io 0 len svt503
+r = hfe r hput cs io svt503
 ret hfe r hwfin cs io
 end
 
@@ -278,7 +449,7 @@ js_wsbuf ob t 0 len t
 end
 
 note svemsg: the message of error code sv16 into wb[81920 ..); its length
-fn svemsg wb edit uchar 82432 sv edit ulong 64 to ulong
+fn svemsg wb edit uchar 1073664 sv edit ulong 64 to ulong
 e = get sv 16
 b = ulong 81920
 z = ulong 82176
@@ -299,7 +470,9 @@ if eq e 5
 p = svmcat wb p z sem5
 end
 if eq e 6
-p = svmcat wb p z sem6
+p = svmcat wb p z sem6a
+p = svmdec wb p z get sv 23
+p = svmcat wb p z sem6b
 end
 if eq e 7
 p = svmcat wb p z sem7
@@ -335,7 +508,39 @@ end
 if eq e 16
 p = svmcat wb p z sem16
 end
-ret sub p b
+ret sub svemsg2 wb e p z b
+end
+
+note svemsg2: the messages of error codes 17 .. 25 at p; the end
+fn svemsg2 wb edit uchar 1073664 e ulong p ulong z ulong to ulong
+if eq e 17
+ret svmcat wb p z sem17
+end
+if eq e 18
+ret svmcat wb p z sem18
+end
+if eq e 19
+ret svmcat wb p z sem19
+end
+if eq e 20
+ret svmcat wb p z sem20
+end
+if eq e 21
+ret svmcat wb p z sem21
+end
+if eq e 22
+ret svmcat wb p z sem22
+end
+if eq e 23
+ret svmcat wb p z sem23
+end
+if eq e 24
+ret svmcat wb p z sem24
+end
+if eq e 25
+ret svmcat wb p z sem25
+end
+ret p
 end
 
 fn svecode ob edit uchar 409600 e ulong to void
@@ -347,7 +552,7 @@ if eq e 11
 svwt ob secctx
 ret
 end
-if eq e 13
+if or eq e 13 eq e 25
 svwt ob secbig
 ret
 end
@@ -367,7 +572,7 @@ svwt ob secreq
 end
 
 note svfail: {"error":{"message","type","param":null,"code"}} for error code sv16 with status st
-fn svfail cs edit ulong 320 io edit uchar 131072 wb edit uchar 82432 sv edit ulong 64 st ulong to long
+fn svfail cs edit ulong 320 io edit uchar 131072 wb edit uchar 1073664 sv edit ulong 64 st ulong to long
 ob = new uchar 409600 0
 put sv 21 st
 m = svemsg wb sv
@@ -398,7 +603,7 @@ ret svsend cs io ob st ulong n
 end
 
 note svhead: {"id", "object" t, "created", "model" opened; the caller adds the rest
-fn svhead ob edit uchar 409600 wb edit uchar 82432 sv edit ulong 64 t view uchar * to void
+fn svhead ob edit uchar 409600 wb edit uchar 1073664 sv edit ulong 64 t view uchar * to void
 x = js_winit ob
 js_wobj ob
 svwt ob skid
@@ -421,6 +626,10 @@ if eq f 2
 svwt ob svlen
 ret
 end
+if eq f 3
+svwt ob sktcall
+ret
+end
 js_wnull ob
 end
 
@@ -436,8 +645,38 @@ js_wulong ob add get sv 6 get sv 7
 js_wobje ob
 end
 
+note svwcalls: the tool_calls array (idx 1 adds each call's index, as a stream delta does)
+fn svwcalls ob edit uchar 409600 wb edit uchar 1073664 sv edit ulong 64 bd edit uchar 983040 idx ulong to void
+js_warr ob
+for i ulong get sv 32
+b = mul i 4
+js_wobj ob
+if eq idx 1
+svwt ob skidx
+js_wulong ob i
+end
+svwt ob skid
+p = svmcat wb 82240 82432 svcallp
+p = svmdec wb p 82432 get sv 9
+p = svmcat wb p 82432 svus
+p = svmdec wb p 82432 i
+js_wsbuf ob wb 82240 sub p 82240
+svwt ob sktype
+svwt ob skfunc
+svwt ob skfunc
+js_wobj ob
+svwt ob sknam
+js_wsbuf ob bd get svtcx b get svtcx add b 1
+svwt ob skargs
+js_wsbuf ob bd get svtcx add b 2 get svtcx add b 3
+js_wobje ob
+js_wobje ob
+end
+js_warre ob
+end
+
 note svfull: the chat.completion object (stream false)
-fn svfull ob edit uchar 409600 wb edit uchar 82432 sv edit ulong 64 to long
+fn svfull ob edit uchar 409600 wb edit uchar 1073664 sv edit ulong 64 bd edit uchar 983040 to long
 svhead ob wb sv svcc
 svwt ob skchoi
 js_warr ob
@@ -449,7 +688,18 @@ js_wobj ob
 svwt ob skrole
 svwt ob svasst
 svwt ob skcont
+if gt get sv 32 0
+h = svtrim wb 0 get sv 33
+if eq h 0
+js_wnull ob
+else
+js_wsbuf ob wb 8192 h
+end
+svwt ob sktcall
+svwcalls ob wb sv bd 0
+else
 js_wsbuf ob wb 8192 get sv 13
+end
 js_wobje ob
 svwt ob skfin
 svfr ob sv
@@ -460,9 +710,9 @@ js_wobje ob
 ret js_wdone ob
 end
 
-note svchunk: one chat.completion.chunk; kind 0 the role, 1 the content wb[8192 + sv14, 8192 + sv13),
+note svchunk: one chat.completion.chunk; kind 0 the role, 1 the content wb[8192 + sv14, 8192 + sv17),
 note 2 the finish reason, 3 usage (empty choices). Sends it as one SSE event.
-fn svchunk cs edit ulong 320 io edit uchar 131072 ob edit uchar 409600 wb edit uchar 82432 sv edit ulong 64 kind ulong to long
+fn svchunk cs edit ulong 320 io edit uchar 131072 ob edit uchar 409600 wb edit uchar 1073664 sv edit ulong 64 kind ulong to long
 svhead ob wb sv svccc
 svwt ob skchoi
 js_warr ob
@@ -483,7 +733,7 @@ end
 if eq kind 1
 svwt ob skcont
 g0 = get sv 14
-js_wsbuf ob wb add 8192 g0 sub get sv 13 g0
+js_wsbuf ob wb add 8192 g0 sub get sv 17 g0
 end
 js_wobje ob
 svwt ob skfin
@@ -499,12 +749,37 @@ if eq kind 3
 svusage ob sv
 end
 js_wobje ob
-n = js_wdone ob
+ret svsse cs io ob js_wdone ob
+end
+
+note svsse: the writer's text ob[1040, 1040 + n) as one SSE event; -5 when n < 0
+fn svsse cs edit ulong 320 io edit uchar 131072 ob edit uchar 409600 n long to long
 if lt n 0
 ret -5
 end
 r = hssedat cs io view part ob 1040 ulong n
 ret hfe r hsseend cs io
+end
+
+note svtchunk: the tool_calls delta chunk (stream true)
+fn svtchunk cs edit ulong 320 io edit uchar 131072 ob edit uchar 409600 wb edit uchar 1073664 sv edit ulong 64 bd edit uchar 983040 to long
+svhead ob wb sv svccc
+svwt ob skchoi
+js_warr ob
+js_wobj ob
+svwt ob skidx
+js_wulong ob 0
+svwt ob skdelta
+js_wobj ob
+svwt ob sktcall
+svwcalls ob wb sv bd 1
+js_wobje ob
+svwt ob skfin
+js_wnull ob
+js_wobje ob
+js_warre ob
+js_wobje ob
+ret svsse cs io ob js_wdone ob
 end
 
 note ======== request parsing
@@ -553,26 +828,89 @@ end
 ret m
 end
 
-note svpcat: append text t to the template; false when it would pass 4000 bytes
-fn svpcat wb edit uchar 82432 sv edit ulong 64 t view uchar * to bool
+note svtopp: the top_p token's lexeme at bd[o, o + n) in millionths (used to 0.000001), or jsnone
+note when it is not a number from 0 to 1
+fn svtopp bd edit uchar 983040 o ulong n ulong to ulong
+ip = ulong 0
+fr = ulong 0
+fd = ulong 0
+dot = false
+for i ulong n
+c = ulong get bd add o i
+if eq c 46
+if dot
+ret jsnone
+end
+dot = true
+else
+if or lt c 48 gt c 57
+ret jsnone
+end
+if dot
+if lt fd 6
+fr = add mul fr 10 sub c 48
+fd = add fd 1
+end
+else
+if ge ip 10
+ret jsnone
+end
+ip = add mul ip 10 sub c 48
+end
+end
+end
+for k ulong 6
+if lt fd 6
+fr = mul fr 10
+fd = add fd 1
+end
+end
+m = add mul ip 1000000 fr
+if gt m 1000000
+ret jsnone
+end
+ret m
+end
+
+note svmem: the value token of member key in object o, or jsnone (the first when repeated)
+fn svmem src view uchar * tp view uint 262144 o ulong key view uchar * to ulong
+if ne js_type tp o 1
+ret jsnone
+end
+k = js_first tp o
+for it ulong js_nkids tp o
+if eq k jsnone
+break
+end
+if js_streq src js_off tp k key
+ret add k 1
+end
+k = js_mnext tp k
+end
+ret jsnone
+end
+
+note svpcat: append text t to the template; false when it would pass tplmax (sv23)
+fn svpcat wb edit uchar 1073664 sv edit ulong 64 t view uchar * to bool
 pl = get sv 5
-if gt add pl len t 4000
+if gt add pl len t get sv 23
 ret false
 end
 for i ulong len t
-put wb add 73728 add pl i get t i
+put wb add 90624 add pl i get t i
 end
 put sv 5 add pl len t
 ret true
 end
 
-note svpstr: append the decoded string token t (role or content) to the template
-fn svpstr bd edit uchar 983040 tp edit uint 262144 t ulong wb edit uchar 82432 sv edit ulong 64 to bool
+note svpstr: append the decoded string token t to the template
+fn svpstr bd edit uchar 983040 tp edit uint 262144 t ulong wb edit uchar 1073664 sv edit ulong 64 to bool
 pl = get sv 5
-if ge pl 4000
+cap = get sv 23
+if ge pl cap
 ret false
 end
-n = js_sget bd js_off tp t part wb add 73728 pl sub 4000 pl
+n = js_sget bd js_off tp t part wb add 90624 pl sub cap pl
 if lt n 0
 ret false
 end
@@ -580,38 +918,148 @@ put sv 5 add pl ulong n
 ret true
 end
 
+note svpraw: append token t's JSON text as sent (a container's whole span) to the template
+fn svpraw bd edit uchar 983040 tp edit uint 262144 t ulong wb edit uchar 1073664 sv edit ulong 64 to bool
+ret svpcopy bd js_off tp t js_span tp t wb sv
+end
+
+note svpcopy: append bd[o, o + n) to the template; false when it would pass tplmax (sv23)
+fn svpcopy bd edit uchar 983040 o ulong n ulong wb edit uchar 1073664 sv edit ulong 64 to bool
+d = add 90624 get sv 5
+if gt add get sv 5 n get sv 23
+ret false
+end
+for i ulong n
+put wb add d i get bd add o i
+end
+put sv 5 add get sv 5 n
+ret true
+end
+
+note svparts: a content array of text parts into the template, joined with no separator
+fn svparts bd edit uchar 983040 tp edit uint 262144 a ulong wb edit uchar 1073664 sv edit ulong 64 to ulong
+e = js_first tp a
+for it ulong js_nkids tp a
+if eq e jsnone
+break
+end
+ty = svmem bd tp e sktype
+tx = svmem bd tp e sktext
+if or eq ty jsnone eq tx jsnone
+ret 17
+end
+if or ne js_type tp ty 6 ne js_type tp tx 6
+ret 17
+end
+if not js_streq bd js_off tp ty sktext
+ret 17
+end
+if not svpstr bd tp tx wb sv
+ret 6
+end
+e = js_enext tp e
+end
+ret 0
+end
+
+note svtc1r: one assistant tool call e as <tool_call>{"name":N,"arguments":A}</tool_call>
+fn svtc1r bd edit uchar 983040 tp edit uint 262144 e ulong wb edit uchar 1073664 sv edit ulong 64 to ulong
+f = svmem bd tp e skfunc
+if eq f jsnone
+ret 23
+end
+nm = svmem bd tp f sknam
+if eq nm jsnone
+ret 23
+end
+if ne js_type tp nm 6
+ret 23
+end
+ar = svmem bd tp f skargs
+aty = ulong 0
+if ne ar jsnone
+aty = js_type tp ar
+end
+if and and ne aty 0 ne aty 6 ne aty 1
+ret 23
+end
+if not svpcat wb sv svtcn
+ret 6
+end
+if not svpraw bd tp nm wb sv
+ret 6
+end
+if not svpcat wb sv svtca
+ret 6
+end
+ok = true
+if eq aty 6
+ok = svpstr bd tp ar wb sv
+end
+if eq aty 1
+ok = svpraw bd tp ar wb sv
+end
+if eq aty 0
+ok = svpcat wb sv svempt
+end
+if not ok
+ret 6
+end
+if not svpcat wb sv svtcz
+ret 6
+end
+ret 0
+end
+
+note svtcs: an assistant message's tool_calls array a into the template
+fn svtcs bd edit uchar 983040 tp edit uint 262144 a ulong wb edit uchar 1073664 sv edit ulong 64 to ulong
+if ne js_type tp a 3
+ret 23
+end
+e = js_first tp a
+for it ulong js_nkids tp a
+if eq e jsnone
+break
+end
+if not svpcat wb sv svtco
+ret 6
+end
+r = svtc1r bd tp e wb sv
+if ne r 0
+ret r
+end
+e = js_enext tp e
+end
+ret 0
+end
+
 note svmsg1: one message object e into the template; 0 or an error code
-fn svmsg1 bd edit uchar 983040 tp edit uint 262144 e ulong wb edit uchar 82432 sv edit ulong 64 to ulong
+fn svmsg1 bd edit uchar 983040 tp edit uint 262144 e ulong wb edit uchar 1073664 sv edit ulong 64 to ulong
 if ne js_type tp e 1
 ret 3
 end
-ro = jsnone
-co = jsnone
-k = js_first tp e
-for it ulong js_nkids tp e
-if eq k jsnone
-break
-end
-o = js_off tp k
-if js_streq bd o skrole
-ro = add k 1
-end
-if js_streq bd o skcont
-co = add k 1
-end
-k = js_mnext tp k
-end
+ro = svmem bd tp e skrole
 if eq ro jsnone
 ret 5
 end
 if or ne js_type tp ro 6 gt js_slen tp ro 32
 ret 5
 end
-if eq co jsnone
+co = svmem bd tp e skcont
+tc = svmem bd tp e sktcall
+if ne tc jsnone
+if eq js_type tp tc 10
+tc = jsnone
+end
+end
+ct = ulong 10
+if ne co jsnone
+ct = js_type tp co
+end
+if and eq co jsnone eq tc jsnone
 ret 4
 end
-ct = js_type tp co
-if and ne ct 6 ne ct 10
+if and and ne ct 6 ne ct 10 ne ct 3
 ret 4
 end
 if not svpstr bd tp ro wb sv
@@ -625,13 +1073,25 @@ if not svpstr bd tp co wb sv
 ret 6
 end
 end
+if eq ct 3
+r = svparts bd tp co wb sv
+if ne r 0
+ret r
+end
+end
+if ne tc jsnone
+r = svtcs bd tp tc wb sv
+if ne r 0
+ret r
+end
+end
 if not svpcat wb sv svnl
 ret 6
 end
 ret 0
 end
 
-fn svmsgs bd edit uchar 983040 tp edit uint 262144 a ulong wb edit uchar 82432 sv edit ulong 64 to ulong
+fn svmsgs bd edit uchar 983040 tp edit uint 262144 a ulong wb edit uchar 1073664 sv edit ulong 64 to ulong
 if ne js_type tp a 3
 ret 3
 end
@@ -651,6 +1111,87 @@ end
 e = js_enext tp e
 end
 if not svpcat wb sv svaprm
+ret 6
+end
+ret 0
+end
+
+note svtool1: one tools entry e; its name into wb[82432 + 64 i ..)
+fn svtool1 bd edit uchar 983040 tp edit uint 262144 e ulong wb edit uchar 1073664 sv edit ulong 64 to ulong
+ty = svmem bd tp e sktype
+f = svmem bd tp e skfunc
+if or eq ty jsnone eq f jsnone
+ret 21
+end
+if ne js_type tp ty 6
+ret 21
+end
+if not js_streq bd js_off tp ty skfunc
+ret 21
+end
+nm = svmem bd tp f sknam
+if eq nm jsnone
+ret 21
+end
+if ne js_type tp nm 6
+ret 21
+end
+ret svtname bd js_off tp nm wb sv
+end
+
+note svtname: the tool name string at bd[o ..) into wb[82432 + 64 i ..), i = sv30
+fn svtname bd edit uchar 983040 o ulong wb edit uchar 1073664 sv edit ulong 64 to ulong
+i = get sv 30
+if ge i 128
+ret 21
+end
+m = js_sget bd o part wb add 82432 mul i 64 64
+if lt m 1
+ret 21
+end
+put svtnl i ulong m
+put sv 30 add i 1
+ret 0
+end
+
+note svtools: the tools value a (jsnone when absent): checked, its names kept, its JSON text
+note rendered as the template's first line
+fn svtools bd edit uchar 983040 tp edit uint 262144 a ulong wb edit uchar 1073664 sv edit ulong 64 to ulong
+if eq a jsnone
+ret 0
+end
+ty = js_type tp a
+if eq ty 10
+ret 0
+end
+if ne ty 3
+ret 21
+end
+n = js_nkids tp a
+if gt n 128
+ret 21
+end
+if eq n 0
+ret 0
+end
+e = js_first tp a
+for it ulong n
+if eq e jsnone
+break
+end
+r = svtool1 bd tp e wb sv
+if ne r 0
+ret r
+end
+e = js_enext tp e
+end
+if not svpcat wb sv svtlp
+ret 6
+end
+if not svpraw bd tp a wb sv
+ret 6
+end
+if not svpcat wb sv svnl
 ret 6
 end
 ret 0
@@ -750,50 +1291,308 @@ end
 ret 0
 end
 
-note svparse: the request body bd[0, n) into sv and the template; 0 or an error code
-fn svparse bd edit uchar 983040 n ulong wb edit uchar 82432 sv edit ulong 64 to ulong
-tp = new uint 262144 0
-x = js_init tp 983040 64
-r = js_parse bd tp n
-if lt r 0
-ret 1
+note svstop1: one stop string token t into wb[73728 + 128 i ..)
+fn svstop1 bd edit uchar 983040 tp edit uint 262144 t ulong wb edit uchar 1073664 sv edit ulong 64 to ulong
+if ne js_type tp t 6
+ret 18
 end
-if ne js_type tp 0 1
-ret 2
+ret svstopn bd js_off tp t wb sv
 end
+
+note svstopn: the stop string at bd[o ..) into wb[73728 + 128 i ..), i = sv35
+fn svstopn bd edit uchar 983040 o ulong wb edit uchar 1073664 sv edit ulong 64 to ulong
+i = get sv 35
+if ge i 8
+ret 18
+end
+m = js_sget bd o part wb add 73728 mul i 128 128
+if lt m 1
+ret 18
+end
+put svstl i ulong m
+put sv 35 add i 1
+ret 0
+end
+
+note svstopp: the stop value v (null, a string or an array of strings)
+fn svstopp bd edit uchar 983040 tp edit uint 262144 v ulong wb edit uchar 1073664 sv edit ulong 64 to ulong
+ty = js_type tp v
+if eq ty 10
+ret 0
+end
+if eq ty 6
+ret svstop1 bd tp v wb sv
+end
+if ne ty 3
+ret 18
+end
+n = js_nkids tp v
+if gt n 8
+ret 18
+end
+e = js_first tp v
+for it ulong n
+if eq e jsnone
+break
+end
+r = svstop1 bd tp e wb sv
+if ne r 0
+ret r
+end
+e = js_enext tp e
+end
+ret 0
+end
+
+note svtopk: the top_k value v; -1, 0 and null leave it off
+fn svtopk bd edit uchar 983040 tp edit uint 262144 v ulong sv edit ulong 64 to ulong
+ty = js_type tp v
+if eq ty 10
+ret 0
+end
+if ne ty 7
+ret 19
+end
+vo = js_off tp v
+if js_isu bd vo
+x = js_tou bd vo
+if gt x 999999
+ret 19
+end
+put sv 28 x
+ret 0
+end
+if js_isl bd vo
+if eq js_tol bd vo neg long 1
+ret 0
+end
+end
+ret 19
+end
+
+note svtchoi: the tool_choice value v; "none" turns tool-call detection off
+fn svtchoi bd edit uchar 983040 tp edit uint 262144 v ulong sv edit ulong 64 to ulong
+ty = js_type tp v
+if eq ty 10
+ret 0
+end
+if eq ty 6
+o = js_off tp v
+if js_streq bd o sknone
+put sv 31 0
+ret 0
+end
+if or js_streq bd o svauto js_streq bd o svreq
+ret 0
+end
+ret 22
+end
+if eq ty 1
+t = svmem bd tp v sktype
+if ne t jsnone
+if eq js_type tp t 6
+if js_streq bd js_off tp t skfunc
+ret 0
+end
+end
+end
+end
+ret 22
+end
+
+note svtest: a test-only member (key k), refused unless the server runs with test=1
+fn svtest bd edit uchar 983040 tp edit uint 262144 k ulong wb edit uchar 1073664 sv edit ulong 64 to ulong
+if eq get sv 22 0
+ret 24
+end
+v = add k 1
+ty = js_type tp v
+vo = js_off tp v
+if js_streq bd js_off tp k sktdel
+if ne ty 7
+ret 24
+end
+if not js_isu bd vo
+ret 24
+end
+x = js_tou bd vo
+if gt x 10000
+ret 24
+end
+put sv 27 x
+ret 0
+end
+if ne ty 6
+ret 24
+end
+m = js_sget bd vo part wb 8192 16384
+if lt m 0
+ret 24
+end
+put sv 25 1
+put sv 26 ulong m
+ret 0
+end
+
+note svscal2: the members stop, top_k, top_p, tool_choice and the test-only ones; 0 or a code
+fn svscal2 bd edit uchar 983040 tp edit uint 262144 k ulong wb edit uchar 1073664 sv edit ulong 64 to ulong
+o = js_off tp k
+v = add k 1
+if js_streq bd o svstop
+ret svstopp bd tp v wb sv
+end
+if js_streq bd o sktopk
+ret svtopk bd tp v sv
+end
+if js_streq bd o sktopp
+ty = js_type tp v
+if eq ty 10
+ret 0
+end
+if ne ty 7
+ret 20
+end
+if ne and js_nflags tp v 5 0
+ret 20
+end
+m = svtopp bd js_off tp v js_span tp v
+if eq m jsnone
+ret 20
+end
+put sv 29 m
+ret 0
+end
+if js_streq bd o sktchoi
+ret svtchoi bd tp v sv
+end
+if or js_streq bd o sktout js_streq bd o sktdel
+ret svtest bd tp k wb sv
+end
+ret 0
+end
+
+note svreset: a request's options to their defaults
+fn svreset sv edit ulong 64 to void
 put sv 0 0
 put sv 1 999999
 put sv 2 1000
 put sv 3 1
 put sv 4 0
 put sv 5 0
-ma = jsnone
+for i ulong 12
+put sv add 24 i 0
+end
+put sv 29 1000000
+put sv 31 1
+end
+
+note svparse: the request body bd[0, n) into sv and the template; 0 or an error code
+fn svparse bd edit uchar 983040 n ulong wb edit uchar 1073664 sv edit ulong 64 to ulong
+tp = new uint 262144 0
+x = js_init tp 983040 64
+r = js_parse bd tp n
+if lt r 0
+if eq r neg long jsetok
+ret 25
+end
+ret 1
+end
+if ne js_type tp 0 1
+ret 2
+end
+svreset sv
 k = js_first tp 0
 for it ulong js_nkids tp 0
 if eq k jsnone
 break
 end
-if js_streq bd js_off tp k skmsgs
-ma = add k 1
-else
 e = svscal bd tp k sv
+if eq e 0
+e = svscal2 bd tp k wb sv
+end
 if ne e 0
 ret e
 end
-end
 k = js_mnext tp k
 end
+ma = svmem bd tp 0 skmsgs
 if eq ma jsnone
 ret 3
 end
+e = svtools bd tp svmem bd tp 0 sktools wb sv
+if ne e 0
+ret e
+end
+if eq get sv 30 0
+put sv 31 0
+end
 ret svmsgs bd tp ma wb sv
+end
+
+note ======== encoding
+
+note svemit: token t, the m-th of an encoding: md 0 onto the context, md 1 into the forced tokens
+fn svemit md ulong m ulong t ulong to void
+if eq md 0
+if lt get og 9 get og 1
+ocpush t
+end
+ret
+end
+if lt m 4096
+put svft m t
+end
+end
+
+note svenc1: the pre-token oarg[i, i + l) encoded and emitted after m tokens; the new count
+fn svenc1 i ulong l ulong md ulong m ulong to ulong
+for k ulong l
+put bqtm k ushort get oarg add i k
+end
+c = bpenct l
+for k ulong c
+svemit md add m k ulong get bqtm k
+end
+ret add m c
+end
+
+note svenc: encode src[0, n) of any length as obpenc does, in windows of at most 4000 bytes copied
+note to oarg; a window ends at a pre-token boundary at least 64 bytes before its end (a pre-token
+note is at most 64 bytes, so the boundaries agree with one pass), the last one at n. Returns the
+note token count.
+fn svenc src view uchar * n ulong md ulong to ulong
+s = ulong 0
+m = ulong 0
+while lt s n bound 999999
+w = sub n s
+if gt w 4000
+w = 4000
+end
+for k ulong w
+put oarg k get src add s k
+end
+la = eq add s w n
+i = ulong 0
+while lt i w bound 4097
+if and not la gt add i 64 w
+break
+end
+l = bpclena i w
+m = svenc1 i l md m
+i = add i l
+end
+s = add s i
+end
+ret m
 end
 
 note ======== generation
 
 note svgen: sample up to min(sv1, T - CT0) tokens; streams chunks when sv0 is 1. 0, or negative
-note when a chunk could not be sent (the client left).
-fn svgen cs edit ulong 320 io edit uchar 131072 ob edit uchar 409600 wb edit uchar 82432 sv edit ulong 64 to long
+note when a chunk could not be sent or the client left (svgone: finish 4, status 499). Between
+note tokens the listener and pending connections are served (svside), waiting up to
+note ollm_test_delay_ms.
+fn svgen cs edit ulong 320 io edit uchar 131072 ob edit uchar 409600 wb edit uchar 1073664 sv edit ulong 64 bd edit uchar 983040 to long
 lim = sub get sv 19 get sv 6
 if lt get sv 1 lim
 lim = get sv 1
@@ -803,11 +1602,19 @@ put sv 8 0
 put sv 12 0
 put sv 13 0
 put sv 14 0
+put sv 17 0
+tmo = long mul get sv 27 1000000
 for g ulong lim
+svside bd sv tmo
+if svgone cs
+put sv 8 4
+put sv 21 499
+ret -104
+end
 if not svtake wb sv
 break
 end
-r = svpend cs io ob wb sv
+r = svpend cs io ob wb sv 0
 if lt r 0
 ret r
 end
@@ -815,13 +1622,23 @@ end
 if eq get sv 8 0
 put sv 8 2
 end
+p = get sv 13
 svclean wb sv 1
-ret svpend cs io ob wb sv
+x = svstopc wb sv p
+svtcall wb sv bd
+r = svpend cs io ob wb sv 1
+if lt r 0
+ret r
+end
+if and eq get sv 0 1 gt get sv 32 0
+ret svtchunk cs io ob wb sv bd
+end
+ret r
 end
 
 note svtake: one sampled token into the context and the content; false when it ends the output
-note (sv8: 1 token 0, 2 the content would pass its 65536 bytes)
-fn svtake wb edit uchar 82432 sv edit ulong 64 to bool
+note (sv8: 1 token 0 or a stop string, 2 the content would pass its 65536 bytes)
+fn svtake wb edit uchar 1073664 sv edit ulong 64 to bool
 c = svdraw sv
 if eq c 0
 put sv 8 1
@@ -832,19 +1649,179 @@ put sv 8 2
 ret false
 end
 svcap wb sv c
+p = get sv 13
 svclean wb sv 0
+if svstopc wb sv p
+ret false
+end
 ret true
 end
 
-note svdraw: the next token (cmdsamp's step osstep), advancing the seed stream when sampling
+note svstopc: the earliest stop string match that ends past the content's old length p cuts the
+note content there (finish stop); whether one did
+fn svstopc wb edit uchar 1073664 sv edit ulong 64 p ulong to bool
+n = get sv 13
+b = jsnone
+for i ulong get sv 35
+l = get svstl i
+s = ulong 0
+if gt add p 1 l
+s = sub add p 1 l
+end
+q = svfind wb s n add 73728 mul i 128 l
+if lt q b
+b = q
+end
+end
+if eq b jsnone
+ret false
+end
+put sv 13 b
+put sv 12 0
+put sv 8 1
+ret true
+end
+
+note svhold: how far a streamed chunk may send: not into the tail a stop string or the tool-call
+note marker could still claim, nor (detection on) past the marker or into trailing whitespace
+fn svhold wb edit uchar 1073664 sv edit ulong 64 to ulong
+n = get sv 13
+lo = get sv 14
+h = n
+for i ulong get sv 35
+k = svpsuf wb lo n add 73728 mul i 128 get svstl i
+if lt sub n k h
+h = sub n k
+end
+end
+if eq get sv 31 1
+q = svfind wb lo n 74752 11
+if lt q h
+h = q
+end
+k2 = svpsuf wb lo n 74752 11
+if lt sub n k2 h
+h = sub n k2
+end
+h = svtrim wb lo h
+end
+ret h
+end
+
+note svdraw: the next token (cmdsamp's step osstep, or svdrawf with top_k/top_p on, or the forced
+note tokens of ollm_test_output then 0), advancing the seed stream when sampling
 fn svdraw sv edit ulong 64 to ulong
+if eq get sv 25 1
+g = get sv 7
+if lt g get sv 24
+ret get svft g
+end
+ret 0
+end
 st = get sv 3
 tm = get sv 2
+c = ulong 0
+if or eq tm 0 not svfon sv
 c = osstep st tm
+else
+c = svdrawf st div f64 tm 1000.0 get sv 28 get sv 29
+end
 if ne tm 0
 put sv 3 add st 11400714819323198485
 end
 ret c
+end
+
+note svfon: whether top_k (0 < K < V) or top_p (< 1) filters
+fn svfon sv edit ulong 64 to bool
+k = get sv 28
+if and gt k 0 lt k get og 0
+ret true
+end
+ret lt get sv 29 1000000
+end
+
+note svdrawf: odraw over the kept tokens (svkeep), the uniform scaled to their mass
+fn svdrawf st ulong tau f64 k ulong p6 ulong to ulong
+svlogit tau
+o = get og 27
+v = get og 0
+cm = svkeep o v k p6
+u = mul f64 shr smx st 11 1.1102230246251565e-16
+r = svpick o v mul u cm
+for j ulong v
+put svmk j 0
+end
+ret r
+end
+
+note svlogit: the next-token logits divided by tau, then made probabilities (as odraw does)
+fn svlogit tau f64 to void
+lf = ofwd 0
+olast
+o = get og 27
+v = get og 0
+m = bitcast f64 ulong 18442240474082181120
+for c ulong v
+x = div get oa add o c tau
+put oa add o c x
+m = fmax m x
+end
+sm = osoft o v m
+end
+
+note svkeep: mark the most probable tokens (ties to the lower id), at most K (0 < K < V), until
+note their mass reaches top_p (p6 < 1000000); their mass
+fn svkeep o ulong v ulong k ulong p6 ulong to f64
+lim = v
+if and gt k 0 lt k v
+lim = k
+end
+pf = div f64 p6 1000000.0
+cm = 0.0f64
+for j ulong lim
+b = svmax o v
+put svmk b 1
+cm = add cm get oa add o b
+if and lt p6 1000000 ge cm pf
+break
+end
+end
+ret cm
+end
+
+note svmax: the unmarked token of highest probability, the lower id on ties
+fn svmax o ulong v ulong to ulong
+b = ulong 0
+bv = 0.0f64
+fd = false
+for c ulong v
+if eq get svmk c 0
+x = get oa add o c
+if or not fd gt x bv
+b = c
+bv = x
+fd = true
+end
+end
+end
+ret b
+end
+
+note svpick: the first kept token (id order) whose running kept mass passes t; else the last kept
+fn svpick o ulong v ulong t f64 to ulong
+acc = 0.0f64
+la = ulong 0
+for c ulong v
+if eq get svmk c 1
+acc = add acc get oa add o c
+la = c
+if lt t acc
+ret c
+end
+end
+end
+ret la
 end
 
 note svfits: whether token c's bytes fit the raw buffer (8192) and, as up to three content bytes
@@ -857,7 +1834,7 @@ ret not or or gt rn 8192 gt tl 4096 gt gn 65536
 end
 
 note svcap: token c's bytes onto the raw buffer, c onto the context
-fn svcap wb edit uchar 82432 sv edit ulong 64 c ulong to void
+fn svcap wb edit uchar 1073664 sv edit ulong 64 c ulong to void
 obtcap c
 rn = get sv 12
 for i ulong get obon 0
@@ -868,18 +1845,361 @@ ocpush c
 put sv 7 add get sv 7 1
 end
 
-note svpend: when streaming, the content not yet sent as one chunk; 0 or the send error
-fn svpend cs edit ulong 320 io edit uchar 131072 ob edit uchar 409600 wb edit uchar 82432 sv edit ulong 64 to long
-if or ne get sv 0 1 le get sv 13 get sv 14
+note svpend: when streaming, the content not yet sent (up to svhold; fin 1 all of it, or the text
+note before the tool calls) as one chunk; 0 or the send error
+fn svpend cs edit ulong 320 io edit uchar 131072 ob edit uchar 409600 wb edit uchar 1073664 sv edit ulong 64 fin ulong to long
+if ne get sv 0 1
 ret 0
 end
+h = get sv 13
+if eq fin 0
+h = svhold wb sv
+else
+if gt get sv 32 0
+h = svtrim wb get sv 14 get sv 33
+end
+end
+if le h get sv 14
+ret 0
+end
+put sv 17 h
 r = svchunk cs io ob wb sv 1
-put sv 14 get sv 13
+put sv 14 h
 ret r
 end
 
+note ======== tool calls in the output
+
+note svtdecl: whether bd[f, f + q) is a declared tool name
+fn svtdecl wb edit uchar 1073664 bd edit uchar 983040 f ulong q ulong sv edit ulong 64 to bool
+for i ulong get sv 30
+if eq get svtnl i q
+if svteq wb bd f q add 82432 mul i 64
+ret true
+end
+end
+end
+ret false
+end
+
+note svteq: whether bd[f, f + q) equals wb[b, b + q)
+fn svteq wb edit uchar 1073664 bd edit uchar 983040 f ulong q ulong b ulong to bool
+for j ulong q
+if ne get bd add f j get wb add b j
+ret false
+end
+end
+ret true
+end
+
+note svtargs: the arguments token ar of a block at wb[b ..) into bd at f (object: its JSON text;
+note string: decoded; absent: {}); its length, or negative
+fn svtargs wb edit uchar 1073664 bd edit uchar 983040 tp view uint 262144 ar ulong f ulong b ulong to long
+if eq ar jsnone
+put bd f 123
+put bd add f 1 125
+ret 2
+end
+ty = js_type tp ar
+if eq ty 6
+ret js_sget view part wb b 65536 js_off tp ar part bd f 65536
+end
+if ne ty 1
+ret -1
+end
+o = add b js_off tp ar
+n = js_span tp ar
+for i ulong n
+put bd add f i get wb add o i
+end
+ret long n
+end
+
+note svtc1: the block JSON at content [s, s + l) as tool call sv32; false when it is not one
+fn svtc1 wb edit uchar 1073664 sv edit ulong 64 bd edit uchar 983040 s ulong l ulong to bool
+if or eq l 0 gt l 65536
+ret false
+end
+tp = new uint 262144 0
+x = js_init tp 65536 64
+b = add 8192 s
+r = js_parse view part wb b l tp l
+if lt r 0
+ret false
+end
+if ne js_type tp 0 1
+ret false
+end
+ret svtc2 wb sv bd tp b
+end
+
+note svtc2: the parsed block at wb[b ..) (tape tp) recorded as tool call sv32; whether it is one
+fn svtc2 wb edit uchar 1073664 sv edit ulong 64 bd edit uchar 983040 tp view uint 262144 b ulong to bool
+nm = svmem view part wb b 65536 tp 0 sknam
+if eq nm jsnone
+ret false
+end
+if ne js_type tp nm 6
+ret false
+end
+q = svtnam wb sv bd js_off tp nm b
+if lt q 1
+ret false
+end
+f = get sv 34
+g = add f ulong q
+a = svtargs wb bd tp svmem view part wb b 65536 tp 0 skargs g b
+if lt a 0
+ret false
+end
+svtrec sv f ulong q g ulong a
+ret true
+end
+
+note svtnam: the name string at wb[b + o ..) decoded to bd[sv34 ..); its length when it is a
+note declared tool name, else -1
+fn svtnam wb edit uchar 1073664 sv edit ulong 64 bd edit uchar 983040 o ulong b ulong to long
+f = get sv 34
+q = js_sget view part wb b 65536 o part bd f 64
+if lt q 1
+ret -1
+end
+if not svtdecl wb bd f ulong q sv
+ret -1
+end
+ret q
+end
+
+note svtrec: record tool call sv32's name bd[f, f + q) and arguments bd[g, g + a)
+fn svtrec sv edit ulong 64 f ulong q ulong g ulong a ulong to void
+m = mul get sv 32 4
+put svtcx m f
+put svtcx add m 1 q
+put svtcx add m 2 g
+put svtcx add m 3 a
+put sv 34 add g a
+put sv 32 add get sv 32 1
+end
+
+note svtblk: the block <tool_call>JSON</tool_call> at content p; the position after it, or jsnone
+fn svtblk wb edit uchar 1073664 sv edit ulong 64 bd edit uchar 983040 p ulong n ulong to ulong
+if gt add p 11 n
+ret jsnone
+end
+if not svat wb p 74752 11
+ret jsnone
+end
+s = add p 11
+z = svfind wb s n 74763 12
+if eq z jsnone
+ret jsnone
+end
+if not svtc1 wb sv bd s sub z s
+ret jsnone
+end
+ret add z 12
+end
+
+note svtcall: with detection on, whether the content from the first marker on is 1 .. 8 tool-call
+note blocks with only whitespace around: sv32 calls, sv33 the marker, finish tool_calls
+fn svtcall wb edit uchar 1073664 sv edit ulong 64 bd edit uchar 983040 to void
+put sv 32 0
+put sv 34 0
+if eq get sv 31 0
+ret
+end
+n = get sv 13
+q = svfind wb 0 n 74752 11
+if eq q jsnone
+ret
+end
+p = q
+for it ulong 9
+p = svskws wb p n
+if ge p n
+break
+end
+z = jsnone
+if lt get sv 32 8
+z = svtblk wb sv bd p n
+end
+if eq z jsnone
+put sv 32 0
+ret
+end
+p = z
+end
+if lt p n
+put sv 32 0
+ret
+end
+put sv 33 q
+put sv 8 3
+end
+
+note ======== requests during a generation
+
+note svwait: wait up to tmo ns for the listener or a pending connection (svpfd); the connection to
+note serve now (bytes arrived, or it closed or failed), or -1. A new connection whose first byte
+note does not arrive within 20 ms waits in a free pending slot (8; all taken: new connections stay
+note in the listen backlog), so a connection that sends nothing costs the caller 20 ms once, not a
+note head deadline. A pending connection is closed unanswered 10 s after its accept.
+fn svwait sv edit ulong 64 tmo long to long
+now = ulong monons
+iv = tmo
+n = ulong 0
+for i ulong 8
+f = get svpfd i
+if ne f 0
+age = sub now get svpat i
+if ge age 10000000000
+y = fclose int sub f 1
+put svpfd i 0
+else
+rm = long sub 10000000000 age
+if or lt iv 0 lt rm iv
+iv = rm
+end
+svprec n sub f 1
+put svpix n i
+n = add n 1
+end
+end
+end
+fr = lt n 8
+m = n
+if fr
+svprec n get sv 36
+m = add n 1
+end
+r = pollfds svpl 0 mul m 8 iv
+if le r 0
+ret -1
+end
+for j ulong n
+if ne get svpl add mul j 8 6 0
+s = get svpix j
+cp = long sub get svpfd s 1
+put svpfd s 0
+ret cp
+end
+end
+if not fr
+ret -1
+end
+c = haccept int get sv 36 0
+if lt c 0
+ret -1
+end
+w = waitio int c 1 long 20000000
+if ne w 0
+ret c
+end
+for k ulong 8
+if eq get svpfd k 0
+put svpfd k ulong add c 1
+put svpat k ulong monons
+ret -1
+end
+end
+y2 = fclose int c
+ret -1
+end
+
+note svprec: pollfd record j for descriptor fd, events POLLIN
+fn svprec j ulong fd ulong to void
+b = mul j 8
+put svpl b uchar and fd 255
+put svpl add b 1 uchar and shr fd 8 255
+put svpl add b 2 uchar and shr fd 16 255
+put svpl add b 3 uchar and shr fd 24 255
+put svpl add b 4 1
+put svpl add b 5 0
+put svpl add b 6 0
+put svpl add b 7 0
+end
+
+note svgone: whether the client of the generating request has left: a non-blocking peek (MSG_PEEK |
+note MSG_DONTWAIT) of its socket reads end of stream or an error. Request bytes stay unread. A
+note client that half-closes its sending side after the request counts as gone.
+fn svgone cs edit ulong 320 to bool
+r = recv int get cs HFD svpk 0 1 66
+if eq r 0
+ret true
+end
+ret and lt r 0 and ne r -11 ne r -4
+end
+
+note svside: serve the connections svwait yields (the first wait up to tmo ns, then without waiting;
+note at most 9 per call) with svside2
+fn svside bd edit uchar 983040 sv edit ulong 64 tmo long to void
+c = svwait sv tmo
+for k ulong 9
+if lt c 0
+ret
+end
+svside2 c bd sv
+c = svwait sv 0
+end
+end
+
+note svside2: one request while a completion generates: health busy, models, else 503 (logged)
+fn svside2 c long bd edit uchar 983040 sv edit ulong 64 to void
+cs = new ulong 320 0
+io = new uchar 131072 0
+r = hinit cs io int c 1
+if lt r 0
+x = hclose cs
+ret
+end
+note bytes have arrived (svwait), so a head or body that stalls costs at most 250 ms or 1 s
+hsettmo cs 250000000 250000000
+hsetbdl cs 1000000000
+put cs HBCAP 983040
+r = hreqrd cs io
+if gt r 0
+put cs HKEEP 0
+st = svbusy cs io bd
+svlogs st
+else
+if lt r 0
+x = hreject cs io r
+end
+end
+x = hclose cs
+end
+
+fn svbusy cs edit ulong 320 io edit uchar 131072 bd edit uchar 983040 to ulong
+if and hispath cs io svphlth hismeth cs io svmget
+x = svstat cs io 200 svthbsy
+ret 200
+end
+if and hispath cs io svpmods hismeth cs io svmget
+x = svstat cs io 200 svtmods
+ret 200
+end
+note read the body before answering, so the client sees the 503 rather than a reset
+n = hbodyall cs io bd
+x = svs503 cs io
+ret 503
+end
+
+fn svlogs st ulong to void
+oputc 67
+oputc 32
+oputu st
+for i ulong 4
+oputc 32
+oputc 48
+end
+oputc 10
+oflush
+end
+
+note ======== serving
+
 note svid: response id chatcmpl-ollm-<request count> into wb[82176 ..), its length into sv15
-fn svid wb edit uchar 82432 sv edit ulong 64 to void
+fn svid wb edit uchar 1073664 sv edit ulong 64 to void
 put sv 9 add get sv 9 1
 p = svmcat wb 82176 82240 svidp
 p = svmdec wb p 82240 get sv 9
@@ -902,8 +2222,30 @@ oputc 10
 oflush
 end
 
+note svprep: the context (token 0, then the template's encoding) and the forced tokens; 0 or 11
+fn svprep wb edit uchar 1073664 sv edit ulong 64 to ulong
+put og 9 0
+ocpush 0
+np = svenc view part wb 90624 get sv 5 get sv 5 0
+put sv 6 add np 1
+if ge get sv 6 get sv 19
+ret 11
+end
+if eq get sv 25 1
+c = ulong 0
+if gt get sv 26 0
+c = svenc view part wb 8192 get sv 26 get sv 26 1
+end
+if gt c 4096
+c = 4096
+end
+put sv 24 c
+end
+ret 0
+end
+
 note svchat: POST /v1/chat/completions
-fn svchat cs edit ulong 320 io edit uchar 131072 bd edit uchar 983040 wb edit uchar 82432 sv edit ulong 64 to long
+fn svchat cs edit ulong 320 io edit uchar 131072 bd edit uchar 983040 wb edit uchar 1073664 sv edit ulong 64 to long
 note the request's clock and log fields come from svroute (svbeg)
 n = hbodyall cs io bd
 if lt n 0
@@ -921,28 +2263,16 @@ end
 note generation outlasts the 60 s body deadline: only the idle limit applies from here
 hsetdl cs 0
 e = svparse bd ulong n wb sv
+if eq e 0
+e = svprep wb sv
+end
 if ne e 0
 put sv 16 e
-r = svfail cs io wb sv 400
-svlog sv
-ret r
+st = ulong 400
+if eq e 25
+st = ulong 413
 end
-pl = get sv 5
-for i ulong pl
-put oarg i get wb add 73728 i
-end
-np = obpenc pl
-put og 9 0
-ocpush 0
-for i ulong np
-if lt get og 9 get og 1
-ocpush get obtk i
-end
-end
-put sv 6 add np 1
-if ge get sv 6 get sv 19
-put sv 16 11
-r = svfail cs io wb sv 400
+r = svfail cs io wb sv st
 svlog sv
 ret r
 end
@@ -957,7 +2287,7 @@ if lt r 0
 svlog sv
 ret r
 end
-r = svgen cs io ob wb sv
+r = svgen cs io ob wb sv bd
 if lt r 0
 svlog sv
 ret r
@@ -972,8 +2302,12 @@ r = hfe r hwfin cs io
 svlog sv
 ret r
 end
-r = svgen cs io ob wb sv
-m = svfull ob wb sv
+r = svgen cs io ob wb sv bd
+if lt r 0
+svlog sv
+ret r
+end
+m = svfull ob wb sv bd
 if lt m 0
 put sv 16 16
 r = svfail cs io wb sv 500
@@ -985,7 +2319,7 @@ svlog sv
 ret r
 end
 
-fn svroute cs edit ulong 320 io edit uchar 131072 bd edit uchar 983040 wb edit uchar 82432 sv edit ulong 64 to long
+fn svroute cs edit ulong 320 io edit uchar 131072 bd edit uchar 983040 wb edit uchar 1073664 sv edit ulong 64 to long
 svbeg sv
 if hispath cs io svpchat
 if hismeth cs io svmpost
@@ -1017,7 +2351,7 @@ put sv 8 0
 end
 
 note svend: error code e with status st, logged
-fn svend cs edit ulong 320 io edit uchar 131072 wb edit uchar 82432 sv edit ulong 64 e ulong st ulong to long
+fn svend cs edit ulong 320 io edit uchar 131072 wb edit uchar 1073664 sv edit ulong 64 e ulong st ulong to long
 put sv 16 e
 r = svfail cs io wb sv st
 svlog sv
@@ -1035,8 +2369,9 @@ end
 note svconn: one accepted connection c carries one request, answered with Connection: close.
 note Connections are served one at a time, so a kept-alive idle connection would hold the listener:
 note allen-chat pools its upstream connection, and its next request queued 30 s behind the pooled
-note one (the old idle limit) until this change. The head must arrive within 10 s.
-fn svconn c long cs edit ulong 320 io edit uchar 131072 bd edit uchar 983040 wb edit uchar 82432 sv edit ulong 64 to void
+note one (the old idle limit) until this change. svwait hands over a connection only once its first
+note bytes arrived; the rest of the head must arrive within 10 s.
+fn svconn c long cs edit ulong 320 io edit uchar 131072 bd edit uchar 983040 wb edit uchar 1073664 sv edit ulong 64 to void
 r = hinit cs io int c 1
 if lt r 0
 x = hclose cs
@@ -1062,38 +2397,94 @@ end
 x = hclose cs
 end
 
-note serve PORT CK MERGES [MAXCONN]
+note svpre: whether the argument in oarg (length n) starts with t
+fn svpre n ulong t view uchar * to bool
+if lt n len t
+ret false
+end
+for i ulong len t
+if ne get oarg i get t i
+ret false
+end
+end
+ret true
+end
+
+note svdig: the decimal oarg[a, n) (1 .. 7 digits), or 0
+fn svdig a ulong n ulong to ulong
+if or le n a gt sub n a 7
+ret 0
+end
+v = ulong 0
+for i ulong sub n a
+c = ulong get oarg add a i
+if or lt c 48 gt c 57
+ret 0
+end
+v = add mul v 10 sub c 48
+end
+ret v
+end
+
+note svcli: the options after MERGES: [MAXCONN] (first only), tplmax=N, test=1; MAXCONN
+fn svcli sv edit ulong 64 na ulong to ulong
+mx = ulong 1000000
+for j ulong sub na 5
+i = add j 5
+n = oargp i
+if svpre n svoptt
+v = svdig 7 n
+if or lt v 256 gt v 983040
+exit 2
+end
+put sv 23 v
+else
+if and eq n len svopte svpre n svopte
+put sv 22 1
+else
+if ne i 5
+exit 2
+end
+mx = oargu 5
+if eq mx 0
+exit 2
+end
+end
+end
+end
+ret mx
+end
+
+note serve PORT CK MERGES [MAXCONN] [tplmax=N] [test=1]
 fn cmdserve to void
 na = oargc
-if and ne na 5 ne na 6
+if or lt na 5 gt na 8
 exit 2
 end
 port = oargu 2
 if or eq port 0 gt port 65535
 exit 2
 end
-mx = ulong 1000000
-if eq na 6
-mx = oargu 5
-if eq mx 0
-exit 2
-end
-end
+sv = new ulong 64 0
+put sv 23 65536
+mx = svcli sv na
 ockload 3
 v = get og 0
 obload 4 v
 cs = new ulong 320 0
 io = new uchar 131072 0
 bd = new uchar 983040 0
-wb = new uchar 82432 0
-sv = new ulong 64 0
+wb = new uchar 1073664 0
 a = new uchar 16 0
 put sv 19 get og 1
+x = svmcat wb 74752 74763 svtco
+x = svmcat wb 74763 74775 svtcc
 r = haddr4 a 2130706433 port
 lf = hlisten a 16
 if lt lf 0
 exit 71
 end
+put sv 36 ulong lf
 for i ulong len svport
 oputc ulong get svport i
 end
@@ -1102,7 +2493,7 @@ oputc 10
 oflush
 nc = ulong 0
 for j ulong 999999999
-c = haccept int lf 60000000000
+c = svwait sv 60000000000
 if ge c 0
 svconn c cs io bd wb sv
 nc = add nc 1
@@ -1111,5 +2502,5 @@ break
 end
 end
 end
-x = fclose int lf
+y = fclose int lf
 end

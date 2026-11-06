@@ -1,0 +1,432 @@
+note SPDX-License-Identifier: AGPL-3.0-only
+note omegallm tok/tkfit.om: the merge learner of the own BPE (FORMAT.md section 5) and the chunk
+note type table that tokenc also uses as its encode cache. No host words; about 441 MiB of
+note globals, so it lives only in the standalone program ollm-tok, never in ollm.
+note Fit counts chunk types (tkcli.om tcscan), then merges with a hashed pair table, per-pair lists
+note of the types that hold the pair and a lazy max-heap keyed count << 30 | (32767 - a) << 15 |
+note (32767 - b): the largest key is the largest count, then the smallest a, then the smallest b.
+note A pair's count only falls once its newest token exists, so a popped key whose count is still
+note current is the true maximum; a stale one is pushed again with its current count (if any).
+note A merged pair never appears again, so the list nodes of its pair go back to a free list.
+note Counts stay below 2^34 because tcscan refuses texts of 2^33 bytes or more.
+note Exits: 21 a capacity below; 28 no pair left to merge.
+note Capacities: 2097152 chunk types, 16777216 pool symbols, 6000000 pairs, 16777216 list nodes.
+const TFTCAP ulong 2097152
+const TFHMSK ulong 4194303
+const TFSCAP ulong 16777216
+const TFPCAP ulong 6000000
+const TFPMSK ulong 8388607
+const TFNCAP ulong 16777216
+global tfhs uint 4194304
+global tfto uint 2097152
+global tftl uchar 2097152
+global tftn uchar 2097152
+global tftc ulong 2097152
+global tfts uint 2097152
+global tfsy ushort 16777216
+global tfpk uint 8388608
+global tfpc ulong 8388608
+global tfph uint 8388608
+global tfpl uint 8388608
+global tfnl uint 6000000
+global tfnt uint 16777216
+global tfnx uint 16777216
+global tfhp ulong 6000000
+global tfst ulong 16
+
+note tfst: 0 types, 1 pool symbols used, 2 chunks, 3 bytes scanned, 4 special markers, 5 pairs,
+note 6 new pairs of this merge (tfnl), 7 list nodes made, 8 heap entries, 9 free node list head
+note (node + 1; 0 empty), 10 tokens written (tokenc).
+
+note FNV-1a 64 of tkw[i .. i + l)
+fn tfhash i ulong l ulong to ulong
+h = ulong 14695981039346656037
+for k ulong l
+h = mul xor h ulong get tkw add i k 1099511628211
+end
+ret h
+end
+
+note does type y hold the bytes tkw[i .. i + l)?
+fn tfsame y ulong i ulong l ulong to bool
+if ne ulong get tftl y l
+ret false
+end
+o = ulong get tfto y
+for k ulong l
+if ne ulong get tfsy add o k ulong get tkw add i k
+ret false
+end
+end
+ret true
+end
+
+note new type in empty hash slot s for tkw[i .. i + l), its bytes as pool symbols; TFTCAP when
+note the type table or the pool is full
+fn tfins s ulong i ulong l ulong to ulong
+nt = get tfst 0
+o = get tfst 1
+if ge nt TFTCAP
+ret TFTCAP
+end
+if gt add o l TFSCAP
+ret TFTCAP
+end
+put tfhs s uint add nt 1
+put tfto nt uint o
+put tftl nt uchar l
+put tftn nt uchar l
+put tftc nt 0
+put tfts nt 0
+for k ulong l
+put tfsy add o k ushort get tkw add i k
+end
+put tfst 0 add nt 1
+put tfst 1 add o l
+ret nt
+end
+
+note type id of the chunk tkw[i .. i + l), added when absent; TFTCAP when absent and full
+fn tffind i ulong l ulong to ulong
+s = and tfhash i l TFHMSK
+for q ulong 4194305
+y = ulong get tfhs s
+if eq y 0
+ret tfins s i l
+end
+y = sub y 1
+if tfsame y i l
+ret y
+end
+s = and add s 1 TFHMSK
+end
+ret TFTCAP
+end
+
+note fit: count one chunk
+fn tfcount i ulong l ulong to void
+y = tffind i l
+if eq y TFTCAP
+exit 21
+end
+put tftc y add get tftc y 1
+put tfst 2 add get tfst 2 1
+end
+
+note pair table slot of key a 32768 + b, made (count 0, no list) when absent; new slots are listed
+note in tfnl; exit 21 past TFPCAP pairs
+fn tfpslot key ulong to ulong
+s = shr mul add key 1 ulong 11400714819323198485 41
+for q ulong 8388609
+k = ulong get tfpk s
+if eq k 0
+nf = get tfst 5
+if ge nf TFPCAP
+exit 21
+end
+put tfpk s uint add key 1
+put tfpc s 0
+put tfph s 0
+put tfpl s 0
+put tfst 5 add nf 1
+nn = get tfst 6
+put tfnl nn uint s
+put tfst 6 add nn 1
+ret s
+end
+if eq k add key 1
+ret s
+end
+s = and add s 1 TFPMSK
+end
+ret s
+end
+
+note list type y under pair slot s (once per type in a row), reusing a freed node when there is
+note one; exit 21 past TFNCAP nodes
+fn tfnode s ulong y ulong to void
+if ne ulong get tfpl s add y 1
+put tfpl s uint add y 1
+f = get tfst 9
+q = ulong 0
+if gt f 0
+q = sub f 1
+put tfst 9 ulong get tfnx q
+else
+q = get tfst 7
+if ge q TFNCAP
+exit 21
+end
+put tfst 7 add q 1
+end
+put tfnt q uint y
+put tfnx q get tfph s
+put tfph s uint add q 1
+end
+end
+
+fn tfkey c ulong a ulong b ulong to ulong
+ret or or shl c 30 shl sub 32767 a 15 sub 32767 b
+end
+
+fn tfhpush x ulong to void
+i = get tfst 8
+put tfst 8 add i 1
+dn = false
+while and not dn gt i 0 bound 64
+p = div sub i 1 2
+v = get tfhp p
+if ge v x
+dn = true
+else
+put tfhp i v
+i = p
+end
+end
+put tfhp i x
+end
+
+note pop the heap's largest key (the heap is not empty)
+fn tfhpop to ulong
+top = get tfhp 0
+n = sub get tfst 8 1
+put tfst 8 n
+x = get tfhp n
+i = ulong 0
+dn = false
+while not dn bound 64
+l = add mul i 2 1
+if ge l n
+dn = true
+else
+c = l
+r = add l 1
+if lt r n
+if gt get tfhp r get tfhp l
+c = r
+end
+end
+v = get tfhp c
+if ge x v
+dn = true
+else
+put tfhp i v
+i = c
+end
+end
+end
+if gt n 0
+put tfhp i x
+end
+ret top
+end
+
+note tfpc[s] += c and -= c, one big array per function
+fn tfpcadd s ulong c ulong to void
+put tfpc s add get tfpc s c
+end
+fn tfpcsub s ulong c ulong to void
+put tfpc s sub get tfpc s c
+end
+
+note count the pairs of type y and list y under them
+fn tfinty y ulong to void
+o = ulong get tfto y
+c = get tftc y
+for j ulong sub ulong get tftn y 1
+x = ulong get tfsy add o j
+z = ulong get tfsy add add o j 1
+s = tfpslot or shl x 15 z
+tfpcadd s c
+tfnode s y
+end
+end
+
+note count the pairs of every type, list the types under them, heap every pair
+fn tfinit to void
+nt = get tfst 0
+y = ulong 0
+for o ulong 3
+lim = mul add o 1 999999
+if gt lim nt
+lim = nt
+end
+while lt y lim bound 999999
+if gt ulong get tftn y 1
+tfinty y
+end
+y = add y 1
+end
+end
+for s ulong 8388608
+k = ulong get tfpk s
+if ne k 0
+c = get tfpc s
+if gt c 0
+k = sub k 1
+tfhpush tfkey c shr k 15 and k 32767
+end
+end
+end
+end
+
+note the pair to merge: the slot of the heap's largest current key; exit 28 when none is left.
+note Each pair has at most one heap entry, and one pop sequence meets a pair at most twice.
+fn tfsel to ulong
+for o ulong 13
+q = ulong 0
+while and gt get tfst 8 0 lt q 999999 bound 999999
+q = add q 1
+x = tfhpop
+c = shr x 30
+a = sub 32767 and shr x 15 32767
+b = sub 32767 and x 32767
+s = tfpslot or shl a 15 b
+cc = get tfpc s
+if eq cc c
+ret s
+end
+if gt cc 0
+tfhpush tfkey cc a b
+end
+end
+end
+exit 28
+end
+
+fn tfhas o ulong n ulong a ulong b ulong to bool
+for j ulong sub n 1
+x = ulong get tfsy add o j
+z = ulong get tfsy add add o j 1
+if and eq x a eq z b
+ret true
+end
+end
+ret false
+end
+
+note take count c of every pair in tfsy[o .. o + n)
+fn tfsub o ulong n ulong c ulong to void
+for j ulong sub n 1
+x = ulong get tfsy add o j
+z = ulong get tfsy add add o j 1
+s = tfpslot or shl x 15 z
+tfpcsub s c
+end
+end
+
+note replace (a, b) by t in tfsy[o .. o + n), left to right without overlap; returns the length
+fn tfrpool o ulong n ulong a ulong b ulong t ulong to ulong
+w = ulong 0
+j = ulong 0
+while lt j n bound 128
+x = ulong get tfsy add o j
+z = ulong 65535
+if lt add j 1 n
+z = ulong get tfsy add add o j 1
+end
+if and eq x a eq z b
+put tfsy add o w ushort t
+j = add j 2
+else
+put tfsy add o w ushort x
+j = add j 1
+end
+w = add w 1
+end
+ret w
+end
+
+note add count c of every pair in tfsy[o .. o + m) of type y; list y under the pairs holding t
+fn tfadd o ulong m ulong c ulong y ulong t ulong to void
+for j ulong sub m 1
+x = ulong get tfsy add o j
+z = ulong get tfsy add add o j 1
+s = tfpslot or shl x 15 z
+tfpcadd s c
+if or eq x t eq z t
+tfnode s y
+end
+end
+end
+
+note apply merge (a, b) -> t to type y, moving its pair counts
+fn tfmtype y ulong a ulong b ulong t ulong to void
+o = ulong get tfto y
+n = ulong get tftn y
+if tfhas o n a b
+c = get tftc y
+tfsub o n c
+m = tfrpool o n a b t
+put tftn y uchar m
+tfadd o m c y t
+end
+end
+
+note free list node e; returns its successor (node + 1; 0 at the end)
+fn tffree e ulong to ulong
+nx = ulong get tfnx e
+put tfnx e uint get tfst 9
+put tfst 9 add e 1
+ret nx
+end
+
+note merge t into type y unless y already met this merge (stamp t - 271)
+fn tfvisit y ulong a ulong b ulong t ulong to void
+st = uint sub t 271
+if ne get tfts y st
+put tfts y st
+tfmtype y a b t
+end
+end
+
+note merge t over every type listed under pair slot s; the walked nodes go to the free list (the
+note pair never comes back)
+fn tfwalk s ulong a ulong b ulong t ulong to void
+nd = ulong get tfph s
+put tfph s 0
+for o ulong 17
+q = ulong 0
+while and gt nd 0 lt q 999999 bound 999999
+q = add q 1
+e = sub nd 1
+y = ulong get tfnt e
+nd = tffree e
+tfvisit y a b t
+end
+end
+end
+
+note heap every pair slot made by this merge (tfnl[0 .. tfst 6)) that has a count
+fn tfnewp to void
+nw = get tfst 6
+for i ulong nw
+q = ulong get tfnl i
+c = get tfpc q
+if gt c 0
+kq = sub ulong get tfpk q 1
+tfhpush tfkey c shr kq 15 and kq 32767
+end
+end
+end
+
+note merges 0 .. v - 273 into tkma/tkmb and the pair records of tkmf (tkseal adds the header)
+fn tfmerge v ulong to void
+for k ulong sub v TKFIRST
+s = tfsel
+key = sub ulong get tfpk s 1
+a = shr key 15
+b = and key 32767
+t = add TKFIRST k
+put tkma t ushort a
+put tkmb t ushort b
+p = add 32 mul 4 k
+put tkmf p uchar and a 255
+put tkmf add p 1 uchar shr a 8
+put tkmf add p 2 uchar and b 255
+put tkmf add p 3 uchar shr b 8
+put tfst 6 0
+tfwalk s a b t
+tfnewp
+end
+end
