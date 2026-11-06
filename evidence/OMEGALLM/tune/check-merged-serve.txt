@@ -1,0 +1,25 @@
+ollm_sha256=318573b6cc65bb6dbb0e63ab23c0afffdc45eab10823ccf5d1a98433842f113d
+data_sha256=0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0
+PASS init: I 119104
+PASS train base 0..30 rc: 0
+PASS train past TOTAL makes no step (why tune exists): 0
+PASS checkpoint unchanged past TOTAL: 0
+PASS tune: U 119104
+PASS weights kept (eval loss and bpb equal): 4 4901318 7071108
+PASS step reset: 0
+PASS Adam m and v zeroed: 0
+PASS control: base checkpoint moments nonzero (1899279 bytes)
+PASS fine-tune 0..20 rc: 0
+PASS fine-tune saves: T 10,T 20,
+PASS fine-tune resume 0..10..20 bit-identical to 0..20: 0
+PASS fine-tune changed the weights
+PASS fine-tune lowered eval loss (micro-nats 4901318 to 4816743)
+PASS tune deterministic: 0
+PASS TOTAL 0 refused: 12
+PASS TOTAL 1000000 refused: 12
+PASS argument count refused: 2
+PASS truncated checkpoint refused: 10
+PASS refused tune wrote no output
+PASS negative control: one moment-reset line to remove: 1
+PASS negative control caught: moments not reset (1899279 nonzero bytes)
+TUNE_PASS
