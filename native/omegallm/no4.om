@@ -1,0 +1,7 @@
+note SPDX-License-Identifier: AGPL-3.0-only
+note o4cmd for x86efi: v4.om needs the Linux host words mapnew, mapget, mapset, fork and waitpid,
+note which the UEFI backend does not have, so every v4 command (init4, train4, eval4, sample4,
+note tune4, gcheck4, ropeck, kvck) and any other unknown command refuses with exit 2 here.
+fn o4cmd w ulong to int
+exit 2
+end

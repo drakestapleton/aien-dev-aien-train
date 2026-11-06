@@ -1,0 +1,2243 @@
+note SPDX-License-Identifier: AGPL-3.0-only
+note omegallm v4.om (DRA-162, docs/omegallm/CONTRACT-V4.md): the scaled architecture. Rotary
+note positions (RoPE, no wpe), context up to 16384, configurable width, depth and heads, a KV cache
+note for decode, checkpoint OLLMCK03, and the master state (parameters, Adam m and v, the per-block
+note gradients and the saved activations of the layers that do not fit) in host mappings rather than
+note omc globals, so P is bounded by memory and not by the 2^30-byte globals limit (omc error 23).
+note Linux targets only (aarch64, gb10, x86linux): it uses the host words mapnew, mapget, mapset,
+note fork and waitpid. x86efi concatenates no4.om instead. Concatenated after cli.om; the v3 units
+note are unchanged and their kernels are reused with og set so that opx is the identity (og[34] =
+note OWC) and ogra writes ogr directly (og[8] = 0, og[10] = 0).
+note Commands (argv[1] packings, Wolfram FromDigits[Reverse[ToCharacterCode[w]],256]): init4
+note 225291365993, train4 57648819040884, eval4 225156626021, sample4 14748215206044019, gcheck4
+note 14754773436228455, ropeck 118074647801714, kvck 1801680491, tune4 225040037236. Given an
+note OLLMCK01 or OLLMCK02 file, train4, eval4, sample4, gcheck4 and tune4 run the v3 command.
+note Exit codes as cli.om, plus 43 ropeck over tolerance and 44 kvck logits mismatch.
+note
+note Virtual parameter order (the CK03 payload and the master mapping): wte[V][D], then per layer
+note l: g1[D] Wq Wk Wv Wo [D][D] g2[D] W1[D][F] W2[F][D], then gf[D]. LSTR = 4 D^2 + 2 D F + 2 D,
+note P = V D + L LSTR + D. Master mapping 0 (private): params [0,P), m [P,2P), v [2P,3P).
+note Mapping 1 (shared, train4/gcheck4): G gradient regions of P values, then B sequence losses.
+note Mapping 2 (private, lazy): saved activations of the staged layers, ASTR4 per layer.
+note Mapping 3 (private, lazy): the KV cache of the staged decode layers, 2 T D per layer.
+note Compute windows: ow holds wte at 0 (klogit reads it there), gf at V D, then RW resident
+note layers from WS = V D + D and, when RW < L, one staging slot after them; ogr has the same layout
+note for the gradients. oa holds the activations (training layout xga, decode layout xgd).
+note xg slots: 0 V 1 T 2 D 3 H 4 F 5 L 6 B 7 E 8 P 9 LSTR 10 G 11 K 12 seed 13 step 14 TOTAL
+note 15 lr bits 16 rope base bits 17 WS 18 RW 19 staged weight layer (L none) 20 RA (resident
+note activation layers) 21 ASTR4 22 AB 23 staged activation layer 24 forward only 25 X 26 DH 27 DQ
+note 28 DK 29 DU 30 SF 31 RA row 32 RB 33 RO 34 RZ 35 RDZ 36 RF 37 LG 38 SC 39 SP 40 block j
+note 41 first sequence of the block 43 sc bits 44 RK (resident KV layers) 45 KVB 46 staged KV
+note layer 47 CV (cache valid) 48 CT (context count) 49 XR 50 HN 51 QR 52 OR 53 HMR 54 RLR 55 SS
+note 56 hash mode 57 mismatches 59 T D 60-63 gcheck stats 65 gf virtual index 66 master mapped
+note 67 KV mapped 68 activations mapped 70-71 ropeck counts.
+note Per-layer activation slot (ASTR4 = 6 T D + 2 T + T F + H T): HIN, Q, K (after RoPE), U, O,
+note HMID (T D each), S1[T], S2[T], RL[T][F] (post-ReLU; its sign is the backward mask), LSE[H][T].
+
+note Mutant i (K rotated with the wrong sign in the forward; the backward keeps the true inverse):
+note 1 in the product, 0 in the mutant. ropeck's shift check and gcheck4 must catch it.
+const OMUTI ulong 1
+note Mutant z (the backward applies R instead of R^T to dQ and dK): gcheck4 must catch it.
+const OMUTZ ulong 1
+note magics: "OLLMCK03" (Wolfram -> 3688530847248174159), CK01, CK02 (ckpt.om)
+const XCK3 ulong 3688530847248174159
+const XCK1 ulong 3544415659172318287
+const XCK2 ulong 3616473253210246223
+note ropeck tolerance: |fsin/fcos - Wolfram| absolute (values in [-1, 1])
+const XRTOL f64 0.000000000000001
+global xg ulong 96
+global xf f64 16
+global xmh long 4
+global xtk ulong 16385
+global xkh ulong 16384
+global xpd int 64
+global xst uchar 8
+note xar: argument slots of the row helpers (xatt 0..4, xlfa 5..9, xrffn 10..11; see each fn)
+global xar ulong 16
+
+fn o4cmd w ulong to int
+if eq w 225291365993
+xcinit
+ret 0
+end
+if eq w 57648819040884
+xctrain
+ret 0
+end
+if eq w 225156626021
+xceval
+ret 0
+end
+if eq w 14748215206044019
+xcsamp
+ret 0
+end
+if eq w 14754773436228455
+xcgchk
+ret 0
+end
+if eq w 118074647801714
+xcrope
+ret 0
+end
+if eq w 1801680491
+xckv
+ret 0
+end
+if eq w 225040037236
+xctune
+ret 0
+end
+exit 2
+end
+
+note ---- host mappings ----
+
+note map n f64 values (zero-filled) as handle k: shared (sh 1, flags 33) or private (flags 34)
+fn xmap k ulong n ulong sh ulong to void
+h = long 0
+if eq sh 1
+h = mapnew int -1 0 mul n 8 3 33
+else
+h = mapnew int -1 0 mul n 8 3 34
+end
+if lt h 0
+exit 70
+end
+put xmh k h
+end
+
+fn xmg k ulong i ulong to f64
+ret bitcast f64 mapget get xmh k mul i 8 8
+end
+
+fn xmp k ulong i ulong v f64 to void
+x = mapset get xmh k mul i 8 8 bitcast ulong v
+end
+
+note ow[o + i] = map k [mo + i], i < n (chunks of OCH)
+fn xm2w k ulong mo ulong o ulong n ulong to void
+for q ulong ocn n
+i = mul q OCH
+ie = oce q n
+while lt i ie bound 999999
+put ow add o i xmg k add mo i
+i = add i 1
+end
+end
+end
+
+note ogr[o + i] = map k [mo + i]
+fn xm2g k ulong mo ulong o ulong n ulong to void
+for q ulong ocn n
+i = mul q OCH
+ie = oce q n
+while lt i ie bound 999999
+put ogr add o i xmg k add mo i
+i = add i 1
+end
+end
+end
+
+note map k [mo + i] = ogr[o + i]
+fn xg2m k ulong mo ulong o ulong n ulong to void
+for q ulong ocn n
+i = mul q OCH
+ie = oce q n
+while lt i ie bound 999999
+xmp k add mo i get ogr add o i
+i = add i 1
+end
+end
+end
+
+note oa[o + i] = map k [mo + i]
+fn xm2a k ulong mo ulong o ulong n ulong to void
+for q ulong ocn n
+i = mul q OCH
+ie = oce q n
+while lt i ie bound 999999
+put oa add o i xmg k add mo i
+i = add i 1
+end
+end
+end
+
+note map k [mo + i] = oa[o + i]
+fn xa2m k ulong mo ulong o ulong n ulong to void
+for q ulong ocn n
+i = mul q OCH
+ie = oce q n
+while lt i ie bound 999999
+xmp k add mo i get oa add o i
+i = add i 1
+end
+end
+end
+
+note map k [o + i] = v
+fn xmset k ulong o ulong n ulong v f64 to void
+for q ulong ocn n
+i = mul q OCH
+ie = oce q n
+while lt i ie bound 999999
+xmp k add o i v
+i = add i 1
+end
+end
+end
+
+note master [o + i] times v
+fn xmscal o ulong n ulong v f64 to void
+for q ulong ocn n
+i = mul q OCH
+ie = oce q n
+while lt i ie bound 999999
+j = add o i
+xmp 0 j mul xmg 0 j v
+i = add i 1
+end
+end
+end
+
+fn xzg o ulong n ulong to void
+for q ulong ocn n
+i = mul q OCH
+ie = oce q n
+while lt i ie bound 999999
+put ogr add o i 0.0f64
+i = add i 1
+end
+end
+end
+
+fn xza o ulong n ulong to void
+for q ulong ocn n
+i = mul q OCH
+ie = oce q n
+while lt i ie bound 999999
+put oa add o i 0.0f64
+i = add i 1
+end
+end
+end
+
+note oa[o + i] = ow[w + i]
+fn xcpw o ulong w ulong n ulong to void
+for i ulong n
+put oa add o i get ow add w i
+end
+end
+
+note oa[o + i] = oa[a + i]
+fn xcpa o ulong a ulong n ulong to void
+for i ulong n
+put oa add o i get oa add a i
+end
+end
+
+note ---- geometry ----
+
+note check V T D H F L B (xg 0..6) and G (xg 10); derive E, LSTR, P and the window and activation
+note layouts; false when a value is out of range or a layout passes a pool
+fn xgeom to bool
+if not xgrng
+ret false
+end
+d = get xg 2
+f = get xg 4
+l = get xg 5
+v = get xg 0
+tt = get xg 1
+e = div d get xg 3
+put xg 7 e
+lsr = add add mul 4 mul d d mul 2 mul d f mul 2 d
+put xg 9 lsr
+put xg 65 add mul v d mul l lsr
+put xg 8 add get xg 65 d
+put xg 59 mul tt d
+if gt mul tt e OWWN
+ret false
+end
+if not xgw
+ret false
+end
+ret xga
+end
+
+fn xgrng to bool
+v = get xg 0
+tt = get xg 1
+if or or lt v 256 gt v 65536 or lt tt 2 gt tt 16384
+ret false
+end
+d = get xg 2
+h = get xg 3
+if or or eq d 0 gt d 8192 or eq h 0 gt h 64
+ret false
+end
+if ne rem d h 0
+ret false
+end
+if ne rem div d h 2 0
+ret false
+end
+f = get xg 4
+if or eq f 0 gt f 65536
+ret false
+end
+l = get xg 5
+if or eq l 0 gt l 4096
+ret false
+end
+b = get xg 6
+if or eq b 0 gt b 4096
+ret false
+end
+g = get xg 10
+if or or eq g 0 gt g b ne rem b g 0
+ret false
+end
+ret true
+end
+
+note weight windows: WS, RW (all L when every layer fits, else one slot less for staging)
+fn xgw to bool
+d = get xg 2
+ws = add mul get xg 0 d d
+put xg 17 ws
+cw = OWC
+if lt OGC cw
+cw = OGC
+end
+lsr = get xg 9
+if gt add ws lsr cw
+ret false
+end
+r = div sub cw ws lsr
+l = get xg 5
+if ge r l
+put xg 18 l
+else
+put xg 18 sub r 1
+end
+put xg 19 l
+ret true
+end
+
+note training activation layout in oa: X DH DQ DK DU (T D each), SF[T], rows RA RB RO RZ RDZ (D),
+note RF (F), LG (V), SC SP (T), then the layer slots from AB
+fn xga to bool
+td = get xg 59
+tt = get xg 1
+d = get xg 2
+put xg 25 0
+put xg 26 td
+put xg 27 mul 2 td
+put xg 28 mul 3 td
+put xg 29 mul 4 td
+o = mul 5 td
+put xg 30 o
+o = add o tt
+put xg 31 o
+put xg 32 add o d
+put xg 33 add o mul 2 d
+put xg 34 add o mul 3 d
+put xg 35 add o mul 4 d
+o = add o mul 5 d
+put xg 36 o
+o = add o get xg 4
+put xg 37 o
+o = add o get xg 0
+put xg 38 o
+o = add o tt
+put xg 39 o
+o = add o tt
+put xg 22 o
+ast = xast
+put xg 21 ast
+if gt add o ast OAC
+ret false
+end
+r = div sub OAC o ast
+l = get xg 5
+if ge r l
+put xg 20 l
+else
+put xg 20 sub r 1
+end
+put xg 23 l
+ret true
+end
+
+note ASTR4 = 6 T D + 2 T + T F + H T
+fn xast to ulong
+tt = get xg 1
+a = add mul 6 get xg 59 mul 2 tt
+ret add add a mul tt get xg 4 mul get xg 3 tt
+end
+
+note decode layout in oa: rows XR HN QR OR HMR RA RO RZ (D), RF RLR (F), SS[4], LG (V), SC (T), then
+note the KV slots (K then U, T D each) from KVB
+fn xgd to void
+d = get xg 2
+f = get xg 4
+put xg 49 0
+put xg 50 d
+put xg 51 mul 2 d
+put xg 52 mul 3 d
+put xg 53 mul 4 d
+put xg 31 mul 5 d
+put xg 33 mul 6 d
+put xg 34 mul 7 d
+o = mul 8 d
+put xg 36 o
+put xg 54 add o f
+o = add o mul 2 f
+put xg 55 o
+o = add o 4
+put xg 37 o
+o = add o get xg 0
+put xg 38 o
+o = add o get xg 1
+put xg 45 o
+kvs = mul 2 get xg 59
+r = div sub OAC o kvs
+l = get xg 5
+if eq r 0
+exit 12
+end
+if ge r l
+put xg 44 l
+else
+put xg 44 sub r 1
+end
+put xg 46 l
+put og 27 get xg 37
+put xg 24 1
+end
+
+note og for the v3 kernels and helpers, the RoPE table, 1/sqrt(E), the step scale and mapping 0
+fn xsetup to void
+for i ulong 7
+put og i get xg i
+end
+put og 7 get xg 7
+put og 8 0
+put og 10 0
+put og 34 OWC
+put og 42 get xg 14
+put ogkm 0 0
+put xf 8 fsqrt f64 get xg 7
+put xg 43 bitcast ulong div 1.0f64 f64 mul get xg 1 get xg 6
+put xg 24 0
+put xg 56 0
+put xg 11 1
+xrtab
+if eq get xg 66 0
+xmap 0 mul 3 get xg 8 0
+put xg 66 1
+end
+end
+
+note ---- RoPE ----
+
+note cos and sin of x >= 0 (x < 2^22 pi/2) into xf[0], xf[1]: q = trunc(x 2/pi + 1/2), r = x - q
+note (p1 + p2 + p3) with the fdlibm-style 33-bit split of pi/2 (p1 31 bits, p2 33 bits, so q p1 and
+note q p2 are exact), then Taylor polynomials of degree 17 (sin) and 18 (cos) on |r| <= pi/4 + eps
+note and the quadrant q mod 4. Every constant is a Wolfram-derived f64 bit pattern (CONTRACT-V4 4).
+fn xsc x f64 to void
+q = long add mul x bitcast f64 ulong 4603909380684499075 0.5
+fq = f64 q
+r = sub x mul fq bitcast f64 ulong 4609753056924401664
+r = sub r mul fq bitcast f64 ulong 4454258360616747008
+r = sub r mul fq bitcast f64 ulong 4297306550709743731
+z = mul r r
+s = xsinp r z
+c = xcosp z
+k = and ulong q 3
+if eq k 0
+put xf 0 c
+put xf 1 s
+end
+if eq k 1
+put xf 0 sub 0.0 s
+put xf 1 c
+end
+if eq k 2
+put xf 0 sub 0.0 c
+put xf 1 sub 0.0 s
+end
+if eq k 3
+put xf 0 s
+put xf 1 sub 0.0 c
+end
+end
+
+note r + r z (-1/3! + z (1/5! - ... + z 1/17!))
+fn xsinp r f64 z f64 to f64
+p = bitcast f64 ulong 4389130328383466826
+p = add mul p z bitcast f64 ulong 13648976655441704991
+p = add mul p z bitcast f64 ulong 4460272573143870729
+p = add mul p z bitcast f64 ulong 13716528800881525988
+p = add mul p z bitcast f64 ulong 4523617214285662004
+p = add mul p z bitcast f64 ulong 13774824197408792602
+p = add mul p z bitcast f64 ulong 4575957461383581969
+p = add mul p z bitcast f64 ulong 13818544856648471893
+ret add r mul mul r z p
+end
+
+note 1 + z (-1/2! + z (1/4! - ... - z 1/18!))
+fn xcosp z f64 to f64
+p = bitcast f64 ulong 13593695978845207959
+p = add mul p z bitcast f64 ulong 4407590220077447199
+p = add mul p z bitcast f64 ulong 13666517717442657437
+p = add mul p z bitcast f64 ulong 4477122120089393304
+p = add mul p z bitcast f64 ulong 13732177094651715420
+p = add mul p z bitcast f64 ulong 4537941361671905306
+p = add mul p z bitcast f64 ulong 13787419979223755799
+p = add mul p z bitcast f64 ulong 4586165620538955093
+p = add mul p z bitcast f64 ulong 13826050856027422720
+ret add 1.0 mul z p
+end
+
+note table oww[2 (t E/2 + i)] = cos(t w_i), [.. + 1] = sin(t w_i), w_i = exp(-(2i/E) ln base),
+note t < T, i < E/2
+fn xrtab to void
+e = get xg 7
+h2 = div e 2
+lb = flog bitcast f64 get xg 16
+for i ulong h2
+w = fexp sub 0.0 mul div f64 mul 2 i f64 e lb
+xrtab1 i w h2
+end
+end
+
+fn xrtab1 i ulong w f64 h2 ulong to void
+for t ulong get xg 1
+xsc mul f64 t w
+o = mul add mul t h2 i 2
+put oww o get xf 0
+put oww add o 1 get xf 1
+end
+end
+
+note rotate the D-row at o (oa) for position t: pairs (2i, 2i+1) of each head, angle t w_(i mod E/2);
+note sg = 1 is R, sg = -1 is R^T (the backward)
+fn xrope o ulong t ulong sg f64 to void
+h2 = div get xg 7 2
+tb = mul t h2
+n = div get xg 2 2
+for i ulong n
+p = add o mul i 2
+w = mul add tb rem i h2 2
+xrot1 p w sg
+end
+end
+
+note rotate the pair oa[p], oa[p + 1] by the table entry at w (sin times sg)
+fn xrot1 p ulong w ulong sg f64 to void
+c = get oww w
+s = mul get oww add w 1 sg
+a = get oa p
+b = get oa add p 1
+put oa p sub mul a c mul b s
+put oa add p 1 add mul a s mul b c
+end
+
+note the K rotation of the forward (mutant i: R^T)
+fn xropk o ulong t ulong to void
+if eq OMUTI 0
+xrope o t sub 0.0f64 1.0f64
+else
+xrope o t 1.0
+end
+end
+
+note the backward rotation of dQ and dK: R^T (mutant z: R)
+fn xropb o ulong t ulong to void
+if eq OMUTZ 0
+xrope o t 1.0
+else
+xrope o t sub 0.0f64 1.0f64
+end
+end
+
+note ---- staging ----
+
+note virtual index of layer l
+fn xvl l ulong to ulong
+ret add mul get xg 0 get xg 2 mul l get xg 9
+end
+
+note component k of the layer at base w (0 g1, 1 Wq, 2 Wk, 3 Wv, 4 Wo, 5 g2, 6 W1, 7 W2)
+fn xwo w ulong k ulong to ulong
+d = get xg 2
+dd = mul d d
+if eq k 0
+ret w
+end
+if le k 4
+ret add add w d mul sub k 1 dd
+end
+if eq k 5
+ret add add w d mul 4 dd
+end
+if eq k 6
+ret add add w mul 2 d mul 4 dd
+end
+ret add add add w mul 2 d mul 4 dd mul d get xg 4
+end
+
+note window base of layer l (resident, or the staging slot)
+fn xwl l ulong to ulong
+rw = get xg 18
+if lt l rw
+ret add get xg 17 mul l get xg 9
+end
+ret add get xg 17 mul rw get xg 9
+end
+
+fn xstw l ulong to void
+if lt l get xg 18
+ret
+end
+if eq get xg 19 l
+ret
+end
+xm2w 0 xvl l xwl l get xg 9
+put xg 19 l
+end
+
+note wte, gf and the resident layers from the master (after a load or an Adam step)
+fn xldw to void
+d = get xg 2
+vd = mul get xg 0 d
+xm2w 0 0 0 vd
+xm2w 0 get xg 65 vd d
+lsr = get xg 9
+ws = get xg 17
+for l ulong get xg 18
+xm2w 0 xvl l add ws mul l lsr lsr
+end
+put xg 19 get xg 5
+end
+
+note activation slot of layer l
+fn xsla l ulong to ulong
+ra = get xg 20
+if lt l ra
+ret add get xg 22 mul l get xg 21
+end
+ret add get xg 22 mul ra get xg 21
+end
+
+note after the forward of a staged layer: save its slot (training) or forget it (forward only)
+fn xflsa l ulong to void
+if lt l get xg 20
+ret
+end
+if eq get xg 24 1
+put xg 23 get xg 5
+ret
+end
+ast = get xg 21
+if eq get xg 68 0
+xmap 2 mul get xg 5 ast 0
+put xg 68 1
+end
+xa2m 2 mul l ast xsla l ast
+put xg 23 l
+end
+
+fn xlda l ulong to void
+if lt l get xg 20
+ret
+end
+if eq get xg 23 l
+ret
+end
+ast = get xg 21
+xm2a 2 mul l ast xsla l ast
+put xg 23 l
+end
+
+note gradient slot of a staged layer: zero for the block's first sequence, else region j
+fn xstg l ulong to void
+if lt l get xg 18
+ret
+end
+lsr = get xg 9
+if eq get xg 41 1
+xzg xwl l lsr
+else
+xm2g 1 add mul get xg 40 get xg 8 xvl l xwl l lsr
+end
+end
+
+fn xflg l ulong to void
+if lt l get xg 18
+ret
+end
+xg2m 1 add mul get xg 40 get xg 8 xvl l xwl l get xg 9
+end
+
+note ---- forward ----
+
+fn xemb to void
+d = get xg 2
+x = get xg 25
+tt = get xg 1
+for t ulong tt
+o = add x mul t d
+s = mul get xtk t d
+xcpw o s d
+end
+end
+
+note slot section offsets of the activation slot at a: k 0..5 are HIN Q K U O HMID (k T D), 6 S1,
+note 7 S2 (T each), 8 RL (T F), 9 LSE (H T)
+fn xso a ulong k ulong to ulong
+td = get xg 59
+if le k 6
+ret add a mul k td
+end
+b = add a mul 6 td
+tt = get xg 1
+if eq k 7
+ret add b tt
+end
+b = add b mul 2 tt
+if eq k 8
+ret b
+end
+f = get xg 4
+ret add b mul tt f
+end
+
+fn xlayf l ulong to void
+xstw l
+a = xsla l
+w = xwl l
+tt = get xg 1
+for t ulong tt
+xlf1 a w t
+end
+h = get xg 3
+for n ulong h
+xlfa a n
+end
+for t2 ulong tt
+xlf2 a w t2
+end
+xflsa l
+end
+
+note row t: HIN = X; A = rms(HIN, g1); Q, K, U = A Wq, A Wk, A Wv; rotate Q and K
+fn xlf1 a ulong w ulong t ulong to void
+d = get xg 2
+r = mul t d
+hin = add a r
+x = add get xg 25 r
+xcpa hin x d
+put xar 0 add xso a 1 r
+put xar 1 add xso a 2 r
+put xar 2 add xso a 3 r
+s1 = add xso a 6 t
+xrqkv hin s1 w
+x = get xar 0
+xrope x t 1.0f64
+x = get xar 1
+xropk x t
+end
+
+note the shared row step (training and decode): A = rms(hin, g1) in RA, s at s1; the q, k, u rows
+note at xar[0], xar[1], xar[2]
+fn xrqkv hin ulong s1 ulong w ulong to void
+d = get xg 2
+ra = get xg 31
+frms hin w ra s1
+for k ulong 3
+x = xwo w add k 1
+y = get xar k
+kvm ra x y d d
+end
+end
+
+note head n for every row of the layer at slot a; LSE stored per (n, t)
+fn xlfa a ulong n ulong to void
+nh = mul n get xg 7
+put xar 5 add xso a 9 mul n get xg 1
+put xar 6 add xso a 1 nh
+put xar 7 add xso a 2 nh
+put xar 8 add xso a 3 nh
+put xar 9 add xso a 4 nh
+tt = get xg 1
+for t ulong tt
+xlfa1 t
+end
+end
+
+fn xlfa1 t ulong to void
+r = mul t get xg 2
+put xar 0 add get xar 6 r
+put xar 1 get xar 7
+put xar 2 get xar 8
+put xar 3 add t 1
+put xar 4 add get xar 9 r
+l = xatt
+put oa add get xar 5 t l
+end
+
+note one attention row of one head (shared by training and decode), arguments in xar: q row 0, key
+note base 1, value base 2 (rows of stride D), nj 3, output row 4. s_j = (q . k_j)/sqrt(E) for j < nj,
+note p = softmax(s) in SC, o = sum_j p_j u_j; returns m + log(sum)
+fn xatt to f64
+nj = get xar 3
+q = get xar 0
+k = get xar 1
+m = xscore q k nj
+sc = get xg 38
+sm = osoft sc nj m
+oo = get xar 4
+e = get xg 7
+ozero oo e
+xattu oo nj
+ret add m flog sm
+end
+
+fn xattu oo ulong nj ulong to void
+sc = get xg 38
+uo = get xar 2
+d = get xg 2
+e = get xg 7
+for j ulong nj
+u = add uo mul j d
+p = get oa add sc j
+kaxpy oo u p e
+end
+end
+
+note s_j = (q . k_j)/sqrt(E) into SC[0..nj) (four keys per kdot4a pass); returns max s_j
+fn xscore qo ulong ko ulong nj ulong to f64
+isq = get xf 8
+m = bitcast f64 ulong 18442240474082181120
+j = ulong 0
+while le add j 4 nj bound 999999
+xsk4 qo ko j
+m = xsc4 j isq m
+j = add j 4
+end
+while lt j nj bound 4
+s = div xsk1 qo ko j isq
+put oa add get xg 38 j s
+m = fmax m s
+j = add j 1
+end
+ret m
+end
+
+fn xsk4 qo ulong ko ulong j ulong to void
+d = get xg 2
+qe = add qo get xg 7
+k = add ko mul j d
+kdot4a qo qe k d
+end
+
+fn xsk1 qo ulong ko ulong j ulong to f64
+qe = add qo get xg 7
+k = add ko mul j get xg 2
+ret kdot1a qo qe k
+end
+
+fn xsc4 j ulong isq f64 m f64 to f64
+p = add get xg 38 j
+for i ulong 4
+s = div get oq i isq
+put oa add p i s
+m = fmax m s
+end
+ret m
+end
+
+note row t: HMID = HIN + O Wo; FFN; X = HMID + relu(rms(HMID, g2) W1) W2
+fn xlf2 a ulong w ulong t ulong to void
+r = mul t get xg 2
+hm = add xso a 5 r
+oo = add xso a 4 r
+hin = add a r
+xrwo oo hin hm w
+s2 = add xso a 7 t
+put xar 10 add xso a 8 mul t get xg 4
+put xar 11 add get xg 25 r
+xrffn hm s2 w
+end
+
+fn xrwo oo ulong hin ulong hm ulong w ulong to void
+d = get xg 2
+x = xwo w 4
+kvm oo x hm d d
+kadd3 hm hin hm d
+end
+
+note FFN of one row (training and decode): RL row at xar[10], output X row at xar[11]
+fn xrffn hm ulong s2 ulong w ulong to void
+d = get xg 2
+f = get xg 4
+ra = get xg 31
+x = xwo w 5
+frms hm x ra s2
+x = xwo w 6
+y = get xg 36
+kvm ra x y d f
+z = get xar 10
+krelu z y f
+x = xwo w 7
+ra = get xg 33
+kvm z x ra f d
+y = get xar 11
+kadd3 y hm ra d
+end
+
+note FNV-1a 64 over the bit patterns of oa[o .. o + n), one 64-bit word per step
+fn xhash o ulong n ulong to ulong
+h = ulong 14695981039346656037
+for i ulong n
+h = mul xor h bitcast ulong get oa add o i 1099511628211
+end
+ret h
+end
+
+note the head over every row; mean loss. The backward of each row follows at once (training).
+fn xhead to f64
+ls = 0.0f64
+tt = get xg 1
+for t ulong tt
+ls = add ls xhr t
+end
+ret div ls f64 tt
+end
+
+fn xhr t ulong to f64
+d = get xg 2
+v = get xg 0
+r = mul t d
+xo = add get xg 25 r
+sf = add get xg 30 t
+z = get xg 34
+lg = get xg 37
+x = mul v d
+frms xo x z sf
+klogit z lg v d
+if eq get xg 56 1
+x = xhash lg v
+put xkh t x
+end
+y = get xtk add t 1
+ls = olossrow lg v y
+if eq get xg 24 0
+xhb xo sf y r
+end
+ret ls
+end
+
+note head backward of one row: dl = (p - onehot) sc; dwte += dl z; dz = dl wte; DH row = rms'(dz)
+fn xhb xo ulong sf ulong y ulong r ulong to void
+v = get xg 0
+d = get xg 2
+lg = get xg 37
+c = bitcast f64 get xg 43
+kdlog lg v y c
+z = get xg 34
+kger lg z 0 v d
+z = get xg 35
+kvm lg 0 z v d
+xhb2 xo sf r
+end
+
+fn xhb2 xo ulong sf ulong r ulong to void
+d = get xg 2
+dh = add get xg 26 r
+ozero dh d
+x = mul get xg 0 d
+dz = get xg 35
+brms xo x sf dz dh
+end
+
+note ---- backward ----
+
+fn xlayb l ulong to void
+xstw l
+xlda l
+xstg l
+a = xsla l
+w = xwl l
+tt = get xg 1
+for t ulong tt
+xffb a w t
+end
+x = get xg 27
+n = mul 3 get xg 59
+xza x n
+for t2 ulong tt
+xattb a w t2
+end
+for t3 ulong tt
+xqkvb a w t3
+end
+xflg l
+end
+
+note FFN backward of row t; DH[t] (dX) becomes dHMID
+fn xffb a ulong w ulong t ulong to void
+d = get xg 2
+f = get xg 4
+dh = add get xg 26 mul t d
+rf = get xg 36
+rl = add xso a 8 mul t f
+ozero rf f
+x = xwo w 7
+kvta dh x rf f d
+kdrelu rf rl f
+kger rl dh x f d
+xffb2 a w t rf
+end
+
+fn xffb2 a ulong w ulong t ulong rf ulong to void
+r = mul t get xg 2
+hm = add xso a 5 r
+s2 = add xso a 7 t
+xrms2 hm s2 w
+y = add get xg 26 r
+xffb3 hm s2 w rf y
+end
+
+note RA = rms(hm, g2) (the FFN input) again
+fn xrms2 hm ulong s2 ulong w ulong to void
+x = xwo w 5
+y = get xg 31
+frms hm x y s2
+end
+
+fn xffb3 hm ulong s2 ulong w ulong rf ulong dh ulong to void
+d = get xg 2
+f = get xg 4
+x = xwo w 6
+y = get xg 31
+kger y rf x d f
+y = get xg 32
+ozero y d
+kvta rf x y d f
+x = xwo w 5
+brms hm x s2 y dh
+end
+
+note dO = dHMID Wo^T into RO, dWo += O dHMID, then each head
+fn xattb a ulong w ulong t ulong to void
+xattb0 a w t
+h = get xg 3
+for n ulong h
+xattbh a n t
+end
+end
+
+fn xattb0 a ulong w ulong t ulong to void
+d = get xg 2
+r = mul t d
+dh = add get xg 26 r
+ro = get xg 33
+ozero ro d
+x = xwo w 4
+kvta dh x ro d d
+y = add xso a 4 r
+kger y dh x d d
+end
+
+note head n of row t: p_j = exp(s_j - LSE), dp_j = dO . u_j, ds_j = p_j (dp_j - sum p dp)/sqrt(E);
+note dQ[t] += ds_j k_j, dK[j] += ds_j q_t, dU[j] += p_j dO. xar: q 0, key base 1, dQ row 2, nh 3
+fn xattbh a ulong n ulong t ulong to void
+nh = mul n get xg 7
+r = mul t get xg 2
+put xar 3 nh
+put xar 0 add xso a 1 add r nh
+put xar 1 add xso a 2 nh
+put xar 2 add get xg 27 add r nh
+x = add xso a 9 mul n get xg 1
+lse = get oa add x t
+x = add xso a 3 nh
+y = add t 1
+xattb2 x y lse
+end
+
+fn xattb2 uo ulong nj ulong lse f64 to void
+q = get xar 0
+k = get xar 1
+m = xscore q k nj
+xpexp nj lse
+x = add get xg 33 get xar 3
+xdp x uo nj
+dt = xdtot nj
+for j ulong nj
+xab1 j dt
+end
+end
+
+fn xpexp nj ulong lse f64 to void
+sc = get xg 38
+for j ulong nj
+p = add sc j
+put oa p fexp sub get oa p lse
+end
+end
+
+note SP[j] = dO . u_j for j < nj
+fn xdp dor ulong uo ulong nj ulong to void
+d = get xg 2
+de = add dor get xg 7
+j = ulong 0
+while le add j 4 nj bound 999999
+k = add uo mul j d
+kdot4a dor de k d
+xput4 add get xg 39 j
+j = add j 4
+end
+while lt j nj bound 4
+k2 = add uo mul j d
+s = kdot1a dor de k2
+put oa add get xg 39 j s
+j = add j 1
+end
+end
+
+fn xput4 p ulong to void
+for i ulong 4
+put oa add p i get oq i
+end
+end
+
+fn xdtot nj ulong to f64
+sc = get xg 38
+sp = get xg 39
+s = 0.0f64
+for j ulong nj
+s = add s mul get oa add sc j get oa add sp j
+end
+ret s
+end
+
+fn xab1 j ulong dt f64 to void
+p = get oa add get xg 38 j
+s = get oa add get xg 39 j
+ds = div mul p sub s dt get xf 8
+e = get xg 7
+nh = get xar 3
+jd = add mul j get xg 2 nh
+x = add get xar 1 mul j get xg 2
+y = get xar 2
+kaxpy y x ds e
+x = add get xg 28 jd
+y = get xar 0
+kaxpy x y ds e
+x = add get xg 29 jd
+y = add get xg 33 nh
+kaxpy x y p e
+end
+
+note rotate dQ and dK back, dA = dQ Wq^T + dK Wk^T + dU Wv^T, the three weight gradients, rms'
+fn xqkvb a ulong w ulong t ulong to void
+r = mul t get xg 2
+x = add get xg 27 r
+xropb x t
+x = add get xg 28 r
+xropb x t
+d = get xg 2
+rb = get xg 32
+ozero rb d
+for k ulong 3
+x = add get xg add 27 k r
+y = xwo w add k 1
+kvta x y rb d d
+end
+xqkvb2 a w t
+end
+
+fn xqkvb2 a ulong w ulong t ulong to void
+d = get xg 2
+r = mul t d
+hin = add a r
+s1 = add xso a 6 t
+ra = get xg 31
+frms hin w ra s1
+for k ulong 3
+x = add get xg add 27 k r
+y = xwo w add k 1
+kger ra x y d d
+end
+x = get xg 32
+y = add get xg 26 r
+brms hin w s1 x y
+end
+
+fn xembb to void
+d = get xg 2
+tt = get xg 1
+for t ulong tt
+o = mul get xtk t d
+x = add get xg 26 mul t d
+kaxpg o x 1.0f64 d
+end
+end
+fn xseq to f64
+xemb
+l = get xg 5
+for i ulong l
+xlayf i
+end
+ls = xhead
+if eq get xg 24 0
+for k ulong l
+xlayb sub sub l 1 k
+end
+xembb
+end
+ret ls
+end
+
+note ---- data, gradient, Adam ----
+
+note offset of sequence b of step s: splitmix64(seed xor ((s B + b) 0x9E3779B97F4A7C15)) mod (N - T)
+fn xoff s ulong b ulong to ulong
+n = get odn 0
+x = mul add mul s get xg 6 b 11400714819323198485
+ret rem smx xor get xg 12 x sub n get xg 1
+end
+
+fn xrow o ulong to void
+tt = get xg 1
+odrow o add tt 1
+for t ulong add tt 1
+put xtk t odtk t
+end
+end
+
+note block j: sequences j B/G .. (j+1) B/G - 1 into gradient region j, losses after the regions
+fn xblock j ulong to void
+put xg 40 j
+put xg 41 1
+xzg 0 add get xg 17 mul get xg 18 get xg 9
+r = div get xg 6 get xg 10
+s = get xg 13
+lb = mul get xg 10 get xg 8
+for i ulong r
+b = add mul j r i
+xrow xoff s b
+ls = xseq
+xmp 1 add lb b ls
+put xg 41 0
+end
+xstres j
+end
+
+note the resident gradient windows into region j
+fn xstres j ulong to void
+jp = mul j get xg 8
+d = get xg 2
+vd = mul get xg 0 d
+xg2m 1 jp 0 vd
+xg2m 1 add jp get xg 65 vd d
+lsr = get xg 9
+ws = get xg 17
+for l ulong get xg 18
+xg2m 1 add jp xvl l add ws mul l lsr lsr
+end
+end
+
+note one step: blocks over K processes, region 0 += region j (j ascending), Adam, windows reloaded.
+note Every block is computed alone and folded in a fixed order, so the bits do not depend on K.
+fn xstep to f64
+k = get xg 11
+g = get xg 10
+per = div g k
+if le k 1
+for j ulong g
+xblock j
+end
+else
+oflush
+for w ulong sub k 1
+xfork w per
+end
+for j2 ulong per
+xblock j2
+end
+for w2 ulong sub k 1
+xjoin w2
+end
+end
+xfold
+ls = xlsum
+xadam
+put xg 13 add get xg 13 1
+xldw
+ret ls
+end
+
+fn xfork w ulong per ulong to void
+pid = fork
+if lt pid 0
+exit 70
+end
+if eq pid 0
+j0 = mul add w 1 per
+for j ulong per
+xblock add j0 j
+end
+exit 0
+end
+put xpd w int pid
+end
+
+fn xjoin w ulong to void
+pd = get xpd w
+x = waitpid pd xst 0 4 0
+if ne x long pd
+exit 70
+end
+s0 = get xst 0
+s1 = get xst 1
+if ne or s0 s1 0
+exit 70
+end
+end
+
+fn xfold to void
+p = get xg 8
+for j ulong sub get xg 10 1
+xfold1 mul add j 1 p p
+end
+end
+
+fn xfold1 jo ulong p ulong to void
+for q ulong ocn p
+i = mul q OCH
+ie = oce q p
+while lt i ie bound 999999
+xmp 1 i add xmg 1 i xmg 1 add jo i
+i = add i 1
+end
+end
+end
+
+fn xlsum to f64
+b = get xg 6
+lb = mul get xg 10 get xg 8
+s = 0.0f64
+for i ulong b
+s = add s xmg 1 add lb i
+end
+ret div s f64 b
+end
+
+note Adam on region 0 (adam.om's order: clip to norm 1, bias correction, olrs schedule)
+fn xadam to void
+p = get xg 8
+ss = 0.0f64
+for q ulong ocn p
+i = mul q OCH
+ie = oce q p
+while lt i ie bound 999999
+g = xmg 1 i
+ss = add ss mul g g
+i = add i 1
+end
+end
+nr = fsqrt ss
+c = 1.0f64
+if gt nr 1.0
+c = div 1.0 nr
+end
+s = get xg 13
+put ofs 3 olrs s bitcast f64 get xg 15
+put ofs 4 sub 1.0 opowb 0.9 s
+put ofs 5 sub 1.0 opowb 0.99 s
+for q2 ulong ocn p
+xadamc q2 c
+end
+end
+
+fn xadamc q ulong c f64 to void
+i = mul q OCH
+ie = oce q get xg 8
+while lt i ie bound 999999
+xadam1 i c
+i = add i 1
+end
+end
+
+fn xadam1 i ulong c f64 to void
+p = get xg 8
+g = mul xmg 1 i c
+mi = add p i
+m = add mul 0.9 xmg 0 mi mul sub 1.0f64 0.9f64 g
+xmp 0 mi m
+vi = add mi p
+v = add mul 0.99 xmg 0 vi mul sub 1.0f64 0.99f64 mul g g
+xmp 0 vi v
+u = mul get ofs 3 div m get ofs 4
+w = add fsqrt div v get ofs 5 0.00000001
+xmp 0 i sub xmg 0 i div u w
+end
+
+note ---- checkpoint OLLMCK03 ----
+
+note header (128 bytes): magic, V T D H F L B, seed, step, TOTAL, lr bits, P, G, rope base bits,
+note FNV-1a 64 of the payload; payload 24 P bytes (params, m, v; f64 little-endian)
+fn xsave ai ulong to void
+ocwopen ai
+h = ulong 14695981039346656037
+n = mul 3 get xg 8
+for q ulong div add n sub OCKC 1 OCKC
+h = xsavc q n h
+end
+xhdr h
+ocwput 0 128
+ocwend ai
+end
+
+fn xsavc q ulong n ulong h ulong to ulong
+i0 = mul q OCKC
+m = sub n i0
+if gt m OCKC
+m = OCKC
+end
+for j ulong m
+ocput8 mul j 8 bitcast ulong xmg 0 add i0 j
+end
+nb = mul m 8
+x = ocfnvk h nb
+ocwput add 128 mul i0 8 nb
+ret x
+end
+
+fn xhdr h ulong to void
+ocput8 0 XCK3
+for i ulong 7
+ocput8 mul add i 1 8 get xg i
+end
+ocput8 64 get xg 12
+ocput8 72 get xg 13
+ocput8 80 get xg 14
+ocput8 88 get xg 15
+ocput8 96 get xg 8
+ocput8 104 get xg 10
+ocput8 112 get xg 16
+ocput8 120 h
+end
+
+note magic of the file in argv[ai] (0 when shorter than 8 bytes)
+fn xpeek ai ulong to ulong
+if lt ofsz ai 8
+ret 0
+end
+r = oprd ai 0 0 8
+ret opw8 0
+end
+
+note load a CK03 file: 10 short, 11 magic, 12 shapes, 13 P, 14 FNV, 15 long, 70 I/O
+fn xload ai ulong to void
+n = ofsz ai
+if lt n 8
+exit 10
+end
+r = oprd ai 0 0 128
+if ne opw8 0 XCK3
+exit 11
+end
+if lt n 128
+exit 10
+end
+for i ulong 7
+put xg i opw8 mul add i 1 8
+end
+put xg 12 opw8 64
+put xg 13 opw8 72
+put xg 14 opw8 80
+put xg 15 opw8 88
+put xg 10 opw8 104
+put xg 16 opw8 112
+if not xgeom
+exit 12
+end
+if gt get xg 14 999999
+exit 12
+end
+if not gt bitcast f64 get xg 16 1.0
+exit 12
+end
+if ne opw8 96 get xg 8
+exit 13
+end
+wn = add 128 mul 24 get xg 8
+if lt n wn
+exit 10
+end
+if gt n wn
+exit 15
+end
+hf = opw8 120
+xsetup
+h = ulong 14695981039346656037
+nv = mul 3 get xg 8
+for q ulong div add nv sub OCKC 1 OCKC
+h = xloadc ai q nv h
+end
+if ne h hf
+exit 14
+end
+xldw
+end
+
+fn xloadc ai ulong q ulong n ulong h ulong to ulong
+i0 = mul q OCKC
+m = sub n i0
+if gt m OCKC
+m = OCKC
+end
+nb = mul m 8
+r = oprd ai add 128 mul i0 8 0 nb
+if ne r nb
+exit 10
+end
+x = ocfnvw h nb
+for j ulong m
+xmp 0 add i0 j bitcast f64 opw8 mul j 8
+end
+ret x
+end
+
+note ---- init (adam.om's rule over the v4 virtual order) ----
+
+fn xinit to void
+p = get xg 8
+sd = get xg 12
+for q ulong ocn p
+xinitc q sd p
+end
+d = get xg 2
+l = get xg 5
+ri = div 1.0f64 fsqrt f64 mul 2 l
+for i ulong l
+v = xvl i
+xmset 0 v d 1.0f64
+xmscal xwo v 4 mul d d ri
+xmset 0 xwo v 5 d 1.0f64
+xmscal xwo v 7 mul d get xg 4 ri
+end
+xmset 0 get xg 65 d 1.0f64
+end
+
+fn xinitc q ulong sd ulong p ulong to void
+i = mul q OCH
+ie = oce q p
+while lt i ie bound 999999
+r = mul f64 shr smx add sd i 11 1.1102230246251565e-16
+xmp 0 i mul sub add r r 1.0 0.034641016151377546
+i = add i 1
+end
+end
+
+note ---- commands ----
+
+note init4 CK V T D H F L B SEED TOTAL LRMICRO G: a fresh OLLMCK03 (rope base 10000); prints `I P`
+fn xcinit to void
+if ne oargc 14
+exit 2
+end
+for i ulong 7
+put xg i oargu add 3 i
+end
+put xg 12 oargu 10
+tt = oargu 11
+if gt tt 999999
+exit 12
+end
+put xg 14 tt
+put xg 15 bitcast ulong div f64 oargu 12 1000000.0
+put xg 10 oargu 13
+put xg 13 0
+put xg 16 bitcast ulong 10000.0f64
+if not xgeom
+exit 12
+end
+xsetup
+xinit
+xldw
+xsave 2
+oputc 73
+oputc 32
+oputu get xg 8
+oputc 10
+oflush
+end
+
+fn xisv3 ai ulong to bool
+mg = xpeek ai
+ret or eq mg XCK1 eq mg XCK2
+end
+
+note train4 CK TRAIN UNTIL EVERY [K]: as train (cli.om) on a CK03 file; K processes (exit 29 when
+note K < 1, K > G or G mod K != 0); prints `T s+1 loss_micro`
+fn xctrain to void
+na = oargc
+if and ne na 6 ne na 7
+exit 2
+end
+if xisv3 2
+cmdtrain
+ret
+end
+xload 2
+odopen 3
+un = oargu 4
+ev = oargu 5
+if eq ev 0
+exit 2
+end
+k = ulong 1
+if eq na 7
+k = oargu 6
+end
+g = get xg 10
+if or eq k 0 gt k g
+exit 29
+end
+if ne rem g k 0
+exit 29
+end
+put xg 11 k
+xmap 1 add mul g get xg 8 get xg 6 1
+en = get xg 14
+if lt un en
+en = un
+end
+while lt get xg 13 en bound 999999
+ls = xstep
+s1 = get xg 13
+if or eq rem s1 ev 0 eq s1 en
+xsave 2
+oputc 84
+oputc 32
+oputu s1
+oputc 32
+oputl rmic ls
+oputc 10
+oflush
+end
+end
+end
+
+note eval4 CK HELD W [MERGES]: as eval (cli.om); windows of T + 1 tokens at 0, T, .., (W-1) T
+fn xceval to void
+na = oargc
+if and ne na 5 ne na 6
+exit 2
+end
+if xisv3 2
+cmdeval
+ret
+end
+xload 2
+ww = oargu 4
+v = get xg 0
+if gt v 256
+if eq na 5
+exit 2
+end
+obload 5 v
+end
+odopen 3
+tt = get xg 1
+if eq ww 0
+exit 23
+end
+if gt ww div sub get odn 0 1 tt
+exit 23
+end
+put xg 24 1
+ls = 0.0f64
+nb = ulong 0
+for w ulong ww
+xrow mul w tt
+ls = add ls xseq
+if gt v 256
+nb = add nb xevnb
+end
+end
+lo = div ls f64 ww
+bp = div lo 0.6931471805599453
+if gt v 256
+bp = div mul bp f64 mul ww tt f64 nb
+end
+oputc 69
+oputc 32
+oputu get xg 13
+oputc 32
+oputu ww
+oputc 32
+oputl rmic lo
+oputc 32
+oputl rmic bp
+oputc 10
+oflush
+end
+
+fn xevnb to ulong
+s = ulong 0
+for t ulong get xg 1
+s = add s obtlen get xtk add t 1
+end
+ret s
+end
+
+note tune4 CK OUT TOTAL LRMICRO: as tune (cli.om) on a CK03 file; prints `U P`
+fn xctune to void
+if ne oargc 6
+exit 2
+end
+if xisv3 2
+cmdtune
+ret
+end
+xload 2
+tt = oargu 4
+if or eq tt 0 gt tt 999999
+exit 12
+end
+put xg 13 0
+put xg 14 tt
+put og 42 tt
+put xg 15 bitcast ulong div f64 oargu 5 1000000.0
+p = get xg 8
+xmset 0 p mul 2 p 0.0f64
+xsave 3
+oputc 85
+oputc 32
+oputu p
+oputc 10
+oflush
+end
+
+note ---- decode with the KV cache ----
+
+fn xkvmk to void
+if eq get xg 67 0
+xmap 3 mul get xg 5 mul 2 get xg 59 0
+put xg 67 1
+end
+end
+
+note KV slot of layer l at position t (a staged layer reads its rows 0 .. t-1 from mapping 3)
+fn xkvs l ulong t ulong to ulong
+rk = get xg 44
+kvs = mul 2 get xg 59
+if lt l rk
+ret add get xg 45 mul l kvs
+end
+bs = add get xg 45 mul rk kvs
+if ne get xg 46 l
+if gt t 0
+xkvmk
+td = get xg 59
+mo = mul l kvs
+n = mul t get xg 2
+xm2a 3 mo bs n
+xm2a 3 add mo td add bs td n
+end
+put xg 46 l
+end
+ret bs
+end
+
+note a staged layer writes its new K and U rows back to mapping 3
+fn xkvf l ulong t ulong kv ulong to void
+if lt l get xg 44
+ret
+end
+xkvmk
+d = get xg 2
+td = get xg 59
+r = mul t d
+mo = add mul l mul 2 td r
+xa2m 3 mo add kv r d
+xa2m 3 add mo td add add kv td r d
+end
+
+note one decode position t (token xtk[t]) through every layer; logits into LG when hd
+fn xdpos t ulong hd bool to void
+d = get xg 2
+xr = get xg 49
+xcpw xr mul get xtk t d d
+for l ulong get xg 5
+xdlay l t
+end
+if hd
+z = get xg 34
+frms xr mul get xg 0 d z add get xg 55 2
+klogit z get xg 37 get xg 0 d
+end
+end
+
+fn xdlay l ulong t ulong to void
+xstw l
+w = xwl l
+kv = xkvs l t
+d = get xg 2
+r = mul t d
+hn = get xg 50
+x = get xg 49
+xcpa hn x d
+put xar 0 get xg 51
+put xar 1 add kv r
+put xar 2 add add kv get xg 59 r
+x = get xg 55
+xrqkv hn x w
+x = get xg 51
+xrope x t 1.0f64
+x = add kv r
+xropk x t
+xdatt kv t
+xdlay2 w hn
+xkvf l t kv
+end
+
+note decode row: HMR = HN + OR Wo; FFN into XR (RLR row, S2 at SS + 1)
+fn xdlay2 w ulong hn ulong to void
+x = get xg 52
+y = get xg 53
+xrwo x hn y w
+put xar 10 get xg 54
+put xar 11 get xg 49
+x = add get xg 55 1
+xrffn y x w
+end
+
+fn xdatt kv ulong t ulong to void
+h = get xg 3
+for n ulong h
+xdatt1 kv t n
+end
+end
+
+fn xdatt1 kv ulong t ulong n ulong to void
+nh = mul n get xg 7
+put xar 0 add get xg 51 nh
+put xar 1 add kv nh
+put xar 2 add add kv get xg 59 nh
+put xar 3 add t 1
+put xar 4 add get xg 52 nh
+x = xatt
+end
+
+note context: token c at CT; at CT = T keep the last T/2 tokens and drop the cache
+fn xpush c ulong to void
+tt = get xg 1
+cn = get xg 48
+if eq cn tt
+hh = div tt 2
+for i ulong hh
+put xtk i get xtk add sub tt hh i
+end
+cn = hh
+put xg 47 0
+end
+put xtk cn c
+put xg 48 add cn 1
+end
+
+note decode the positions the cache lacks; the next token from the last position's logits
+fn xdstep st ulong tm ulong to ulong
+cn = get xg 48
+while lt get xg 47 cn bound 999999
+cv = get xg 47
+xdpos cv eq cv sub cn 1
+put xg 47 add cv 1
+end
+if eq tm 0
+ret oargmax
+end
+ret odraw st div f64 tm 1000.0
+end
+
+note sample4 CK SEED N TEMPMILLI PROMPT [MERGES]: as sample (cli.om) with the KV cache
+fn xcsamp to void
+na = oargc
+if and ne na 7 ne na 8
+exit 2
+end
+if xisv3 2
+cmdsamp
+ret
+end
+xload 2
+st = oargu 3
+nn = oargu 4
+if gt nn 999999
+exit 2
+end
+tm = oargu 5
+v = get xg 0
+if gt v 256
+if eq na 7
+exit 2
+end
+obload 7 v
+end
+xgd
+put xg 48 0
+put xg 47 0
+xpush 0
+xprompt v
+for g ulong nn
+c = xdstep st tm
+if ne tm 0
+st = add st 11400714819323198485
+end
+if eq c 0
+break
+end
+if gt v 256
+obtput c
+else
+oputc c
+end
+oflush
+xpush c
+end
+oflush
+end
+
+fn xprompt v ulong to void
+r = oargr 6
+if gt v 256
+if or lt r 0 gt r 4000
+exit 2
+end
+np = obprompt 6
+for i ulong np
+xpush get obtk i
+end
+else
+if or lt r 0 gt r 4096
+exit 2
+end
+for j ulong ulong r
+xpush ulong get oarg j
+end
+end
+end
+
+note kvck CK DATA: the first T + 1 tokens through the training forward (logit hashes per position),
+note then position by position through the KV-cache decode; prints `K T mismatches`; exit 44 when
+note any position's logits differ in any bit
+fn xckv to void
+if ne oargc 4
+exit 2
+end
+xload 2
+odopen 3
+xrow 0
+put xg 24 1
+put xg 56 1
+ls = xseq
+put xg 56 0
+xgd
+put xg 57 0
+tt = get xg 1
+for t ulong tt
+xdpos t true
+if ne xhash get xg 37 get xg 0 get xkh t
+put xg 57 add get xg 57 1
+end
+end
+oputc 75
+oputc 32
+oputu tt
+oputc 32
+oputu get xg 57
+oputc 32
+oputl rmic ls
+oputc 10
+oflush
+if gt get xg 57 0
+exit 44
+end
+end
+
+note ---- gcheck4 ----
+
+note gcheck4 CK TRAIN: cmdgchk (cli.om) for CK03: the step-loss gradient of the header step's batch
+note against central differences at 4 indices of every tensor instance (wte, per layer g1 wq wk wv
+note wo g2 w1 w2, gf); same constants, retry and output; exit 40 over GCTOL
+fn xcgchk to void
+if ne oargc 4
+exit 2
+end
+if xisv3 2
+cmdgchk
+ret
+end
+xload 2
+odopen 3
+g = get xg 10
+xmap 1 add mul g get xg 8 get xg 6 1
+for j ulong g
+xblock j
+end
+xfold
+for k ulong 4
+put xg add 60 k 0
+end
+d = get xg 2
+xgcten 0 mul get xg 0 d
+for l ulong get xg 5
+xgclay xvl l
+end
+xgcten get xg 65 d
+mx = bitcast f64 get xg 61
+oputc 67
+oputc 32
+oputu get xg 60
+oputc 32
+oputx get xg 61
+oputc 32
+oputl long mul mx 1000000000.0
+oputc 32
+oputu get xg 62
+oputc 32
+oputu get xg 63
+oputc 10
+oflush
+if gt mx GCTOL
+exit 40
+end
+end
+
+fn xgclay v ulong to void
+d = get xg 2
+dd = mul d d
+df = mul d get xg 4
+xgcten v d
+xgcten xwo v 1 dd
+xgcten xwo v 2 dd
+xgcten xwo v 3 dd
+xgcten xwo v 4 dd
+xgcten xwo v 5 d
+xgcten xwo v 6 df
+xgcten xwo v 7 df
+end
+
+fn xgcten o ulong n ulong to void
+for j ulong 4
+i = add o rem smx xor get xg 12 add mul get xg 60 4 j n
+xgc1 i
+end
+end
+
+note a parameter's new value in the master and in its window (a staged layer is restaged)
+fn xpp i ulong v f64 to void
+xmp 0 i v
+vd = mul get xg 0 get xg 2
+if lt i vd
+put ow i v
+ret
+end
+gf = get xg 65
+if ge i gf
+put ow add vd sub i gf v
+ret
+end
+lsr = get xg 9
+l = div sub i vd lsr
+if lt l get xg 18
+put ow add get xg 17 sub i vd v
+else
+put xg 19 get xg 5
+end
+end
+
+fn xloss to f64
+put xg 24 1
+s = get xg 13
+ls = 0.0f64
+for b ulong get xg 6
+xrow xoff s b
+ls = add ls xseq
+end
+put xg 24 0
+ret div ls f64 get xg 6
+end
+
+fn xgcnum i ulong h f64 to f64
+p0 = xmg 0 i
+pp = add p0 h
+pm = sub p0 h
+xpp i pp
+lp = xloss
+xpp i pm
+lm = xloss
+xpp i p0
+ret div sub lp lm sub pp pm
+end
+
+fn xgc1 i ulong to void
+g = xmg 1 i
+num = xgcnum i GCH
+rel = ogcrel num g
+if gt rel GCTOL
+put xg 63 add get xg 63 1
+n2 = xgcnum i GCH2
+r2 = ogcrel n2 g
+if lt r2 rel
+num = n2
+rel = r2
+end
+end
+oputc 99
+oputc 32
+oputu i
+oputc 32
+oputl long mul g 1000000000000.0
+oputc 32
+oputl long mul num 1000000000000.0
+oputc 10
+put xg 60 add get xg 60 1
+if gt rel bitcast f64 get xg 61
+put xg 61 bitcast ulong rel
+put xg 62 i
+end
+end
+
+note ---- ropeck ----
+
+note ropeck REF: REF lines `s XBITS RBITS` / `c XBITS RBITS` (36 bytes; RBITS the correctly rounded
+note Wolfram sin/cos at the exact f64 XBITS; tests/omegallm/roperef.wl). Prints
+note `R s count maxabs_e18`, `R c count maxabs_e18`, then the shift check `R h trials maxdiff_e15
+note normrel_e18`: for 64 random (q, k) of E = 64 (base 10000) and positions m, n, s < 2048,
+note |rope(q,m).rope(k,n) - rope(q,m+s).rope(k,n+s)|. Exit 43 when maxabs > XRTOL, a kind has no
+note line, the shift difference exceeds 1e-9 or a rotation changes a norm by more than 1e-12.
+fn xcrope to void
+if ne oargc 3
+exit 2
+end
+n = odread 2
+if ne rem n 36 0
+exit 21
+end
+put xg 70 0
+put xg 71 0
+put xf 10 0.0f64
+put xf 11 0.0f64
+put xf 12 0.0f64
+put xf 13 0.0f64
+for i ulong div n 36
+xrline mul i 36
+end
+put xg 1 4096
+put xg 2 64
+put xg 3 1
+put xg 7 64
+put xg 16 bitcast ulong 10000.0f64
+xrtab
+for k ulong 64
+xrinv k
+end
+xrprint 115 0
+xrprint 99 1
+oputc 82
+oputc 32
+oputc 104
+oputc 32
+oputu 64
+oputc 32
+oputl long mul get xf 12 1000000000000000.0
+oputc 32
+oputl long mul mul get xf 13 1000000000.0 1000000000.0
+oputc 10
+oflush
+if or eq get xg 70 0 eq get xg 71 0
+exit 43
+end
+if or gt get xf 10 XRTOL gt get xf 11 XRTOL
+exit 43
+end
+if or gt get xf 12 0.000000001 gt get xf 13 0.000000000001
+exit 43
+end
+end
+
+fn xrline o ulong to void
+kd = odb o
+x = bitcast f64 ohex add o 2
+r = bitcast f64 ohex add o 19
+xsc x
+b = ulong 1
+y = get xf 0
+if eq kd 115
+b = ulong 0
+y = get xf 1
+end
+put xg add 70 b add get xg add 70 b 1
+e = fabs sub y r
+if gt e get xf add 10 b
+put xf add 10 b e
+end
+end
+
+fn xrprint c ulong b ulong to void
+oputc 82
+oputc 32
+oputc c
+oputc 32
+oputu get xg add 70 b
+oputc 32
+oputl long mul mul get xf add 10 b 1000000000.0 1000000000.0
+oputc 10
+end
+
+note random values in [-1, 1) at oa[o .. o + n) from splitmix64(sd + i)
+fn xrrnd o ulong n ulong sd ulong to void
+for i ulong n
+r = mul f64 shr smx add sd i 11 1.1102230246251565e-16
+put oa add o i sub add r r 1.0
+end
+end
+
+fn xrinv k ulong to void
+sd = mul add k 1 1000003
+xrrnd 0 64 sd
+xrrnd 64 64 add sd 500
+m = rem smx add sd 7 2048
+n = rem smx add sd 8 2048
+s = rem smx add sd 9 2048
+a = xrdot m n
+b = xrdot add m s add n s
+e = fabs sub a b
+if gt e get xf 12
+put xf 12 e
+end
+end
+
+note rope(q, m) . rope(k, n) with q at oa[0..64), k at oa[64..128); records the norm change
+fn xrdot m ulong n ulong to f64
+xcpa 128 0 64
+xcpa 192 64 64
+xrope 128 m 1.0f64
+xropk 192 n
+q0 = kdot1a 0 64 0
+q1 = kdot1a 128 192 128
+e = div fabs sub q1 q0 q0
+if gt e get xf 13
+put xf 13 e
+end
+ret kdot1a 128 192 192
+end

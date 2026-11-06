@@ -1,6 +1,6 @@
 #!/bin/sh
 # Build ollm (aien-train#52) from native/omegallm/*.om with the pinned seeded omc.
-# Usage: sh tests/omegallm/build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p|t|r|x|q|w|u|l|o|v|n|y | --variant h5|h7|r0|bx]
+# Usage: sh tests/omegallm/build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p|t|r|x|q|w|u|l|o|v|n|y|i|z | --variant h5|h7|r0|bx]
 # Env: TARGET (aarch64, the default, gb10, x86linux or x86efi), OMC (default ../omega-mv/seed/out/omc
 #      beside this clone for aarch64 and gb10, ../omega-mv-x86/seed/out/omc for x86linux,
 #      ../omega-efi-ident/seed/out/omc for x86efi), OUT (default ../build beside it), CORE (taskset core,
@@ -66,18 +66,18 @@ here=$(cd "$(dirname "$0")/../.." && pwd)
 TARGET=${TARGET:-aarch64}
 case "$TARGET" in
   aarch64|gb10) PIN=2c82480596bbdc50cda9626866209ef662d5834f278f839ff4ce0250c495029f
-           OMC=${OMC:-$here/../omega-mv/seed/out/omc} lead= plat=lio.om pool=lpool.om ext= ;;
+           OMC=${OMC:-$here/../omega-mv/seed/out/omc} lead= plat=lio.om pool=lpool.om v4=v4.om ext= ;;
   x86linux) PIN=be8c51301307555254fc59e351d281aae1aa096d91521777e33a41c8b446448a
-            OMC=${OMC:-$here/../omega-mv-x86/seed/out/omc} lead='target x86linux' plat=lio.om pool=lpool.om ext= ;;
+            OMC=${OMC:-$here/../omega-mv-x86/seed/out/omc} lead='target x86linux' plat=lio.om pool=lpool.om v4=v4.om ext= ;;
   x86efi) PIN=3ad9f10f64309e7acf8a725082b28e23a2a4aeb07e98322fb4dc0fcd8fc93194
-          OMC=${OMC:-$here/../omega-efi-ident/seed/out/omc} lead='target x86efi' plat=eio.om pool=epool.om ext=.efi ;;
+          OMC=${OMC:-$here/../omega-efi-ident/seed/out/omc} lead='target x86efi' plat=eio.om pool=epool.om v4=no4.om ext=.efi ;;
   *) echo "TARGET must be aarch64, gb10, x86linux or x86efi" >&2; exit 2 ;;
 esac
 OUT=${OUT:-$here/../build}
 CORE=${CORE:-6}
 mut= kind=
 if [ $# -ge 1 ]; then
-  { [ "$1" = --mutant ] || [ "$1" = --variant ]; } && [ $# -eq 2 ] || { echo "usage: build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p|t|r|x|q|w|u|l|o|v|n|y | --variant h5|h7|r0|bx]" >&2; exit 2; }
+  { [ "$1" = --mutant ] || [ "$1" = --variant ]; } && [ $# -eq 2 ] || { echo "usage: build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p|t|r|x|q|w|u|l|o|v|n|y|i|z | --variant h5|h7|r0|bx]" >&2; exit 2; }
   kind=$1 mut=$2
 fi
 got=$(sha256sum "$OMC" | cut -d' ' -f1)
@@ -100,7 +100,7 @@ fi
   [ -z "$lead" ] || printf '%s\n' "$lead"
   # shellcheck disable=SC2086
   [ -z "$pre" ] || cat $pre
-  cat "$src/math.om" "$src/data.om" "$src/$pool" "$src/model.om" "$src/adam.om" "$src/ckpt.om" "$src/bpe.om" "$src/cli.om" "$src/$plat" "$post"
+  cat "$src/math.om" "$src/data.om" "$src/$pool" "$src/model.om" "$src/adam.om" "$src/ckpt.om" "$src/bpe.om" "$src/cli.om" "$src/$v4" "$src/$plat" "$post"
   [ "$TARGET" = gb10 ] || cat "$src/nogpu.om"
 } > "$OUT/ollm.om"
 if [ "$TARGET" = gb10 ]; then
@@ -137,11 +137,13 @@ case "$kind$mut" in
   --mutantv) pat='s/^const OMUTV ulong 1$/const OMUTV ulong 0/' want=1 ;;
   --mutantn) pat='s/^const OMUTN ulong 1$/const OMUTN ulong 0/' want=1 ;;
   --mutanty) pat='s/^const OWC ulong 15833472$/const OWC ulong 8400/;s/^const OGC ulong 15833472$/const OGC ulong 5000/;s/^const OAC ulong 15016192$/const OAC ulong 12344/;s/^const OMUTY ulong 1$/const OMUTY ulong 0/' want=4 ;;
+  --mutanti) pat='s/^const OMUTI ulong 1$/const OMUTI ulong 0/' want=1 ;;
+  --mutantz) pat='s/^const OMUTZ ulong 1$/const OMUTZ ulong 0/' want=1 ;;
   --varianth5) pat='s/^const GCH f64 0\.000001$/const GCH f64 0.00001/;s/^const GCH2 f64 0\.00000025$/const GCH2 f64 0.00001/' want=2 ;;
   --varianth7) pat='s/^const GCH f64 0\.000001$/const GCH f64 0.0000001/;s/^const GCH2 f64 0\.00000025$/const GCH2 f64 0.0000001/' want=2 ;;
   --variantr0) pat='s/^const OKREU ulong 1$/const OKREU ulong 0/' want=1 ;;
   --variantbx) pat='s/^const OWC ulong 15833472$/const OWC ulong 8400/;s/^const OGC ulong 15833472$/const OGC ulong 5000/;s/^const OAC ulong 15016192$/const OAC ulong 12344/' want=3 ;;
-  *) echo "usage: build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p|t|r|x|q|w|u|l|o|v|n|y | --variant h5|h7|r0|bx]" >&2; exit 2 ;;
+  *) echo "usage: build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p|t|r|x|q|w|u|l|o|v|n|y|i|z | --variant h5|h7|r0|bx]" >&2; exit 2 ;;
 esac
 if [ -n "$mut" ]; then
   [ "$kind" = --mutant ] && name=ollm-mut-$mut || name=ollm-var-$mut
