@@ -1,0 +1,49 @@
+{
+  "artifacts": [
+    {
+      "file": "L899-train-parity-final3.log.d76baa2983b262b5e9ef706b130aeb4be504ead66a5f0abb8d7461ff5fed2e89.txt",
+      "normalization": "home directory prefix only",
+      "original_sha256": "d76baa2983b262b5e9ef706b130aeb4be504ead66a5f0abb8d7461ff5fed2e89",
+      "sha256": "d76baa2983b262b5e9ef706b130aeb4be504ead66a5f0abb8d7461ff5fed2e89"
+    },
+    {
+      "file": "L899-resident-final3.log.30457567cca06c77d12fd59392cd8f5d72af6cd6e13bf4939349b341b2ce2708.txt",
+      "normalization": "home directory prefix only",
+      "original_sha256": "30457567cca06c77d12fd59392cd8f5d72af6cd6e13bf4939349b341b2ce2708",
+      "sha256": "30457567cca06c77d12fd59392cd8f5d72af6cd6e13bf4939349b341b2ce2708"
+    },
+    {
+      "file": "L899-train-crumb.log.5d4f7de054b5a4a367e4d6fd4d3ce0ca0e5170d2ae2e6196344b7fcd9fe4ecb9.txt",
+      "normalization": "home directory prefix only",
+      "original_sha256": "5d4f7de054b5a4a367e4d6fd4d3ce0ca0e5170d2ae2e6196344b7fcd9fe4ecb9",
+      "sha256": "5d4f7de054b5a4a367e4d6fd4d3ce0ca0e5170d2ae2e6196344b7fcd9fe4ecb9"
+    }
+  ],
+  "checks": [
+    "Exact scalar/cache/ordered-NEON logits and seeded draws, including context rollover.",
+    "Greedy and seeded sampled-byte parity.",
+    "Stale-cache negative control rejected.",
+    "Corrupt optimizer byte, truncated and overlong checkpoints refused.",
+    "Wrong compiler pin refused before output creation.",
+    "Three resident startup/shutdown cycles with cancellation followed immediately by a request, split UTF-8 and limits."
+  ],
+  "commands": [
+    "quiet-build sh tests/omegallm/inference.sh REFERENCE_OMC FRESH_PARITY NEW_OMC",
+    "quiet-build sh tests/omegallm/build-resident.sh NEW_OMC FRESH_RESIDENT neon",
+    "quiet-build python3 tests/omegallm/resident.py RESIDENT REFERENCE TINY_CHECKPOINT -"
+  ],
+  "compiler_binary_sha256": "c54c9a149a23fc86fb96e08b433e09b555f690a0266c43a4b0e6095449035496",
+  "compiler_source_commit": "0b17fda6a7b80e1ca5b82c3e38fa7bc862889b16",
+  "exact_logits_sha256": "6313e386cb0306a3418c16096813c7a22f05373c86428ef2dbc1cad057ad5fb8",
+  "limitations": [
+    "CPU-only tiny fixture parity/lifecycle.",
+    "Actual pinned Astra HTTP/browser checks are recorded by the Aienux consumer.",
+    "No performance or GPU claim."
+  ],
+  "observations": "Runs preceded the source commit; input/source/binary hashes identify the exact committed implementation. No passing result is inferred from commit status.",
+  "recorded_utc": "2026-11-06T19:16:41.494254+00:00",
+  "reference_compiler_sha256": "2c82480596bbdc50cda9626866209ef662d5834f278f839ff4ce0250c495029f",
+  "result": "PASS_TARGETED",
+  "source_commit": "07bf3aac005ec1203f759f0f673b3ce0f1d2537f",
+  "source_tree_clean_at_receipt": true
+}

@@ -1,0 +1,6 @@
+COMPILED   docs/omegallm
+COMPILED   evidence/OMEGALLM
+COMPILED   native/omegallm
+COMPILED   tests/omegallm
+crumb compile: 12 crumbs, 4 rewritten, HEAD 70d048c
+crumb verify: OK: 12 crumbs current

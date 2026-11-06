@@ -1,0 +1,17 @@
+BUILD_OK 5bff239b4ed83c8cca5bf444398327790196d2834697c9cd4bff573561a06573 /tmp/L899-train-parity-final3/ollm source_sha256 2c289c674a0d1b7e430396097d7795877411b48efed8671f927d2c53e8020dff
+PASS exact logits and seeded draws: prefill, decode, rollover, repeated requests
+PASS sampled bytes: greedy and seeded, context overflow
+PASS stale-cache negative control rejected
+PASS corrupt optimizer refused
+PASS truncated and overlong checkpoints refused
+PASS wrong compiler pin refused before output creation
+2c82480596bbdc50cda9626866209ef662d5834f278f839ff4ce0250c495029f  /tmp/L899-reference-omc
+5bff239b4ed83c8cca5bf444398327790196d2834697c9cd4bff573561a06573  /tmp/L899-train-parity-final3/ollm
+053c8c359bbc460c7df525b8da87f20dc74a5252666b7bde5b5f5e57a861bf09  /tmp/L899-train-parity-final3/parity
+6313e386cb0306a3418c16096813c7a22f05373c86428ef2dbc1cad057ad5fb8  /tmp/L899-train-parity-final3/scalar.txt
+6313e386cb0306a3418c16096813c7a22f05373c86428ef2dbc1cad057ad5fb8  /tmp/L899-train-parity-final3/cache.txt
+PASS ordered NEON exact logits and seeded draws, including rollover
+c54c9a149a23fc86fb96e08b433e09b555f690a0266c43a4b0e6095449035496  /tmp/L899-omega-seed/seed/out/omc
+f74e6ae95f5bfecefb19b43b0fab68cf98c25339519a4ae49e7736c556e4a5e2  /tmp/L899-train-parity-final3/neon.om
+33259670bf60d76554288015c39ec3cce606f6f9c90812534c43375d24dd6619  /tmp/L899-train-parity-final3/neon
+6313e386cb0306a3418c16096813c7a22f05373c86428ef2dbc1cad057ad5fb8  /tmp/L899-train-parity-final3/neon.txt

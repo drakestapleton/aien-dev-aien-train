@@ -1,0 +1,6 @@
+c54c9a149a23fc86fb96e08b433e09b555f690a0266c43a4b0e6095449035496  /tmp/L899-omega-seed/seed/out/omc
+c78a572d8fb3ca6196c2ab8baa912b7b326f2f37733ac876c5c23661a90f0aa9  /tmp/L899-resident-final3/resident.om
+53d6993ea136655747f14ed3d14555f14029b73538c7a094eec3a1b0abbc95da  /tmp/L899-resident-final3/resident
+PASS startup 1: parity, cancel/next, bounds, split UTF-8, limits, shutdown
+PASS startup 2: parity, cancel/next, bounds, split UTF-8, limits, shutdown
+PASS startup 3: parity, cancel/next, bounds, split UTF-8, limits, shutdown
