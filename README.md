@@ -12,11 +12,12 @@ Every claim in `docs/` links to a source or to a receipt in `evidence/`. Numbers
 
 **Mechanism.** [Omega LLM](docs/omegallm/README.md) is a decoder-only transformer in [`native/omegallm/`](native/omegallm/).
 
-- **Build.** [`tests/omegallm/build.sh`](tests/omegallm/build.sh) concatenates `math.om data.om`, a pool unit, `model.om adam.om ckpt.om bpe.om cli.om` and a platform unit into one program, `ollm`.
+- **Build.** [`tests/omegallm/build.sh`](tests/omegallm/build.sh) concatenates `math.om data.om`, a pool unit, `model.om adam.om ckpt.om bpe.om cli.om`, the v4 unit (`v4.om` on Linux, `no4.om` on x86efi) and a platform unit into one program, `ollm`.
+- **Scaled architecture (v4).** `init4`/`train4`/`eval4`/`sample4` add RoPE, contexts up to 16384, configurable width, depth and heads, a KV-cache decode and checkpoint `OLLMCK03`, with the weights, Adam state and activations in host mappings instead of omc globals ([CONTRACT-V4](docs/omegallm/CONTRACT-V4.md)).
 - **Train.** `ollm train` reads u16 tokens and runs the forward pass, cross-entropy loss, backward pass and Adam step. It writes a checkpoint every `EVERY` steps.
 - **Evaluate.** `ollm eval` reports held-out nats per token.
 - **On the GB10.** `gtrainf` and `gtrainb` keep the weights and Adam state on the chip ([rung 4 onward](docs/omegallm/README.md#gb10-gpu-training-rung-4)).
-- **Specs.** [CONTRACT.md](docs/omegallm/CONTRACT.md), [V1](docs/omegallm/CONTRACT-V1.md), [V2](docs/omegallm/CONTRACT-V2.md), [V3](docs/omegallm/CONTRACT-V3.md), [BF16](docs/omegallm/CONTRACT-BF16.md).
+- **Specs.** [CONTRACT.md](docs/omegallm/CONTRACT.md), [V1](docs/omegallm/CONTRACT-V1.md), [V2](docs/omegallm/CONTRACT-V2.md), [V3](docs/omegallm/CONTRACT-V3.md), [V4](docs/omegallm/CONTRACT-V4.md), [BF16](docs/omegallm/CONTRACT-BF16.md).
 
 The earlier [NL1 experiment](native/neuralese/README.md), a learned numerical channel between two small networks, uses the same toolchain on a much smaller scale.
 
