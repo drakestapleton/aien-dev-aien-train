@@ -1,8 +1,9 @@
 note accept.om: the DRA-124 acceptance suite runner, reference stubs and IFEval self-test.
 note Built by tests/omegallm/accept/build.sh as: om2, net/http.om, net/json.om, this file.
 note Commands (PREREG.md is the normative description; this file implements it):
-note   accept run HOST PORT SUITEDIR OUTDIR OMC MODEL CORPUSDIR|- [MUTANTID]
-note   accept stub PORT garbage|ref SUITEDIR [CORPUSDIR|- [COUNT]]
+note   accept run HOST PORT SUITEDIR OUTDIR OMC MODEL CORPUSDIR|- [MUTANTOP]
+note   accept stub PORT garbage|ref SUITEDIR [COUNT]
+note   accept ifsel UPSTREAM OUT RESP
 note   accept selftest FILE
 note No LLM judge and no outside tokenizer: every check below is a byte or JSON rule.
 
@@ -74,14 +75,13 @@ const STOT ulong 50
 const SMF ulong 60
 const SSKIP ulong 70
 const SXST ulong 72
-const SPATH ulong 74
 const SIDNR ulong 75
 
 note per-category item counts, pass bars (permille) and the registered totals (PREREG.md section 4)
 const EXA ulong 24
 const EXT ulong 20
 const EXG ulong 16
-const EXI ulong 376
+const EXI ulong 369
 const EXC ulong 164
 const EXL ulong 6
 const EXP ulong 8
@@ -159,7 +159,6 @@ text klength "length"
 text kdone "[DONE]"
 text kpost "POST"
 text kpchat "/v1/chat/completions"
-text kpcomp "/v1/completions"
 text khost "Host"
 text kloc "localhost"
 text kctype "Content-Type"
@@ -1475,11 +1474,24 @@ end
 ret false
 end
 
+note acifltr: whether kwargs kw name one ASCII letter; upstream build_description swaps any other
+note letter for a random one, so such letter_frequency rows have no fixed verdict and are not registered
+fn acifltr it view uchar ILN tp view uint TPN kw ulong to bool
+b = new uchar 16 0
+r = acstr it tp acmem it tp kw wlet b
+if ne r 1
+ret false
+end
+c = hlow get b 0
+ret and ge c 97 le c 122
+end
+
 note acifsup: whether every instruction of IFEval row it is supported (the registered subset)
 fn acifsup it view uchar ILN tp view uint TPN to bool
 b = new uchar 256 0
 l = acmem it tp 0 kiids
 e = acel tp l 0
+k = acel tp acmem it tp 0 kkw 0
 if eq e jsnone
 ret false
 end
@@ -1491,10 +1503,15 @@ r = acstr it tp e b
 if lt r 1
 ret false
 end
-if eq acifid view part b 0 ulong r 0
+c = acifid view part b 0 ulong r
+if eq c 0
+ret false
+end
+if and eq c 16 not acifltr it tp k
 ret false
 end
 e = acnext tp e
+k = acnext tp k
 end
 ret true
 end
@@ -1525,9 +1542,6 @@ end
 
 note ======== request bodies (PREREG.md section 2)
 
-text kprm "\",\"prompt\":\""
-text kecho "\",\"max_tokens\":0,\"echo\":true,\"logprobs\":0,\"temperature\":0}"
-text kgen "\",\"max_tokens\":256,\"temperature\":0}"
 
 note acbhd: {"model":M,"temperature":0,"max_tokens":N,stream flags,"messages":[
 fn acbhd rq edit uchar RQN wk view uchar WKN sv view ulong SVN to ulong
@@ -1698,21 +1712,9 @@ q = acbtool rq q wk sv
 ret acapp rq q kendm
 end
 
-note acbcomp: a /v1/completions body for prompt p; echo scores p, otherwise 256 tokens are generated
-fn acbcomp rq edit uchar RQN p view uchar * wk view uchar WKN sv view ulong SVN echo bool to ulong
-q = acapp rq 0 kmodel
-q = acapp rq q view part wk WMO get sv SMOL
-q = acapp rq q kprm
-q = acesc rq q p
-if echo
-ret acapp rq q kecho
-end
-ret acapp rq q kgen
-end
-
 note ======== exchange: one POST, the reply captured into sv and rs (PREREG.md section 2)
 
-note acxsend: dial sv[SIP]:sv[SPORT], POST rq[0, sv[SBL]) to chat (SPATH 0) or completions (1); the status
+note acxsend: dial sv[SIP]:sv[SPORT], POST rq[0, sv[SBL]) to /v1/chat/completions; the status
 fn acxsend rq view uchar RQN wk view uchar WKN sv view ulong SVN cs edit ulong 320 io edit uchar 131072 to long
 a = new uchar 16 0
 r = haddr4 a uint get sv SIP get sv SPORT
@@ -1725,11 +1727,7 @@ hsettmo cs 1800000000000 1800000000000
 hsetbdl cs 3600000000000
 put cs HBCAP 16777216
 r = hreqst cs io kpost
-if eq get sv SPATH 1
-r = hfe r hreqtg cs io kpcomp
-else
 r = hfe r hreqtg cs io kpchat
-end
 r = hfe r hhname cs io khost
 r = hfe r hhval cs io kloc
 r = hfe r hhname cs io kctype
@@ -1946,7 +1944,6 @@ put sv SCL 0
 put sv SFIN 0
 put sv SCTOK 0
 put sv SERR 0
-put sv SPATH 0
 st = acxsend rq wk sv cs io
 if lt st 0
 put sv SST 0
@@ -2637,4 +2634,1782 @@ if om
 ret acxom view part rs 0 n ex sv pa
 end
 ret acxpy view part rs 0 n ex sv pa
+end
+
+note ======== IFEval reference responses (PREREG.md section 5, the ref control)
+note acifref builds, for one row, a response meant to satisfy every instruction by construction. It is
+note used by the ref stub and by ifsel, which registers only the supported rows whose reference response
+note passes this runner's own checkers; tools/ifeval_oracle.py re-checks both with the upstream code.
+
+text ifpool "rhythm lynx myth crypt glyph alpha bravo delta kilo lima tango zulu quiz"
+text ifcyes " My answer is yes."
+text ifj1 "{\"r\": \""
+text ifj2 "\"}"
+text iftl ">>\n"
+text ifsix "******\n"
+text ifthr "***\n"
+text ifbul "* "
+text ifob " ["
+text ifcb "]"
+text ifst " *"
+text ifs1 "*"
+
+note acifk: the kwargs object of the first instruction of row it with code, else jsnone
+fn acifk it view uchar ILN tp view uint TPN code ulong to ulong
+b = new uchar 256 0
+e = acel tp acmem it tp 0 kiids 0
+k = acel tp acmem it tp 0 kkw 0
+while ne e jsnone bound 999999
+r = acstr it tp e b
+if gt r 0
+if eq acifid view part b 0 ulong r code
+ret k
+end
+end
+e = acnext tp e
+k = acnext tp k
+end
+ret jsnone
+end
+
+note acifok: whether filler word w is safe for row it: no restricted letter (less than), not a forbidden
+note word, no keyword counted "less than"
+fn acifok it view uchar ILN tp view uint TPN w view uchar * to bool
+b = new uchar 4096 0
+k = acifk it tp 16
+if ne k jsnone
+if ifless it tp k wletr
+r = acstr it tp acmem it tp k wlet b
+if gt r 0
+if lt acfind w view part b 0 ulong r 0 true len w
+ret false
+end
+end
+end
+end
+k = acifk it tp 3
+if ne k jsnone
+e = acel tp acmem it tp k wforb 0
+while ne e jsnone bound 999999
+r = acstr it tp e b
+if gt r 0
+if acwhole w view part b 0 ulong r true
+ret false
+end
+end
+e = acnext tp e
+end
+end
+k = acifk it tp 5
+if ne k jsnone
+if ifless it tp k wrel
+r = acstr it tp acmem it tp k wkey b
+if gt r 0
+if lt acfind w view part b 0 ulong r 0 true len w
+ret false
+end
+end
+end
+end
+ret true
+end
+
+note acifw: the first safe pool word for row it into w; its length (0 when none is safe)
+fn acifw it view uchar ILN tp view uint TPN w edit uchar 64 to ulong
+n = len ifpool
+p = ulong 0
+while lt p n bound 64
+e = p
+while and lt e n ne get ifpool e 32 bound 64
+e = add e 1
+end
+for i ulong sub e p
+put w i get ifpool add p i
+end
+if acifok it tp view part ifpool p sub e p
+ret sub e p
+end
+p = add e 1
+end
+ret 0
+end
+
+note acifstr: string token t decoded and stripped, appended at o[q..]
+fn acifstr o edit uchar 65536 q ulong it view uchar ILN tp view uint TPN t ulong to ulong
+b = new uchar 4096 0
+r = acstr it tp t b
+if lt r 0
+ret q
+end
+x = acstrip view part b 0 ulong r
+ret acapp o q view part b acsa x sub acsb x acsa x
+end
+
+note acifrep: n copies of " " + s at o[q..]
+fn acifrep o edit uchar 65536 q ulong n ulong s view uchar * to ulong
+r = q
+for i ulong n
+r = acapp o r ksp
+r = acapp o r s
+end
+ret r
+end
+
+note acifkw: every keywords:existence keyword, and each at-least keywords:frequency keyword its
+note frequency times, at o[q..]
+fn acifkw o edit uchar 65536 q ulong it view uchar ILN tp view uint TPN esc bool to ulong
+b = new uchar 4096 0
+r = q
+k = acifk it tp 4
+if ne k jsnone
+e = acel tp acmem it tp k wkeys 0
+while ne e jsnone bound 999999
+l = acstr it tp e b
+if gt l 0
+r = acapp o r ksp
+if esc
+r = acesc o r view part b 0 ulong l
+else
+r = acapp o r view part b 0 ulong l
+end
+end
+e = acnext tp e
+end
+end
+k = acifk it tp 5
+if ne k jsnone
+if not ifless it tp k wrel
+l = acstr it tp acmem it tp k wkey b
+if gt l 0
+r = acifrep o r ackn it tp k wfreq view part b 0 ulong l
+end
+end
+end
+ret r
+end
+
+note acifmid: the inline part of the first paragraph: keywords, highlights, placeholders, letters,
+note the constrained answer and nf filler words, then a newline
+fn acifmid o edit uchar 65536 q ulong it view uchar ILN tp view uint TPN wb view uchar 64 nf ulong to ulong
+wl = ulong get wb 63
+b = new uchar 4096 0
+r = acapp o q view part wb 0 wl
+r = acifkw o r it tp false
+k = acifk it tp 6
+if ne k jsnone
+for i ulong ackn it tp k wnumh
+r = acapp o r ifst
+r = acapp o r view part wb 0 wl
+r = acapp o r ifs1
+end
+end
+k = acifk it tp 12
+if ne k jsnone
+for i ulong ackn it tp k wnumph
+r = acapp o r ifob
+r = acapp o r view part wb 0 wl
+r = acapp o r ifcb
+end
+end
+k = acifk it tp 16
+if ne k jsnone
+if not ifless it tp k wletr
+l = acstr it tp acmem it tp k wlet b
+if eq l 1
+r = acapp o r ksp
+for i ulong ackn it tp k wletf
+if lt r len o
+put o r get b 0
+end
+r = add r 1
+end
+end
+end
+end
+if ne acifk it tp 19 jsnone
+r = acapp o r ifcyes
+end
+r = acifrep o r nf view part wb 0 wl
+ret acapp o r knl
+end
+
+note acifg2: the reference response with filler word w and nf extra filler words at o; its length
+fn acifg2 o edit uchar 65536 it view uchar ILN tp view uint TPN wb view uchar 64 nf ulong to ulong
+wl = ulong get wb 63
+if ne acifk it tp 14 jsnone
+q = acapp o 0 ifj1
+q = acapp o q view part wb 0 wl
+q = acifkw o q it tp true
+q = acifrep o q nf view part wb 0 wl
+ret acapp o q ifj2
+end
+q = ulong 0
+qt = ne acifk it tp 7 jsnone
+if qt
+q = acapp o q kq
+end
+k = acifk it tp 17
+if ne k jsnone
+q = acifstr o q it tp acmem it tp k wptr
+q = acapp o q knl
+end
+if ne acifk it tp 8 jsnone
+q = acapp o q tlt2
+q = acapp o q view part wb 0 wl
+q = acapp o q iftl
+end
+k = acifk it tp 15
+if ne k jsnone
+for i ulong ackn it tp k wnums
+q = acifstr o q it tp acmem it tp k wsplit
+q = acapp o q ksp
+q = acdec o q add i 1
+q = acapp o q knl
+q = acapp o q view part wb 0 wl
+q = acapp o q knl
+end
+end
+q = acifmid o q it tp wb nf
+k = acifk it tp 9
+if ne k jsnone
+for i ulong ackn it tp k wnumb
+q = acapp o q ifbul
+q = acapp o q view part wb 0 wl
+q = acapp o q knl
+end
+end
+k = acifk it tp 13
+if ne k jsnone
+n = ackn it tp k wnump
+for i ulong n
+if gt i 0
+q = acapp o q ifthr
+q = acapp o q view part wb 0 wl
+q = acapp o q knl
+end
+end
+end
+if ne acifk it tp 18 jsnone
+q = acapp o q ifsix
+q = acapp o q view part wb 0 wl
+q = acapp o q ksp
+q = acapp o q view part wb 0 wl
+q = acapp o q knl
+end
+k = acifk it tp 11
+if ne k jsnone
+q = acifstr o q it tp acmem it tp k wpsm
+q = acapp o q ksp
+q = acapp o q view part wb 0 wl
+q = acapp o q knl
+end
+k = acifk it tp 10
+if ne k jsnone
+q = acifstr o q it tp acmem it tp k wendp
+end
+if qt
+q = acapp o q kq
+end
+ret q
+end
+
+note acifgen: acifg2 with the row's first safe pool word ("q" when none is safe)
+fn acifgen o edit uchar 65536 it view uchar ILN tp view uint TPN nf ulong to ulong
+wb = new uchar 64 0
+wl = acifw it tp wb
+if eq wl 0
+put wb 0 113
+wl = 1
+end
+put wb 63 uchar wl
+ret acifg2 o it tp wb nf
+end
+
+note acifref: acifgen, with filler words added when the row asks for at least N words; its length
+fn acifref o edit uchar 65536 it view uchar ILN tp view uint TPN to ulong
+q = acifgen o it tp 0
+k = acifk it tp 2
+if eq k jsnone
+ret q
+end
+if ifless it tp k wrel
+ret q
+end
+if gt q len o
+ret q
+end
+n = ackn it tp k wnumw
+w = acwords view part o 0 q
+if ge w n
+ret q
+end
+ret acifgen o it tp add sub n w 1
+end
+
+note ======== the run loop (PREREG.md sections 1 and 4)
+
+const FIL ulong 2097152
+const SW1L ulong 76
+const SW2L ulong 77
+const SFN ulong 78
+const BPBMU ulong 1500000
+
+text fitems "/items.jsonl"
+text fifev "/ifeval.jsonl"
+text fhe "/humaneval.jsonl"
+text fth "/tools-hermes.json"
+text fto "/tools-opencode.json"
+text ftf "/tools-fn.json"
+text fags "/agent-system.txt"
+text fals "/allen-system.txt"
+text fheld "/heldout.jsonl"
+text kagent "agent"
+text kresx ".resp"
+text kbpbid "ident-bpb"
+text kbpbenv "OLLM_BPB_CMD"
+text kbinsh "/bin/sh"
+text kdashc "-c"
+text kbpb0 "accept-bpb"
+text khumev "HumanEval/"
+text krhdr "id\tcat\tverdict\tdetail\n"
+text kst "st="
+text kfinx " fin="
+text kdet " d="
+text ksum "category\tpass\ttotal\tregistered\tbar_permille\tverdict\n"
+text koverall "overall\t"
+text kdash "-"
+
+note acpth: pa slot k = pa[base, base + bl) followed by s; its length (> 1024 when it does not fit)
+fn acpth pa edit uchar PAN base ulong bl ulong s view uchar * k ulong to ulong
+o = add PB mul k 1024
+if gt add bl len s 1024
+ret 1025
+end
+for i ulong bl
+put pa add o i get pa add base i
+end
+for j ulong len s
+put pa add add o bl j get s j
+end
+ret add bl len s
+end
+
+note acgeta: argv[i] into pa[off, off + 1024); its length, or exits 2 when absent or too long
+fn acgeta i ulong pa edit uchar PAN off ulong to ulong
+r = argread i pa off 1024
+if or lt r 1 gt r 1000
+exit 2
+end
+ret ulong r
+end
+
+note acudec: s as a decimal ulong; exits 2 on anything else
+fn acudec s view uchar * to ulong
+if or eq len s 0 gt len s 19
+exit 2
+end
+v = ulong 0
+for i ulong len s
+c = ulong get s i
+if or lt c 48 gt c 57
+exit 2
+end
+v = add mul v 10 sub c 48
+end
+ret v
+end
+
+note acip: dotted IPv4 (or localhost) as the host-order address haddr4 takes; exits 2 otherwise
+fn acip s view uchar * to uint
+if heq s kloc
+ret 2130706433
+end
+v = ulong 0
+d = ulong 0
+k = ulong 0
+nd = ulong 0
+for i ulong len s
+c = ulong get s i
+if eq c 46
+if or eq nd 0 gt d 255
+exit 2
+end
+v = add shl v 8 d
+d = 0
+nd = 0
+k = add k 1
+continue
+end
+if or lt c 48 gt c 57
+exit 2
+end
+d = add mul d 10 sub c 48
+nd = add nd 1
+end
+if or or ne k 3 eq nd 0 gt d 255
+exit 2
+end
+ret uint add shl v 8 d
+end
+
+note acshift: b[a, a + m) moved to b[0, m)
+fn acshift b edit uchar 4096 a ulong m ulong to void
+for j ulong m
+put b j get b add a j
+end
+end
+
+note acenv: the value of environment variable key into b; its length, or -1 when unset
+fn acenv key view uchar * b edit uchar 4096 to long
+n = envcnt
+if lt n 0
+ret -1
+end
+for i ulong ulong n
+r = envread i b 0 4096
+if or le r long len key gt r 4096
+continue
+end
+if ne get b len key 61
+continue
+end
+if heq view part b 0 len key key
+acshift b add len key 1 sub ulong r add len key 1
+ret sub r long add len key 1
+end
+end
+ret -1
+end
+
+note accat: category name to index 0..7, else 99
+fn accat s view uchar * to ulong
+if heq s gallen
+ret 0
+end
+if heq s gtools
+ret 1
+end
+if heq s gagent
+ret 2
+end
+if heq s gif
+ret 3
+end
+if heq s gcode
+ret 4
+end
+if heq s glong
+ret 5
+end
+if heq s gproto
+ret 6
+end
+if heq s gident
+ret 7
+end
+ret 99
+end
+
+fn acapcat o edit uchar * q ulong c ulong to ulong
+if eq c 0
+ret acapp o q gallen
+end
+if eq c 1
+ret acapp o q gtools
+end
+if eq c 2
+ret acapp o q gagent
+end
+if eq c 3
+ret acapp o q gif
+end
+if eq c 4
+ret acapp o q gcode
+end
+if eq c 5
+ret acapp o q glong
+end
+if eq c 6
+ret acapp o q gproto
+end
+ret acapp o q gident
+end
+
+note acexp / acbar: registered item count and pass bar (permille) of category c (PREREG.md section 4)
+fn acexp c ulong to ulong
+if eq c 0
+ret EXA
+end
+if eq c 1
+ret EXT
+end
+if eq c 2
+ret EXG
+end
+if eq c 3
+ret EXI
+end
+if eq c 4
+ret EXC
+end
+if eq c 5
+ret EXL
+end
+if eq c 6
+ret EXP
+end
+ret EXD
+end
+
+fn acbar c ulong to ulong
+if or eq c 0 eq c 1
+ret 850
+end
+if or eq c 2 eq c 4
+ret 700
+end
+if eq c 3
+ret 750
+end
+ret 1000
+end
+
+note acline: f[p, end of line) of the n-byte file into it; sv[SILN] its length (ILN + 1 when too long); the next p
+fn acline f view uchar FIL n ulong p ulong it edit uchar ILN sv edit ulong SVN to ulong
+e = p
+while and lt e n ne get f e 10 bound 999999
+e = add e 1
+end
+l = sub e p
+put sv SILN l
+if gt l ILN
+put sv SILN add ILN 1
+ret add e 1
+end
+for i ulong l
+put it i get f add p i
+end
+ret add e 1
+end
+
+note acpar: parse it[0, sv[SILN)) onto tp
+fn acpar it view uchar ILN tp edit uint TPN sv view ulong SVN to bool
+x = js_init tp 983040 64
+if lt x 0
+ret false
+end
+n = get sv SILN
+if gt n ILN
+ret false
+end
+ret ge js_parse view part it 0 n tp n 0
+end
+
+note acsetid: the item id s into wk[WID] and pa[PID]; sv[SIDL]
+fn acsetid wk edit uchar WKN sv edit ulong SVN pa edit uchar PAN s view uchar * to bool
+if or eq len s 0 gt len s 200
+ret false
+end
+for i ulong len s
+c = get s i
+if or or le c 32 eq c 47 ge c 127
+ret false
+end
+put wk add WID i c
+put pa add PID i c
+end
+put sv SIDL len s
+ret true
+end
+
+note acwkcp: wk[a, a + n) copied to wk[WSY..]; sv[SSYL] = n
+fn acwkcp wk edit uchar WKN sv edit ulong SVN a ulong n ulong to void
+for i ulong n
+put wk add WSY i get wk add a i
+end
+put sv SSYL n
+end
+
+note acwhy: tool set name to 1 hermes, 2 opencode, 3 fn, else 0
+fn acwhy s view uchar * to ulong
+if heq s khermes
+ret 1
+end
+if heq s kopenc
+ret 2
+end
+if heq s kfn
+ret 3
+end
+ret 0
+end
+
+note acmeta: chat item fields into sv / wk / pa; false when the item is malformed
+fn acmeta it view uchar ILN tp view uint TPN wk edit uchar WKN sv edit ulong SVN pa edit uchar PAN to bool
+b = new uchar 4096 0
+k = acstr it tp acmem it tp 0 kid b
+if lt k 1
+ret false
+end
+if not acsetid wk sv pa view part b 0 ulong k
+ret false
+end
+k = acstr it tp acmem it tp 0 kcat b
+if lt k 1
+ret false
+end
+c = accat view part b 0 ulong k
+if or gt c 7 or eq c 3 eq c 4
+ret false
+end
+put sv SCAT c
+put sv SKIND 0
+put sv SSTRM 0
+if actrue it tp 0 kstream
+put sv SSTRM 1
+end
+put sv SMAX ackn it tp 0 kmax
+if eq get sv SMAX 0
+ret false
+end
+put sv SWHY 0
+t = acmem it tp 0 ktoolsk
+if ne t jsnone
+k = acstr it tp t b
+if lt k 1
+ret false
+end
+put sv SWHY acwhy view part b 0 ulong k
+if eq get sv SWHY 0
+ret false
+end
+end
+put sv SSYL 0
+t = acmem it tp 0 ksysk
+if ne t jsnone
+k = acstr it tp t b
+if lt k 1
+ret false
+end
+if heq view part b 0 ulong k kallen
+acwkcp wk sv WS1 get sv SW1L
+ret ne get sv SW1L 0
+end
+if heq view part b 0 ulong k kagent
+acwkcp wk sv WS2 get sv SW2L
+ret ne get sv SW2L 0
+end
+k = acstr it tp t part wk WSY WSYN
+if lt k 1
+ret false
+end
+put sv SSYL ulong k
+end
+ret true
+end
+
+note acvalid: a chat item is well formed and its rules are known ops with at least one positive check
+fn acvalid it view uchar ILN tp view uint TPN to bool
+b = new uchar 64 0
+r = acel tp acmem it tp 0 krules 0
+pos = false
+n = ulong 0
+while ne r jsnone bound 999999
+l = acrarg it tp r 0 b
+if lt l 1
+ret false
+end
+op = acopc view part b 0 ulong l
+if eq op 0
+ret false
+end
+if acoppos op
+pos = true
+end
+n = add n 1
+r = acnext tp r
+end
+if eq actype tp acmem it tp 0 kref jsobj
+ret and pos gt n 0
+end
+ret false
+end
+
+note acrules: 0 when every rule of the item holds, else 1 + the index of the first failing rule.
+note The mutant control inverts every rule whose op is sv[SMUT] (PREREG.md section 7).
+fn acrules it view uchar ILN tp view uint TPN sv edit ulong SVN rs view uchar RSN pa edit uchar PAN to ulong
+b = new uchar 64 0
+r = acel tp acmem it tp 0 krules 0
+i = ulong 1
+while ne r jsnone bound 999999
+l = acrarg it tp r 0 b
+op = ulong 0
+if gt l 0
+op = acopc view part b 0 ulong l
+end
+ok = false
+if and ge op 1 le op 14
+ok = acrc op it tp r sv rs
+end
+if and ge op 20 le op 25
+ok = acrcl op it tp r sv rs
+end
+if eq op 30
+ok = acrexe it tp r sv rs pa
+end
+if and ne op 0 eq op get sv SMUT
+ok = not ok
+end
+if not ok
+ret i
+end
+r = acnext tp r
+i = add i 1
+end
+ret 0
+end
+
+note acsv1: call k's name and arguments appended to f at q
+fn acsv1 f edit uchar FBN q ulong sv view ulong SVN rs view uchar RSN k ulong to ulong
+a = add add RCL CLNM mul k CLNS
+r = acapp f q kcallh
+r = acapp f r view part rs a get sv add SNL k
+r = acapp f r knl
+a = add RCL mul k CLAS
+ret acapp f r view part rs a get sv add SAL k
+end
+
+note acsave: the reply (content, then each call's name and arguments) to OUTDIR/x-ID.resp
+fn acsave sv view ulong SVN rs view uchar RSN pa edit uchar PAN to void
+f = new uchar FBN 0
+q = acapp f 0 view part rs 0 get sv SCL
+for k ulong get sv SNC
+q = acsv1 f q sv rs k
+end
+if gt q len f
+q = len f
+end
+n = acxpath pa sv 0 kresx
+if le n 1024
+x = acwfile view part pa PB n view part f 0 q
+end
+end
+
+note acres: one results.tsv row and the category counters; v 0 PASS, 1 FAIL, 2 NOT_RUN
+fn acres wk view uchar WKN sv edit ulong SVN v ulong d ulong to void
+o = new uchar 1024 0
+c = get sv SCAT
+q = acapp o 0 view part wk WID get sv SIDL
+q = acapp o q ktab
+q = acapcat o q c
+q = acapp o q ktab
+if eq v 0
+q = acapp o q kpass
+put sv add SPASS c add get sv add SPASS c 1
+end
+if eq v 1
+q = acapp o q kfail
+end
+if eq v 2
+q = acapp o q knotrun
+put sv add SMF c add get sv add SMF c 1
+end
+put sv add STOT c add get sv add STOT c 1
+q = acapp o q ktab
+q = acapp o q kst
+q = acdec o q get sv SST
+q = acapp o q kfinx
+q = acdec o q and get sv SFIN 255
+q = acapp o q kdet
+q = acdec o q d
+q = acapp o q knl
+x = acwrite long get sv SRFD view part o 0 q
+end
+
+note acsend: build, exchange, save; whether the reply arrived with status 200 and no capture error
+fn acsend it view uchar ILN tp view uint TPN wk view uchar WKN sv edit ulong SVN rs edit uchar RSN pa edit uchar PAN to bool
+rq = new uchar RQN 0
+n = acbuild rq it tp wk sv
+put sv SST 0
+put sv SFIN 0
+if gt n RQN
+put sv SCL 0
+put sv SNC 0
+ret false
+end
+put sv SBL n
+acexch rq wk sv rs
+acsave sv rs pa
+ret and eq get sv SST 200 eq get sv SERR 0
+end
+
+note acmif / acmhe: the sv / wk / pa fields of an IFEval row (id if-KEY) and a HumanEval row (id he-N)
+fn acmif it view uchar ILN tp view uint TPN wk edit uchar WKN sv edit ulong SVN pa edit uchar PAN to bool
+b = new uchar 64 0
+if not acifsup it tp
+ret false
+end
+q = acapp b 0 kif
+q = acdec b q ackn it tp 0 kkey
+if not acsetid wk sv pa view part b 0 q
+ret false
+end
+put sv SKIND 1
+put sv SCAT 3
+put sv SSTRM 0
+put sv SMAX 2048
+put sv SWHY 0
+put sv SSYL 0
+ret true
+end
+
+fn acmhe it view uchar ILN tp view uint TPN wk edit uchar WKN sv edit ulong SVN pa edit uchar PAN to bool
+b = new uchar 256 0
+o = new uchar 64 0
+k = acstr it tp acmem it tp 0 ktask b
+if lt k 11
+ret false
+end
+if not heq view part b 0 10 khumev
+ret false
+end
+q = acapp o 0 khe
+q = acapp o q view part b 10 sub ulong k 10
+if not acsetid wk sv pa view part o 0 q
+ret false
+end
+put sv SKIND 2
+put sv SCAT 4
+put sv SSTRM 0
+put sv SMAX 1024
+put sv SWHY 0
+put sv SSYL 0
+ret true
+end
+
+note acheex: the HumanEval check program: test, then check(entry_point); its length in f
+fn acheex it view uchar ILN tp view uint TPN f edit uchar FBN to ulong
+b = new uchar 65536 0
+k = acstr it tp acmem it tp 0 ktest b
+if lt k 1
+ret add len f 1
+end
+q = acapp f 0 view part b 0 ulong k
+q = acapp f q kcheck
+k = acstr it tp acmem it tp 0 kentry b
+if lt k 1
+ret add len f 1
+end
+q = acapp f q view part b 0 ulong k
+ret acapp f q kcheckz
+end
+
+note acscore: 0 when the captured reply passes item it of kind k, else a nonzero detail
+fn acscore it view uchar ILN tp view uint TPN sv edit ulong SVN rs view uchar RSN pa edit uchar PAN to ulong
+f = new uchar FBN 0
+k = get sv SKIND
+if eq k 0
+ret acrules it tp sv rs pa
+end
+if eq k 1
+ret acifrow view part rs 0 get sv SCL it tp
+end
+q = acheex it tp f
+if gt q FBN
+exit 4
+end
+if acxpy view part rs 0 get sv SCL view part f 0 q sv pa
+ret 0
+end
+ret 1
+end
+
+note acitem: run and score the parsed item it of kind sv[SKIND]; writes its results row
+fn acitem it view uchar ILN tp view uint TPN wk edit uchar WKN sv edit ulong SVN rs edit uchar RSN pa edit uchar PAN to void
+k = get sv SKIND
+ok = false
+if eq k 0
+ok = acmeta it tp wk sv pa
+end
+if eq k 1
+ok = acmif it tp wk sv pa
+end
+if eq k 2
+ok = acmhe it tp wk sv pa
+end
+if not ok
+acout kfail
+exit 4
+end
+if not acsend it tp wk sv rs pa
+acres wk sv 1 0
+ret
+end
+d = acscore it tp sv rs pa
+if eq d 0
+acres wk sv 0 0
+else
+acres wk sv 1 d
+end
+end
+
+note acvfile: every line of a chat-item file is a well-formed item; exits 4 (the suite is broken) otherwise
+fn acvfile f view uchar FIL n ulong sv edit ulong SVN to void
+it = new uchar ILN 0
+tp = new uint TPN 0
+p = ulong 0
+while lt p n bound 999999
+p = acline f n p it sv
+if eq get sv SILN 0
+continue
+end
+if not acpar it tp sv
+exit 4
+end
+if not acvalid it tp
+exit 4
+end
+end
+end
+
+note acloop: every line of the n-byte file f as an item of kind sv[SKIND]
+fn acloop f view uchar FIL n ulong wk edit uchar WKN sv edit ulong SVN pa edit uchar PAN to void
+it = new uchar ILN 0
+tp = new uint TPN 0
+rs = new uchar RSN 0
+p = ulong 0
+k = get sv SKIND
+while lt p n bound 999999
+p = acline f n p it sv
+if eq get sv SILN 0
+continue
+end
+if not acpar it tp sv
+exit 4
+end
+put sv SKIND k
+acitem it tp wk sv rs pa
+end
+end
+
+note acpdec: a decimal like 1.234567 at the start of s (after spaces) in millionths; 2^64-1 when absent
+fn acpdec s view uchar * to ulong
+i = ulong 0
+while and lt i len s eq get s i 32 bound 999999
+i = add i 1
+end
+v = ulong 0
+nd = ulong 0
+while and lt i len s and ge get s i 48 le get s i 57 bound 20
+v = add mul v 10 ulong sub get s i 48
+nd = add nd 1
+i = add i 1
+end
+if eq nd 0
+ret NOFENCE
+end
+v = mul v 1000000
+if and lt i len s eq get s i 46
+i = add i 1
+m = ulong 100000
+while and lt i len s and ge get s i 48 le get s i 57 bound 64
+v = add v mul m ulong sub get s i 48
+m = div m 10
+i = add i 1
+end
+end
+ret v
+end
+
+note acbpbav: av = /bin/sh -c CMD accept-bpb HELDOUT (CMD = b[0, l), HELDOUT = pa slot 2 of length n)
+fn acbpbav av edit uchar 8192 b view uchar 4096 l ulong pa view uchar PAN n ulong to ulong
+put av 0 0
+put av 1 0
+q = acav av 2 kbinsh
+q = acav av q kdashc
+q = acav av q view part b 0 l
+q = acav av q kbpb0
+ret acav av q view part pa add PB 2048 n
+end
+
+note acbpbx: run av with stdout to OUTDIR/x-ident-bpb.out (pa slot 0, its length the result's low
+note 16 bits) and stderr to .log; the exit status in the high bits
+fn acbpbx av view uchar 8192 q ulong sv view ulong SVN pa edit uchar PAN to ulong
+m = acxpath pa sv 0 kdout
+fo = acopenw pa 0 m 420
+e = acxpath pa sv 1 kdlog
+fe = acopenw pa 1 e 420
+st = acspawn view part av 0 q -1 fo fe
+x2 = fclose int fo
+x3 = fclose int fe
+ret or shl and ulong st 255 16 m
+end
+
+note acbpbv: the number printed in the file at pa slot 0 (length m), in millionths; NOFENCE when none
+fn acbpbv pa view uchar PAN m ulong to ulong
+o = new uchar 65536 0
+k = acreadf view part pa PB m o
+if lt k 1
+ret NOFENCE
+end
+ret acpdec view part o 0 ulong k
+end
+
+note acbpb: the ident bits-per-byte row: OLLM_BPB_CMD run by /bin/sh -c with the held-out file as $1
+note (an empty environment: the command names absolute paths). NOT_RUN when the variable is unset or
+note CORPUSDIR is -. PASS when it exits 0 and prints a number <= 1.500000 (PREREG.md section 4).
+fn acbpb wk edit uchar WKN sv edit ulong SVN pa edit uchar PAN to void
+b = new uchar 4096 0
+av = new uchar 8192 0
+x = acsetid wk sv pa kbpbid
+put sv SCAT 7
+put sv SST 0
+put sv SFIN 0
+l = acenv kbpbenv b
+if or lt l 1 and eq get sv SCOL 1 eq get pa PCO 45
+acres wk sv 2 0
+ret
+end
+n = acpth pa PCO get sv SCOL fheld 2
+q = acbpbav av b ulong l pa n
+r = acbpbx av q sv pa
+put sv SST shr r 16
+v = acbpbv pa and r 65535
+if or ne get sv SST 0 eq v NOFENCE
+acres wk sv 1 v
+ret
+end
+if le v BPBMU
+acres wk sv 0 v
+ret
+end
+acres wk sv 1 v
+end
+
+note acsum: summary.txt and stdout; 0 PASS, 1 FAIL, 3 NOT_RUN overall. A category passes only when it ran
+note exactly its registered item count and meets its own bar; any NOT_RUN row makes it NOT_RUN.
+fn acsum sv view ulong SVN pa edit uchar PAN to ulong
+o = new uchar 8192 0
+q = acapp o 0 ksum
+fl = false
+nr = false
+for c ulong 8
+p = get sv add SPASS c
+t = get sv add STOT c
+x = acexp c
+r = acbar c
+q = acapcat o q c
+q = acapp o q ktab
+q = acdec o q p
+q = acapp o q ktab
+q = acdec o q t
+q = acapp o q ktab
+q = acdec o q x
+q = acapp o q ktab
+q = acdec o q r
+q = acapp o q ktab
+if ne t x
+q = acapp o q kfail
+fl = true
+else
+if gt get sv add SMF c 0
+q = acapp o q knotrun
+nr = true
+else
+if ge mul p 1000 mul r t
+q = acapp o q kpass
+else
+q = acapp o q kfail
+fl = true
+end
+end
+end
+q = acapp o q knl
+end
+q = acapp o q koverall
+v = ulong 0
+if fl
+q = acapp o q kfail
+v = 1
+else
+if nr
+q = acapp o q knotrun
+v = 3
+else
+q = acapp o q kpass
+end
+end
+q = acapp o q knl
+n = acpth pa POD get sv SODL ksummary 0
+x = acwfile view part pa PB n view part o 0 q
+acout view part o 0 q
+ret v
+end
+
+note acrdwk: the file at pa slot 0 (length n) into wk[o, o + cap); its length, or exits 4
+fn acrdwk wk edit uchar WKN pa view uchar PAN n ulong o ulong to ulong
+cap = ulong 32768
+if ge o WS1
+cap = 65536
+end
+r = acreadf view part pa PB n part wk o cap
+if or lt r 1 ge r long cap
+acout view part pa PB n
+exit 4
+end
+ret ulong r
+end
+
+note acrdf: SUITEDIR + s into f; its length, or exits 4
+fn acrdf f edit uchar FIL pa edit uchar PAN sl ulong s view uchar * to ulong
+n = acpth pa PSD sl s 0
+r = acreadf view part pa PB n f
+if lt r 0
+acout view part pa PB n
+exit 4
+end
+ret ulong r
+end
+
+note run HOST PORT SUITEDIR OUTDIR OMC MODEL CORPUSDIR|- [MUTANTOP]
+fn cmdrun to void
+na = ulong argcnt
+if and ne na 9 ne na 10
+exit 2
+end
+pa = new uchar PAN 0
+wk = new uchar WKN 0
+sv = new ulong SVN 0
+f = new uchar FIL 0
+n = acgeta 2 pa PB
+put sv SIP ulong acip view part pa PB n
+n = acgeta 3 pa PB
+put sv SPORT acudec view part pa PB n
+if or eq get sv SPORT 0 gt get sv SPORT 65535
+exit 2
+end
+put sv SSDL acgeta 4 pa PSD
+put sv SODL acgeta 5 pa POD
+put sv SOML acgeta 6 pa POM
+n = acgeta 7 pa PB
+if gt n 250
+exit 2
+end
+for i ulong n
+put wk add WMO i get pa add PB i
+end
+put sv SMOL n
+put sv SCOL acgeta 8 pa PCO
+put sv SMUT 0
+if eq na 10
+n = acgeta 9 pa PMU
+put sv SMUT acopc view part pa PMU n
+if eq get sv SMUT 0
+exit 2
+end
+end
+x = makedir pa POD get sv SODL 493
+put sv ST0L acrdwk wk pa acpth pa PSD get sv SSDL fth 0 WT0
+put sv add ST0L 1 acrdwk wk pa acpth pa PSD get sv SSDL fto 0 WT1
+put sv add ST0L 2 acrdwk wk pa acpth pa PSD get sv SSDL ftf 0 WT2
+put sv SW2L acrdwk wk pa acpth pa PSD get sv SSDL fags 0 WS2
+put sv SW1L acrdwk wk pa acpth pa POD get sv SODL fals 0 WS1
+m = acpth pa POD get sv SODL kresults 0
+fd = fopen pa PB m 524865 420
+if lt fd 0
+exit 4
+end
+put sv SRFD ulong fd
+x2 = acwrite fd krhdr
+n = acrdf f pa get sv SSDL fitems
+acvfile f n sv
+put sv SKIND 0
+acloop f n wk sv pa
+n = acrdf f pa get sv SSDL fifev
+put sv SKIND 1
+acloop f n wk sv pa
+n = acrdf f pa get sv SSDL fhe
+put sv SKIND 2
+acloop f n wk sv pa
+acbpb wk sv pa
+x3 = fclose int fd
+exit int acsum sv pa
+end
+note acpre: whether s starts with p
+fn acpre s view uchar * p view uchar * to bool
+if lt len s len p
+ret false
+end
+ret heq view part s 0 len p p
+end
+
+note ======== the control stubs (PREREG.md section 7)
+note stub garbage answers every request with "zq", finish length, no calls, 977 completion tokens.
+note stub ref answers item X-Accept-Item from SUITEDIR: if-KEY with acifref, he-N with the prompt and the
+note canonical solution in a python fence, any other id with the item's ref object.
+
+text sobj1 "{\"id\":\"x\",\"object\":\"chat.completion\",\"choices\":[{\"index\":0,\"message\":{\"role\":\"assistant\",\"content\":\""
+text sobj2 "{\"id\":\"x\",\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\""
+text stc1 "\",\"tool_calls\":["
+text stc2 "{\"index\":"
+text stc3 ",\"id\":\"call_"
+text stc4 "\",\"type\":\"function\",\"function\":{\"name\":\""
+text stc5 "\",\"arguments\":\""
+text stc6 "\"}}"
+text sfin1 "},\"finish_reason\":\""
+text sfin1c "\"},\"finish_reason\":\""
+text susg "\"}],\"usage\":{\"prompt_tokens\":1,\"completion_tokens\":"
+text susg2 ",\"total_tokens\":"
+text susg3 "}}"
+text sstrue "\"stream\":true"
+text sgarb "zq"
+text spyf "```python\n"
+text sfence "```\n"
+text sgarbage "garbage"
+text sref "ref"
+text kctk "ctok"
+text kstub "stub "
+
+note acsfin: the reply tail: finish F, usage with C completion tokens; sv[SFIN] code F (1..4), sv[SCTOK] C
+fn acsfin o edit uchar FBN q ulong sv view ulong SVN cl bool to ulong
+r = q
+if cl
+r = acapp o r sfin1c
+else
+r = acapp o r sfin1
+end
+f = get sv SFIN
+if eq f 2
+r = acapp o r klength
+end
+if eq f 3
+r = acapp o r ktoolc
+end
+if or eq f 1 eq f 4
+r = acapp o r kstop
+end
+r = acapp o r susg
+r = acdec o r get sv SCTOK
+r = acapp o r susg2
+r = acdec o r add get sv SCTOK 1
+ret acapp o r susg3
+end
+
+note acscall: tool call k of the ref object's calls array element e, at o[q..]
+fn acscall o edit uchar FBN q ulong it view uchar ILN tp view uint TPN e ulong k ulong to ulong
+b = new uchar 4096 0
+r = q
+if gt k 0
+r = acapp o r kcomma
+end
+r = acapp o r stc2
+r = acdec o r k
+r = acapp o r stc3
+r = acdec o r k
+r = acapp o r stc4
+l = acstr it tp acmem it tp e kname b
+if gt l 0
+r = acesc o r view part b 0 ulong l
+end
+r = acapp o r stc5
+a = acmem it tp e kargs
+if ne a jsnone
+r = acesc o r view part it js_off tp a js_span tp a
+end
+ret acapp o r stc6
+end
+
+note acsrefo: the item's ref object as the reply body at o (sv[SSTRM] picks chunk or completion); its length
+fn acsrefo o edit uchar FBN it view uchar ILN tp view uint TPN sv edit ulong SVN to ulong
+b = new uchar 65536 0
+rf = acmem it tp 0 kref
+q = acapp o 0 sobj1
+if ne get sv SSTRM 0
+q = acapp o 0 sobj2
+end
+l = acstr it tp acmem it tp rf kcontent b
+if gt l 0
+q = acesc o q view part b 0 ulong l
+end
+e = acel tp acmem it tp rf kcalls 0
+k = ulong 0
+if ne e jsnone
+q = acapp o q stc1
+end
+while ne e jsnone bound 4
+q = acscall o q it tp e k
+k = add k 1
+e = acnext tp e
+end
+if gt k 0
+q = acapp o q kclose
+end
+l = acstr it tp acmem it tp rf kfin b
+put sv SFIN 1
+if gt l 0
+put sv SFIN acfcode view part b 0 ulong l
+end
+put sv SCTOK ackn it tp rf kctk
+ret acsfin o q sv eq k 0
+end
+
+note acstext: content c as the whole reply body at o (finish sv[SFIN], tokens sv[SCTOK]); its length
+fn acstext o edit uchar FBN c view uchar * sv view ulong SVN to ulong
+q = acapp o 0 sobj1
+if ne get sv SSTRM 0
+q = acapp o 0 sobj2
+end
+q = acesc o q c
+ret acsfin o q sv true
+end
+
+note acshe: the HumanEval ref content (prompt + canonical solution in a python fence) at c; its length
+fn acshe c edit uchar 65536 it view uchar ILN tp view uint TPN to ulong
+b = new uchar 65536 0
+q = acapp c 0 spyf
+l = acstr it tp acmem it tp 0 kprompt b
+if gt l 0
+q = acapp c q view part b 0 ulong l
+end
+l = acstr it tp acmem it tp 0 kcanon b
+if gt l 0
+q = acapp c q view part b 0 ulong l
+end
+ret acapp c q sfence
+end
+
+note acsidm: whether the line in it (parsed on tp) is item id of kind k (0 chat, 1 IFEval, 2 HumanEval)
+fn acsidm it view uchar ILN tp view uint TPN k ulong id view uchar * to bool
+b = new uchar 512 0
+q = ulong 0
+if eq k 0
+l = acstr it tp acmem it tp 0 kid b
+if lt l 1
+ret false
+end
+q = ulong l
+end
+if eq k 1
+q = acapp b 0 kif
+q = acdec b q ackn it tp 0 kkey
+end
+if eq k 2
+l = acstr it tp acmem it tp 0 ktask b
+if or lt l 11 not acpre id khe
+ret false
+end
+ret heq view part id 3 sub len id 3 view part b 10 sub ulong l 10
+end
+ret heq view part b 0 q id
+end
+
+note acsfind: in the n-byte file f, the line holding item id of kind k parsed into it / tp; false if none
+fn acsfind f view uchar FIL it edit uchar ILN tp edit uint TPN sv edit ulong SVN id view uchar * to bool
+p = ulong 0
+n = get sv SFN
+k = get sv SKIND
+while lt p n bound 999999
+p = acline f n p it sv
+if eq get sv SILN 0
+continue
+end
+if not acpar it tp sv
+continue
+end
+if acsidm it tp k id
+ret true
+end
+end
+ret false
+end
+
+note acsrefb: the ref reply body for item id at o; its length (0 when the id is unknown)
+fn acsrefb o edit uchar FBN pa edit uchar PAN sv edit ulong SVN id view uchar * to ulong
+f = new uchar FIL 0
+it = new uchar ILN 0
+tp = new uint TPN 0
+c = new uchar 65536 0
+put sv SKIND 0
+if acpre id kif
+put sv SKIND 1
+end
+if acpre id khe
+put sv SKIND 2
+end
+n = ulong 0
+if eq get sv SKIND 0
+n = acrdf f pa get sv SSDL fitems
+end
+if eq get sv SKIND 1
+n = acrdf f pa get sv SSDL fifev
+end
+if eq get sv SKIND 2
+n = acrdf f pa get sv SSDL fhe
+end
+put sv SFN n
+if not acsfind f it tp sv id
+ret 0
+end
+if eq get sv SKIND 0
+ret acsrefo o it tp sv
+end
+put sv SFIN 1
+put sv SCTOK 50
+if eq get sv SKIND 1
+l = acifref c it tp
+if gt l len c
+ret 0
+end
+ret acstext o view part c 0 l sv
+end
+l = acshe c it tp
+ret acstext o view part c 0 l sv
+end
+
+note acsout: send body o[0, n) (or 404 when n is 0) as JSON, or as one SSE chunk then [DONE]
+fn acsout cs edit ulong 320 io edit uchar 131072 o view uchar FBN n ulong sv view ulong SVN to long
+if eq n 0
+r = hrspst cs io 404
+r = hfe r hhname cs io kctype
+r = hfe r hhval cs io kjson
+r = hfe r hhend cs io 0 2
+r = hfe r hput cs io kendm
+ret hfe r hwfin cs io
+end
+if ne get sv SSTRM 0
+r = hrspsse cs io
+r = hfe r hssedat cs io view part o 0 n
+r = hfe r hsseend cs io
+r = hfe r hssedat cs io kdone
+r = hfe r hsseend cs io
+ret hfe r hwfin cs io
+end
+r = hrspst cs io 200
+r = hfe r hhname cs io kctype
+r = hfe r hhval cs io kjson
+r = hfe r hhend cs io 0 n
+r = hfe r hput cs io view part o 0 n
+ret hfe r hwfin cs io
+end
+
+note acsreq: answer one read request on cs / io (body into d); sv[SOP] 1 garbage, 2 ref
+fn acsreq cs edit ulong 320 io edit uchar 131072 d edit uchar RQN pa edit uchar PAN sv edit ulong SVN to long
+o = new uchar FBN 0
+id = new uchar 256 0
+n = hbodyall cs io d
+if lt n 0
+ret hreject cs io n
+end
+put sv SSTRM 0
+if lt acfind view part d 0 ulong n sstrue 0 false ulong n
+put sv SSTRM 1
+end
+h = hhfind cs io kxitem
+il = ulong 0
+if ge h 0
+il = hhvlen cs ulong h
+if gt il 255
+il = 0
+end
+for i ulong il
+put id i get io add hhvoff cs ulong h i
+end
+end
+if eq get sv SOP 1
+put sv SFIN 2
+put sv SCTOK 977
+ret acsout cs io o acstext o sgarb sv sv
+end
+m = acsrefb o pa sv view part id 0 il
+ret acsout cs io o m sv
+end
+
+note acsconn: one connection c
+fn acsconn c long cs edit ulong 320 io edit uchar 131072 d edit uchar RQN pa edit uchar PAN sv edit ulong SVN to void
+r = hinit cs io int c 1
+if lt r 0
+x = hclose cs
+ret
+end
+hsettmo cs 30000000000 30000000000
+hsetbdl cs 600000000000
+put cs HBCAP 983040
+r = hreqrd cs io
+if lt r 0
+x = hreject cs io r
+end
+if gt r 0
+put cs HKEEP 0
+x = acsreq cs io d pa sv
+end
+x2 = hclose cs
+end
+
+note acsserve: listen on 127.0.0.1:sv[SPORT], print "stub PORT", answer sv[SMAX] connections
+fn acsserve pa edit uchar PAN sv edit ulong SVN to void
+cs = new ulong 320 0
+io = new uchar 131072 0
+d = new uchar RQN 0
+a = new uchar 16 0
+o = new uchar 32 0
+r = haddr4 a 2130706433 get sv SPORT
+lf = hlisten a 16
+if lt lf 0
+exit 71
+end
+q = acapp o 0 kstub
+q = acdec o q get sv SPORT
+q = acapp o q knl
+acout view part o 0 q
+nc = ulong 0
+for j ulong 999999999
+if ge nc get sv SMAX
+break
+end
+c = haccept int lf 60000000000
+if ge c 0
+acsconn c cs io d pa sv
+nc = add nc 1
+end
+end
+x = fclose int lf
+end
+
+note stub PORT garbage|ref SUITEDIR [COUNT]: serve the control replies on 127.0.0.1:PORT, COUNT connections
+fn cmdstub to void
+na = ulong argcnt
+if and ne na 5 ne na 6
+exit 2
+end
+pa = new uchar PAN 0
+sv = new ulong SVN 0
+n = acgeta 2 pa PB
+put sv SPORT acudec view part pa PB n
+if or eq get sv SPORT 0 gt get sv SPORT 65535
+exit 2
+end
+n = acgeta 3 pa PB
+put sv SOP 0
+if heq view part pa PB n sgarbage
+put sv SOP 1
+end
+if heq view part pa PB n sref
+put sv SOP 2
+end
+if eq get sv SOP 0
+exit 2
+end
+put sv SSDL acgeta 4 pa PSD
+put sv SMAX 1000000000
+if eq na 6
+n = acgeta 5 pa PB
+put sv SMAX acudec view part pa PB n
+end
+acsserve pa sv
+end
+
+note ======== IFEval registration and self-test (PREREG.md section 5)
+
+text kours ",\"ours\":"
+text kresp1 ",\"response\":\""
+text kkey1 "{\"key\":"
+text kifsel "ifsel supported="
+text kifreg " registered="
+text kself "selftest rows="
+text kselfm " mismatches="
+
+note acifsel1: the upstream row in it: whether it is supported, and its ref response's verdict into the
+note RESP line at o (from p); the new end. sv[SOP] gets 1 when the row is registered.
+fn acifsel1 it view uchar ILN tp view uint TPN o edit uchar FBN p ulong sv edit ulong SVN to ulong
+c = new uchar 65536 0
+put sv SOP 0
+if not acifsup it tp
+ret p
+end
+l = acifref c it tp
+if gt l len c
+ret p
+end
+v = acifrow view part c 0 l it tp
+if eq v 0
+put sv SOP 1
+end
+q = acapp o p kkey1
+q = acdec o q ackn it tp 0 kkey
+q = acapp o q kours
+q = acdec o q v
+q = acapp o q kresp1
+q = acesc o q view part c 0 l
+q = acapp o q kendo
+ret acapp o q knl
+end
+
+note acfput: s appended to fd; exits 4 when the write fails
+fn acfput fd long s view uchar * to void
+if not acwrite fd s
+exit 4
+end
+end
+
+note acifsl: every row of the sv[90]-byte file f: supported rows' RESP lines to fd sv[92], registered
+note rows verbatim to fd sv[91]; the counts into sv[93] and sv[94]
+fn acifsl f view uchar FIL it edit uchar ILN tp edit uint TPN o edit uchar FBN sv edit ulong SVN to void
+p = ulong 0
+put sv 93 0
+put sv 94 0
+while lt p get sv 90 bound 999999
+s = p
+p = acline f get sv 90 p it sv
+if eq get sv SILN 0
+continue
+end
+if not acpar it tp sv
+exit 4
+end
+q = acifsel1 it tp o 0 sv
+if gt q 0
+put sv 93 add get sv 93 1
+if gt q len o
+exit 4
+end
+acfput long get sv 92 view part o 0 q
+end
+if eq get sv SOP 1
+put sv 94 add get sv 94 1
+acfput long get sv 91 view part f s get sv SILN
+acfput long get sv 91 knl
+end
+end
+end
+
+note ifsel UPSTREAM OUT RESP: OUT = the registered rows (verbatim), RESP = every supported row's reference
+note response with this runner's verdict (0 pass), for tools/ifeval_oracle.py
+fn cmdifsel to void
+if ne argcnt 5
+exit 2
+end
+pa = new uchar PAN 0
+sv = new ulong SVN 0
+f = new uchar FIL 0
+it = new uchar ILN 0
+tp = new uint TPN 0
+o = new uchar FBN 0
+n = acgeta 2 pa PB
+r = acreadf view part pa PB n f
+if lt r 0
+exit 4
+end
+n = acgeta 3 pa PB
+fo = fopen pa PB n 524865 420
+n = acgeta 4 pa add PB 1024
+fr = fopen pa add PB 1024 n 524865 420
+if or lt fo 0 lt fr 0
+exit 4
+end
+put sv 90 ulong r
+put sv 91 ulong fo
+put sv 92 ulong fr
+acifsl f it tp o sv
+x = fclose int fo
+x2 = fclose int fr
+q = acapp o 0 kifsel
+q = acdec o q get sv 93
+q = acapp o q kifreg
+q = acdec o q get sv 94
+q = acapp o q knl
+acout view part o 0 q
+end
+
+note acself1: one self-test line (an IFEval row plus response and expect); whether this runner agrees
+fn acself1 it view uchar ILN tp view uint TPN to bool
+b = new uchar 262144 0
+l = acstr it tp acmem it tp 0 kresp b
+if lt l 0
+exit 4
+end
+v = acifrow view part b 0 ulong l it tp
+ret eq eq v 0 actrue it tp 0 kexpect
+end
+
+note selftest FILE: every line's verdict must equal its expect; prints the counts, exits 1 on a mismatch
+fn cmdself to void
+if ne argcnt 3
+exit 2
+end
+pa = new uchar PAN 0
+sv = new ulong SVN 0
+f = new uchar FIL 0
+it = new uchar ILN 0
+tp = new uint TPN 0
+o = new uchar 256 0
+n = acgeta 2 pa PB
+r = acreadf view part pa PB n f
+if lt r 0
+exit 4
+end
+p = ulong 0
+nl = ulong 0
+nm = ulong 0
+while lt p ulong r bound 999999
+p = acline f ulong r p it sv
+if eq get sv SILN 0
+continue
+end
+if not acpar it tp sv
+exit 4
+end
+if not acifsup it tp
+exit 4
+end
+nl = add nl 1
+if not acself1 it tp
+nm = add nm 1
+q = acapp o 0 kfail
+q = acapp o q ksp
+q = acdec o q ackn it tp 0 kkey
+q = acapp o q knl
+acout view part o 0 q
+end
+end
+q = acapp o 0 kself
+q = acdec o q nl
+q = acapp o q kselfm
+q = acdec o q nm
+q = acapp o q knl
+acout view part o 0 q
+if or ne nm 0 eq nl 0
+exit 1
+end
+end
+
+text crun "run"
+text cstub "stub"
+text cifsel "ifsel"
+text cself "selftest"
+
+fn main to int
+b = new uchar 64 0
+if lt argcnt 2
+exit 2
+end
+r = argread 1 b 0 64
+if or lt r 1 gt r 64
+exit 2
+end
+if heq view part b 0 ulong r crun
+cmdrun
+end
+if heq view part b 0 ulong r cstub
+cmdstub
+ret 0
+end
+if heq view part b 0 ulong r cifsel
+cmdifsel
+ret 0
+end
+if heq view part b 0 ulong r cself
+cmdself
+ret 0
+end
+ret 2
 end
