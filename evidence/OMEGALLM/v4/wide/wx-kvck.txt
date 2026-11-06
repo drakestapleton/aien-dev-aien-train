@@ -1,0 +1,6 @@
+receipt: wx-kvck
+binary: ollm-var-wx sha256 d4d1247fe2b35f955049d5b3fe3a2a90af45b782c853c4a63ae5ac8a874d622f
+$ taskset -c 6 nice -n 10 /dev/shm/hive/ownmodel/wide4/v4w-build/ollm-var-wx kvck /home/drakestapleton/work/hive/ownmodel/wide4/v4w-work/x2.ck /home/drakestapleton/work/hive/ownmodel/wide4/v4w-work/held.bin
+--- output
+K 32 0 5519331
+--- rc 0 ms 9

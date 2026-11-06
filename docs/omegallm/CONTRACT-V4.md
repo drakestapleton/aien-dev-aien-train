@@ -30,16 +30,63 @@ mappings (`mapnew`/`mapget`/`mapset`) and stages layers through the existing win
 | 2 private, lazy | saved activations of layers that do not fit `oa` | ASTR4 = 6TD + 2T + TF + HT per layer |
 | 3 private, lazy | KV cache of decode layers that do not fit | 2TD per layer |
 
-Window `ow` (and `ogr` for gradients) holds wte at 0, gf at V·D, then the resident layers from
-WS = V·D + D; when not every layer fits, one staging slot follows. **Limit:** WS + one LSTR must
-fit min(OWC, OGC) = 15,833,472 f64, so wte and gf are always resident:
+### 2.1 Windows and the wte banks (wide4)
 
-- V 32768, D 384, F 1536: V·D = 12,582,912, LSTR = 1,770,240, total 14,353,536 — fits.
-- V 32768, D 512: V·D = 16,777,216 alone exceeds the window — `init4` refuses (exit 12).
+Window `ow` (and `ogr` for gradients) holds **gf at 0, then the resident layers from WS = D**; when
+not every layer fits, one staging slot follows. `wte` and its gradient do not live in a window: they
+sit in two banks each, the v3 pools that v4 never otherwise uses (`opa` from `model.om`, `oww`,
+`ogb`, `oab` from `lpool.om`; no new globals, no larger ones):
+
+| Rows of wte | wte (parameters) | dwte (gradient) |
+|---|---|---|
+| bank 1: c < R1 | `opa[c·D ..]` | `ogb[c·D ..]` |
+| bank 2: R1 ≤ c < V | `oww[RT + (c − R1)·D ..]`, RT = T·E (after the RoPE table) | `oab[(c − R1)·D ..]` |
+
+with R1 = min(V, ⌊XWB1 / D⌋), XWB1 = 14,161,920 = OGBN ≤ OPAN, XWB2 = 15,733,760 = OABN. Every row
+lies in one bank. The embedding gather (`xcpe`), the tied logits (`xlogit`, one ascending sum per
+logit), the gradient outer product (`xgerw`), the embedding backward (`xembg`) and the
+dz = dl·wte column sums (`xdz`) address the banks directly; the column sums run over bank 1's rows and
+then on over bank 2's in the same accumulator, so every result has the bits of the one-window layout
+(the virtual parameter order and the CK03 payload are unchanged; receipts in section 6.1).
+
+**Limits** (Wolfram; `init4` exits 12 past any of them):
+
+- layers: D + one LSTR ≤ min(OWC, OGC) = 15,833,472;
+- wte: (V − R1)·D ≤ XWB2 and T·E + (V − R1)·D ≤ OWWN = 15,932,160, i.e. V·D ≲ XWB1 + XWB2 =
+  29,895,680. At V = 32768 the widest even D is 912; D 1024 (bank 2 would need 19,392,512) and
+  V 65536 D 512 (the same) are refused;
+- decode (`xgd`): 8D + 2F + 4 + V + T + 2·T·D ≤ OAC (one KV slot);
+- training forward (`train4`, `eval4`, `gcheck4`, `kvck`): the activation layout `xga`, one layer
+  slot ASTR4 = 6TD + 2T + TF + HT after 5TD + 3T + 5D + F + V. These commands exit 12 when it does
+  not fit; `init4`, `tune4` and `sample4` need only the weights and the decode layout. For S1 the
+  training forward fits up to T = 1947, so a T = 4096 S1 checkpoint loads for `sample4` (3 KV slots:
+  2 resident layers and the staging slot) but trains on the CPU only at T ≤ 1947.
+
+| Shape (V 32768) | V·D | R1 | bank-2 values | LSTR | RW at L 8 (old layout) |
+|---|---|---|---|---|---|
+| D 384 H 6 F 1536 | 12,582,912 | 32,768 | 0 | 1,770,240 | 8, all resident (0: every layer staged) |
+| S1: D 512 H 8 F 2048 | 16,777,216 | 27,660 | 2,615,296 | 3,146,752 | 4 + staging (refused) |
+| D 768 H 12 F 3072 | 25,165,824 | 18,440 | 11,003,904 | 7,079,424 | 1 + staging (refused) |
+| D 912 F 3648 | 29,884,416 | 15,528 | 15,722,880 | 9,982,752 | 0 + staging (refused) |
+| D 1024 F 4096 (refused) | 33,554,432 | 13,830 | 19,392,512 > XWB2 | 12,584,960 | — |
+
+Why banks and not tiling the logits over chunks of wte staged from mapping 0 (option b): map access
+costs ~28 ns (`mapget`) / ~31 ns (`mapset`) per f64 against ~2.9 ns per multiply-add (MEASURED, core
+4). The head reads every wte row once per position, so staging rows per position costs V·D·28 ns =
+0.470 s per token at S1 against 0.146 s of head arithmetic (3·V·D multiply-adds; MODELED from the
+measured unit costs, Wolfram), and staging once per sequence needs T·V stored logits (T ≤ 458 even with all of
+`oa`, at V 32768). The banks cost nothing per step beyond the one-window layout: the per-step copies
+are the same V·D values as before (master to wte after Adam, dwte to the gradient region).
 
 Map access costs ~31 ns (`mapset`) and ~28 ns (`mapget`) per f64, against ~2.9 ns per dot-product
 multiply-add (MEASURED, core 4), so staged layers pay a copy per step but no per-element map call
 inside the kernels.
+
+`build.sh --variant wx` (bx's window sizes plus XWB1 2000) makes the small shape
+V 256 T 32 D 18 H 3 F 32 L 4 cross the bank boundary (R1 = 111 of 256 rows) with staged layers and
+activations; `--mutant j` (wx plus OMUTJ 0) restarts the dz sums at bank 2 and `--mutant jd` (wx plus
+OMUTJD 0) embeds a bank-2 token from row c xor 1 in decode only. Receipts:
+[`tests/omegallm/v4-wide-check.sh`](../../tests/omegallm/v4-wide-check.sh).
 
 ## 3. Commands
 

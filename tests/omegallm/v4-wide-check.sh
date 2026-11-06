@@ -24,17 +24,14 @@ for a in "" "--variant wx" "--mutant j" "--mutant jd"; do
 		exit 1
 	}
 done
-# the reference: the same build script and sources at $OLD (one-window wte), product and bx
+# the reference: the same build script and sources at $OLD (wte in the one window ow)
 rm -rf "$WORK/oldsrc"
 mkdir -p "$WORK/oldsrc"
 git archive "$OLD" native/omegallm tests/omegallm/build.sh | tar -x -C "$WORK/oldsrc" || exit 70
-for a in "" "--variant bx"; do
-	# shellcheck disable=SC2086
-	OUT=$BUILD/old CORE=${CORES%%[-,]*} sh "$WORK/oldsrc/tests/omegallm/build.sh" $a >> "$E/build.txt" 2>&1 || {
-		echo "BUILD_FAIL old $a" | tee -a "$E/build.txt"
-		exit 1
-	}
-done
+OUT=$BUILD/old CORE=${CORES%%[-,]*} sh "$WORK/oldsrc/tests/omegallm/build.sh" >> "$E/build.txt" 2>&1 || {
+	echo "BUILD_FAIL old" | tee -a "$E/build.txt"
+	exit 1
+}
 echo "old source: $OLD $(git rev-parse "$OLD")" >> "$E/build.txt"
 cat "$E/build.txt"
 cat native/omegallm/*.om docs/omegallm/*.md | awk '{print} NR%40==0 {print "<|endoftext|>"}' > "$WORK/in.txt"
@@ -103,8 +100,9 @@ same ck03-continue-identical "$WORK/o.ck" "$WORK/o2.ck"
 # 2. the bank crossing: variant wx (XWB1 2000: R1 = 111 of 256 rows, layers and activations staged)
 rec x-init4 0 ollm init4 "$WORK/x.ck" 256 32 18 3 32 4 4 3 100 1000 2
 rec wx-gcheck4 0 ollm-var-wx gcheck4 "$WORK/x.ck" "$TR"
-rec oldbx-gcheck4 0 old/ollm-var-bx gcheck4 "$WORK/x.ck" "$TR"
-same wx-gcheck4-eq-oldbx "$WORK/wx-gcheck4.out" "$WORK/oldbx-gcheck4.out"
+# (the old build holds this shape in one window: no staging, no banks; the bits must agree)
+rec old-gcheck4-x 0 old/ollm gcheck4 "$WORK/x.ck" "$TR"
+same wx-gcheck4-eq-old "$WORK/wx-gcheck4.out" "$WORK/old-gcheck4-x.out"
 rec mut-j-gcheck4 40 ollm-mut-j gcheck4 "$WORK/x.ck" "$TR"
 for k in 1 2; do
 	cp "$WORK/x.ck" "$WORK/x$k.ck"

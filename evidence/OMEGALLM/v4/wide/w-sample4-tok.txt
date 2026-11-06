@@ -1,0 +1,5 @@
+receipt: w-sample4-tok
+binary: ollm sha256 aa6cceda5358a797e463bc309d5baeac86db9fe366c8c80a5648837b608deaac
+$ taskset -c 6 nice -n 10 /dev/shm/hive/ownmodel/wide4/v4w-build/ollm sample4 /home/drakestapleton/work/hive/ownmodel/wide4/v4w-work/w.ck 3 8 0 /home/drakestapleton/work/hive/ownmodel/wide4/v4w-work/p.u16
+--- output
+‚c‚c‚c‚c‚c‚c‚c‚c--- rc 0 ms 2874

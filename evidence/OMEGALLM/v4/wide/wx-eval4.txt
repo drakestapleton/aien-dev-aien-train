@@ -1,0 +1,6 @@
+receipt: wx-eval4
+binary: ollm-var-wx sha256 d4d1247fe2b35f955049d5b3fe3a2a90af45b782c853c4a63ae5ac8a874d622f
+$ taskset -c 6 nice -n 10 /dev/shm/hive/ownmodel/wide4/v4w-build/ollm-var-wx eval4 /home/drakestapleton/work/hive/ownmodel/wide4/v4w-work/x2.ck /home/drakestapleton/work/hive/ownmodel/wide4/v4w-work/held.bin 3
+--- output
+E 6 3 5521125 7965300
+--- rc 0 ms 8

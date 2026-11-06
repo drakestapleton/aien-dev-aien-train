@@ -1,0 +1,6 @@
+receipt: prep
+binary: ollm sha256 aa6cceda5358a797e463bc309d5baeac86db9fe366c8c80a5648837b608deaac
+$ taskset -c 6 nice -n 10 /dev/shm/hive/ownmodel/wide4/v4w-build/ollm prep /home/drakestapleton/work/hive/ownmodel/wide4/v4w-work/in.txt /home/drakestapleton/work/hive/ownmodel/wide4/v4w-work/train.bin /home/drakestapleton/work/hive/ownmodel/wide4/v4w-work/held.bin
+--- output
+P 313 282 31 290384 37712
+--- rc 0 ms 14
