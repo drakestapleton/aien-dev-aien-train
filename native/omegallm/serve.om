@@ -1,0 +1,1115 @@
+note SPDX-License-Identifier: AGPL-3.0-only
+note omegallm serve.om (aien-train DRA-119): `ollm serve PORT CK MERGES [MAXCONN]`, an
+note OpenAI-compatible HTTP/1.1 server for a v1 BPE checkpoint (V > 256) on 127.0.0.1:PORT only.
+note aarch64 only: build.sh composes it under one `om2` line after the omega-mv e5b32567 units
+note net/http.om, net/json.om and net/jsonw.om (vendored unmodified); the other targets take
+note noserve.om. It prints `PORT n`, then serves one connection at a time, one request each
+note (Connection: close), until MAXCONN connections (default 1000000) have been served.
+note Routes: GET /health {"status":"ok","in_flight":0}; GET /v1/models; POST /v1/chat/completions
+note with JSON or SSE (stream true) responses; other paths 404, other methods 405.
+note Request: messages (non-empty array of objects with a string role of at most 32 bytes and a
+note string or null content), optional max_tokens or max_completion_tokens (1 .. 999999),
+note temperature (0 .. 2 without exponent, used to 0.001; default 1), seed (unsigned, default 1),
+note stream, stream_options.include_usage and n (only 1). Other members (model, tools, tool_choice)
+note are accepted and ignored: this model never calls tools.
+note Interim chat template (until DRA-123 fixes one shared template): `role: content\n` for each
+note message in order, then `assistant: `; at most 4000 bytes, else 400. The context is token 0 then
+note the template's encoding (CT0 tokens, reported as prompt_tokens); CT0 >= T is refused with 400
+note context_length_exceeded. Output runs at most min(max_tokens, T - CT0) tokens, so the T-token
+note window never slides (cmdsamp's sampling step osstep, splitmix64 seed stream); a generated
+note token 0 ends it with finish_reason stop, the limit with length. Decoded bytes are sent as
+note UTF-8: a sequence cut by a token boundary waits for the next token, an ill-formed one (or one
+note cut by the end) becomes U+FFFD. One line per routed response (and per 413 at the head) goes
+note to stdout: `C status prompt_tokens completion_tokens finish(0 none, 1 stop, 2 length) ms`.
+note Exit codes: 2 usage; 27 merges (bpe.om); 71 the port cannot be bound.
+note wb layout: raw token bytes [0, 8192), content [8192, 73728), template [73728, 77824),
+note message [81920, 82176), response id [82176, 82240). sv slots: 0 stream, 1 max tokens,
+note 2 TEMPMILLI, 3 seed state, 4 include_usage, 5 template bytes, 6 CT0, 7 generated, 8 finish,
+note 9 request count, 10 created, 11 start ns, 12 raw bytes, 13 content bytes, 14 content sent,
+note 16 error code, 19 T, 21 last status.
+
+text svtjson "application/json"
+text svtctyp "Content-Type"
+text svphlth "/health"
+text svpmods "/v1/models"
+text svpchat "/v1/chat/completions"
+text svmget "GET"
+text svmpost "POST"
+text svthlth "{\"status\":\"ok\",\"in_flight\":0}"
+text svtmods "{\"object\":\"list\",\"data\":[{\"id\":\"ollm\",\"object\":\"model\",\"created\":0,\"owned_by\":\"aien\"}]}"
+text svport "PORT "
+text skmsgs "messages"
+text skrole "role"
+text skcont "content"
+text skstrm "stream"
+text skmaxt "max_tokens"
+text skmaxc "max_completion_tokens"
+text sktemp "temperature"
+text skseed "seed"
+text skopts "stream_options"
+text skincl "include_usage"
+text skn "n"
+text skid "id"
+text skobj "object"
+text skcrt "created"
+text skmodel "model"
+text skchoi "choices"
+text skidx "index"
+text skmsg "message"
+text skdelta "delta"
+text skfin "finish_reason"
+text skusage "usage"
+text skpt "prompt_tokens"
+text skct "completion_tokens"
+text sktt "total_tokens"
+text skerr "error"
+text sktype "type"
+text skcode "code"
+text skparam "param"
+text svollm "ollm"
+text svasst "assistant"
+text svcc "chat.completion"
+text svccc "chat.completion.chunk"
+text svstop "stop"
+text svlen "length"
+text svinv "invalid_request_error"
+text svsrv "server_error"
+text svdone "[DONE]"
+text svidp "chatcmpl-ollm-"
+text svsep ": "
+text svnl "\n"
+text svaprm "assistant: "
+text secjson "invalid_json"
+text secreq "invalid_request"
+text secctx "context_length_exceeded"
+text secbig "request_too_large"
+text secnf "not_found"
+text secmeth "method_not_allowed"
+text secint "internal_error"
+text sem1 "request body is not valid JSON (RFC 8259) or has over 65532 JSON tokens"
+text sem2 "the request must be a JSON object"
+text sem3 "messages must be a non-empty array of objects"
+text sem4 "message content must be a string or null"
+text sem5 "message role must be a string of at most 32 bytes"
+text sem6 "the chat template is over 4000 bytes"
+text sem7 "temperature must be a number from 0 to 2 without exponent"
+text sem8 "max_tokens must be an integer from 1 to 999999"
+text sem9 "seed must be an unsigned integer"
+text sem10 "stream must be true or false"
+text sem12 "only n = 1 is supported"
+text sem13 "the request body is over 983040 bytes"
+text sem14 "no such path; routes: GET /health, GET /v1/models, POST /v1/chat/completions"
+text sem15 "method not allowed on this path"
+text sem16 "response construction failed"
+text sem11a "prompt is "
+text sem11b " tokens including the start token; the context window is "
+text sem11c " tokens, so no room is left for output"
+
+note ======== small byte helpers over wb
+
+note svmcat: copy text t into wb at p, at most up to e; the next p
+fn svmcat wb edit uchar 82432 p ulong e ulong t view uchar * to ulong
+q = p
+for i ulong len t
+if ge q e
+ret q
+end
+put wb q get t i
+q = add q 1
+end
+ret q
+end
+
+note svmdec: v in decimal into wb at p (at most 20 digits, up to e); the next p
+fn svmdec wb edit uchar 82432 p ulong e ulong v ulong to ulong
+d = new uchar 20 0
+i = ulong 20
+x = v
+for it ulong 20
+i = sub i 1
+put d i uchar add rem x 10 48
+x = div x 10
+if eq x 0
+break
+end
+end
+q = p
+for k ulong sub 20 i
+if ge q e
+ret q
+end
+put wb q get d add i k
+q = add q 1
+end
+ret q
+end
+
+note ======== UTF-8 (RFC 3629 section 4)
+
+note svu8n: the sequence at a[p], with a[0 .. n) the bytes so far: 1 .. 4 its length when well
+note formed; 0 when a[p .. n) is a proper prefix of a well-formed sequence; 8 + k when its maximal
+note ill-formed subpart is k bytes (replaced by one U+FFFD)
+fn svu8n a view uchar * p ulong n ulong to ulong
+c = ulong get a p
+if lt c 128
+ret 1
+end
+k = svu8k c
+if eq k 0
+ret 9
+end
+for i ulong sub k 1
+q = add p add i 1
+if ge q n
+ret 0
+end
+if not svu8ok c i ulong get a q
+ret add 9 i
+end
+end
+ret k
+end
+
+note svu8k: the sequence length a lead byte c >= 128 starts, 0 when it starts none
+fn svu8k c ulong to ulong
+if and ge c 194 le c 223
+ret 2
+end
+if and ge c 224 le c 239
+ret 3
+end
+if and ge c 240 le c 244
+ret 4
+end
+ret 0
+end
+
+note svu8ok: whether b may be continuation byte i (0 the first) after lead byte c (RFC 3629 table)
+fn svu8ok c ulong i ulong b ulong to bool
+lo = ulong 128
+hi = ulong 191
+if eq i 0
+if eq c 224
+lo = 160
+end
+if eq c 237
+hi = 159
+end
+if eq c 240
+lo = 144
+end
+if eq c 244
+hi = 143
+end
+end
+ret and ge b lo le b hi
+end
+
+note svrepl: U+FFFD (EF BF BD) into the content at its end
+fn svrepl wb edit uchar 82432 sv edit ulong 64 to void
+g = add 8192 get sv 13
+put wb g 239
+put wb add g 1 191
+put wb add g 2 189
+put sv 13 add get sv 13 3
+end
+
+note svclean: move the complete sequences of the raw bytes wb[0, sv12) to the content; fin 1 also
+note replaces a cut tail. The rest moves to the front of the raw bytes.
+fn svclean wb edit uchar 82432 sv edit ulong 64 fin ulong to void
+rn = get sv 12
+p = ulong 0
+for it ulong add rn 1
+if ge p rn
+break
+end
+r = svu8n wb p rn
+if eq r 0
+if eq fin 0
+break
+end
+svrepl wb sv
+p = rn
+else
+if gt r 8
+svrepl wb sv
+p = add p sub r 8
+else
+svmove wb add 8192 get sv 13 p r
+put sv 13 add get sv 13 r
+p = add p r
+end
+end
+end
+svmove wb 0 p sub rn p
+put sv 12 sub rn p
+end
+
+note svmove: wb[d, d + n) = wb[s, s + n), copying forward (d <= s or the ranges apart)
+fn svmove wb edit uchar 82432 d ulong s ulong n ulong to void
+for i ulong n
+put wb add d i get wb add s i
+end
+end
+
+note ======== responses
+
+fn svstat cs edit ulong 320 io edit uchar 131072 code ulong t view uchar * to long
+r = hrspst cs io code
+r = hfe r hhname cs io svtctyp
+r = hfe r hhval cs io svtjson
+r = hfe r hhend cs io 0 len t
+r = hfe r hput cs io t
+ret hfe r hwfin cs io
+end
+
+note svsend: the writer's text ob[1040, 1040 + n) as a JSON response with status code
+fn svsend cs edit ulong 320 io edit uchar 131072 ob edit uchar 409600 code ulong n ulong to long
+r = hrspst cs io code
+r = hfe r hhname cs io svtctyp
+r = hfe r hhval cs io svtjson
+r = hfe r hhend cs io 0 n
+r = hfe r hput cs io view part ob 1040 n
+ret hfe r hwfin cs io
+end
+
+fn svwt ob edit uchar 409600 t view uchar * to void
+js_wsbuf ob t 0 len t
+end
+
+note svemsg: the message of error code sv16 into wb[81920 ..); its length
+fn svemsg wb edit uchar 82432 sv edit ulong 64 to ulong
+e = get sv 16
+b = ulong 81920
+z = ulong 82176
+p = b
+if eq e 1
+p = svmcat wb p z sem1
+end
+if eq e 2
+p = svmcat wb p z sem2
+end
+if eq e 3
+p = svmcat wb p z sem3
+end
+if eq e 4
+p = svmcat wb p z sem4
+end
+if eq e 5
+p = svmcat wb p z sem5
+end
+if eq e 6
+p = svmcat wb p z sem6
+end
+if eq e 7
+p = svmcat wb p z sem7
+end
+if eq e 8
+p = svmcat wb p z sem8
+end
+if eq e 9
+p = svmcat wb p z sem9
+end
+if eq e 10
+p = svmcat wb p z sem10
+end
+if eq e 11
+p = svmcat wb p z sem11a
+p = svmdec wb p z get sv 6
+p = svmcat wb p z sem11b
+p = svmdec wb p z get sv 19
+p = svmcat wb p z sem11c
+end
+if eq e 12
+p = svmcat wb p z sem12
+end
+if eq e 13
+p = svmcat wb p z sem13
+end
+if eq e 14
+p = svmcat wb p z sem14
+end
+if eq e 15
+p = svmcat wb p z sem15
+end
+if eq e 16
+p = svmcat wb p z sem16
+end
+ret sub p b
+end
+
+fn svecode ob edit uchar 409600 e ulong to void
+if eq e 1
+svwt ob secjson
+ret
+end
+if eq e 11
+svwt ob secctx
+ret
+end
+if eq e 13
+svwt ob secbig
+ret
+end
+if eq e 14
+svwt ob secnf
+ret
+end
+if eq e 15
+svwt ob secmeth
+ret
+end
+if eq e 16
+svwt ob secint
+ret
+end
+svwt ob secreq
+end
+
+note svfail: {"error":{"message","type","param":null,"code"}} for error code sv16 with status st
+fn svfail cs edit ulong 320 io edit uchar 131072 wb edit uchar 82432 sv edit ulong 64 st ulong to long
+ob = new uchar 409600 0
+put sv 21 st
+m = svemsg wb sv
+x = js_winit ob
+js_wobj ob
+svwt ob skerr
+js_wobj ob
+svwt ob skmsg
+js_wsbuf ob wb 81920 m
+svwt ob sktype
+if eq st 500
+svwt ob svsrv
+else
+svwt ob svinv
+end
+svwt ob skparam
+js_wnull ob
+svwt ob skcode
+svecode ob get sv 16
+js_wobje ob
+js_wobje ob
+n = js_wdone ob
+if lt n 0
+put cs HKEEP 0
+ret hrsperr cs io 500
+end
+ret svsend cs io ob st ulong n
+end
+
+note svhead: {"id", "object" t, "created", "model" opened; the caller adds the rest
+fn svhead ob edit uchar 409600 wb edit uchar 82432 sv edit ulong 64 t view uchar * to void
+x = js_winit ob
+js_wobj ob
+svwt ob skid
+js_wsbuf ob wb 82176 get sv 15
+svwt ob skobj
+svwt ob t
+svwt ob skcrt
+js_wulong ob get sv 10
+svwt ob skmodel
+svwt ob svollm
+end
+
+fn svfr ob edit uchar 409600 sv edit ulong 64 to void
+f = get sv 8
+if eq f 1
+svwt ob svstop
+ret
+end
+if eq f 2
+svwt ob svlen
+ret
+end
+js_wnull ob
+end
+
+fn svusage ob edit uchar 409600 sv edit ulong 64 to void
+svwt ob skusage
+js_wobj ob
+svwt ob skpt
+js_wulong ob get sv 6
+svwt ob skct
+js_wulong ob get sv 7
+svwt ob sktt
+js_wulong ob add get sv 6 get sv 7
+js_wobje ob
+end
+
+note svfull: the chat.completion object (stream false)
+fn svfull ob edit uchar 409600 wb edit uchar 82432 sv edit ulong 64 to long
+svhead ob wb sv svcc
+svwt ob skchoi
+js_warr ob
+js_wobj ob
+svwt ob skidx
+js_wulong ob 0
+svwt ob skmsg
+js_wobj ob
+svwt ob skrole
+svwt ob svasst
+svwt ob skcont
+js_wsbuf ob wb 8192 get sv 13
+js_wobje ob
+svwt ob skfin
+svfr ob sv
+js_wobje ob
+js_warre ob
+svusage ob sv
+js_wobje ob
+ret js_wdone ob
+end
+
+note svchunk: one chat.completion.chunk; kind 0 the role, 1 the content wb[8192 + sv14, 8192 + sv13),
+note 2 the finish reason, 3 usage (empty choices). Sends it as one SSE event.
+fn svchunk cs edit ulong 320 io edit uchar 131072 ob edit uchar 409600 wb edit uchar 82432 sv edit ulong 64 kind ulong to long
+svhead ob wb sv svccc
+svwt ob skchoi
+js_warr ob
+if ne kind 3
+js_wobj ob
+svwt ob skidx
+js_wulong ob 0
+svwt ob skdelta
+js_wobj ob
+if eq kind 0
+svwt ob skrole
+svwt ob svasst
+svwt ob skcont
+note "" as zero bytes of a non-empty text: under omc e5b32567 an empty text passed as a view has a
+note wrong length (omega-mv#775, fixed after this pin), and js_wsbuf then refuses it (jswearg)
+js_wsbuf ob svasst 0 0
+end
+if eq kind 1
+svwt ob skcont
+g0 = get sv 14
+js_wsbuf ob wb add 8192 g0 sub get sv 13 g0
+end
+js_wobje ob
+svwt ob skfin
+if eq kind 2
+svfr ob sv
+else
+js_wnull ob
+end
+js_wobje ob
+end
+js_warre ob
+if eq kind 3
+svusage ob sv
+end
+js_wobje ob
+n = js_wdone ob
+if lt n 0
+ret -5
+end
+r = hssedat cs io view part ob 1040 ulong n
+ret hfe r hsseend cs io
+end
+
+note ======== request parsing
+
+note svtemp: the temperature token's lexeme at bd[o, o + n) as TEMPMILLI (digits, optional
+note fraction, used to 0.001), or 999999 when it is not a number from 0 to 2
+fn svtemp bd edit uchar 983040 o ulong n ulong to ulong
+ip = ulong 0
+fr = ulong 0
+fd = ulong 0
+dot = false
+for i ulong n
+c = ulong get bd add o i
+if eq c 46
+if dot
+ret 999999
+end
+dot = true
+else
+if or lt c 48 gt c 57
+ret 999999
+end
+if dot
+if lt fd 3
+fr = add mul fr 10 sub c 48
+fd = add fd 1
+end
+else
+if ge ip 100
+ret 999999
+end
+ip = add mul ip 10 sub c 48
+end
+end
+end
+for k ulong 3
+if lt fd 3
+fr = mul fr 10
+fd = add fd 1
+end
+end
+m = add mul ip 1000 fr
+if gt m 2000
+ret 999999
+end
+ret m
+end
+
+note svpcat: append text t to the template; false when it would pass 4000 bytes
+fn svpcat wb edit uchar 82432 sv edit ulong 64 t view uchar * to bool
+pl = get sv 5
+if gt add pl len t 4000
+ret false
+end
+for i ulong len t
+put wb add 73728 add pl i get t i
+end
+put sv 5 add pl len t
+ret true
+end
+
+note svpstr: append the decoded string token t (role or content) to the template
+fn svpstr bd edit uchar 983040 tp edit uint 262144 t ulong wb edit uchar 82432 sv edit ulong 64 to bool
+pl = get sv 5
+if ge pl 4000
+ret false
+end
+n = js_sget bd js_off tp t part wb add 73728 pl sub 4000 pl
+if lt n 0
+ret false
+end
+put sv 5 add pl ulong n
+ret true
+end
+
+note svmsg1: one message object e into the template; 0 or an error code
+fn svmsg1 bd edit uchar 983040 tp edit uint 262144 e ulong wb edit uchar 82432 sv edit ulong 64 to ulong
+if ne js_type tp e 1
+ret 3
+end
+ro = jsnone
+co = jsnone
+k = js_first tp e
+for it ulong js_nkids tp e
+if eq k jsnone
+break
+end
+o = js_off tp k
+if js_streq bd o skrole
+ro = add k 1
+end
+if js_streq bd o skcont
+co = add k 1
+end
+k = js_mnext tp k
+end
+if eq ro jsnone
+ret 5
+end
+if or ne js_type tp ro 6 gt js_slen tp ro 32
+ret 5
+end
+if eq co jsnone
+ret 4
+end
+ct = js_type tp co
+if and ne ct 6 ne ct 10
+ret 4
+end
+if not svpstr bd tp ro wb sv
+ret 6
+end
+if not svpcat wb sv svsep
+ret 6
+end
+if eq ct 6
+if not svpstr bd tp co wb sv
+ret 6
+end
+end
+if not svpcat wb sv svnl
+ret 6
+end
+ret 0
+end
+
+fn svmsgs bd edit uchar 983040 tp edit uint 262144 a ulong wb edit uchar 82432 sv edit ulong 64 to ulong
+if ne js_type tp a 3
+ret 3
+end
+n = js_nkids tp a
+if eq n 0
+ret 3
+end
+e = js_first tp a
+for it ulong n
+if eq e jsnone
+break
+end
+r = svmsg1 bd tp e wb sv
+if ne r 0
+ret r
+end
+e = js_enext tp e
+end
+if not svpcat wb sv svaprm
+ret 6
+end
+ret 0
+end
+
+note svopts: stream_options value v: include_usage true sets sv4
+fn svopts bd edit uchar 983040 tp edit uint 262144 v ulong sv edit ulong 64 to void
+if ne js_type tp v 1
+ret
+end
+k = js_first tp v
+for it ulong js_nkids tp v
+if eq k jsnone
+break
+end
+if js_streq bd js_off tp k skincl
+if eq js_type tp add k 1 8
+put sv 4 1
+end
+end
+k = js_mnext tp k
+end
+end
+
+note svscal: one scalar member (key token k, value k + 1); 0 or an error code
+fn svscal bd edit uchar 983040 tp edit uint 262144 k ulong sv edit ulong 64 to ulong
+o = js_off tp k
+v = add k 1
+ty = js_type tp v
+vo = js_off tp v
+if or js_streq bd o skmaxt js_streq bd o skmaxc
+if eq ty 10
+ret 0
+end
+if or ne ty 7 not js_isu bd vo
+ret 8
+end
+x = js_tou bd vo
+if or eq x 0 gt x 999999
+ret 8
+end
+put sv 1 x
+ret 0
+end
+if js_streq bd o sktemp
+if eq ty 10
+ret 0
+end
+if ne ty 7
+ret 7
+end
+if ne and js_nflags tp v 5 0
+ret 7
+end
+m = svtemp bd vo js_span tp v
+if gt m 2000
+ret 7
+end
+put sv 2 m
+ret 0
+end
+if js_streq bd o skseed
+if eq ty 10
+ret 0
+end
+if or ne ty 7 not js_isu bd vo
+ret 9
+end
+put sv 3 js_tou bd vo
+ret 0
+end
+if js_streq bd o skstrm
+if eq ty 8
+put sv 0 1
+ret 0
+end
+if or eq ty 9 eq ty 10
+ret 0
+end
+ret 10
+end
+if js_streq bd o skn
+if eq ty 10
+ret 0
+end
+if or ne ty 7 not js_isu bd vo
+ret 12
+end
+if ne js_tou bd vo 1
+ret 12
+end
+ret 0
+end
+if js_streq bd o skopts
+svopts bd tp v sv
+end
+ret 0
+end
+
+note svparse: the request body bd[0, n) into sv and the template; 0 or an error code
+fn svparse bd edit uchar 983040 n ulong wb edit uchar 82432 sv edit ulong 64 to ulong
+tp = new uint 262144 0
+x = js_init tp 983040 64
+r = js_parse bd tp n
+if lt r 0
+ret 1
+end
+if ne js_type tp 0 1
+ret 2
+end
+put sv 0 0
+put sv 1 999999
+put sv 2 1000
+put sv 3 1
+put sv 4 0
+put sv 5 0
+ma = jsnone
+k = js_first tp 0
+for it ulong js_nkids tp 0
+if eq k jsnone
+break
+end
+if js_streq bd js_off tp k skmsgs
+ma = add k 1
+else
+e = svscal bd tp k sv
+if ne e 0
+ret e
+end
+end
+k = js_mnext tp k
+end
+if eq ma jsnone
+ret 3
+end
+ret svmsgs bd tp ma wb sv
+end
+
+note ======== generation
+
+note svgen: sample up to min(sv1, T - CT0) tokens; streams chunks when sv0 is 1. 0, or negative
+note when a chunk could not be sent (the client left).
+fn svgen cs edit ulong 320 io edit uchar 131072 ob edit uchar 409600 wb edit uchar 82432 sv edit ulong 64 to long
+lim = sub get sv 19 get sv 6
+if lt get sv 1 lim
+lim = get sv 1
+end
+put sv 7 0
+put sv 8 0
+put sv 12 0
+put sv 13 0
+put sv 14 0
+for g ulong lim
+if not svtake wb sv
+break
+end
+r = svpend cs io ob wb sv
+if lt r 0
+ret r
+end
+end
+if eq get sv 8 0
+put sv 8 2
+end
+svclean wb sv 1
+ret svpend cs io ob wb sv
+end
+
+note svtake: one sampled token into the context and the content; false when it ends the output
+note (sv8: 1 token 0, 2 the content would pass its 65536 bytes)
+fn svtake wb edit uchar 82432 sv edit ulong 64 to bool
+c = svdraw sv
+if eq c 0
+put sv 8 1
+ret false
+end
+if not svfits sv c
+put sv 8 2
+ret false
+end
+svcap wb sv c
+svclean wb sv 0
+ret true
+end
+
+note svdraw: the next token (cmdsamp's step osstep), advancing the seed stream when sampling
+fn svdraw sv edit ulong 64 to ulong
+st = get sv 3
+tm = get sv 2
+c = osstep st tm
+if ne tm 0
+put sv 3 add st 11400714819323198485
+end
+ret c
+end
+
+note svfits: whether token c's bytes fit the raw buffer (8192) and, as up to three content bytes
+note each, the content (65536)
+fn svfits sv edit ulong 64 c ulong to bool
+tl = obtlen c
+rn = add get sv 12 tl
+gn = add get sv 13 mul rn 3
+ret not or or gt rn 8192 gt tl 4096 gt gn 65536
+end
+
+note svcap: token c's bytes onto the raw buffer, c onto the context
+fn svcap wb edit uchar 82432 sv edit ulong 64 c ulong to void
+obtcap c
+rn = get sv 12
+for i ulong get obon 0
+put wb add rn i get obo i
+end
+put sv 12 add rn get obon 0
+ocpush c
+put sv 7 add get sv 7 1
+end
+
+note svpend: when streaming, the content not yet sent as one chunk; 0 or the send error
+fn svpend cs edit ulong 320 io edit uchar 131072 ob edit uchar 409600 wb edit uchar 82432 sv edit ulong 64 to long
+if or ne get sv 0 1 le get sv 13 get sv 14
+ret 0
+end
+r = svchunk cs io ob wb sv 1
+put sv 14 get sv 13
+ret r
+end
+
+note svid: response id chatcmpl-ollm-<request count> into wb[82176 ..), its length into sv15
+fn svid wb edit uchar 82432 sv edit ulong 64 to void
+put sv 9 add get sv 9 1
+p = svmcat wb 82176 82240 svidp
+p = svmdec wb p 82240 get sv 9
+put sv 15 sub p 82176
+end
+
+fn svlog sv edit ulong 64 to void
+oputc 67
+oputc 32
+oputu get sv 21
+oputc 32
+oputu get sv 6
+oputc 32
+oputu get sv 7
+oputc 32
+oputu get sv 8
+oputc 32
+oputu div sub ulong monons get sv 11 1000000
+oputc 10
+oflush
+end
+
+note svchat: POST /v1/chat/completions
+fn svchat cs edit ulong 320 io edit uchar 131072 bd edit uchar 983040 wb edit uchar 82432 sv edit ulong 64 to long
+note the request's clock and log fields come from svroute (svbeg)
+n = hbodyall cs io bd
+if lt n 0
+put cs HKEEP 0
+if eq n HEBIG
+put sv 16 13
+r = svfail cs io wb sv 413
+svlog sv
+ret r
+end
+put sv 21 400
+svlog sv
+ret hrsperr cs io 400
+end
+note generation outlasts the 60 s body deadline: only the idle limit applies from here
+hsetdl cs 0
+e = svparse bd ulong n wb sv
+if ne e 0
+put sv 16 e
+r = svfail cs io wb sv 400
+svlog sv
+ret r
+end
+pl = get sv 5
+for i ulong pl
+put oarg i get wb add 73728 i
+end
+np = obpenc pl
+put og 9 0
+ocpush 0
+for i ulong np
+if lt get og 9 get og 1
+ocpush get obtk i
+end
+end
+put sv 6 add np 1
+if ge get sv 6 get sv 19
+put sv 16 11
+r = svfail cs io wb sv 400
+svlog sv
+ret r
+end
+svid wb sv
+put sv 10 ulong div realns 1000000000
+ob = new uchar 409600 0
+put sv 21 200
+if eq get sv 0 1
+r = hrspsse cs io
+r = hfe r svchunk cs io ob wb sv 0
+if lt r 0
+svlog sv
+ret r
+end
+r = svgen cs io ob wb sv
+if lt r 0
+svlog sv
+ret r
+end
+r = svchunk cs io ob wb sv 2
+if eq get sv 4 1
+r = hfe r svchunk cs io ob wb sv 3
+end
+r = hfe r hssedat cs io svdone
+r = hfe r hsseend cs io
+r = hfe r hwfin cs io
+svlog sv
+ret r
+end
+r = svgen cs io ob wb sv
+m = svfull ob wb sv
+if lt m 0
+put sv 16 16
+r = svfail cs io wb sv 500
+svlog sv
+ret r
+end
+r = svsend cs io ob 200 ulong m
+svlog sv
+ret r
+end
+
+fn svroute cs edit ulong 320 io edit uchar 131072 bd edit uchar 983040 wb edit uchar 82432 sv edit ulong 64 to long
+svbeg sv
+if hispath cs io svpchat
+if hismeth cs io svmpost
+ret svchat cs io bd wb sv
+end
+ret svend cs io wb sv 15 405
+end
+if hispath cs io svphlth
+if hismeth cs io svmget
+ret svok cs io sv svthlth
+end
+ret svend cs io wb sv 15 405
+end
+if hispath cs io svpmods
+if hismeth cs io svmget
+ret svok cs io sv svtmods
+end
+ret svend cs io wb sv 15 405
+end
+ret svend cs io wb sv 14 404
+end
+
+note svbeg: a request's log fields cleared, its clock started
+fn svbeg sv edit ulong 64 to void
+put sv 11 ulong monons
+put sv 6 0
+put sv 7 0
+put sv 8 0
+end
+
+note svend: error code e with status st, logged
+fn svend cs edit ulong 320 io edit uchar 131072 wb edit uchar 82432 sv edit ulong 64 e ulong st ulong to long
+put sv 16 e
+r = svfail cs io wb sv st
+svlog sv
+ret r
+end
+
+note svok: the fixed JSON text t with status 200, logged
+fn svok cs edit ulong 320 io edit uchar 131072 sv edit ulong 64 t view uchar * to long
+put sv 21 200
+r = svstat cs io 200 t
+svlog sv
+ret r
+end
+
+note svconn: one accepted connection c carries one request, answered with Connection: close.
+note Connections are served one at a time, so a kept-alive idle connection would hold the listener:
+note allen-chat pools its upstream connection, and its next request queued 30 s behind the pooled
+note one (the old idle limit) until this change. The head must arrive within 10 s.
+fn svconn c long cs edit ulong 320 io edit uchar 131072 bd edit uchar 983040 wb edit uchar 82432 sv edit ulong 64 to void
+r = hinit cs io int c 1
+if lt r 0
+x = hclose cs
+ret
+end
+hsettmo cs 10000000000 10000000000
+hsetbdl cs 60000000000
+note the JSON parser takes at most 983040 bytes (jsmaxn); larger Content-Length is 413 at the head
+put cs HBCAP 983040
+r = hreqrd cs io
+if eq r HEBIG
+put cs HKEEP 0
+svbeg sv
+x = svend cs io wb sv 13 413
+end
+if and lt r 0 ne r HEBIG
+x = hreject cs io r
+end
+if gt r 0
+put cs HKEEP 0
+x = svroute cs io bd wb sv
+end
+x = hclose cs
+end
+
+note serve PORT CK MERGES [MAXCONN]
+fn cmdserve to void
+na = oargc
+if and ne na 5 ne na 6
+exit 2
+end
+port = oargu 2
+if or eq port 0 gt port 65535
+exit 2
+end
+mx = ulong 1000000
+if eq na 6
+mx = oargu 5
+if eq mx 0
+exit 2
+end
+end
+ockload 3
+v = get og 0
+obload 4 v
+cs = new ulong 320 0
+io = new uchar 131072 0
+bd = new uchar 983040 0
+wb = new uchar 82432 0
+sv = new ulong 64 0
+a = new uchar 16 0
+put sv 19 get og 1
+r = haddr4 a 2130706433 port
+lf = hlisten a 16
+if lt lf 0
+exit 71
+end
+for i ulong len svport
+oputc ulong get svport i
+end
+oputu port
+oputc 10
+oflush
+nc = ulong 0
+for j ulong 999999999
+c = haccept int lf 60000000000
+if ge c 0
+svconn c cs io bd wb sv
+nc = add nc 1
+if ge nc mx
+break
+end
+end
+end
+x = fclose int lf
+end

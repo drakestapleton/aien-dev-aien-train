@@ -1,0 +1,10 @@
+source_commit=e4140effeb91366d74d61fc45b7d9de07bb96d2b
+host=Linux 7.0.0-1019-nvidia aarch64
+compiler_sha256=2c82480596bbdc50cda9626866209ef662d5834f278f839ff4ce0250c495029f
+source_sha256=9af90ebe090b89d5f9769c0d3b17e7b7154666f11d7c3e0cb680aed1c7f3aba7
+binary_sha256=966f9994de1b854fc1c7ca11c7e27aabb10cb5ae35b269f8ce9d9498a4842071
+mutant0 exit=0 expected=0 PASS
+mutant1 exit=10 expected=10 PASS
+mutant2 exit=10 expected=10 PASS
+mutant3 exit=11 expected=11 PASS
+OMEGALORA_PASS

@@ -1,0 +1,6 @@
+note cmdserve for the targets without serve.om (gb10, x86linux, x86efi): serve.om needs the om2
+note profile and omega-mv e5b32567's seed/net/http.om, which build.sh composes on aarch64 only, so
+note `ollm serve` refuses here with exit 2.
+fn cmdserve to void
+exit 2
+end
