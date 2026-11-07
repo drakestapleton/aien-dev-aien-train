@@ -1,7 +1,7 @@
 receipt: mut-rs-gcmp4-p1
-utc: 2026-11-07T00:28:43Z window: 20261107T002829Z-3db3e8
-binary: ollm-mut-rs-gb10 sha256 14b5a0094c9c8ff4e8ab624b1ca6e30e31546e6763a270cf6250bb1a285379d2
-$ timeout 300 taskset -c 5 nice -n 10 /dev/shm/hive/ownmodel/gpu4/L2/ollm-mut-rs-gb10 gcmp4 /home/drakestapleton/work/hive/ownmodel/gpu4/ref/p1.ck /dev/shm/hive/ownmodel/gpu4/tr8.bin /home/drakestapleton/work/hive/ownmodel/gpu4/ref/p1.gr
+utc: 2026-11-07T00:52:56Z window: 20261107T005239Z-a1107c
+binary: ollm-mut-rs-gb10 sha256 e0ba03eaeb3ac0a3dd140ac4faf7fcabedc29d58db2ecb478e81cef7e2ed8f50
+$ timeout 300 taskset -c 5 nice -n 10 /dev/shm/hive/ownmodel/gpu4/L3/ollm-mut-rs-gb10 gcmp4 /home/drakestapleton/work/hive/ownmodel/gpu4/ref/p1.ck /dev/shm/hive/ownmodel/gpu4/tr8.bin /home/drakestapleton/work/hive/ownmodel/gpu4/ref/p1.gr
 --- output
 GC4 0 16384 14608228 3820957356 350328403880
 GC4 1 128 12089009 36023540 3777291884
@@ -18,5 +18,5 @@ GN4 0
 GT4 350952
 GCMP4 FAIL
 Command exited with non-zero status 51
-maxrss_kb 16560
---- rc 51 ms 91
+maxrss_kb 16564
+--- rc 51 ms 1200

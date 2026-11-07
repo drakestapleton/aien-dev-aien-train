@@ -37,9 +37,10 @@ cat "$src/math.om" "$src/data.om" "$src/lpool.om" "$src/model.om" "$src/adam.om"
   sed 's/^fn main to int$/fn ocpumain to int/' > "$OUT/gpu-dump.om"
 sed "s/^grset 256 32 64 2 128 2\$/grset $SHAPE/" "$here/tests/omegallm/gpu-dump.om" > "$OUT/gpu-dump-main.om"
 grep -qx "grset $SHAPE" "$OUT/gpu-dump-main.om" || { echo "SHAPE_NOT_SET $SHAPE" >&2; exit 2; }
-# V4=1 dumps the v4 mode (gr.om grd 6 = 1: slots 12, 17, 18 and the D <= 1024 RMS banks, g4.om)
+# V4=1 dumps the v4 mode (gr.om grd 6 = 1: slots 12, 17, 18, the D <= 1024 RMS banks and grall4's
+# slots 60, 61; g4.om), T a multiple of 256
 if [ "${V4:-0}" = 1 ]; then
-  sed "s/^grset $SHAPE\$/grset $SHAPE\nput grd 6 1/" "$OUT/gpu-dump-main.om" > "$OUT/gpu-dump-main4.om"
+  sed "s/^grset $SHAPE\$/grset $SHAPE\nput grd 6 1/;s/^if not grall\$/if not and grall grall4/" "$OUT/gpu-dump-main.om" > "$OUT/gpu-dump-main4.om"
   grep -qx "put grd 6 1" "$OUT/gpu-dump-main4.om" || { echo "V4_NOT_SET" >&2; exit 2; }
   mv "$OUT/gpu-dump-main4.om" "$OUT/gpu-dump-main.om"
 fi

@@ -1,7 +1,7 @@
 receipt: gcmp4-p1
-utc: 2026-11-07T00:28:37Z window: 20261107T002829Z-3db3e8
-binary: ollm-gb10 sha256 405809ec9cd0fe214ab8b182e89a9488e2a247104f193890e07932e25c6cf4a8
-$ timeout 300 taskset -c 5 nice -n 10 /dev/shm/hive/ownmodel/gpu4/L2/ollm-gb10 gcmp4 /home/drakestapleton/work/hive/ownmodel/gpu4/ref/p1.ck /dev/shm/hive/ownmodel/gpu4/tr8.bin /home/drakestapleton/work/hive/ownmodel/gpu4/ref/p1.gr
+utc: 2026-11-07T00:52:51Z window: 20261107T005239Z-a1107c
+binary: ollm-gb10 sha256 195daeec586ea7b672cae18fa1c14f3df430e1ce542fc3cc5eed0f10da6ceb7d
+$ timeout 300 taskset -c 5 nice -n 10 /dev/shm/hive/ownmodel/gpu4/L3/ollm-gb10 gcmp4 /home/drakestapleton/work/hive/ownmodel/gpu4/ref/p1.ck /dev/shm/hive/ownmodel/gpu4/tr8.bin /home/drakestapleton/work/hive/ownmodel/gpu4/ref/p1.gr
 --- output
 GC4 0 16384 227 47074 350328403880
 GC4 1 128 275 1414 3777291884
@@ -17,5 +17,5 @@ GL4 5525220 5525220 5
 GN4 0
 GT4 350952
 GCMP4 PASS
-maxrss_kb 16560
---- rc 0 ms 1255
+maxrss_kb 16564
+--- rc 0 ms 122

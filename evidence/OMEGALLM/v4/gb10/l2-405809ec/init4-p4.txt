@@ -1,0 +1,8 @@
+receipt: init4-p4
+utc: 2026-11-07T00:42:25Z window: none
+binary: ollm-gb10 sha256 405809ec9cd0fe214ab8b182e89a9488e2a247104f193890e07932e25c6cf4a8
+$ timeout 600 taskset -c 5 nice -n 10 /dev/shm/hive/ownmodel/gpu4/L2/ollm-gb10 init4 /home/drakestapleton/work/hive/ownmodel/gpu4/ref/p4.ck 4096 1024 512 8 2048 1 2 7 1000 3000 1
+--- output
+I 5244416
+maxrss_kb 83088
+--- rc 0 ms 626

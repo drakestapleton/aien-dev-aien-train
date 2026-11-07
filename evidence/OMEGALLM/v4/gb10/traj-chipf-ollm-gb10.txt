@@ -1,12 +1,12 @@
 receipt: traj-chipf-ollm-gb10
-utc: 2026-11-07T00:50:18Z window: 20261107T005014Z-99d0bd
-binary: ollm-gb10 sha256 405809ec9cd0fe214ab8b182e89a9488e2a247104f193890e07932e25c6cf4a8
-$ timeout 300 taskset -c 5 nice -n 10 /dev/shm/hive/ownmodel/gpu4/L2/ollm-gb10 gtrain4f /home/drakestapleton/work/hive/ownmodel/gpu4/ref/tg.ck /dev/shm/hive/ownmodel/gpu4/tr8.bin 40 10
+utc: 2026-11-07T00:56:25Z window: 20261107T005239Z-a1107c
+binary: ollm-gb10 sha256 195daeec586ea7b672cae18fa1c14f3df430e1ce542fc3cc5eed0f10da6ceb7d
+$ timeout 300 taskset -c 5 nice -n 10 /dev/shm/hive/ownmodel/gpu4/L3/ollm-gb10 gtrain4f /home/drakestapleton/work/hive/ownmodel/gpu4/ref/tg.ck /dev/shm/hive/ownmodel/gpu4/tr8.bin 40 10
 --- output
 T 10 5291650
 T 20 4908596
 T 30 4342269
 T 40 3776005
-G4 40 5120 60056173 117976100 15634100 9533029 31714146 2052805 11171584 64
-maxrss_kb 17040
---- rc 0 ms 277
+G4 40 5120 59773074 106689411 15527792 9555512 31497156 2074393 11172608 64
+maxrss_kb 17044
+--- rc 0 ms 258

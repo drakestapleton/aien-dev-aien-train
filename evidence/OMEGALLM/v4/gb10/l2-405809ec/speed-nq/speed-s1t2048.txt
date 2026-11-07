@@ -1,0 +1,9 @@
+receipt: speed-s1t2048
+utc: 2026-11-07T00:45:16Z window: 20261107T004432Z-6a6d6c
+binary: ollm-gb10 sha256 405809ec9cd0fe214ab8b182e89a9488e2a247104f193890e07932e25c6cf4a8
+$ timeout 600 taskset -c 5 nice -n 10 /dev/shm/hive/ownmodel/gpu4/L2/ollm-gb10 gtrain4 /home/drakestapleton/work/hive/ownmodel/gpu4/ref/run.ck /home/drakestapleton/work/hive/ownmodel/gpu4/tr40.u16 10 10
+--- output
+T 10 9082876
+G4 10 163840 6862093138 7550768095 1664040692 1867109281 3190797739 83497937 15357469184 2048
+maxrss_kb 15986320
+--- rc 0 ms 28789

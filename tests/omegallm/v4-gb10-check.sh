@@ -12,6 +12,7 @@
 #   trainref / trained  CPU ggrad4 of the chip-trained r200, then CHIP gcmp4 on it (+ mutants)
 #   trajcpu / traj  CPU train4 40 steps on p1, then CHIP gtrain4f / gtrain4 from the same CK: loss
 #           trajectories within 1e-4 (f32) / 2^-6 (BF16) relative; v3 mutant h (Adam beta1) must fail
+#   resumes1 CHIP: the continuation check at S1 T 1024 (1 GB CK03)
 #   evalcpu CPU eval4 of the chip-trained CK (no chip), compared with the chip geval4 E line
 # Env: OMC (pinned omc), BUILD, WORK (large files), DATA (byte-token train file), DATA16 (the same as
 #      u16), EV (receipts dir, default evidence/OMEGALLM/v4/gb10), G4CORES (taskset list, default 5; a
@@ -68,7 +69,7 @@ dat() { case $1 in p1|p2) echo "$DATA" ;; *) echo "$DATA16" ;; esac; }
 case $PH in
 build)
 	: > "$E/build.txt"
-	for a in "" "--mutant rs" "--mutant ri" "--mutant cc" "--mutant sv" "--mutant h"; do
+	for a in "" "--mutant rs" "--mutant ri" "--mutant cc" "--mutant sv" "--mutant h" "--mutant od"; do
 		# shellcheck disable=SC2086
 		TARGET=gb10 OUT=$BUILD CORE=${CORES%%-*} sh tests/omegallm/build.sh $a >> "$E/build.txt" 2>&1 || { echo "BUILD_FAIL $a" | tee -a "$E/build.txt"; exit 1; }
 	done
@@ -89,6 +90,10 @@ parity)
 		for p in p1 p3; do
 			rec "mut-$m-gcmp4-$p" 51 300 "ollm-mut-$m-gb10" gcmp4 "$WORK/$p.ck" "$(dat $p)" "$WORK/$p.gr"
 		done
+	done
+	# od changes only the looped-softmax path (T a multiple of 256): p2 and p3, not p1
+	for p in p2 p3; do
+		rec "mut-od-gcmp4-$p" 51 300 ollm-mut-od-gb10 gcmp4 "$WORK/$p.ck" "$(dat $p)" "$WORK/$p.gr"
 	done
 	for p in p1 p4 p3; do
 		rec "gcmp4b-$p" 0 300 ollm-gb10 gcmp4b "$WORK/$p.ck" "$(dat $p)" "$WORK/$p.gr"
@@ -118,6 +123,18 @@ big)
 		rec "big-$x" 0 900 ollm-gb10 gtrain4 "$WORK/run.ck" "$DATA32" "$N" "$N"
 	done
 	rm -f "$WORK/run.ck"
+	;;
+resumes1)
+	# CHIP: the continuation check at S1 T 1024 B 16 (1 GB CK03): 0 -> 4 against 0 -> 2, reload, 2 -> 4
+	cp "$WORK/s1t1024.ck" "$WORK/su.ck"
+	cp "$WORK/s1t1024.ck" "$WORK/ss.ck"
+	rec resumes1-u 0 600 ollm-gb10 gtrain4 "$WORK/su.ck" "$DATA32" 4 4
+	rec resumes1-s1 0 600 ollm-gb10 gtrain4 "$WORK/ss.ck" "$DATA32" 2 2
+	rec resumes1-s2 0 600 ollm-gb10 gtrain4 "$WORK/ss.ck" "$DATA32" 4 2
+	{ echo "u $(sha256sum "$WORK/su.ck")"; echo "s $(sha256sum "$WORK/ss.ck")"; cmp "$WORK/su.ck" "$WORK/ss.ck" && echo SAME || echo DIFFER; } > "$E/resumes1-cmp.txt" 2>&1
+	cat "$E/resumes1-cmp.txt"
+	grep -q SAME "$E/resumes1-cmp.txt" || fail=1
+	rm -f "$WORK/su.ck" "$WORK/ss.ck"
 	;;
 resume)
 	# r: V256 T256 D128 H4 F512 L2 B8 (byte data); uninterrupted 0 -> 200 against 0 -> 100, reload, 100 -> 200
@@ -184,7 +201,7 @@ evalcpu)
 	grep -q SAME "$E/eval-cmp.txt" || fail=1
 	;;
 *)
-	echo "usage: v4-gb10-check.sh build|refs|parity|speedck|speed|big|resume|evalcpu|trainref|trained|trajcpu|traj" >&2
+	echo "usage: v4-gb10-check.sh build|refs|parity|speedck|speed|big|resume|evalcpu|trainref|trained|trajcpu|traj|resumes1" >&2
 	exit 2
 	;;
 esac

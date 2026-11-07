@@ -1,9 +1,9 @@
 receipt: geval4-r200
-utc: 2026-11-07T00:29:07Z window: 20261107T002829Z-3db3e8
-binary: ollm-gb10 sha256 405809ec9cd0fe214ab8b182e89a9488e2a247104f193890e07932e25c6cf4a8
-$ timeout 300 taskset -c 5 nice -n 10 /dev/shm/hive/ownmodel/gpu4/L2/ollm-gb10 geval4 /home/drakestapleton/work/hive/ownmodel/gpu4/ref/r/r200.ck /dev/shm/hive/ownmodel/gpu4/he8.bin 146
+utc: 2026-11-07T00:56:11Z window: 20261107T005239Z-a1107c
+binary: ollm-gb10 sha256 195daeec586ea7b672cae18fa1c14f3df430e1ce542fc3cc5eed0f10da6ceb7d
+$ timeout 300 taskset -c 5 nice -n 10 /dev/shm/hive/ownmodel/gpu4/L3/ollm-gb10 geval4 /home/drakestapleton/work/hive/ownmodel/gpu4/ref/r/r200.ck /dev/shm/hive/ownmodel/gpu4/he8.bin 146
 --- output
-E 200 146 2342464 3379462
-GE 129672671
-maxrss_kb 100080
---- rc 0 ms 187
+E 200 146 2327792 3358294
+GE 118388703
+maxrss_kb 100084
+--- rc 0 ms 177

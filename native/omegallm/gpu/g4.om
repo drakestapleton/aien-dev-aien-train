@@ -22,7 +22,8 @@ note Arena (gga byte offsets, v3's indices where v3's helpers read them): 0 W, 1
 note 5 CSR order, 6 first layer, 7 layer stride (layer fields 24 + f as gg.om), 8 HF, 9 SF, 10 Z,
 note 11 logits (RC V), 12 CE stats (R 3), 13 DH, 14 DA, 15 DQ DK DU, 16 DO, 17 DF, 18 DP, 19 WS, 20 CS,
 note 21 Adam m, 22 Adam v, 23 SQN, 37 split-K, 41 RoPE forward table (T D/2 pairs), 42 inverse
-note table, 43 zero rows (T D, the missing wpe). Layer field 12 (P) is not in the arena: g4pa.
+note table, 43 zero rows (T D, the missing wpe), 44 Dr (B H T, ODOT's row sums for SOFTBL1). Layer
+note field 12 (P) is not in the arena: g4pa.
 note g4s: 0 RC, 1 arena bytes, 2 softmax forward id, 3 softmax backward id
 global g4s ulong 8
 note g4pa: device address of layer l's score buffer P (B H T T f32), one nvalloc per layer (context.om
@@ -326,6 +327,7 @@ td = get xg 59
 ggput 41 td
 ggput 42 td
 ggput 43 td
+ggput 44 mul mul get og 6 get og 3 get og 1
 end
 
 note open the chip in v4 mode (gr.om grd 6 = 1) with the kernels for the dims, the RoPE tables and the
@@ -881,7 +883,7 @@ ggpl 0 pp true
 gghd 1 dn true
 ggch du 1.0f64
 ggbh tt e tt false 2
-ggsoft uint get g4s 3 pp dp
+g4sb l pp dp
 x = ggl l 3
 ggpl 0 dp false
 gghd 1 x true
@@ -892,6 +894,27 @@ ggpl 0 dp true
 gghd 1 x true
 ggch dk 1.0f64
 ggbh tt e tt false 2
+end
+
+note the softmax backward: on the long-row path ODOT (Dr = dO . o per row and head) then the one-pass
+note SOFTBL1; v3's register kernel 16 for T <= 512 not a multiple of 256
+fn g4sb l ulong pp ulong dp ulong to void
+if ne get g4s 3 18
+ggsoft uint get g4s 3 pp dp
+ret
+end
+tt = get og 1
+bh = mul get og 6 get og 3
+ggu 0 tt
+ggpt 1 gga1 16
+ggpt 2 ggl l 5
+ggpt 3 gga1 44
+ggrun 60 8 ggcd tt 64 get og 3 get og 6
+ggu 0 mul tt 32
+ggpt 1 pp
+ggpt 2 dp
+ggpt 3 gga1 44
+ggrun 61 8 div tt 2 bh 1
 end
 
 note R^T on dQ and dK (mutant ri: skipped), DA = DQ wq^T + DK wk^T + DU wv^T, the batched weight

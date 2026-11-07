@@ -1,0 +1,8 @@
+receipt: ggrad4-p2
+utc: 2026-11-07T00:42:24Z window: none
+binary: ollm-gb10 sha256 405809ec9cd0fe214ab8b182e89a9488e2a247104f193890e07932e25c6cf4a8
+$ timeout 1800 taskset -c 5 nice -n 10 /dev/shm/hive/ownmodel/gpu4/L2/ollm-gb10 ggrad4 /home/drakestapleton/work/hive/ownmodel/gpu4/ref/p2.ck /dev/shm/hive/ownmodel/gpu4/tr8.bin /home/drakestapleton/work/hive/ownmodel/gpu4/ref/p2.gr
+--- output
+G 82240 5540244
+maxrss_kb 10608
+--- rc 0 ms 786

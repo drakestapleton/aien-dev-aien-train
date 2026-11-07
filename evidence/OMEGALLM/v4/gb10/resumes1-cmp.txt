@@ -1,0 +1,3 @@
+u 888e988efafb9967310c5677f24c8bd6ce2637e9b4da226700798eefa981937a  /home/drakestapleton/work/hive/ownmodel/gpu4/ref/su.ck
+s 888e988efafb9967310c5677f24c8bd6ce2637e9b4da226700798eefa981937a  /home/drakestapleton/work/hive/ownmodel/gpu4/ref/ss.ck
+SAME

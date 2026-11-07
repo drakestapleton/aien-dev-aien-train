@@ -725,6 +725,87 @@ gradv 12 1024
 grbot 30 top2
 gkexit
 end
+note 60 ODOT (v4): Dr[(b H + h) T + t] = sum_e dO[b T + t][h E + e] O[b T + t][h E + e], which equals the
+note softmax backward's row sum sum_j p_j dp_j (o = sum_j p_j u_j and dp_j = dO . u_j), so SOFTBL1 needs
+note one pass over P and DP instead of two. Grid (T/64, H, B); args T dO O Dr. Mutant od (OMUTOD 0) sums
+note one 8-element chunk of each head fewer, which gcmp4 must catch.
+const OMUTOD ulong 1
+fn grodot to void
+d = uint get grd 2
+t = uint get grd 1
+h = uint get grd 3
+e = div d h
+grpro
+gkimadi 8 7 t 4
+gkimadi 9 3 e 255
+gkimadi 9 8 d 9
+grptr 10 1 9 4
+grptr 12 3 9 4
+gkmovz 64
+ne8 = div e 8
+if eq OMUTOD 0
+ne8 = sub ne8 1
+end
+top = grtop 30 ne8
+grld8 32 10 true
+grld8 40 12 false
+for u uint 8
+gkffmaf 64 add 32 u add 40 u 64
+end
+gradv 10 32
+gradv 12 32
+grbot 30 top
+gkimadi 14 7 h 3
+gkimadi 14 14 t 4
+grptr 16 5 14 4
+gkstg 16 64 0 false
+gkexit
+end
+note 61 SOFTBL1 (v4): ds = p (dp - s) / sqrt(E) in place over dp in one pass over the chunks c <= t/256,
+note s = Dr[row] from ODOT; p and dp above t read as 0. args T*32 P DP Dr
+fn grsoftb1 to void
+tt = uint get grd 1
+e = div get grd 2 get grd 3
+grsrow tt true
+gkmovi 29 grf div 1.0f64 fsqrt f64 e
+gkmovi 23 32
+grptr 14 5 8 4
+gkldg 64 14 0 false
+grlcnt
+top = div get gkat 0 16
+grldw 32 10 8 true
+grldw 48 12 8 false
+grlmask2 32 48
+for u uint 8
+grfsub add 48 u add 48 u 64
+gkfmulf add 48 u add 48 u add 32 u
+gkfmulf add 48 u add 48 u 29
+end
+grstw 12 48 8
+gradv 10 1024
+gradv 12 1024
+grbot 30 top
+gkexit
+end
+note emit the v4 slots outside 9..24 (60 ODOT, 61 SOFTBL1) for the long-row path; false on overflow
+fn grall4 to bool
+for k uint 2
+id = add k 60
+gkslot id
+if eq id 60
+grodot
+else
+grsoftb1
+end
+if gt get gkat 0 mul ulong add id 1 16384
+ret false
+end
+put gkthr id 64
+put gkgpr id 72
+put gksm id 0
+end
+ret true
+end
 note emit slots 9..24 (12, 17 and 18 empty) for dims V T D H F B; false when a kernel overflows its 16 KiB slot
 fn grset v ulong t ulong d ulong h ulong f ulong b ulong to void
 put grd 0 v
@@ -830,6 +911,12 @@ fn gropen asz ulong to bool
 if not grall
 put nverr 0 neg long 7
 ret false
+end
+if and eq get grd 6 1 eq rem get grd 1 256 0
+if not grall4
+put nverr 0 neg long 7
+ret false
+end
 end
 ret gkopen asz
 end
