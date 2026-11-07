@@ -2932,12 +2932,14 @@ end
 note ======== loaded identity (DRA-125 deploy, docs/omegallm/DEPLOY.md)
 note svidn, filled once at start after both loads succeeded: 0 checkpoint magic, 1 .. 7 V T D H F L B,
 note 8 step, 9 P, 10 ck_fnv, 11 merges kind (1 OLLMTOK1, 2 v1 OLLMBPE1), 12 merges V, 13 tok_fnv,
-note 14 checkpoint bytes. ck_fnv is the header's payload FNV-1a 64; xload / ockload recomputed it over
-note the payload they decoded and exit 14 when it differs, so a serving process reports the value it
-note verified. tok_fnv is the OLLMTOK1 header checksum tkload verified (exit 26 otherwise); v1 merges
-note carry no checksum (null). GET /health appends them as "model":{"ck":MAGIC,"V":..,"T":..,"D":..,
-note "H":..,"F":..,"L":..,"B":..,"step":..,"P":..,"ck_bytes":..,"ck_fnv":HEX16,"tok":KIND,"tok_V":..,
-note "tok_fnv":HEX16|null}. Mutant id (OMUTID 0) reports ck_fnv xor 1, which the deploy live check
+note 14 checkpoint bytes, 15 rope base f64 bits (CK03; 0 for CK01/CK02, which have no rope).
+note DRA-420: every checkpoint value comes from the load itself (ckpt.om ockhd / ockid: the header
+note bytes the loader admitted and the payload FNV-1a 64 it recomputed, read through one held
+note descriptor), never from the file on disk afterwards, so replacing the file under a running
+note server cannot change what /health reports. GET /health appends them as "model":{"ck":MAGIC,
+note "V":..,"T":..,"D":..,"H":..,"F":..,"L":..,"B":..,"step":..,"P":..,"ck_bytes":..,
+note "ck_fnv":HEX16,"rope":HEX16|null,"tok":KIND,"tok_V":..,"tok_fnv":HEX16|null}. Mutant id
+note (OMUTID 0) reports ck_fnv xor 1, which the deploy live check
 note (tests/omegallm/deploy/mancheck.om live) must refuse.
 const OMUTID ulong 1
 global svidn ulong 16
@@ -2953,7 +2955,10 @@ text svi8 ",\"step\":"
 text svi9 ",\"P\":"
 text svia ",\"ck_bytes\":"
 text svib ",\"ck_fnv\":\""
+text svir "\",\"rope\":\""
+text svirn "\",\"rope\":null"
 text svic "\",\"tok\":\""
+text svicn ",\"tok\":\""
 text svit1 "OLLMTOK1"
 text svitb "OLLMBPE1"
 text svif "\",\"tok_V\":"
@@ -2961,30 +2966,37 @@ text svig ",\"tok_fnv\":\""
 text svih "\"}}"
 text svinul ",\"tok_fnv\":null}}"
 
-note svidck: the checkpoint argument 3's header fields, read after its load succeeded
+note svck8: little-endian u64 at ockhd[o .. o + 8), the admitted checkpoint header
+fn svck8 o ulong to ulong
+v = ulong 0
+for k ulong 8
+v = or v shl ulong get ockhd add o k mul k 8
+end
+ret v
+end
+
+note svidck: the identity of the checkpoint the loader admitted (ockhd, ockid), after its load
 fn svidck to void
-n = ofsz 3
-r = oprd 3 0 0 128
-mg = opw8 0
+if ne get ockid 2 1
+exit 14
+end
+mg = svck8 0
 put svidn 0 mg
 for i ulong 7
-put svidn add i 1 opw8 mul add i 1 8
+put svidn add i 1 svck8 mul add i 1 8
 end
-put svidn 8 opw8 72
-put svidn 9 opw8 96
-fo = ulong 120
-if eq mg XCK2
-fo = 112
-end
-if eq mg XCK1
-fo = 104
-end
-h = opw8 fo
+put svidn 8 svck8 72
+put svidn 9 svck8 96
+h = get ockid 1
 if eq OMUTID 0
 h = xor h 1
 end
 put svidn 10 h
-put svidn 14 n
+put svidn 14 get ockid 0
+put svidn 15 0
+if eq mg XCK3
+put svidn 15 svck8 112
+end
 end
 
 note svidtk: the merges identity, after otload succeeded
@@ -3048,7 +3060,14 @@ q = svhb b q svia
 q = svhd b q get svidn 14
 q = svhb b q svib
 q = svhx b q get svidn 10
+if eq get svidn 15 0
+q = svhb b q svirn
+q = svhb b q svicn
+else
+q = svhb b q svir
+q = svhx b q get svidn 15
 q = svhb b q svic
+end
 if eq get svidn 11 1
 q = svhb b q svit1
 else
