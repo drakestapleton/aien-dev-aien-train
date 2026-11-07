@@ -1,0 +1,7 @@
+pid 2946633 workers 2951218  listener 2946633
+exe 9e6441d4bad0c65ff1a972d3b6d1b8c7e8d1d82993e3f96e371c4a3a35574ba7 path /home/drakestapleton/work/hive/ownmodel/evalprep/dry3/bin/ollm
+argv /home/drakestapleton/work/hive/ownmodel/evalprep/dry3/bin/ollm serve 18296 /home/drakestapleton/work/hive/ownmodel/evalprep/work/serve-t4096-8a94d7c3.ck /home/drakestapleton/work/hive/ownmodel/data/merges32k.bin par=2 
+affinity pid 2946633's current affinity list: 4,6
+health_model ck OLLMCK03 32768 4096 384 6 1536 8 4 0 26745216 641885312 313fab2f2654fd3b tok 32768 920b3046a17db9be
+file_ident   ck OLLMCK03 32768 4096 384 6 1536 8 4 0 26745216 641885312 313fab2f2654fd3b tok 32768 920b3046a17db9be
+identity EQUAL

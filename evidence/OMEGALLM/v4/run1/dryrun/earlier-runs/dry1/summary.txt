@@ -1,0 +1,11 @@
+LABEL DRY-RUN STAGE-A (not the candidate)
+script dad772a8d04e96ce02d92673fca543ba26b5d3cd51eb7b235574075b40fb8588 commit 915d9b8182c1afe7a2eade5a3d14939f1618245e
+start 2026-11-07T06:48:13Z ck /home/drakestapleton/work/hive/ownmodel/evalprep/ck9850.bin stage A steps 1 3 4 5 6 dry 1 cores 4,6 port 18296 pport 18298
+STEP 0 build PASS ms=595 ollm=9e6441d4bad0c65f
+STEP 1 identity PASS ms=6195 ck OLLMCK03 32768 1024 384 6 1536 8 16 9850 26745216 641885312 7cbfd48b0b64ba2e step=9850 stage=A ck=8a94d7c3e473899168490cc1e3a39fa4f855c4565c5c974083ea62aef97c2482
+STEP 3 serve PASS ms=58876 ready_ms=15529 7 rows; health {"ck":"OLLMCK03","V":32768,"T":4096,"D":384,"H":6,"F":1536,"L":8,"B":4,"step":0,"P":26745216,"ck_bytes":641885312,"ck_fnv":"313fab2f2654fd3b","rope":"40c3880000
+STEP 4 harness PASS ms=1103409 train_new 0/3 heldout 0/2 controls 
+STEP 5 accept PASS ms=270873 rc=3 14 summary rows; transcripts /home/drakestapleton/work/hive/ownmodel/accept/runs/run1-A-8a94d7c3-20261107T064813Z
+STEP 6 demo NOT_RUN ms=0 no server
+STEP 7 stop PASS ms=1106 server 1858549 workers 1860760 ; port 18296 free
+end 2026-11-07T07:12:14Z fails 0

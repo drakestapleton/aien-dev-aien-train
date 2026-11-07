@@ -1,0 +1,15 @@
+LABEL DRY-RUN STAGE-A (not the candidate)
+date 2026-11-07T07:27:18Z host spark-b87b aarch64
+commit 048905d427ccc36f551eec68c837cf6ba5d80b30 dirty 0
+sha256 8a94d7c3e473899168490cc1e3a39fa4f855c4565c5c974083ea62aef97c2482  /home/drakestapleton/work/hive/ownmodel/evalprep/ck9850.bin
+sha256 688b723a894baa831ee92aaf814918d30823225c45de68c85d9dd244eb79947c  /home/drakestapleton/work/hive/ownmodel/data/merges32k.bin
+sha256 2c82480596bbdc50cda9626866209ef662d5834f278f839ff4ce0250c495029f  /home/drakestapleton/workspace/hive-worktrees/arch-scale-x/omc/seed/out/omc
+sha256 9e6441d4bad0c65ff1a972d3b6d1b8c7e8d1d82993e3f96e371c4a3a35574ba7  /home/drakestapleton/work/hive/ownmodel/evalprep/dry3/bin/ollm
+sha256 f1adcad1a16b05c8ac580c7a1108a349ad65d744225fccbb6122b0419a2b4c72  /home/drakestapleton/work/hive/ownmodel/evalprep/dry3/bin/verify
+sha256 22b1add4b79ef93b6debbfef4df186508e35b2fb1dd843018c76b2678c0e4501  /home/drakestapleton/work/hive/ownmodel/evalprep/dry3/bin/sftgen
+sha256 8c4fb0cb9f8de0c27da96d29ad69ccf4601b703132d78cd68aaecfc3b97eb5bd  /home/drakestapleton/work/hive/ownmodel/evalprep/dry3/bin/accept
+sha256 6d09b1e94389eced7a513b04e12892c47838c941eacadb7af48d82cfe8a361a1  /home/drakestapleton/work/hive/ownmodel/evalprep/dry3/bin/mancheck
+ck OLLMCK03 32768 1024 384 6 1536 8 16 9850 26745216 641885312 7cbfd48b0b64ba2e
+tok OLLMTOK1 32768 920b3046a17db9be
+provenance step=9850 stage=A ck=8a94d7c3e473899168490cc1e3a39fa4f855c4565c5c974083ea62aef97c2482
+neg_flip refused rc=1 MANCHECK FAIL checkpoint payload FNV differs from its header

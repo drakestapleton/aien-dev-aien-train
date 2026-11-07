@@ -1,0 +1,4 @@
+LABEL DRY-RUN STAGE-A (not the candidate)
+DEMO_FAIL FAIL d01 trim directive.txt missing
+control d01x FAIL d01x trim directive.txt missing
+hermes rc 1 ms 2545

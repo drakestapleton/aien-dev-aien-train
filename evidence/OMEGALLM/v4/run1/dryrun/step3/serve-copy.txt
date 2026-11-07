@@ -1,0 +1,1 @@
+serve copy 750ab1cdeb5cb162ca342f7dd5cabbd155d1852c3bd4738473cea2e800914681  /home/drakestapleton/work/hive/ownmodel/evalprep/work/serve-t4096-8a94d7c3.ck from T 1024 to T 4096 B 4 G 1 (tune4), params identical (213961728 bytes)

@@ -1,0 +1,7 @@
+LABEL DRY-RUN STAGE-A (not the candidate)
+tune4 /home/drakestapleton/work/hive/ownmodel/evalprep/ck9850.bin -> /home/drakestapleton/work/hive/ownmodel/evalprep/work/x1024-8a94d7c3.ck T 1024 B 16 G 1 rc=0 U 26745216
+params identical (213961728 bytes after the header)
+neg_shift differs (control ok)
+x1024 bb1c35124963ae9089cd4d4e72738b48313ff5ce517f5638e6dcf6ee58321536  /home/drakestapleton/work/hive/ownmodel/evalprep/work/x1024-8a94d7c3.ck ck OLLMCK03 32768 1024 384 6 1536 8 16 0 26745216 641885312 313fab2f2654fd3b
+cpu_eval4 W 1 rc=0 ms=42408 ollm 9e6441d4bad0c65ff1a972d3b6d1b8c7e8d1d82993e3f96e371c4a3a35574ba7
+CPU_E E 0 1 3805562 5490266

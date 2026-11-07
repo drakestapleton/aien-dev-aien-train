@@ -1,0 +1,3 @@
+LABEL DRY-RUN STAGE-A (not the candidate)
+CAPABILITY train_new pass=0/3 heldout pass=0/2 (verify.om verdicts; rows in train/summary.txt heldout/summary.txt)
+WOLFRAM wilson[k_,n_]:=With[{z=Quantile[NormalDistribution[],0.975],p=k/n},N[{(p+z^2/(2n)-z Sqrt[p(1-p)/n+z^2/(4n^2)])/(1+z^2/n),(p+z^2/(2n)+z Sqrt[p(1-p)/n+z^2/(4n^2)])/(1+z^2/n)}]]; {wilson[0,3],wilson[0,2]}

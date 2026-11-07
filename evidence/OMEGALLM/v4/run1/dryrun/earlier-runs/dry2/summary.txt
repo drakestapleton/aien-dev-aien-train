@@ -1,0 +1,9 @@
+LABEL DRY-RUN STAGE-A (not the candidate)
+script c0ea24d4a2741e43315e2b8ae66b58df044348b0b3950054b31cf5625cc1a3c9 commit 915d9b8182c1afe7a2eade5a3d14939f1618245e
+start 2026-11-07T07:13:39Z ck /home/drakestapleton/work/hive/ownmodel/evalprep/ck9850.bin stage A steps 3 5 6 dry 1 cores 4,6 port 18296 pport 18298
+STEP 0 build PASS ms=156 ollm=9e6441d4bad0c65f
+STEP 3 serve PASS ms=34307 ready_ms=3401 7 rows; health {"ck":"OLLMCK03","V":32768,"T":4096,"D":384,"H":6,"F":1536,"L":8,"B":4,"step":0,"P":26745216,"ck_bytes":641885312,"ck_fnv":"313fab2f2654fd3b","rope":"40c3880000
+STEP 5 accept PASS ms=511852 rc=3 14 summary rows; transcripts /home/drakestapleton/work/hive/ownmodel/accept/runs/run1-A-8a94d7c3-20261107T071339Z
+STEP 6 demo PASS ms=26131 DEMO_FAIL FAIL d01 trim directive.txt missing (capability, not the step's pass rule)
+STEP 7 stop PASS ms=1213 server 2617399 workers 2619689 ; port 18296 free
+end 2026-11-07T07:23:13Z fails 0

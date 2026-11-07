@@ -1,0 +1,4 @@
+trainseed 20261109 n 30 kept 30 seen 0 seen_pool 20500
+neg_seen caught (control ok)
+only_train s0 s1 s2 
+only_heldout t14 t16

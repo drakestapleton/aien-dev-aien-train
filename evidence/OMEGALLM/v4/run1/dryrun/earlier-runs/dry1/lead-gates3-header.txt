@@ -1,0 +1,2 @@
+# ownmodel lead: gate run on feat/ollm-path-integ3 (cores 4,6; ports 18291-18293, 18296-18298).
+rec rehearse 0 env WORK=/home/drakestapleton/work/hive/ownmodel/g3rh/w CKA=/home/drakestapleton/work/hive/ownmodel/g3rh/cka.ck CKR=/home/drakestapleton/work/hive/ownmodel/run1/ck0.bin CKR_SHA=8826e738c66109720970aab2715e9efe9da0059edc22e1bcfe7782a198a6f768 TOK=$M32 EV=$G/rh-ev sh tests/omegallm/deploy/rehearse.sh

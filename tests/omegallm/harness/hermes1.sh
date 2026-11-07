@@ -14,6 +14,12 @@ cores=${CORES:-6}
 mkdir -p "$hh"
 tsarg="-t $ts"
 [ "$ts" = - ] && tsarg=
+# Every task starts from the same Hermes state. Hermes v0.22.5 caches a context window it learned from a
+# context_length_exceeded reply in HERMES_HOME/context_length_cache.yaml and then refuses every later run
+# (its minimum is 64,000 tokens; ollm serves T 4096: "below the minimum 64,000 required by Hermes Agent",
+# logs/managed-worker.log), so one long task would turn all later tasks into 0-request FAILs. The cache
+# a previous task left is moved to OUTPREFIX.ctxcache (a receipt that it existed).
+[ -f "$hh/context_length_cache.yaml" ] && mv "$hh/context_length_cache.yaml" "$op.ctxcache"
 t0=$(date +%s%N)
 (cd "$wd" && env -i HOME="$HOME" HERMES_HOME="$hh" PATH=/usr/bin:/bin TERM=dumb \
 	timeout -k 5 "$tmo" taskset -c "$cores" nice -n 10 "$hermes" chat --query-file "$q" --oneshot -Q \
