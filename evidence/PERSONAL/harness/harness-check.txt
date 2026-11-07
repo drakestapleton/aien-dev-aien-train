@@ -1,4 +1,4 @@
-peval_sha256=f30d23c6298162bb1fc126de0d41ddb46037773477e420db5e461b0d52b9756c
+peval_sha256=5628dddb10e6855c5e24bee2f4d55ba8cd1f7760893e96637de1009a4cd6464b
 tasks_sha256=d9d905d425fd87cce9f49835cbce2922f44a5d71f4c5de64272d3e07c2b41378
 PASS split: SPLIT 16
 PASS split files: 38
@@ -69,6 +69,13 @@ PASS rx negated range with an escaped upper endpoint refused:  rc22
 PASS rx range with an escaped lower endpoint refused:  rc22
 PASS rx escaped hyphen before ] is a literal: RX pass 1/1 0/0 rc0
 PASS rx plain range still works: RX pass 1/1 0/0 rc0
+PASS rx initial ] as the lower endpoint of a range with an escaped upper endpoint refused:  rc22
+PASS rx negated initial ] range with an escaped upper endpoint refused:  rc22
+PASS rx initial ] range with plain endpoints still works: RX pass 1/1 0/0 rc0
+PASS rx negated initial ] range with plain endpoints still works: RX fail 0/1 0/0 rc0
+PASS rx reversed range refused (an error in Python):  rc22
+PASS rx range then a literal hyphen: RX pass 1/1 0/0 rc0
+PASS rx range then a literal hyphen, upper item: RX pass 1/1 0/0 rc0
 PASS a program killed by the 5 s timeout fails (why=omc5)
 PASS a timed-out program fails even when the task expects exit 124 (why=omc5)
 PASS a real exit status of 142 (above 128) is scored from bwrap's exit-code

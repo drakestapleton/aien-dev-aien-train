@@ -96,10 +96,12 @@ with a recall-oriented threshold, must-bearing scorers, and examples that fit th
 ## Review round 1 fixes and re-score (lead dra146, 2026-11-07)
 
 Reviewer verdict REQUEST_CHANGES on 926c6548 (gpt-6-astra), five blocking findings; round 2 (on 3e8bed70) found 4
-fixed and the regex one PARTIAL (two more parser defects); all are fixed at this head:
+fixed and the regex one PARTIAL (two more parser defects); round 3 (on afadad2c) one more class-parser defect
+(an initial ] as a range start); this head fixes all of them, and the class validator now scans items exactly
+as the matcher does:
 1. regex: `.` no longer matches a newline; `$` also matches before a final newline; escapes outside
    d D w W s S n t (b B outside classes), non-punctuation escapes and unescaped ^ or $ inside `(?!...)`, and
-   class ranges with an escaped endpoint ([a-\~], [\--0]) are refused (exit 22);
+   class ranges with an escaped endpoint ([a-\~], [\--0], []-\~]) or a reversed range ([z-a]) are refused (exit 22);
 2. timeouts: the harness takes the program's exit from `bwrap --json-status-fd` ("exit-code"); a run with no
    exit-code (5 s timeout or sandbox failure) or one that differs from timeout's status is omc5, never a pass
    (expected exits above 128 such as 142 still score);
@@ -107,11 +109,11 @@ fixed and the regex one PARTIAL (two more parser defects); all are fixed at this
    expect_stdout (possibly empty) and expect_exit, or regex without must/must_not are refused;
 4. email leak detection accepts a local part ending in `_`, `+`, `.`, `%` or `-`;
 5. no private paths in the public files.
-New checks: tests/personal/harness-check.sh 72 PASS, HARNESS_PASS (the 926c6548 peval fails 14 of the new
-checks, the 3e8bed70 peval 5); tests/personal/rx-oracle.py agree=1444 disagree=0 refused=0.
-New peval build: f30d23c6298162bb1fc126de0d41ddb46037773477e420db5e461b0d52b9756c.
+New checks: tests/personal/harness-check.sh 79 PASS, HARNESS_PASS (the 926c6548 peval fails 14 of the new
+checks, the 3e8bed70 peval 5, the afadad2c peval 2); tests/personal/rx-oracle.py agree=2021 disagree=0 refused=0.
+New peval build: 5628dddb10e6855c5e24bee2f4d55ba8cd1f7760893e96637de1009a4cd6464b.
 Re-score: the saved pilot answers (no model rerun) were scored again with the fixed peval and harness rules:
-dev ck100 (153 rows) and test (210 rows): 0 pass changes and 0 leak changes (with both the round-1 and the
-round-2 fixed builds); all task files pass the new
+dev ck100 (153 rows) and test (210 rows): 0 pass changes and 0 leak changes (with the round-1, round-2 and round-3 fixed
+builds); all task files pass the new
 scorer validation; 1 dev and 3 test task regexes are now refused (scored fail in every arm, as before
 they also failed in every arm). The tables above stand.

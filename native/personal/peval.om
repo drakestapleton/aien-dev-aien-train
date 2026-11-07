@@ -859,13 +859,18 @@ j = add i 1
 if eq pb j e 94
 j = add j 1
 end
-if eq pb j e 93
-j = add j 1
-end
-note review round 2: a range with an escaped endpoint ([\--0], [a-\~]) is refused (exit 22): ranges are
-note matched on raw bytes, so an escaped endpoint would silently mean a different set
+note review rounds 2 and 3: the class is scanned item by item exactly as clsm/crlen match it (an initial ]
+note is an item; a range is lo - hi with hi not ]). Refused (exit 22): an escaped range endpoint ([\--0],
+note [a-\~], []-\~]), a range whose lower end is above its upper end ([z-a], an error in Python), an
+note unsupported escape, and an unterminated class.
+first = true
 while lt j e bound 4096
-if eq pb j e 92
+d = pb j e
+if and eq d 93 not first
+ret add sub j i 1
+end
+first = false
+if eq d 92
 if not escok pb add j 1 e true
 exit 22
 end
@@ -874,13 +879,18 @@ exit 22
 end
 j = add j 2
 else
-if eq pb j e 93
-ret add sub j i 1
-end
-if and eq pb add j 1 e 45 eq pb add j 2 e 92
+if and eq pb add j 1 e 45 ne pb add j 2 e 93
+h = pb add j 2 e
+if or eq h 92 eq h 256
 exit 22
 end
+if gt d h
+exit 22
+end
+j = add j 3
+else
 j = add j 1
+end
 end
 end
 exit 22
