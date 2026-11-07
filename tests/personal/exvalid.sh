@@ -49,6 +49,12 @@ case_ bad_shared_dev_test.tsv 1 "FAIL no_shared_hash_dev_test violations=1"
 case_ bad_cond_oversize.tsv 1 "FAIL cond_bytes_le_600 violations=1"
 case_ bad_target_oversize.tsv 1 "FAIL target_bytes_le_400 violations=1"
 case_ bad_malformed.tsv 2 "FAIL well_formed_rows violations=1"
+case_ ok_zero_one.tsv 0
+case_ bad_same_zero.tsv 1 "FAIL no_shared_hash_train_dev violations=1"
+case_ ok_dash.tsv 0
+for m in bad_allowed_empty bad_allowed_two bad_hashes_empty bad_hashes_comma bad_hashes_hyphen bad_hashes_trailing bad_hashes_dash_more; do
+    case_ $m.tsv 2 "FAIL well_formed_rows violations=1"
+done
 grep -qx "exvalid rows=6 convs=4 hashes=8 target_allowed=4" "$WORK/ok.tsv.out" \
     && { echo "PASS ok.tsv counts"; pass=$((pass + 1)); } || { echo "FAIL ok.tsv counts"; fail=$((fail + 1)); }
 echo "SUMMARY pass=$pass fail=$fail"

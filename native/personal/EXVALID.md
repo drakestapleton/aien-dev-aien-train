@@ -18,7 +18,9 @@ training. It reads labels, sizes and hashes only, never text.
 
 One row per example, nine TAB-separated fields, on stdin:
 `id split conv_id target_role outcome_label target_allowed cond_bytes target_bytes hashes`
-(`hashes`: 16 lowercase hex digits, comma separated, or `-`).
+(`target_allowed`: exactly one byte, `0` or `1`; `hashes`: exactly `-`, or a nonempty comma-separated list of
+tokens of exactly 16 lowercase hex digits; an empty token, a trailing comma, a `-` inside a list or anything
+after a lone `-` is malformed, exit 2. Every 64-bit value, `0000000000000000` included, is a distinct key.)
 
 ## Output and exit
 

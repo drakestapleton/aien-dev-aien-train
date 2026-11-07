@@ -46,8 +46,8 @@ text lsum "SUMMARY pass="
 text lsfail " fail="
 
 note S slots: 0 field, 1 field FNV, 2 conv FNV, 3 split bit, 4 role ok, 5 outcome code, 6 allowed, 7 cond bytes,
-note 8 target bytes, 9 malformed, 12 row has bytes, 13 hex value, 14 hex digits,
-note 15 decimal digits in field. K: FNV of the known words (0 train, 1 dev, 2 test, 3 agent, 4..7 outcomes).
+note 8 target bytes, 9 malformed, 10 hash tokens, 11 lone '-' seen, 12 row has bytes, 13 hex value, 14 hex digits,
+note 15 digits in field (decimal fields; the target_allowed byte count). K: FNV of the known words (0 train, 1 dev, 2 test, 3 agent, 4..7 outcomes).
 note E slots: 0 rows, 1 non-agent target, 2 allowed with bad outcome, 3 conv split differs, 4 cond oversize,
 note 5 target oversize, 6 malformed rows, 7 table full, 8 train-dev, 9 train-test, 10 dev-test, 11 allowed rows,
 note 12 distinct hashes, 13 conversations
@@ -99,16 +99,15 @@ end
 put S 1 14695981039346656037
 end
 
+note a slot is occupied iff its split mask is nonzero (every stored bit is 1, 2 or 4), so every 64-bit hash
+note value, 0 included, is its own key (review finding: hash 0 used to be rewritten to 1)
 fn hput h ulong bit uchar to long
 k = h
-if eq k 0
-k = ulong 1
-end
 i = and k 16777215
 n = ulong 0
 while lt n 999999 bound 999999
 c = get hk i
-if eq c 0
+if eq get hm i 0
 put hk i k
 put hm i bit
 einc 12
@@ -124,16 +123,14 @@ end
 ret -1
 end
 
+note occupied iff the stored split code is nonzero (rowend calls cput only for well-formed rows: code 1, 2 or 4)
 fn cput h ulong code uchar to void
 k = h
-if eq k 0
-k = ulong 1
-end
 i = and k 1048575
 n = ulong 0
 while lt n 999999 bound 999999
 c = get ck i
-if eq c 0
+if eq get cs i 0
 put ck i k
 put cs i code
 einc 13
@@ -223,8 +220,20 @@ if eq get S 15 0
 put S 9 1
 end
 end
+if eq f 5
+if ne get S 15 1
+put S 9 1
+end
+end
 if eq f 8
+if eq get S 11 0
+if eq get S 14 0
+put S 9 1
+else
 hexend
+put S 10 add get S 10 1
+end
+end
 end
 put S 1 14695981039346656037
 put S 15 0
@@ -292,6 +301,7 @@ ret
 end
 put S 1 fnvstep get S 1 b
 if eq f 5
+put S 15 add get S 15 1
 if eq b 49
 put S 6 1
 else
@@ -314,12 +324,28 @@ hexbyte b
 end
 end
 
+note hashes field grammar: exactly '-', or a nonempty comma-separated list of 16-hex-digit tokens; an empty
+note token, a trailing comma, a '-' inside a list or any byte after a lone '-' is malformed (exit 2)
 fn hexbyte b uchar to void
+if ne get S 11 0
+put S 9 1
+ret
+end
 if eq b 44
+if eq get S 14 0
+put S 9 1
+ret
+end
 hexend
+put S 10 add get S 10 1
 ret
 end
 if eq b 45
+if or ne get S 14 0 ne get S 10 0
+put S 9 1
+ret
+end
+put S 11 1
 ret
 end
 d = ulong 16

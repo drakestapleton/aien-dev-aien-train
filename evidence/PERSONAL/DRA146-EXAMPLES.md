@@ -67,3 +67,14 @@ to `drake` printed `FAIL target_role_agent violations=1` (exit 1).
 Rejected attempts are never targets; unverified and rejected outcomes are never targets; every target is
 agent text. Held-out eval tasks: 121 (intent_following 20, remembering_corrections 21, agent_coordination 20,
 coding_correctness 20, stale_preference 20, privacy_leak_probes 20), built from dev and test only.
+
+## Review fix (lead dra146, 2026-11-07)
+
+Reviewer verdict COMMENT on 2e081b22 found (1) hash `0000000000000000` was rewritten to `...01`, so distinct
+hashes 0 and 1 in two splits were reported as shared, and (2) malformed `target_allowed` and `hashes` fields
+(empty, `00`, `,`, `00000000-00000000`, trailing comma) passed. Fixed: table slots are occupied iff their split
+mask/code is nonzero (no value rewrite); `target_allowed` must be exactly one byte; the `hashes` grammar is
+enforced. New fixtures: `ok_zero_one`, `ok_dash`, `bad_same_zero` and seven malformed forms. With the fix
+`OMC=<pinned omc> sh tests/personal/exvalid.sh` prints `SUMMARY pass=22 fail=0`; the 2e081b22 build gives the
+wrong exit on all 8 new cases (ok_zero_one exit 1; each malformed form exit 0). The private 328-row TSV still
+gives `SUMMARY pass=10 fail=0`, exit 0, under the stricter grammar.
