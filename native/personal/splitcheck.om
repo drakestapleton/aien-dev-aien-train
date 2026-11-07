@@ -2,7 +2,8 @@ om2
 note splitcheck.om: verify a corpus split projection against the DRA-146 v4 pre-registered split rule.
 note Input on stdin, one row per record, five TAB-separated fields:
 note   conv_id  split  start_ts  text_hash  shingle_hashes
-note split is train, dev or test. start_ts is ISO-8601 UTC; its first 19 bytes are compared with the cutoffs.
+note split is exactly train, dev or test. start_ts is YYYY-MM-DDTHH:MM:SS[.d{1,9}]Z (UTC, calendar-checked);
+note its first 19 bytes are compared with the cutoffs.
 note text_hash and every shingle hash are 16 lowercase hex digits; shingles are comma separated, or a single -.
 note text_hash may also be - when a large projection is partitioned by hash prefix (one run per partition).
 note Checks: every conversation in one split, one start_ts per conversation, the split agrees with
@@ -24,8 +25,11 @@ global ck ulong 1048576
 global cs uchar 1048576
 global ct ulong 1048576
 global tsb uchar 32
-global S ulong 16
+global S ulong 24
 global E ulong 32
+text wtrain "train"
+text wdev "dev"
+text wtest "test"
 text cdev "2026-10-29T00:00:00"
 text ctst "2026-11-03T00:00:00"
 text lhead "splitcheck rows="
@@ -51,7 +55,7 @@ text lsfail " fail="
 
 note S slots: 0 field, 1 conv FNV, 2 split byte 0, 3 split byte 1, 4 ts length, 5 ts FNV, 6 hex value,
 note 7 hex digits, 8 split bit, 9 row malformed, 10 hash entries, 11 conversations, 12 row has bytes,
-note 13 split bytes seen
+note 13 split bytes seen, 14 split field FNV, 15 hash tokens in the field, 16 lone '-' seen in the field
 note E slots: 0 rows, 1 conv split differs, 2 cutoff mismatch, 3 conv start_ts differs, 4 malformed rows,
 note 6 table full, 7 shared train-dev, 8 shared train-test, 9 shared dev-test, 10 train, 11 dev, 12 test rows
 
@@ -100,6 +104,9 @@ put S 8 0
 put S 9 0
 put S 12 0
 put S 13 0
+put S 14 14695981039346656037
+put S 15 0
+put S 16 0
 end
 
 note the 2^26-slot hash table is four 2^24 arrays: slot i lives in array i / 2^24 at i mod 2^24
@@ -167,16 +174,15 @@ put hm3 j v
 end
 end
 
+note a slot is occupied iff its split mask is nonzero (stored bits are 1, 2 or 4), so every 64-bit value,
+note 0 included, is its own key (review: hash 0 used to be rewritten to 1)
 fn hput h ulong bit uchar to long
 k = h
-if eq k 0
-k = ulong 1
-end
 i = and k 67108863
 n = ulong 0
 while lt n 999999 bound 999999
 c = kget i
-if eq c 0
+if eq mget i 0
 kput i k
 mput i bit
 sinc 10
@@ -192,16 +198,19 @@ end
 ret -1
 end
 
+note occupied iff the stored split code is nonzero (cput runs only for well-formed rows: code 1, 2 or 4);
+note a new conversation beyond the declared 786432 is a full table (exit 2)
 fn cput h ulong code uchar tsh ulong to void
 k = h
-if eq k 0
-k = ulong 1
-end
 i = and k 1048575
 n = ulong 0
 while lt n 999999 bound 999999
 c = get ck i
-if eq c 0
+if eq get cs i 0
+if ge get S 11 786432
+einc 6
+ret
+end
 put ck i k
 put cs i code
 put ct i tsh
@@ -279,17 +288,28 @@ end
 ret 0
 end
 
-fn splitend to void
-a = get S 2
-b = get S 3
-put S 8 0
-if eq a 100
-put S 8 2
+fn fnvtext t view uchar * to ulong
+h = ulong 14695981039346656037
+i = ulong 0
+while lt i len t bound 16
+h = fnvstep h get t i
+i = add i 1
 end
-if and eq a 116 eq b 114
+ret h
+end
+
+note the split field must be exactly train, dev or test (review: prefixes such as trash, d, testing passed)
+fn splitend to void
+h = get S 14
+n = get S 13
+put S 8 0
+if and eq n 5 eq h fnvtext wtrain
 put S 8 1
 end
-if and eq a 116 eq b 101
+if and eq n 3 eq h fnvtext wdev
+put S 8 2
+end
+if and eq n 4 eq h fnvtext wtest
 put S 8 4
 end
 if eq get S 8 0
@@ -297,16 +317,110 @@ put S 9 1
 end
 end
 
+fn dig2 i ulong to ulong
+a = ulong get tsb i
+b = ulong get tsb add i 1
+if or or lt a 48 gt a 57 or lt b 48 gt b 57
+ret 99
+end
+ret add mul sub a 48 10 sub b 48
+end
+
+fn isdig i ulong to bool
+a = get tsb i
+ret and ge a 48 le a 57
+end
+
+note start_ts grammar: YYYY-MM-DDTHH:MM:SS, then optionally . and 1..9 digits, then Z, nothing else; month
+note 01..12, day 01..days in that month (Gregorian leap years), hour 00..23, minute and second 00..59
+fn tsvalid to bool
+n = get S 4
+if or lt n 20 gt n 30
+ret false
+end
+for i ulong 4
+if not isdig i
+ret false
+end
+end
+if ne get tsb 4 45
+ret false
+end
+if ne get tsb 7 45
+ret false
+end
+if ne get tsb 10 84
+ret false
+end
+if ne get tsb 13 58
+ret false
+end
+if ne get tsb 16 58
+ret false
+end
+y = add mul dig2 0 100 dig2 2
+mo = dig2 5
+d = dig2 8
+if or or gt dig2 11 23 gt dig2 14 59 gt dig2 17 59
+ret false
+end
+if or lt mo 1 gt mo 12
+ret false
+end
+dm = ulong 31
+if or or eq mo 4 eq mo 6 or eq mo 9 eq mo 11
+dm = ulong 30
+end
+if eq mo 2
+dm = ulong 28
+if eq rem y 4 0
+dm = ulong 29
+if and eq rem y 100 0 ne rem y 400 0
+dm = ulong 28
+end
+end
+end
+if or lt d 1 gt d dm
+ret false
+end
+if ne get tsb sub n 1 90
+ret false
+end
+if eq n 20
+ret true
+end
+if ne get tsb 19 46
+ret false
+end
+if eq n 21
+ret false
+end
+j = ulong 20
+while lt j sub n 1 bound 32
+if not isdig j
+ret false
+end
+j = add j 1
+end
+ret true
+end
+
 fn fend f ulong to int
 if eq f 1
 splitend
 ret 0
 end
-if eq f 3
-ret hexend
+if or eq f 3 eq f 4
+if ne get S 16 0
+ret 0
 end
-if eq f 4
-ret hexend
+if eq get S 7 0
+put S 9 1
+ret 0
+end
+r = hexend
+sinc 15
+ret r
 end
 ret 0
 end
@@ -319,7 +433,7 @@ einc 0
 if ne get S 0 4
 put S 9 1
 end
-if lt get S 4 19
+if not tsvalid
 put S 9 1
 end
 if ne get S 9 0
@@ -360,6 +474,8 @@ ret r
 end
 if eq b 9
 r = fend f
+put S 15 0
+put S 16 0
 put S 0 add f 1
 if gt f 3
 put S 9 1
@@ -378,9 +494,10 @@ end
 if eq n 1
 put S 3 ulong b
 end
-if lt n 2
+if lt n 64
 put S 13 add n 1
 end
+put S 14 fnvstep get S 14 b
 ret 0
 end
 if eq f 2
@@ -396,11 +513,27 @@ ret hexbyte f b
 end
 
 note bytes of the hash fields (3 and 4)
+note hash field grammar: text_hash is '-' or one 16-hex token; shingle_hashes is '-' or a nonempty comma list
+note of 16-hex tokens; an empty token, trailing comma, embedded '-' or a byte after a lone '-' is malformed
 fn hexbyte f ulong b uchar to int
+if ne get S 16 0
+put S 9 1
+ret 0
+end
 if and eq f 4 eq b 44
+if eq get S 7 0
+put S 9 1
+ret 0
+end
+sinc 15
 ret hexend
 end
 if eq b 45
+if or ne get S 7 0 ne get S 15 0
+put S 9 1
+ret 0
+end
+put S 16 1
 ret 0
 end
 d = hexdig b

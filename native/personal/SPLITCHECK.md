@@ -19,10 +19,10 @@ One row per record, five TAB-separated fields, on stdin:
 | field | value |
 |---|---|
 | conv_id | conversation id (any bytes except TAB and newline) |
-| split | `train`, `dev` or `test` |
-| start_ts | ISO-8601 UTC conversation start; the first 19 bytes are compared with the cutoffs |
-| text_hash | 16 lowercase hex digits (first 64 bits of sha256 of the NFKC, lowercased, whitespace-collapsed text), or `-` |
-| shingle_hashes | 16-hex 13-word shingle hashes, comma separated, or `-` |
+| split | exactly `train`, `dev` or `test` (no prefixes) |
+| start_ts | `YYYY-MM-DDTHH:MM:SS`, optional `.` and 1 to 9 digits, then `Z` (UTC only, no offsets); month, day (Gregorian leap years), hour, minute and second ranges are checked; the first 19 bytes are compared with the cutoffs |
+| text_hash | exactly one token of 16 lowercase hex digits (first 64 bits of sha256 of the NFKC, lowercased, whitespace-collapsed text), or exactly `-` |
+| shingle_hashes | a nonempty comma-separated list of 16-hex 13-word shingle hashes, or exactly `-`; empty tokens, trailing commas and embedded `-` are malformed |
 
 A projection with more than 50,331,648 distinct hashes is split by leading hex digit into partitions;
 each partition carries every row (with `-` for hashes outside it) and is checked by its own run. All runs
@@ -33,7 +33,8 @@ must pass.
 One `PASS`/`FAIL` line per check (`conv_one_split`, `conv_one_start_ts`, `split_matches_cutoffs`,
 `no_shared_hash_train_dev`, `no_shared_hash_train_test`, `no_shared_hash_dev_test`, `well_formed_rows`,
 `table_capacity`) with its violation count, then `SUMMARY pass=N fail=M`. Exit 0 when every check passes,
-1 on a split violation, 2 on malformed input or a full table.
+1 on a split violation, 2 on malformed input or a full table (more than 50,331,648 hashes or 786,432
+conversations). Every 64-bit hash value, `0000000000000000` included, is a distinct key.
 
 ## Build and test
 

@@ -81,3 +81,16 @@ in the split files; `no start ts` conversations have no timestamp and are in no 
 
 Conversations: train 10150, dev 619, test 910, no start ts 23. Cross-split dedupe dropped from dev 7568
 (exact) + 40618 (13-word shingle) records and from test 7778 + 32101 (train) and 1675 + 8436 (dev).
+
+## Review fix (lead dra146, 2026-11-07)
+
+Reviewer verdict COMMENT on 1deaf0e3 (gpt-6-astra): B1 malformed input passed (split prefixes `trash`, `d`,
+`testing`; timestamps `zzz...`, `2026-10-32...`, `+01:00` offsets; empty hash fields, embedded `-`, empty
+shingle tokens); N1 hash 0 collapsed into 1; N2 the declared 786,432-conversation capacity was not enforced.
+Fixed: exact split tokens; a UTC timestamp grammar with calendar ranges; the hash-field grammar; occupancy by
+nonzero mask/code instead of a rewritten key; a full conversation table exits 2. Fixtures added: `ok_zero_one`,
+`bad_zero_shared`, `ok_ts_forms` and 12 malformed forms, plus a generated 786,432 / 786,433 capacity case.
+`OMC=<pinned omc> sh tests/personal/splitcheck.sh` -> `SUMMARY pass=26 fail=0`. The 1deaf0e3 build gives the
+wrong exit on all 13 new fixture cases (ok_zero_one exit 1; each malformed form exit 0). Rerun on the private
+projection with the fixed build: all 4 partitions `SUMMARY pass=8 fail=0`, exit 0, same row/conversation/hash
+counts as above.

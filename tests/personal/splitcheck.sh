@@ -47,6 +47,21 @@ case_ bad_train_dev_text.tsv 1 "FAIL no_shared_hash_train_dev violations=1"
 case_ bad_train_test_shingle.tsv 1 "FAIL no_shared_hash_train_test violations=1"
 case_ bad_dev_test_shingle.tsv 1 "FAIL no_shared_hash_dev_test violations=1"
 case_ bad_malformed.tsv 2 "FAIL well_formed_rows violations=1"
+case_ ok_zero_one.tsv 0
+case_ bad_zero_shared.tsv 1 "FAIL no_shared_hash_train_dev violations=1"
+case_ ok_ts_forms.tsv 0
+for m in bad_split_prefix_trash bad_split_prefix_d bad_split_testing bad_ts_junk bad_ts_calendar bad_ts_feb29 \
+         bad_ts_offset bad_ts_nofrac bad_hash_empty bad_hash_dash_inside bad_shingle_empty_token bad_shingle_trailing; do
+    case_ $m.tsv 2 "FAIL well_formed_rows violations=1"
+done
+# declared conversation capacity: 786432 distinct conversations pass, one more is a full table (exit 2)
+awk 'BEGIN { for (i = 1; i <= 786432; i++) printf "syn:k%d\ttrain\t2026-10-20T10:00:00Z\t-\t-\n", i }' > "$WORK/cap_ok.tsv"
+{ cat "$WORK/cap_ok.tsv"; printf 'syn:k786433\ttrain\t2026-10-20T10:00:00Z\t-\t-\n'; } > "$WORK/cap_over.tsv"
+"$WORK/splitcheck" < "$WORK/cap_ok.tsv" > "$WORK/cap_ok.out"; r1=$?
+"$WORK/splitcheck" < "$WORK/cap_over.tsv" > "$WORK/cap_over.out"; r2=$?
+if [ $r1 -eq 0 ] && [ $r2 -eq 2 ] && grep -qxF "FAIL table_capacity violations=1" "$WORK/cap_over.out"; then
+    echo "PASS conversation capacity (786432 exit $r1, 786433 exit $r2)"; pass=$((pass + 1))
+else echo "FAIL conversation capacity (786432 exit $r1, 786433 exit $r2)"; fail=$((fail + 1)); fi
 grep -qx "splitcheck rows=8 convs=6 hashes=12 train=4 dev=2 test=2" "$WORK/ok.tsv.out" \
     && { echo "PASS ok.tsv counts"; pass=$((pass + 1)); } || { echo "FAIL ok.tsv counts"; fail=$((fail + 1)); }
 echo "SUMMARY pass=$pass fail=$fail"
