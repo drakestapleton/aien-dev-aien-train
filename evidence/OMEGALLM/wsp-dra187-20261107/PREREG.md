@@ -137,3 +137,20 @@ Tool changes only; no change to splits, search space, acceptance or limits.
   (MEASURED, 06:06:57Z to 06:18:28Z, core 19): target 7/66 (L6 7/18, L7 0/24, L8 0/24), control 120/120,
   the cited failure reproduced. Ranking on its 59 digit-copy failure rows: heads 6.6, 7.11, 6.11, 7.0 lead;
   mean logit gap -7.063. Output `diag/D-base.out`.
+
+## Amendment 2, 2026-11-07T08:10Z (during the S search; before selection, before any H or G run)
+
+Instrument substitution only (Drake directive 2026-11-07 ~07:31Z, everything in seeded Omega). No change
+to splits, search space, selection rule, arms, acceptance, limits or the section 9 policy check.
+- Each Python instrument named above is replaced by an Omega program that reproduces it: `make_splits.py`
+  and `make_d.py` by `wsplit`, `score.py` by `wscore`, the search runner by `wdrive/wrun`, the section 6
+  item 5 control draw by `wprobe controls` (MT19937 identical to CPython `random.Random(SEED)`, so the
+  preregistered seeds give the same units), the section 9 computation by `wprobe survive` and
+  `wdrive/wpolicy`, and `build.sh`/`check.py` by `wdrive/wbuild`/`wcheck`. Gates and negative controls
+  are in `PORT.md`; any instrument still to be ported is listed there with its gate before it is used.
+- The S search started on the Python runner and scorer and finishes on them; every scored arm is re-scored
+  by `wscore` and must agree row for row (16 of 16 so far).
+- The committed H is kept. Regenerating it today gives 3 different rows because one later evaluation file
+  (item 1199, written after H was cut) entered the exclusion scan; H is not regenerated (`PORT.md`).
+- Hook groups may be passed in a file (`@PATH`), because a program started from Omega takes at most 64
+  arguments and E2 with m = 32 needs 128 hook numbers. Output is byte-identical to passing them inline.
