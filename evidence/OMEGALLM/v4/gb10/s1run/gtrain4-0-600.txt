@@ -1,0 +1,7 @@
+$ timeout 420 taskset -c 5 nice -n 10 ollm-gb10 gtrain4 s1run.ck(=copy of s1t1024.ck) tr40.u16 600 100   binary a22f863ea85691d48c6f58475b11c9498d1da5d839935ed3189e9e8031be7597 window 20261107T010044Z-2e1698 utc 2026-11-07T01:01:26Z non-quiet
+T 100 6307294
+T 200 5564301
+T 300 5317763
+T 400 5170089
+T 500 5128188
+--- killed by the agent tool timeout after T 500 (420 s); CK at step 500 saved

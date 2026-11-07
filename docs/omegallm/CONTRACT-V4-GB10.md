@@ -63,8 +63,9 @@ tol = (10L + 3)·k·2^−24, k = max(R, D, F, V): the first-order bound γ_k of 
 longest reduction) over the 10L + 3 GEMMs of the longest chain. BF16 (`gcmp4b`): CONTRACT-BF16's
 gbcmp2 heuristic (10L + 3)(2u + u²), u = 2^−8 (gross failures only). Mutants (build.sh `--mutant`):
 **rs** rotates K with the inverse table in the forward (the RoPE sign flip), **ri** skips Rᵀ on dQ/dK,
-**cc** drops the head's last CE row chunk; each must exit 51. **sv** (saves no Adam v) is the resume
-check's control.
+**cc** drops the head's last CE row chunk, **od** (gr.om) drops one 8-element chunk of ODOT's per-head
+row sum (only on the looped path, so it runs on p2 and p3, not p1); each must exit 51. **sv** (saves no
+Adam v) is the resume check's control.
 
 MEASURED 2026-11-07, product binary `195daeec…` (window g4-sb8 `20261107T005239Z-a1107c`, `--quiet
 none`, core 5); rel and tol ×10^9, tol recomputed by Wolfram:
@@ -82,7 +83,11 @@ Every mutant failed (rc 51); largest class rel ×10^9 on p1 / p3 / r200: rs 620,
 unchanged: backward only); cc 633,978,947 / 598,816,642 / 399,916,634 (loss non-finite: the dropped
 chunk's rows have no CE stats). 18 of 18 parity receipts as predicted. The same gates ran on the
 previous product `405809ec…` (two-pass SOFTBL, windows g4-gates3 and g4-trained5) with the same
-verdicts (`l2-405809ec/`); the largest p4 class rel there was 415,241.
+verdicts (`l2-405809ec/`); the largest p4 class rel there was 415,241. The branch head's binary
+`a22f863e…` (195daeec plus the od switch; its device code image at the S1 shape is byte-identical,
+gpu-disasm `c3cc90e9…` for both sources) re-ran the parity phase in window g4-head10
+`20261107T010044Z-2e1698`: 15 of 15 as predicted, mutant od failing with Wk rel 214,496,592 (p2) and
+339,629,073 (p3) ×10^−9 (`head-a22f863e/`).
 
 **Checkpoint continuation**: r (V256 T256 D128 H4 F512 L2 B8, byte data, BF16 `gtrain4`):
 uninterrupted 0 → 200 against 0 → 100, save, reload, 100 → 200: both CK03 files sha256
