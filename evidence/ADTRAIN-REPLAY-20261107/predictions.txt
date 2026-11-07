@@ -1,0 +1,55 @@
+DRA-14 replay predictions, written 2026-11-07T01:5xZ by t_3dad9df7 BEFORE the first
+run of tests/adtrain/replay/run-replay.sh. [INFERENCE] from reading tape.om, mlp.om and
+the two suites; not observations. Observed results are in replay.txt; mismatches are
+listed in README.md and were not edited away.
+
+Checkpoint images (mode R, aien-train 80bcbd18, omc 62775d2a):
+  0 (re-checksummed, unchanged)  exit 0, L/P tail identical to the uninterrupted T run
+  S (step 200, valid checksum)    exit 0
+  m v s c l p u n i x             exit 65 each
+  h (data hash, valid checksum)   exit 66
+  size537, size0, missing file    exit 65
+
+ckcheck removal mutants: every one LOADBEARING (forged image no longer gives the
+refusal code; good image still exits 0). Expected rc under the mutant:
+  c-checksum/x 0, c-magic/m 0, c-version/v 0, c-count/c 0, c-lr/l 0, c-zero-word/p 0,
+  c-step/s 0 (no step runs past 200), c-finite-nan/n 86, c-finite-inf/i 86,
+  c-param-upper/u 105 (checked uint conversion traps 5), c-data-hash/h 0, c-size/size537 0.
+
+Tape mutants, killed by omega-mv tests/autodiff664/tape-test.om? / adtrain T stdout changes?
+  t-acc-overwrite      KILL / DIFFER
+  t-e1-pad-pos0        UNSURE / SAME
+  t-e1-16lanes         KILL / SAME (no adtrain reduction is longer than 16)
+  t-mm-gb-stride       KILL / DIFFER
+  t-mm-ga-useA         KILL / DIFFER
+  t-bc-row0            KILL / DIFFER
+  t-sum-axis           KILL / DIFFER
+  t-relu-fwd-id        KILL / DIFFER
+  t-relu-bwd-negzero   UNSURE / SAME
+  t-cap33              KILL (trap 3, exit 103) / SAME
+  t-back-twice         KILL / SAME
+  t-seed2              KILL / DIFFER
+  t-admit-b-skip       UNSURE / SAME
+
+mlp mutants, killed by tests/adtrain/run-adtrain.sh? / differs from the PR #42 golden receipts?
+  m-lr32               SURVIVES the suite / DIFFER (T stdout)
+  m-db2-index          KILL (gradcheck) / DIFFER
+  m-skip-last-param    SURVIVES the suite / DIFFER
+  m-hash-T15           SURVIVES the suite / DIFFER (checkpoint bytes only)
+  m-no-fsync           SURVIVES the suite / SAME (durability is not observable without a crash test)
+
+Addendum, written after run 1 and before run 2 (run 1 showed m-lr32 killed by gradcheck
+because tests/adtrain/main.om dgc uses eps = mllr, so lr and epsilon move together):
+  m-lr-update-only     SURVIVES the suite / DIFFER (update step 2*lr, epsilon unchanged)
+  t-relu-fwd-id, m-no-fsync: run-1 patterns matched twice (INVALID setup, subst exit 76);
+  widened to unique patterns; predictions unchanged.
+
+Addendum 2, written after run 2 and before run 3: run 2 m-lr-update-only edited the line
+that the suite's own tests/adtrain/mutate.om mode 0 injects into, so the suite failed with
+mutant0-inject (a setup collision, now classified INVALID by the runner, never a kill).
+The mutant now doubles lr inside mlupd (lr = add mllr mllr); prediction unchanged:
+  m-lr-update-only     SURVIVES the suite / DIFFER
+
+Addendum 3, after run 3: padprobe.om (sum of four -0 leaves) was added to test whether
+t-e1-pad-pos0 is an equivalent mutant. An ad-hoc probe before the receipt run already
+showed pinned tape rc 11 (-0) and mutant rc 10 (+0); this is an observation, not a prediction.

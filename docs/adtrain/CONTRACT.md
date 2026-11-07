@@ -89,6 +89,12 @@ checksum rejects a torn image. The suite exercises each refusal path:
 | byte 96 flipped (parameter mantissa, checksum only) | 65 |
 | byte 100 flipped (zero-extension padding) | 65 |
 
+A plain byte flip only ever reaches the checksum, so the two flip cases above both
+exercise the checksum check. `tests/adtrain/replay/run-replay.sh` (DRA-14 replay,
+`evidence/ADTRAIN-REPLAY-20261107/`) forges re-checksummed images (`replay/ckforge.om`)
+that reach each structural check on its own, and removes one check at a time to show
+that each carries its refusal.
+
 ## Exit codes
 
 | code | meaning |

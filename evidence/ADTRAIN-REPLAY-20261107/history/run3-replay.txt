@@ -1,0 +1,57 @@
+omc 62775d2a391cfef7cde64e387655caa9809a267093112910ec76bfa568f3712b
+dep 8975287573f284dd2140b2f2b169619d3e145cf1 native/ecosystem663/metadata.om f60b6d62c1bf90de42455effae977de66adeca1268669f6144809a3327aec7a4
+dep 965fb7627364274878c35a49e132fae492ff53be native/autodiff664/tape.om 1b4ed431c4841353a81868c37313d610f9b2e15f6d367538f113666dba708bde
+dep 965fb7627364274878c35a49e132fae492ff53be tests/autodiff664/tape-test.om 5f7532cdd6b077c27964dcc063bbc65625e734cc3c53c95a6588087ea751a696
+GOLDEN b/ref-T.stdout == evidence/ADTRAIN/run/T.stdout PASS
+GOLDEN good.ck == evidence/ADTRAIN/frozen/adtrain.ck.good PASS
+CKFORGE mode 0 reproduces the image byte for byte (FNV-1a 64 agrees) PASS
+CK 0 expect=0 rc=0 PASS
+CK 0 resumed tail == uninterrupted T PASS
+CK S expect=0 rc=0 PASS
+CK m expect=65 rc=65 PASS
+CK v expect=65 rc=65 PASS
+CK s expect=65 rc=65 PASS
+CK c expect=65 rc=65 PASS
+CK l expect=65 rc=65 PASS
+CK p expect=65 rc=65 PASS
+CK u expect=65 rc=65 PASS
+CK n expect=65 rc=65 PASS
+CK i expect=65 rc=65 PASS
+CK x expect=65 rc=65 PASS
+CK h expect=66 rc=66 PASS
+CK size537 expect=65 rc=65 PASS
+CK size0 expect=65 rc=65 PASS
+CK size535 expect=65 rc=65 PASS
+CK missing expect=65 rc=65 PASS
+CKMUT c-checksum image=x good_rc=0 forged_rc=0 (was 65) LOADBEARING PASS
+CKMUT c-magic image=m good_rc=0 forged_rc=0 (was 65) LOADBEARING PASS
+CKMUT c-version image=v good_rc=0 forged_rc=0 (was 65) LOADBEARING PASS
+CKMUT c-count image=c good_rc=0 forged_rc=0 (was 65) LOADBEARING PASS
+CKMUT c-step image=s good_rc=0 forged_rc=104 (was 65) LOADBEARING PASS
+CKMUT c-lr image=l good_rc=0 forged_rc=0 (was 65) LOADBEARING PASS
+CKMUT c-zero-word image=p good_rc=0 forged_rc=0 (was 65) LOADBEARING PASS
+CKMUT c-finite-nan image=n good_rc=0 forged_rc=86 (was 65) LOADBEARING PASS
+CKMUT c-finite-inf image=i good_rc=0 forged_rc=86 (was 65) LOADBEARING PASS
+CKMUT c-param-upper image=u good_rc=0 forged_rc=105 (was 65) LOADBEARING PASS
+CKMUT c-data-hash image=h good_rc=0 forged_rc=0 (was 66) LOADBEARING PASS
+CKMUT c-size image=size537 good_rc=0 forged_rc=0 (was 65) LOADBEARING PASS
+TAPEMUT t-acc-overwrite tape_test_rc=1 KILLED NATIVE_TAPE_FAIL check=195 adtrain_T_rc=0 DIFFER
+TAPEMUT t-e1-pad-pos0 tape_test_rc=0 SURVIVED NATIVE_TAPE_PASS checks=302 adtrain_T_rc=0 SAME GAP
+TAPEMUT t-e1-16lanes tape_test_rc=1 KILLED NATIVE_TAPE_FAIL check=102 adtrain_T_rc=0 SAME
+TAPEMUT t-mm-gb-stride tape_test_rc=1 KILLED NATIVE_TAPE_FAIL check=81 adtrain_T_rc=0 DIFFER
+TAPEMUT t-mm-ga-useA tape_test_rc=1 KILLED NATIVE_TAPE_FAIL check=66 adtrain_T_rc=0 DIFFER
+TAPEMUT t-bc-row0 tape_test_rc=1 KILLED NATIVE_TAPE_FAIL check=191 adtrain_T_rc=0 DIFFER
+TAPEMUT t-sum-axis tape_test_rc=1 KILLED NATIVE_TAPE_FAIL check=66 adtrain_T_rc=0 DIFFER
+TAPEMUT t-relu-fwd-id tape_test_rc=1 KILLED NATIVE_TAPE_FAIL check=168 adtrain_T_rc=0 DIFFER
+TAPEMUT t-relu-bwd-negzero tape_test_rc=1 KILLED NATIVE_TAPE_FAIL check=169 adtrain_T_rc=0 SAME
+TAPEMUT t-cap33 tape_test_rc=103 KILLED  adtrain_T_rc=0 SAME
+TAPEMUT t-back-twice tape_test_rc=1 KILLED NATIVE_TAPE_FAIL check=235 adtrain_T_rc=0 SAME
+TAPEMUT t-seed2 tape_test_rc=1 KILLED NATIVE_TAPE_FAIL check=66 adtrain_T_rc=0 DIFFER
+TAPEMUT t-admit-b-skip tape_test_rc=1 KILLED NATIVE_TAPE_FAIL check=48 adtrain_T_rc=0 SAME
+MLPMUT m-lr32 suite=KILLED (ADTRAIN_SUITE_FAIL gradcheck) golden_T=DIFFER(rc=0) golden_ck=DIFFER(rc=0)
+MLPMUT m-db2-index suite=KILLED (ADTRAIN_SUITE_FAIL gradcheck) golden_T=DIFFER(rc=0) golden_ck=DIFFER(rc=0)
+MLPMUT m-skip-last-param suite=SURVIVED (ADTRAIN_SUITE_PASS) golden_T=DIFFER(rc=0) golden_ck=DIFFER(rc=0) GAP
+MLPMUT m-hash-T15 suite=SURVIVED (ADTRAIN_SUITE_PASS) golden_T=SAME golden_ck=DIFFER(rc=0) GAP
+MLPMUT m-no-fsync suite=SURVIVED (ADTRAIN_SUITE_PASS) golden_T=SAME golden_ck=SAME GAP
+MLPMUT m-lr-update-only suite=SURVIVED (ADTRAIN_SUITE_PASS) golden_T=DIFFER(rc=0) golden_ck=DIFFER(rc=0) GAP
+REPLAY_PASS fail=0 invalid=0 gap=5

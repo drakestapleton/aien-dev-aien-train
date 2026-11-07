@@ -1,0 +1,17 @@
+# DRA-14 replay: remove one checkpoint check of native/adtrain/mlp.om at a time.
+# Columns (TAB): id, pattern, replacement, image, refusal code.
+# image is a tests/adtrain/replay/ckforge.om mode (one character) or size537.
+# With the check removed, that image must no longer give the refusal code
+# (the check is load-bearing), while the good image must still load (exit 0).
+c-checksum	if ne mlget 528 mlimgfnv 528	if ne mlget 528 mlget 528	x	65
+c-magic	if ne mlget 0 mlmagic	if ne mlmagic mlmagic	m	65
+c-version	if or ne mlget 8 1 ne mlget 24 58	if or ne mlget 24 58 ne mlget 24 58	v	65
+c-count	if or ne mlget 8 1 ne mlget 24 58	if or ne mlget 8 1 ne mlget 8 1	c	65
+c-step	if or gt mlget 16 200 ne mlget 32 mlbits mllr	if or ne mlget 32 mlbits mllr ne mlget 32 mlbits mllr	s	65
+c-lr	if or gt mlget 16 200 ne mlget 32 mlbits mllr	if or gt mlget 16 200 gt mlget 16 200	l	65
+c-zero-word	if ne mlget 56 0	if ne mlget 56 mlget 56	p	65
+c-finite-nan	if not mlfinite bitcast f32 uint and w 4294967295	if not mlfinite 0.0f32	n	65
+c-finite-inf	if not mlfinite bitcast f32 uint and w 4294967295	if not mlfinite 0.0f32	i	65
+c-param-upper	if gt w 4294967295\nret -1	if gt w w\nret -1	u	65
+c-data-hash	if ne mlget 48 mlhash	if ne mlhash mlhash	h	66
+c-size	if ne n 536\nret -1	if ne n n\nret -1	size537	65

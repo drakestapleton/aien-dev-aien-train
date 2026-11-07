@@ -1,0 +1,16 @@
+# DRA-14 replay: independent semantic mutants of omega-mv native/autodiff664/tape.om.
+# Columns (TAB): id, pattern, replacement. Backslash-n is a newline (printf %b).
+# Each pattern must occur exactly once in the pinned tape.om (subst exit 76 otherwise).
+t-acc-overwrite	put TG p add get TG p v	put TG p v
+t-e1-pad-pos0	put TL add n i neg 0.0f32	put TL add n i 0.0f32
+t-e1-16lanes	d = ulong 16\nfor s ulong 5	d = ulong 8\nfor s ulong 4
+t-mm-gb-stride	x = get TV add oa mul i k	x = get TV add oa i
+t-mm-ga-useA	ob = add tpoff tnget n 2 mul q nn	ob = add tpoff tnget n 1 mul q nn
+t-bc-row0	put TL i get TG add og mul i c	put TL i get TG og
+t-sum-axis	col = eq tnget n 9 0	col = ne tnget n 9 0
+t-relu-fwd-id	put TV add o i x\nelse\nput TV add o i 0.0f32	put TV add o i x\nelse\nput TV add o i x
+t-relu-bwd-negzero	v = 0.0f32\nx = get TV add tpoff a i	v = neg 0.0f32\nx = get TV add tpoff a i
+t-cap33	if ge n 32\nret -30	if ge n 33\nret -30
+t-back-twice	if or ne get TK 1 0 ne get TK 2 0\nret -31	if ne get TK 2 0\nret -31
+t-seed2	put TG tpoff root 1.0f32	put TG tpoff root 2.0f32
+t-admit-b-skip	ret tpadmit b	ret 0

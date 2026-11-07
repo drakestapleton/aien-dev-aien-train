@@ -1,0 +1,100 @@
+note SPDX-License-Identifier: AGPL-3.0-only
+note subst: exact-once source substitution for the DRA-14 replay mutants.
+note stdin: PATTERN, one 0 byte, REPLACEMENT, one 0 byte, SOURCE.
+note stdout: SOURCE with the single occurrence of PATTERN replaced.
+note Exits: 0 done, 74 I/O, 75 malformed input, 76 PATTERN does not occur
+note exactly once in SOURCE (an invalid mutant setup, never a kill).
+note Written independently of omega-mv tests/autodiff664/mutate.om and
+note aien-train tests/adtrain/mutate.om; it knows no pattern of its own.
+global SI uchar 262144
+global SZ ulong 4
+
+note Read all of stdin into SI; SZ 0 = byte count.
+fn slurp to void
+p = ulong 0
+reading = true
+while reading bound 262145
+if eq p 262144
+exit 75
+end
+n = read 0 SI p sub 262144 p
+if eq n 0
+reading = false
+else
+if lt n 0
+exit 74
+end
+p = add p ulong n
+end
+end
+put SZ 0 p
+end
+
+note Index of the first 0 byte at or after from; exit 75 when there is none.
+fn zfind from ulong to ulong
+i = from
+while lt i get SZ 0 bound 262145
+if eq get SI i 0
+ret i
+end
+i = add i 1
+end
+exit 75
+end
+
+note true when the pattern SI[ps..ps+pl) occurs at SI[pos..).
+fn match pos ulong ps ulong pl ulong to bool
+k = ulong 0
+while lt k pl bound 262145
+if ne get SI add pos k get SI add ps k
+ret false
+end
+k = add k 1
+end
+ret true
+end
+
+fn emit from ulong n ulong to void
+o = ulong 0
+while lt o n bound 262145
+w = write 1 SI add from o sub n o
+if le w 0
+exit 74
+end
+o = add o ulong w
+end
+end
+
+fn main to int
+slurp
+z1 = zfind 0
+z2 = zfind add z1 1
+pl = z1
+if eq pl 0
+ret 75
+end
+s0 = add z2 1
+n = get SZ 0
+if lt sub n s0 pl
+ret 76
+end
+found = ulong 0
+at = ulong 0
+last = sub n pl
+pos = s0
+while le pos last bound 262145
+if match pos 0 pl
+found = add found 1
+at = pos
+end
+pos = add pos 1
+end
+if ne found 1
+ret 76
+end
+emit s0 sub at s0
+emit add z1 1 sub z2 add z1 1
+tail = add at pl
+emit tail sub n tail
+ret 0
+end

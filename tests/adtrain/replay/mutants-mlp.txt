@@ -1,0 +1,10 @@
+# DRA-14 replay: independent semantic mutants of aien-train native/adtrain/mlp.om.
+# Columns (TAB): id, pattern, replacement. Backslash-n is a newline (printf %b).
+# Each one is run through the full tests/adtrain/run-adtrain.sh suite and against
+# the golden receipts of PR #42 (evidence/ADTRAIN run/T.stdout, frozen/adtrain.ck.good).
+m-lr32	ret div 1.0f32 64.0f32	ret div 1.0f32 32.0f32
+m-db2-index	put MG 57 tpgrad 4 1	put MG 57 tpgrad 4 0
+m-skip-last-param	for i ulong 58\np = sub get MP i mul lr get MG i	for i ulong 57\np = sub get MP i mul lr get MG i
+m-hash-T15	for i ulong 16\nh = mlfnv4 h mlbits get MT i	for i ulong 15\nh = mlfnv4 h mlbits get MT i
+m-no-fsync	mlwrfile fd 536\nif ne fsync fd 0\nexit 74\nend\n	mlwrfile fd 536\n
+m-lr-update-only	note p = p - round(lr * g); every parameter must stay finite.\nfn mlupd to void\nlr = mllr	note p = p - round(lr * g); every parameter must stay finite.\nfn mlupd to void\nlr = add mllr mllr

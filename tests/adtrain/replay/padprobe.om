@@ -1,0 +1,32 @@
+note SPDX-License-Identifier: AGPL-3.0-only
+note padprobe: sign of a tape reduction whose inputs are all -0.
+note Unit order: metadata.om, tape.om (or a mutant of it), this file.
+note Sums a [1,4] leaf of -0.0 along axis 1 with tpsum. IEEE 754 RNE gives
+note -0 + -0 = -0, so with the contract's -0 lane padding the sum is -0.
+note Exits: 11 the sum is -0, 10 the sum is +0, 12 any other value,
+note 87 a tape refusal.
+fn main to int
+tpreset
+id = tpleaf 1 4 0
+if ne id 0
+ret 87
+end
+for i ulong 4
+st = tpset 0 i neg 0.0f32
+if ne st 0
+ret 87
+end
+end
+s = tpsum 0 1
+if ne s 1
+ret 87
+end
+b = bitcast uint tpval 1 0
+if eq b 2147483648
+ret 11
+end
+if eq b 0
+ret 10
+end
+ret 12
+end
