@@ -1,0 +1,14 @@
+Title                        Workspace          Last Active   ID
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Create a file named direct   hw-d01.I58QtW      just now      local-d9760407ecadf9cbde5383f84a60b44627eb873115ec309ea900dbede71a821e
+In story.txt replace every   hw-t16.N4tuXv      13m ago       local-9f299b388b4a144f07cc80eab970a480cebdcd03deb549475e0bd1f90d45695d
+—                            hw-t14.7XCt9P      15m ago       local-1c8810eff0e20d0ac0592cae68d94dd6badfb89e11ac1905facb0449fe8d7c9b
+—                            hw-s2.Mau05g       20m ago       local-7d7b9acf6459117149c871afaf1d3a04a33262950904b96117a874177f0b28bc
+—                            hw-s1.kfYPgE       25m ago       local-c9a5c31c8a4c9c4c7dad5d8099b2db229b4df6764cebd63772336055c5166fe8
+—                            hw-s0.9vA83o       27m ago       local-fc3f5b23c7610138c60a5a9711c57da40d6d56d2762e98e6fcd22b27d8957571
+—                            hw-d01.U4CdN2      35m ago       local-e296cb833efaa4665bddd09bf9d019d7b6387d13d148c7a7ac04b0bfa9838d36
+—                            hw-t16.mxBSLO      51m ago       local-536e3dd11e1c701ad6d6158b96e108e96a690c9ceb65e62183025adae7a08b9e
+Compute the SHA-256 hash o   hw-t14.tNSbuE      43m ago       local-88442a3ce3f1ebd43e29069bd16685f7f4e814a61d3fd68a4c6aef050ff64190
+Make a folder shared with    hw-s2.ORMmeg       49m ago       local-bd77f7115f694ad2651e8fe7710804f984a46cbe41e80b97e0bafb546e8f4f82
+Put only the first line of   hw-s1.AQLuOY       55m ago       local-d8fd50b02648be718b275905b2ba2abefc50334e59a4eb90e1ad8fc8b4fb11f0
+List the names of the file   hw-s0.HuPKgH       1h ago        local-2dbe59b52616ab22c76ae1768dcdddc97df072f1087294dec0636ae8f61d2216

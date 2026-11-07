@@ -1,0 +1,1 @@
+FAIL s0 trim listing.txt missing

@@ -1,0 +1,8 @@
+date 2026-11-07T07:56:55Z
+endpoint http://127.0.0.1:18296/v1 mode server inject none toolsets terminal tmo 300 maxturns 4 cores 4,6
+verify f1adcad1a16b05c8ac580c7a1108a349ad65d744225fccbb6122b0419a2b4c72  /home/drakestapleton/work/hive/ownmodel/evalprep/dry3/bin/verify
+tasks cfa099cbe42d8917aac76a3ed6f83e0be6a05f46369ac74a55b56dd7371a6b43  /home/drakestapleton/work/hive/ownmodel/evalprep/dry3/step6/demo.txt
+runner 28aa9227384467058d51b26582cc12926d1f16e1c5529d4423f9ed17e0fb4142
+hermes Hermes Agent v0.22.5 (2026.9.24) · stable · local bf0203a794a0
+d01 create train FAIL 0 91871 2 200
+SUMMARY train pass=0/1 heldout pass=0/0 control fail=0/0 invalid=0

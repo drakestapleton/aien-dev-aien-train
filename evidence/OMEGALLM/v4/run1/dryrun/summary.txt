@@ -1,0 +1,12 @@
+LABEL DRY-RUN STAGE-A (not the candidate)
+script 6dd4010a3db73e90041a88afd6490a67e8c784d78b3cd37caa1135b8ec85875a commit 048905d427ccc36f551eec68c837cf6ba5d80b30
+start 2026-11-07T07:27:18Z ck /home/drakestapleton/work/hive/ownmodel/evalprep/ck9850.bin stage A steps 1 2 3 4 5 6 dry 1 cores 4,6 port 18296 pport 18298
+STEP 0 build PASS ms=138 ollm=9e6441d4bad0c65f
+STEP 1 identity PASS ms=2787 ck OLLMCK03 32768 1024 384 6 1536 8 16 9850 26745216 641885312 7cbfd48b0b64ba2e step=9850 stage=A ck=8a94d7c3e473899168490cc1e3a39fa4f855c4565c5c974083ea62aef97c2482
+STEP 2 xcheck PENDING_CHIP ms=48887 E 0 1 3805562 5490266
+STEP 3 serve PASS ms=20600 ready_ms=2569 7 rows; health {"ck":"OLLMCK03","V":32768,"T":4096,"D":384,"H":6,"F":1536,"L":8,"B":4,"step":0,"P":26745216,"ck_bytes":641885312,"ck_fnv":"313fab2f2654fd3b","rope":"40c3880000
+STEP 4 harness PASS ms=1005122 train_new 0/3 heldout 0/2 noreq 0 ctxcache 2 controls 
+STEP 5 accept PASS ms=700261 rc=3 14 summary rows; transcripts /home/drakestapleton/work/hive/ownmodel/accept/runs/run1-A-8a94d7c3-20261107T072718Z
+STEP 6 demo PASS ms=112370 DEMO_FAIL FAIL d01 trim directive.txt missing (capability, not the step's pass rule)
+STEP 7 stop PASS ms=1176 server 2946633 workers 2951218 ; port 18296 free
+end 2026-11-07T07:58:49Z fails 0

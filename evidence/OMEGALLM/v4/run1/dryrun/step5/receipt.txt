@@ -1,0 +1,11 @@
+LABEL DRY-RUN STAGE-A (not the candidate)
+accept 8c4fb0cb9f8de0c27da96d29ad69ccf4601b703132d78cd68aaecfc3b97eb5bd
+omc 2c82480596bbdc50cda9626866209ef662d5834f278f839ff4ce0250c495029f
+prereg 7133f654c23b087c4b1df7531f0b67c9bf9fe349d0ebc5325a73b2f3814a04c9
+thresholds 393200abf747919de67653691fd7da769215782635a33a775ce4dd18b2c581e9
+endpoint 127.0.0.1:18296 model run1-A-8a94d7c3 splits dev public 0 workers 2 repeats 0 stemp 700
+devn 10 (dry-run subset, not the pre-registered suite) items 60c3d304c3fdbb9e760dd4c35c93bec677034601ecf00d8e37ac4838042b31a2
+start 2026-11-07T07:45:15Z
+arm t0 temp 0 seed 1 runner rc 0
+sum t0 rc 3
+end 2026-11-07T07:56:55Z verdict-rc 3

@@ -1,0 +1,3 @@
+session local-d9760407ecadf9cbde5383f84a60b44627eb873115ec309ea900dbede71a821e
+Exported 1 session to /home/drakestapleton/work/hive/ownmodel/evalprep/dry3/step6/session.jsonl
+Exported 1 session (2 messages) to /home/drakestapleton/work/hive/ownmodel/evalprep/dry3/step6/session-md/local-d9760407ecadf9cbde5383f84a60b44627eb873115ec309ea900dbede71a821e-create-a-file-named-directive.txt-whose-content.md

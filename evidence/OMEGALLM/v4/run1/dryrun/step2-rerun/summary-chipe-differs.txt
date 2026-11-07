@@ -1,0 +1,7 @@
+LABEL DRY-RUN STAGE-A (not the candidate)
+script 1393bc8963eff4cc239decce9509348f481488bd0d7e874a1cc7dfffbcac35b6 commit 048905d427ccc36f551eec68c837cf6ba5d80b30
+start 2026-11-07T08:00:34Z ck /home/drakestapleton/work/hive/ownmodel/evalprep/ck9850.bin stage A steps 2 dry 1 cores 4,6 port 18296 pport 18298
+STEP 0 build PASS ms=128 ollm=9e6441d4bad0c65f
+STEP 2 xcheck FAIL ms=50027 E 0 1 3805562 5490266
+STEP 7 stop PASS ms=2 server  workers ; port 18296 free
+end 2026-11-07T08:01:24Z fails 1

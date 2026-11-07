@@ -1,0 +1,20 @@
+# run1 end-to-end demo task (eval.sh step 6). The content is Drake's own public hive directive.
+@task d01 create train
+@prompt
+Create a file named directive.txt whose content is exactly: use your best judgement and get this done
+@end
+@ref
+printf 'use your best judgement and get this done\n' > directive.txt
+@end
+@expect trim directive.txt
+use your best judgement and get this done
+@end
+
+# negative control: the same outcome checked against a deliberately different text must FAIL
+@task d01x create control
+@prompt
+(control only, never sent)
+@end
+@expect trim directive.txt
+use your best judgement and get this done!
+@end

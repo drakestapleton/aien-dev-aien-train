@@ -1,0 +1,9 @@
+POST /api/show HTTP/1.1
+Host: 127.0.0.1:18298
+Accept: */*
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+User-Agent: python-httpx/0.28.1
+Authorization: Bearer x
+Content-Length: 15
+Content-Type: application/json

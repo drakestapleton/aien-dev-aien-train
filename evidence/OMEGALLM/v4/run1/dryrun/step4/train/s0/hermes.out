@@ -1,0 +1,9 @@
+Session: local-fc3f5b23c7610138c60a5a9711c57da40d6d56d2762e98e6fcd22b27d8957571
+⚠️ **Response Stopped — Repetition Detected**
+
+The model fell into a repetition loop while writing this response, so continuing would only produce more repeated text. The partial response was discarded.
+
+→ Switch to a different model with `/model`
+→ Or resend your message (your conversation history is preserved)
+
+session_id: local-fc3f5b23c7610138c60a5a9711c57da40d6d56d2762e98e6fcd22b27d8957571

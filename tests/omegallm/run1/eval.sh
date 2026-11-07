@@ -140,16 +140,20 @@ if want 2; then
 	r=PASS
 	X=$WORK/x1024-$ck8.ck
 	echo "LABEL $LABEL" >"$d/xcheck.txt"
-	run "$O" tune4 "$CK" "$X" 24000 3000 1024 16 1 >"$d/tune4.txt" 2>&1 || r=FAIL
-	echo "tune4 $CK -> $X T 1024 B 16 G 1 rc=$? $(cat "$d/tune4.txt")" >>"$d/xcheck.txt"
+	run "$O" tune4 "$CK" "$X" 24000 3000 1024 16 1 >"$d/tune4.txt" 2>&1
+	x=$?
+	[ $x -eq 0 ] || r=FAIL
+	echo "tune4 $CK -> $X T 1024 B 16 G 1 rc=$x $(cat "$d/tune4.txt")" >>"$d/xcheck.txt"
 	pb=$(pbytes "$CK")
 	if cmp -s -i 128 -n "$pb" "$CK" "$X"; then echo "params identical ($pb bytes after the header)"; else r=FAIL; echo "params DIFFER"; fi >>"$d/xcheck.txt"
 	# negative control of the comparison: the same files offset by one value must differ
 	if cmp -s -i 128:136 -n "$pb" "$CK" "$X"; then r=FAIL; echo "neg_shift EQUAL (control failed)"; else echo "neg_shift differs (control ok)"; fi >>"$d/xcheck.txt"
 	echo "x1024 $(sha256sum "$X") $(ckid "$X" | grep '^ck ')" >>"$d/xcheck.txt"
 	t2=$(now)
-	run "$O" eval4 "$X" "$DATA/base-val.u16" "$XW" >"$d/eval4.txt" 2>&1 || r=FAIL
-	echo "cpu_eval4 rc=$? ms=$(secs "$t2") ollm $(sha256sum "$O" | cut -c1-64)" >>"$d/xcheck.txt"
+	run "$O" eval4 "$X" "$DATA/base-val.u16" "$XW" >"$d/eval4.txt" 2>&1
+	x=$?
+	[ $x -eq 0 ] || r=FAIL
+	echo "cpu_eval4 W $XW rc=$x ms=$(secs "$t2") ollm $(sha256sum "$O" | cut -c1-64)" >>"$d/xcheck.txt"
 	E=$(grep '^E ' "$d/eval4.txt")
 	echo "CPU_E $E" >>"$d/xcheck.txt"
 	G=$RUN1/bin/ollm-gb10

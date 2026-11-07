@@ -1,0 +1,1 @@
+{"status":"ok","in_flight":0,"queued":0,"capacity":32,"busy":false,"model":{"ck":"OLLMCK03","V":32768,"T":4096,"D":384,"H":6,"F":1536,"L":8,"B":4,"step":0,"P":26745216,"ck_bytes":641885312,"ck_fnv":"313fab2f2654fd3b","rope":"40c3880000000000","tok":"OLLMTOK1","tok_V":32768,"tok_fnv":"920b3046a17db9be"}}

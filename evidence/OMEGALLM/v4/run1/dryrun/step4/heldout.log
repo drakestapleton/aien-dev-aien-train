@@ -1,0 +1,3 @@
+t14 sha256 heldout FAIL
+t16 replace_word heldout FAIL
+SUMMARY train pass=0/0 heldout pass=0/2 control fail=0/0 invalid=0

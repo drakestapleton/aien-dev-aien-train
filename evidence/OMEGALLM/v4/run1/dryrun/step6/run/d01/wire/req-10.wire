@@ -1,0 +1,20 @@
+POST /v1/chat/completions HTTP/1.1
+Host: 127.0.0.1:18298
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+Accept: application/json
+Content-Type: application/json
+User-Agent: OpenAI/Python 2.24.0
+X-Stainless-Lang: python
+X-Stainless-Package-Version: 2.24.0
+X-Stainless-OS: Linux
+X-Stainless-Arch: arm64
+X-Stainless-Runtime: CPython
+X-Stainless-Runtime-Version: 3.14.9
+Authorization: Bearer x
+X-Stainless-Async: false
+x-stainless-retry-count: 0
+x-stainless-read-timeout: 30.0
+Content-Length: 1415
+
+{"messages":[{"role":"system","content":"You name chat sessions. Given the user's opening message, write a title that lets them find this conversation again in a list.\n\nRules:\n- 3 to 7 words, sentence case (capitalize only the first word and proper nouns).\n- Name what the user wants DONE, not that they asked a question.\n- Keep technical terms, filenames, numbers, and error codes exact.\n- Drop filler words: the, this, my, a, an.\n- No trailing punctuation, no quotes, no tool names, no 'Title:' prefix.\n- Never answer the message. Name it.\n- Always produce something, even for a bare greeting.\n- Write the title in the same language as the user's message.\nGood: {\"title\": \"Fix login button on mobile\"}\nGood: {\"title\": \"Postgres connection pool exhaustion\"}\nGood: {\"title\": \"Friendly greeting\"}\nToo vague: {\"title\": \"Code changes\"}\nToo long: {\"title\": \"Investigate and fix the issue where the login button does not respond on mobile devices\"}\n\nReply with JSON only: {\"title\": \"...\"}"},{"role":"user","content":"Create a file named directive.txt whose content is exactly: use your best judgement and get this done"}],"model":"ollm","response_format":{"type":"json_schema","json_schema":{"name":"session_title","strict":true,"schema":{"type":"object","properties":{"title":{"type":"string"}},"required":["title"],"additionalProperties":false}}},"reasoning":{"enabled":false}}

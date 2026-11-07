@@ -1,0 +1,8 @@
+# chip geval4 of the same retimed copy (the lead runs this inside a lease; this script never uses the GPU)
+flock ~/handoffs/BOARD.md.lock sh -c 'echo "$(date -u +%FT%TZ) ownmodel STARTING WINDOW run1-xchk-8a94d7c3 (geval4 W 1 of /home/drakestapleton/work/hive/ownmodel/evalprep/work/x1024-8a94d7c3.ck, ~3 min)" >> ~/handoffs/BOARD.md'
+spark-window open run1-xchk-8a94d7c3 --ledger L904 --lease 20 --gb10 exclusive --quiet none --wait
+spark-window run /home/drakestapleton/work/hive/ownmodel/run1/bin/ollm-gb10 geval4 /home/drakestapleton/work/hive/ownmodel/evalprep/work/x1024-8a94d7c3.ck /home/drakestapleton/work/hive/ownmodel/data/base-val.u16 1 > /home/drakestapleton/work/hive/ownmodel/evalprep/dry3/step2/geval4-chip.txt 2>&1
+spark-window close
+flock ~/handoffs/BOARD.md.lock sh -c 'echo "$(date -u +%FT%TZ) ownmodel DONE WINDOW run1-xchk-8a94d7c3 ID (rc RC)" >> ~/handoffs/BOARD.md'
+# then: CHIP_E="$(grep '^E ' /home/drakestapleton/work/hive/ownmodel/evalprep/dry3/step2/geval4-chip.txt)" STEPS=2 OMC=... sh /home/drakestapleton/work/hive/ownmodel/evalprep/aien-train/tests/omegallm/run1/eval.sh /home/drakestapleton/work/hive/ownmodel/evalprep/ck9850.bin A /home/drakestapleton/work/hive/ownmodel/evalprep/dry3
+#   (ollm-gb10 2467d11f848953c44801d2fb5dd6fb20ed24c8dbf50be538c13cd98341014c0b)

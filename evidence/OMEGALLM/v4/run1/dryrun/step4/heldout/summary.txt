@@ -1,0 +1,9 @@
+date 2026-11-07T07:38:29Z
+endpoint http://127.0.0.1:18296/v1 mode server inject none toolsets terminal tmo 300 maxturns 4 cores 4,6
+verify f1adcad1a16b05c8ac580c7a1108a349ad65d744225fccbb6122b0419a2b4c72  /home/drakestapleton/work/hive/ownmodel/evalprep/dry3/bin/verify
+tasks 03e5c1cfc6faec9eebfaaf19642c636d497278a370c1d9975771ce64c9170290  /home/drakestapleton/work/hive/ownmodel/evalprep/aien-train/tests/omegallm/harness/tasks.txt
+runner 28aa9227384467058d51b26582cc12926d1f16e1c5529d4423f9ed17e0fb4142
+hermes Hermes Agent v0.22.5 (2026.9.24) · stable · local bf0203a794a0
+t14 sha256 heldout FAIL 1 294307 1 200
+t16 replace_word heldout FAIL 0 87872 2 200
+SUMMARY train pass=0/0 heldout pass=0/2 control fail=0/0 invalid=0

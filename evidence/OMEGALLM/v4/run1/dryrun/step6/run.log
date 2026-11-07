@@ -1,0 +1,2 @@
+d01 create train FAIL
+SUMMARY train pass=0/1 heldout pass=0/0 control fail=0/0 invalid=0

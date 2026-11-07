@@ -1,0 +1,438 @@
+@task s0 list_dir train
+@file shared/juliet.txt
+beta
+@end
+@file shared/charlie.txt
+today
+@end
+@file shared/hotel.txt
+warm
+@end
+@file shared/alpha.txt
+draft
+@end
+@expect trim listing.txt
+alpha.txt
+charlie.txt
+hotel.txt
+juliet.txt
+@end
+@prompt
+List the names of the files in the directory shared, one per line, into the file listing.txt.
+@end
+@task s1 first_line train
+@file todo.log
+bright plan task glass
+pen
+final open window
+honey
+alpha twelve fire
+@end
+@expect exact top.txt
+bright plan task glass
+@end
+@prompt
+Put only the first line of todo.log in top.txt.
+@end
+@task s2 mkdir_file train
+@expect dir shared
+@expect exact shared/story.log
+road
+@end
+@prompt
+Make a folder shared with a file story.log in it that says: road
+@end
+@task s3 append train
+@file outline.dat
+note wind moon
+metal
+@end
+@expect exact outline.dat
+note wind moon
+metal
+forest
+@end
+@prompt
+Add the line "forest" at the end of outline.dat, keeping what is already there.
+@end
+@task s4 mkdir_file train
+@expect dir assets
+@expect exact assets/quotes.txt
+window build plan moon happy
+@end
+@prompt
+Create a directory named assets and inside it a file quotes.txt containing the text: window build plan moon happy
+@end
+@task s5 rename train
+@file survey.md
+orange honey blue
+apple forest code
+mountain test cotton white
+@end
+@file ledger.dat
+wind
+@end
+@expect absent survey.md
+@expect exact scores.txt
+orange honey blue
+apple forest code
+mountain test cotton white
+@end
+@expect exact ledger.dat
+wind
+@end
+@prompt
+Move survey.md to scores.txt in the same directory.
+@end
+@task s6 mkdir_file train
+@expect dir reports
+@expect exact reports/minutes.md
+train fix
+@end
+@prompt
+Make a folder reports with a file minutes.md in it that says: train fix
+@end
+@task s7 count_words train
+@file journal.md
+cat flower road
+@end
+@expect trim result.txt
+3
+@end
+@prompt
+How many words are in journal.md? Save just the number in result.txt.
+@end
+@task s8 count_words train
+@file roster.txt
+bridge
+first apple
+fix house gamma wood
+@end
+@expect trim number.txt
+7
+@end
+@prompt
+Write the word count of roster.txt to number.txt.
+@end
+@task s9 count_lines train
+@file letter.md
+dog
+ready
+sun black
+test morning music
+review three slow
+warm
+orange warm
+ocean monday bridge
+task delta coffee
+bird check twelve
+@end
+@expect trim total.txt
+10
+@end
+@prompt
+How many lines does letter.md have? Save just that number in total.txt.
+@end
+@task s10 create train
+@expect exact outline.txt
+water north wood train apple
+@end
+@prompt
+Write the text "water north wood train apple" into a new file outline.txt.
+@end
+@task s11 delete train
+@file tasks.txt
+old first
+@end
+@file config.txt
+city honey honey friday
+@end
+@expect absent tasks.txt
+@expect exact config.txt
+city honey honey friday
+@end
+@prompt
+Delete the file tasks.txt but keep config.txt.
+@end
+@task s12 list_dir train
+@file shared/india.txt
+open
+@end
+@file shared/bravo.txt
+west
+@end
+@file shared/golf.txt
+bread
+@end
+@file shared/lima.txt
+valley
+@end
+@expect trim manifest.txt
+bravo.txt
+golf.txt
+india.txt
+lima.txt
+@end
+@prompt
+Write the file names inside shared to manifest.txt, one per line.
+@end
+@task s13 rename train
+@file minutes.txt
+morning three fast happy
+wool book slow friday
+slow delta draft
+@end
+@file report.log
+bird honey valley
+@end
+@expect absent minutes.txt
+@expect exact readme.txt
+morning three fast happy
+wool book slow friday
+slow delta draft
+@end
+@expect exact report.log
+bird honey valley
+@end
+@prompt
+Rename minutes.txt to readme.txt.
+@end
+@task s14 first_line train
+@file wishlist.md
+mountain bright gamma alpha
+water simple bridge
+simple
+@end
+@expect exact first.txt
+mountain bright gamma alpha
+@end
+@prompt
+Copy the opening line of wishlist.md into a new file first.txt.
+@end
+@task s15 delete train
+@file minutes.dat
+soon plan pen moon
+@end
+@file scores.dat
+bridge later
+@end
+@expect absent minutes.dat
+@expect exact scores.dat
+bridge later
+@end
+@prompt
+Delete the file minutes.dat but keep scores.dat.
+@end
+@task s16 delete train
+@file minutes.txt
+apple plan plan sun
+@end
+@file journal.txt
+book cold final
+@end
+@expect absent minutes.txt
+@expect exact journal.txt
+book cold final
+@end
+@prompt
+Remove minutes.txt; leave journal.txt alone.
+@end
+@task s17 count_lines train
+@file data.md
+morning window idea
+tea
+orange build happy cold
+summer book
+apple happy dog fire
+south moon
+paper open paper mountain
+cat glass little
+west warm silver
+winter honey wood rain
+fire light
+fast today today
+@end
+@expect trim tally.txt
+12
+@end
+@prompt
+Put the line count of data.md into tally.txt, nothing else.
+@end
+@task s18 mkdir_file train
+@expect dir inbox
+@expect exact inbox/memo.txt
+new twelve last
+@end
+@prompt
+Create inbox/memo.txt (making the directory inbox) with the line: new twelve last
+@end
+@task s19 count_lines train
+@file notes.dat
+old light black
+cold
+boat monday wood flower
+red coffee red done
+draft
+cotton gamma
+note wind
+fire
+star boat beta
+wind ready
+quiet winter road
+@end
+@expect trim result.txt
+11
+@end
+@prompt
+Write the number of lines in notes.dat to result.txt.
+@end
+@task s20 list_dir train
+@file shared/foxtrot.txt
+north
+@end
+@file shared/kilo.txt
+first
+@end
+@file shared/delta.txt
+north
+@end
+@expect trim listing.txt
+delta.txt
+foxtrot.txt
+kilo.txt
+@end
+@prompt
+List the names of the files in the directory shared, one per line, into the file listing.txt.
+@end
+@task s21 first_line train
+@file config.md
+garden later purple
+idea
+little south
+@end
+@expect exact head.txt
+garden later purple
+@end
+@prompt
+Put only the first line of config.md in head.txt.
+@end
+@task s22 first_line train
+@file notes.md
+draft morning
+water
+open plan alpha slow
+boat delta
+valley
+winter mountain soon yellow
+@end
+@expect exact top.txt
+draft morning
+@end
+@prompt
+Write the first line of notes.md into top.txt.
+@end
+@task s23 count_words train
+@file chapter.txt
+cotton
+sun
+cotton moon
+snow soon simple green
+@end
+@expect trim count.txt
+8
+@end
+@prompt
+How many words are in chapter.txt? Save just the number in count.txt.
+@end
+@task s24 create train
+@expect exact roster.txt
+check light silver bridge monday close
+@end
+@prompt
+Create a file named roster.txt containing exactly the text: check light silver bridge monday close
+@end
+@task s25 count_words train
+@file summary.md
+boat purple test
+final snow little
+apple
+flower tea open quiet
+@end
+@expect trim amount.txt
+11
+@end
+@prompt
+How many words are in summary.md? Save just the number in amount.txt.
+@end
+@task s26 rename train
+@file config.txt
+idea grass
+later plan gamma
+code train grass
+@end
+@file memo.md
+river
+@end
+@expect absent config.txt
+@expect exact inventory.txt
+idea grass
+later plan gamma
+code train grass
+@end
+@expect exact memo.md
+river
+@end
+@prompt
+Change the name of config.txt to inventory.txt.
+@end
+@task s27 count_lines train
+@file report.dat
+alpha north forest rain
+honey
+cloud
+green review cotton
+note ready
+happy window stone
+wind new
+metal road sun open
+paper pen fire mountain
+@end
+@expect trim number.txt
+9
+@end
+@prompt
+Write the number of lines in report.dat to number.txt.
+@end
+@task s28 list_dir train
+@file logs/bravo.txt
+cloud
+@end
+@file logs/golf.txt
+beta
+@end
+@expect trim contents.txt
+bravo.txt
+golf.txt
+@end
+@prompt
+Write the file names inside logs to contents.txt, one per line.
+@end
+@task s29 rename train
+@file digest.dat
+done book code last
+water rain open city
+@end
+@file quotes.txt
+fix bread train build
+@end
+@expect absent digest.dat
+@expect exact wishlist.txt
+done book code last
+water rain open city
+@end
+@expect exact quotes.txt
+fix bread train build
+@end
+@prompt
+Rename digest.dat to wishlist.txt.
+@end
