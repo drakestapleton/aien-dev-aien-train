@@ -1,0 +1,598 @@
+note SPDX-License-Identifier: AGPL-3.0-only
+note aien-train#26 P0 refusal contract (DRA-15, Spark hive card t_8cf72aaf).
+note Admits ONE synthetic bank descriptor and ONE microjob request before any
+note adapter arithmetic. Contract, codes, check order and the 46 cases:
+note native/collective/fixtures/admission_v0.json (committed before this file).
+note The merged pilot shared_bank_p0.om is not changed; this unit reuses its
+note numbers (B, x, U_i, V_i, scores) as the baseline descriptor.
+note Refusal = nonzero status, no response written, counters unchanged.
+note Score and permission are distinct abstract types: passing one where the
+note other is needed is a compile refusal (omc error 7); a permission entry
+note that is not 0 or 1 (scores stored as permissions) is a runtime refusal.
+note Synthetic P0 admission only: not AEGIS authority, not a router, no model,
+note no checkpoint, no GPU. Names are at most 8 characters (omc error 13).
+om2
+abstract perm ulong
+abstract score ulong
+
+const NCAND ulong 8
+const KMAX ulong 3
+const VMAX long 65536
+const NCASE ulong 46
+note FNV-1a 64 identities computed by Wolfram (evidence/COLLECTIVE-P0-ADMIT):
+note BASEID of B, ALTID of B with B[4]=1, OVRID of B with B[0]=65537.
+const BASEID ulong 10035045484153181716
+const ALTID ulong 9153321889483684885
+const OVRID ulong 9990611769663005102
+
+note Descriptor Dsc: 0 rank, 1 rows, 2 cols, 3 base identity, 4 generation.
+note Request Req: 0 rank, 1 rows, 2 cols, 3 base identity, 4 generation,
+note 5 active count, 6 mode (0 explicit indices, 1 select top-k by score).
+global Dsc ulong 8
+global Req ulong 8
+global Ract ulong 4
+global Rph long 4
+global B long 6
+global U long 16
+global V long 24
+global X long 3
+global PermA ulong 8
+global ScoreA ulong 8
+global Cgen ulong 8
+global PlanA ulong 4
+global PlanP long 4
+global Yv long 2
+global Counts ulong 2
+global Exp long 64
+
+fn permmk x ulong to perm
+ret seal perm x
+end
+
+fn scoremk x ulong to score
+ret seal score x
+end
+
+fn permat id ulong to perm
+ret permmk get PermA id
+end
+
+fn scoreat id ulong to score
+ret scoremk get ScoreA id
+end
+
+note A permission is valid only as 0 (denied) or 1 (granted).
+fn permbad p perm to bool
+ret gt open p 1
+end
+
+fn denied p perm to bool
+ret ne open p 1
+end
+
+fn above a score b score to bool
+ret gt open a open b
+end
+
+note Baseline descriptor and request. Response Yv and Counts are not touched.
+fn reset to void
+put B 0 2
+put B 1 -1
+put B 2 3
+put B 3 1
+put B 4 0
+put B 5 -2
+for id ulong 8
+sid = long id
+ui = mul id 2
+vi = mul id 3
+put U ui sub sid 3
+put U add ui 1 add sid 1
+put V vi 1
+put V add vi 1 sub 3 sid
+put V add vi 2 -1
+put PermA id 1
+put Cgen id 7
+end
+put ScoreA 0 4
+put ScoreA 1 11
+put ScoreA 2 7
+put ScoreA 3 9
+put ScoreA 4 8
+put ScoreA 5 0
+put ScoreA 6 3
+put ScoreA 7 2
+put X 0 2
+put X 1 3
+put X 2 5
+put Dsc 0 1
+put Dsc 1 2
+put Dsc 2 3
+put Dsc 3 BASEID
+put Dsc 4 7
+put Req 0 1
+put Req 1 2
+put Req 2 3
+put Req 3 BASEID
+put Req 4 7
+put Req 5 2
+put Req 6 0
+put Ract 0 1
+put Ract 1 3
+put Ract 2 0
+put Ract 3 0
+put Rph 0 1
+put Rph 1 -1
+put Rph 2 1
+put Rph 3 1
+end
+
+note Base identity: FNV-1a 64 over B row-major, 8 little-endian bytes each.
+fn bdigest to ulong
+h = ulong 14695981039346656037
+for i ulong 6
+w = bitcast ulong get B i
+for b ulong 8
+byt = and shr w mul b 8 255
+h = mul xor h byt 1099511628211
+end
+end
+ret h
+end
+
+fn badval v long to bool
+ret or lt v neg VMAX gt v VMAX
+end
+
+note Range of x, B and the U/V of every planned candidate (first k slots).
+fn rangebad k ulong to bool
+for i ulong 3
+if badval get X i
+ret true
+end
+end
+for i ulong 6
+if badval get B i
+ret true
+end
+end
+for j ulong k
+id = get PlanA j
+ui = mul id 2
+vi = mul id 3
+for r ulong 2
+if badval get U add ui r
+ret true
+end
+end
+for c ulong 3
+if badval get V add vi c
+ret true
+end
+end
+end
+ret false
+end
+
+note Highest-score permitted candidate not in the used mask; 8 when none.
+fn pick used ulong to ulong
+best = ulong 8
+bsc = scoremk 0
+for id ulong 8
+if denied permat id
+continue
+end
+if ne and used shl ulong 1 id 0
+continue
+end
+s = scoreat id
+if eq best 8
+best = id
+bsc = s
+continue
+end
+if above s bsc
+best = id
+bsc = s
+end
+end
+ret best
+end
+
+note Shape: descriptor 2x3, request equal to the descriptor.
+fn shapebad to bool
+d = or ne get Dsc 1 2 ne get Dsc 2 3
+r = or ne get Req 1 get Dsc 1 ne get Req 2 get Dsc 2
+ret or d r
+end
+
+fn dupat j ulong id ulong to bool
+for i ulong j
+if eq get PlanA i id
+ret true
+end
+end
+ret false
+end
+
+note Admission. Writes only the internal plan; never Yv or Counts.
+note Codes and order: fixtures/admission_v0.json "codes" and "check_order".
+fn admit to long
+if or ne get Dsc 0 1 ne get Req 0 get Dsc 0
+ret -4
+end
+if shapebad
+ret -5
+end
+if or eq get Dsc 3 0 eq get Req 3 0
+ret -6
+end
+if ne get Req 3 get Dsc 3
+ret -7
+end
+if ne bdigest get Dsc 3
+ret -7
+end
+if ne get Req 4 get Dsc 4
+ret -8
+end
+for i ulong 8
+if permbad permat i
+ret -13
+end
+end
+md = get Req 6
+if gt md 1
+ret -16
+end
+k = get Req 5
+if eq k 0
+ret -10
+end
+if gt k KMAX
+ret -11
+end
+used = ulong 0
+for j ulong k
+id = get Ract j
+if eq md 1
+id = pick used
+if ge id NCAND
+ret -14
+end
+used = or used shl ulong 1 id
+end
+put PlanA j id
+put PlanP j get Rph j
+end
+for j ulong k
+id = get PlanA j
+if ge id NCAND
+ret -1
+end
+if denied permat id
+ret -2
+end
+if ne get Cgen id get Dsc 4
+ret -9
+end
+ph = get PlanP j
+if and ne ph 1 ne ph -1
+ret -3
+end
+if dupat j id
+ret -12
+end
+end
+if rangebad k
+ret -15
+end
+ret 0
+end
+
+note y = B.x + sum_j phase_j U_j (V_j . x), into a local, then published.
+fn bxrow r ulong to long
+s = long 0
+for c ulong 3
+s = add s mul get B add mul r 3 c get X c
+end
+ret s
+end
+
+fn vdot id ulong to long
+vi = mul id 3
+dot = long 0
+for c ulong 3
+dot = add dot mul get V add vi c get X c
+end
+ret dot
+end
+
+fn compute k ulong to void
+acc = new long 2 0
+put acc 0 bxrow 0
+put acc 1 bxrow 1
+for j ulong k
+id = get PlanA j
+f = mul get PlanP j vdot id
+ui = mul id 2
+for r ulong 2
+d = mul f get U add ui r
+put acc r add get acc r d
+end
+end
+put Yv 0 get acc 0
+put Yv 1 get acc 1
+put Counts 0 add get Counts 0 1
+put Counts 1 add get Counts 1 k
+end
+
+fn run to long
+st = admit
+if ne st 0
+ret st
+end
+compute get Req 5
+ret 0
+end
+
+note The 46 cases of fixtures/admission_v0.json, each from the baseline.
+fn setcase n ulong to void
+reset
+if eq n 1
+put Dsc 0 2
+put Req 0 2
+end
+if eq n 2
+put Req 0 2
+end
+if eq n 3
+put Dsc 1 3
+put Req 1 3
+end
+if eq n 4
+put Dsc 2 2
+put Req 2 2
+end
+if eq n 5
+put Req 1 1
+end
+if eq n 6
+put Req 2 4
+end
+if eq n 7
+put Dsc 3 0
+put Req 3 0
+end
+if eq n 8
+put Req 3 0
+end
+if eq n 9
+put Req 3 xor BASEID 1
+end
+if eq n 10
+put B 4 1
+end
+if eq n 11
+put B 4 1
+put Dsc 3 ALTID
+put Req 3 ALTID
+end
+if eq n 12
+put Req 4 6
+end
+if eq n 13
+put Cgen 3 6
+end
+if eq n 14
+put Cgen 1 8
+end
+if eq n 15
+put Cgen 5 6
+end
+if eq n 16
+put Dsc 4 9
+put Req 4 9
+for i ulong 8
+put Cgen i 9
+end
+end
+if eq n 17
+put Req 5 0
+end
+if eq n 18
+put Req 5 4
+put Ract 0 0
+put Ract 1 2
+put Ract 2 4
+put Ract 3 6
+put Rph 1 1
+end
+if eq n 19
+put Req 5 1
+put Ract 0 6
+put Rph 0 -1
+end
+if eq n 20
+put Req 5 3
+put Ract 0 0
+put Ract 1 4
+put Ract 2 7
+end
+if eq n 21
+put Ract 1 8
+end
+if eq n 22
+put Ract 1 18446744073709551615
+end
+if eq n 23
+put Ract 0 7
+end
+if eq n 24
+put PermA 3 0
+end
+if eq n 25
+put PermA 2 0
+end
+if eq n 26
+put Rph 0 0
+end
+if eq n 27
+put Rph 1 2
+end
+if eq n 28
+put Rph 0 -1
+end
+if eq n 29
+put Ract 0 3
+end
+if eq n 30
+put Req 5 3
+put Ract 2 1
+put Rph 1 1
+end
+if eq n 31
+for i ulong 8
+put PermA i get ScoreA i
+put ScoreA i 1
+end
+end
+if eq n 32
+put PermA 5 2
+end
+if eq n 33
+put Req 6 1
+put Rph 1 1
+end
+if eq n 34
+put Req 6 1
+put Req 5 1
+put PermA 1 0
+end
+if eq n 35
+put Req 6 1
+put Req 5 3
+end
+if eq n 36
+put Req 6 1
+put Req 5 1
+for i ulong 8
+put PermA i 0
+end
+end
+if eq n 37
+put Req 6 1
+put Req 5 3
+for i ulong 8
+put PermA i 0
+end
+put PermA 0 1
+put PermA 5 1
+end
+if eq n 38
+put Req 6 2
+end
+if eq n 39
+put X 0 65536
+put X 1 -65536
+put X 2 65536
+end
+if eq n 40
+put X 0 65537
+end
+if eq n 41
+put X 2 4611686018427387904
+end
+if eq n 42
+put U 6 -65537
+end
+if eq n 43
+put B 0 65537
+put Dsc 3 OVRID
+put Req 3 OVRID
+end
+if eq n 44
+put U 10 70000
+end
+if eq n 45
+put Req 6 1
+put Cgen 3 6
+end
+end
+
+note Precommitted expect_status of every case (fixtures/admission_v0.json).
+fn fillexp to void
+put Exp 0 0
+put Exp 1 -4
+put Exp 2 -4
+put Exp 3 -5
+put Exp 4 -5
+put Exp 5 -5
+put Exp 6 -5
+put Exp 7 -6
+put Exp 8 -6
+put Exp 9 -7
+put Exp 10 -7
+put Exp 11 0
+put Exp 12 -8
+put Exp 13 -9
+put Exp 14 -9
+put Exp 15 0
+put Exp 16 0
+put Exp 17 -10
+put Exp 18 -11
+put Exp 19 0
+put Exp 20 0
+put Exp 21 -1
+put Exp 22 -1
+put Exp 23 0
+put Exp 24 -2
+put Exp 25 0
+put Exp 26 -3
+put Exp 27 -3
+put Exp 28 0
+put Exp 29 -12
+put Exp 30 -12
+put Exp 31 -13
+put Exp 32 -13
+put Exp 33 0
+put Exp 34 0
+put Exp 35 0
+put Exp 36 -14
+put Exp 37 -14
+put Exp 38 -16
+put Exp 39 0
+put Exp 40 -15
+put Exp 41 -15
+put Exp 42 -15
+put Exp 43 -15
+put Exp 44 0
+put Exp 45 -9
+end
+
+note Self-test: exit n+1 when case n returns another status, 47..50 when the
+note final response or counters differ, 0 when all agree. The independent
+note judge is native/collective/admit/run.sh with the Wolfram expectations.
+fn main to int
+fillexp
+for n ulong NCASE
+setcase n
+s = run
+if ne s get Exp n
+ret int add n 1
+end
+end
+if ne get Yv 0 10
+ret 47
+end
+if ne get Yv 1 10
+ret 48
+end
+if ne get Counts 0 14
+ret 49
+end
+if ne get Counts 1 28
+ret 50
+end
+ret 0
+end

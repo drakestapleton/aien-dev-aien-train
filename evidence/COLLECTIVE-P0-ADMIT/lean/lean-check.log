@@ -1,0 +1,10 @@
+file_sha256 273d226917862e88fd418ed50eeb1099abbbe782e433616343a0ede8fa79d62f
+aien-train head b4c67516abdd2c862c812ce168c36045cbfda339
+lean-verify project 8b969194 toolchain leanprover/lean4:v4.35.0 Mathlib v4.35.0; command: cd ~/workspace/lean-verify && lake env lean <file> (cores 10-11, nice 10)
+'AdmitP0.dot3' depends on axioms: [propext, Classical.choice, Quot.sound]
+'AdmitP0.step' depends on axioms: [propext, Classical.choice, Quot.sound]
+'AdmitP0.init' depends on axioms: [propext, Classical.choice, Quot.sound]
+'AdmitP0.ceiling_fits' depends on axioms: [propext]
+'AdmitP0.looser_bound_overflows' depends on axioms: [propext, Classical.choice, Quot.sound]
+'AdmitP0.ceiling_attained' depends on axioms: [propext]
+rc 0

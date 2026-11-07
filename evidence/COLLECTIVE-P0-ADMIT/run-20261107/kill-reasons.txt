@@ -1,0 +1,20 @@
+g01-rank exit=0 differing_lines=45 first=> A1 1 0 10 10 2 4|> A1 2 0 10 10 3 6|> A1 3 -5 10 10 3 6|
+g02-shape exit=0 differing_lines=43 first=> A1 3 0 10 10 2 4|> A1 4 0 10 10 3 6|> A1 5 0 10 10 4 8|
+g03-missing-base exit=0 differing_lines=2 first=> A1 7 -7 10 10 1 2|> A1 8 -7 10 10 1 2|
+g04-wrong-base-req exit=0 differing_lines=37 first=> A1 9 0 10 10 2 4|> A1 10 -7 10 10 2 4|> A1 11 0 10 13 3 6|
+g05-wrong-base-content exit=0 differing_lines=36 first=> A1 10 0 10 13 2 4|> A1 11 0 10 13 3 6|> A1 12 -8 10 13 3 6|
+g06-generation exit=0 differing_lines=34 first=> A1 12 0 10 10 3 6|> A1 13 -9 10 10 3 6|> A1 14 -9 10 10 3 6|
+g07-perm-valid exit=0 differing_lines=15 first=> A1 31 -2 22 -2 9 18|> A1 32 0 10 10 10 20|> A1 33 0 10 -14 11 22|
+g08-mode exit=0 differing_lines=8 first=> A1 38 0 10 10 13 26|> A1 39 0 655360 -327680 14 28|> A1 40 -15 655360 -327680 14 28|
+g09-budget-zero exit=0 differing_lines=29 first=> A1 17 0 16 -8 5 8|> A1 18 -11 16 -8 5 8|> A1 19 0 52 76 6 9|
+g10-budget-ceiling exit=0 differing_lines=28 first=> A1 18 0 -44 -116 5 12|> A1 19 0 52 76 6 13|> A1 20 0 -56 -92 7 16|
+g11-all-denied exit=0 differing_lines=2 first=> A1 36 -1 4 -20 12 24|> A1 37 -1 4 -20 12 24|
+g12-index exit=103 differing_lines=0 first=
+g13-denied exit=0 differing_lines=22 first=> A1 24 0 10 10 8 16|> A1 25 0 10 10 9 18|> A1 26 -3 10 10 9 18|
+g14-stale exit=0 differing_lines=33 first=> A1 13 0 10 10 3 6|> A1 14 0 10 10 4 8|> A1 15 0 10 10 5 10|
+g15-phase exit=0 differing_lines=20 first=> A1 26 0 16 4 9 18|> A1 27 0 10 -26 10 20|> A1 28 0 22 -2 11 22|
+g16-duplicate exit=0 differing_lines=17 first=> A1 29 0 16 -8 10 20|> A1 30 0 4 -8 11 23|> A1 31 -13 4 -8 11 23|
+g17-range exit=101 differing_lines=1 first=> A1 40 0 10 -65525 14 28|
+m18-compute-before-verdict exit=103 differing_lines=20 first=> A1 1 -4 10 10 2 4|> A1 2 -4 10 10 3 6|> A1 3 -5 10 10 4 8|
+m19-select-order exit=0 differing_lines=7 first=> A1 33 0 -62 -182 10 20|> A1 34 0 -2 -62 11 21|> A1 35 0 22 -26 12 24|
+m20-coordinated exit=0 differing_lines=33 first=> A1 13 0 10 10 3 6|> A1 14 0 10 10 4 8|> A1 15 0 10 10 5 10|
