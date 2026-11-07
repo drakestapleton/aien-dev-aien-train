@@ -119,6 +119,7 @@ text sktout "ollm_test_output"
 text sktdel "ollm_test_delay_ms"
 text sktinf "ollm_test_info"
 text sktcol "ollm_test_cold"
+text sktser "ollm_test_serial"
 text sktobj "ollm_test"
 text sklfnv "logits_fnv"
 text skreu "reused"
@@ -181,7 +182,7 @@ text sem20 "top_p must be a number from 0 to 1 without exponent (resolution 0.00
 text sem21 "tools must be an array of at most 128 {\"type\":\"function\",\"function\":{\"name\":string of 1 to 64 bytes}} objects"
 text sem22 "tool_choice must be \"none\", \"auto\", \"required\" or a {\"type\":\"function\"} object"
 text sem23 "tool_calls must be an array of {\"function\":{\"name\":string,\"arguments\":string or object}} objects"
-text sem24 "ollm_test_output (a string of at most 16384 bytes), ollm_test_delay_ms (0 to 10000), ollm_test_info and ollm_test_cold (booleans) need a server started with test=1"
+text sem24 "ollm_test_output (a string of at most 16384 bytes), ollm_test_delay_ms (0 to 10000), ollm_test_info, ollm_test_cold and ollm_test_serial (booleans) need a server started with test=1"
 text sem25 "the request body has over 65532 JSON tokens (values, keys and closers), the JSON parser's limit"
 text sem26 "message role must be system, developer, user, assistant or tool (CHAT1 template)"
 text sem11a "prompt is "
@@ -1470,7 +1471,7 @@ end
 put sv 27 x
 ret 0
 end
-if or js_streq bd js_off tp k sktinf js_streq bd js_off tp k sktcol
+if or or js_streq bd js_off tp k sktinf js_streq bd js_off tp k sktcol js_streq bd js_off tp k sktser
 ret svtbool bd tp k sv
 end
 if ne ty 6
@@ -1495,10 +1496,15 @@ b = ulong 0
 if eq ty 8
 b = 1
 end
-if js_streq bd js_off tp k sktinf
+o = js_off tp k
+if js_streq bd o sktinf
 put sv 51 b
-else
+end
+if js_streq bd o sktcol
 put sv 52 b
+end
+if js_streq bd o sktser
+put sv 55 b
 end
 ret 0
 end
@@ -1534,7 +1540,7 @@ end
 if js_streq bd o sktchoi
 ret svtchoi bd tp v sv
 end
-if or or js_streq bd o sktout js_streq bd o sktdel or js_streq bd o sktinf js_streq bd o sktcol
+if or or js_streq bd o sktout js_streq bd o sktdel or or js_streq bd o sktinf js_streq bd o sktcol js_streq bd o sktser
 ret svtest bd tp k wb sv
 end
 ret 0
@@ -1556,6 +1562,7 @@ put sv 31 1
 put sv 48 0
 put sv 51 0
 put sv 52 0
+put sv 55 0
 end
 
 note svparse: the request body bd[0, n) into sv and the template; 0 or an error code
@@ -2038,6 +2045,10 @@ note forward (cmdsamp's osstep)
 fn svmlog sv edit ulong 64 bd edit uchar 983040 to void
 if eq get sv 41 4
 cn = get xg 48
+if and lt add get xg 47 1 cn eq get sv 55 0
+svpref sv bd get xg 47 sub cn 1
+put xg 47 sub cn 1
+end
 while lt get xg 47 cn bound 65537
 cv = get xg 47
 xdpos cv eq cv sub cn 1
@@ -2073,6 +2084,66 @@ if and ge c 256 lt c 272
 ret ne c 260
 end
 ret false
+end
+
+note svpref: the cache positions [cv, ce) of a prefill decoded layer by layer: each layer's weights
+note are staged (xstw) and a staged layer's KV rows loaded (xkvs) once per chunk instead of once per
+note position. The hidden rows wait in svhid, chunks of 2^21 / D positions. Every operation is
+note xdpos's for the same (layer, position), in an order that keeps each layer's dependencies (its
+note KV rows of the earlier positions), so the cache and the last row are bit-identical to the
+note position-by-position decode (checked against it: test member ollm_test_serial). Between chunks
+note the side connections and the queue are served.
+global svhid f64 2097152
+note Mutant pl (OMUTPL 0) skips the last layer of the layer-by-layer prefill: the check against
+note ollm_test_serial (c1_prefill_layer_bitexact) must catch it.
+const OMUTPL ulong 1
+fn svpref sv edit ulong 64 bd edit uchar 983040 cv ulong ce ulong to void
+ch = div 2097152 get xg 2
+p = cv
+while lt p ce bound 65537
+e = add p ch
+if gt e ce
+e = ce
+end
+svpref1 p e
+p = e
+svside bd sv 0
+svqpoll
+end
+end
+
+fn svpref1 s ulong e ulong to void
+d = get xg 2
+for t ulong sub e s
+svpemb t mul get xtk add s t d d
+end
+nl = sub get xg 5 sub 1 OMUTPL
+for l ulong nl
+for t ulong sub e s
+svpref2 l s t d
+end
+end
+end
+
+note svpemb: svhid row t = the embedding row at ow[w, w + d) (as xdpos's xcpw)
+fn svpemb t ulong w ulong d ulong to void
+o = mul t d
+for i ulong d
+put svhid add o i get ow add w i
+end
+end
+
+note svpref2: layer l at position s + t: the row svhid[t] through xdlay and back
+fn svpref2 l ulong s ulong t ulong d ulong to void
+o = mul t d
+xr = get xg 49
+for i ulong d
+put oa add xr i get svhid add o i
+end
+xdlay l add s t
+for i ulong d
+put svhid add o i get oa add xr i
+end
 end
 
 note ======== encoding

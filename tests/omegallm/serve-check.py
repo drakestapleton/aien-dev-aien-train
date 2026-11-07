@@ -414,6 +414,9 @@ if TOK1:
               and t2.get("reused", 0) + t2.get("prefilled", 0) == len(t2.get("prompt", [])), f"turn1={len(t1.get('prompt', []))} {dict((k, t2.get(k)) for k in ('reused', 'prefilled'))}")
         check("c1_reuse_bitexact", t2.get("logits_fnv") == t2c.get("logits_fnv") != 0 and t2c.get("reused") == 0
               and ch2.get("message") == ch2c.get("message"), f"warm={t2.get('logits_fnv')} cold={t2c.get('logits_fnv')}")
+        st5, ch5, t5, _ = info(dict(g, messages=m2, ollm_test_cold=True, ollm_test_serial=True), TPORT)
+        check("c1_prefill_layer_bitexact", t5.get("logits_fnv") == t2c.get("logits_fnv") != 0 and ch5.get("message") == ch2c.get("message")
+              and t2c.get("prefilled") == len(t2c.get("prompt", [])) > 2, f"layer-major={t2c.get('logits_fnv')} serial={t5.get('logits_fnv')}")
         st3, ch3, t3, _ = info(dict(g, messages=m2), TPORT)
         st4, ch4, t4, _ = info(dict(g, messages=m3), TPORT)
         st4c, ch4c, t4c, _ = info(dict(g, messages=m3, ollm_test_cold=True), TPORT)

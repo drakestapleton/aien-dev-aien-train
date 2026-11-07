@@ -1,6 +1,6 @@
 #!/bin/sh
 # Build ollm (aien-train#52) from native/omegallm/*.om with the pinned seeded omc.
-# Usage: sh tests/omegallm/build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p|t|r|x|q|w|u|l|o|v|n|y|i|z|j|c1 | --variant h5|h7|r0|bx]
+# Usage: sh tests/omegallm/build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p|t|r|x|q|w|u|l|o|v|n|y|i|z|j|c1|pl | --variant h5|h7|r0|bx]
 # Env: TARGET (aarch64, the default, gb10, x86linux or x86efi), OMC (default ../omega-mv/seed/out/omc
 #      beside this clone for aarch64 and gb10, ../omega-mv-x86/seed/out/omc for x86linux,
 #      ../omega-efi-ident/seed/out/omc for x86efi), OUT (default ../build beside it), CORE (taskset core,
@@ -77,7 +77,7 @@ OUT=${OUT:-$here/../build}
 CORE=${CORE:-6}
 mut= kind=
 if [ $# -ge 1 ]; then
-  { [ "$1" = --mutant ] || [ "$1" = --variant ]; } && [ $# -eq 2 ] || { echo "usage: build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p|t|r|x|q|w|u|l|o|v|n|y|i|z|j|c1 | --variant h5|h7|r0|bx]" >&2; exit 2; }
+  { [ "$1" = --mutant ] || [ "$1" = --variant ]; } && [ $# -eq 2 ] || { echo "usage: build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p|t|r|x|q|w|u|l|o|v|n|y|i|z|j|c1|pl | --variant h5|h7|r0|bx]" >&2; exit 2; }
   kind=$1 mut=$2
 fi
 got=$(sha256sum "$OMC" | cut -d' ' -f1)
@@ -143,11 +143,12 @@ case "$kind$mut" in
   --mutantz) pat='s/^const OMUTZ ulong 1$/const OMUTZ ulong 0/' want=1 ;;
   --mutantj) pat='s/^const OMUTJ ulong 1$/const OMUTJ ulong 0/' want=1 ;;
   --mutantc1) pat='s/^const OMUTC1 ulong 1$/const OMUTC1 ulong 0/' want=1 ;;
+  --mutantpl) pat='s/^const OMUTPL ulong 1$/const OMUTPL ulong 0/' want=1 ;;
   --varianth5) pat='s/^const GCH f64 0\.000001$/const GCH f64 0.00001/;s/^const GCH2 f64 0\.00000025$/const GCH2 f64 0.00001/' want=2 ;;
   --varianth7) pat='s/^const GCH f64 0\.000001$/const GCH f64 0.0000001/;s/^const GCH2 f64 0\.00000025$/const GCH2 f64 0.0000001/' want=2 ;;
   --variantr0) pat='s/^const OKREU ulong 1$/const OKREU ulong 0/' want=1 ;;
   --variantbx) pat='s/^const OWC ulong 15833472$/const OWC ulong 8400/;s/^const OGC ulong 15833472$/const OGC ulong 5000/;s/^const OAC ulong 15016192$/const OAC ulong 12344/' want=3 ;;
-  *) echo "usage: build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p|t|r|x|q|w|u|l|o|v|n|y|i|z|j|c1 | --variant h5|h7|r0|bx]" >&2; exit 2 ;;
+  *) echo "usage: build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p|t|r|x|q|w|u|l|o|v|n|y|i|z|j|c1|pl | --variant h5|h7|r0|bx]" >&2; exit 2 ;;
 esac
 if [ -n "$mut" ]; then
   [ "$kind" = --mutant ] && name=ollm-mut-$mut || name=ollm-var-$mut
