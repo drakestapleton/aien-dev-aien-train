@@ -107,9 +107,10 @@ The build script does four things:
      (omega-mv `e5b32567`, `../omega-mv`);
    - x86linux: `be8c51301307555254fc59e351d281aae1aa096d91521777e33a41c8b446448a`
      (omega-mv main `ba5559d9`, `../omega-mv-x86`);
-   - x86efi: `b4f45121f6c6d5d8a6ed0f5c4f3934b7cc4bec369bfa89523699bd33928f9b55`
-     (omega-mv main `d3d1b1bc`, PR #1015 merged 2026-11-04, `../omega-efi`; the receipts were
-     built from #1015's commit `5ce9ecaa`, an ancestor, with this same omc).
+   - x86efi: `3ad9f10f64309e7acf8a725082b28e23a2a4aeb07e98322fb4dc0fcd8fc93194`
+     (omega-mv PR #1022 commit `cf9fbda1`: main `d3d1b1bc`, where #1015's x86efi backend merged
+     on 2026-11-04, plus efi 14, `../omega-efi`); the receipts in `evidence/OMEGALLM/efi` and `imac`
+     were built earlier with omc `b4f45121` from #1015's commit `5ce9ecaa`.
 2. It concatenates `math.om data.om`, the pool unit (`lpool.om` on Linux, `epool.om` on UEFI;
    CONTRACT-V3 §2), `model.om adam.om ckpt.om bpe.om cli.om` and the platform unit
    (`lio.om` for Linux, `eio.om` for UEFI; CONTRACT §9). The x86 targets put the line
