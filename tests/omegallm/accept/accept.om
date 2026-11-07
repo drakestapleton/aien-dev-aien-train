@@ -104,6 +104,7 @@ const SFAML ulong 88
 const SSPL ulong 89
 const SREAS ulong 90
 const SHN ulong 92
+const SRN ulong 93
 
 note rs: the captured reply; content at [0, CTN), call k arguments at RCL + k CLAS, call k name at RCL + CLNM + k CLNS
 const RSN ulong 528384
@@ -3741,6 +3742,7 @@ text yrule "rule"
 text yexec "exec"
 text ynoh "noharness"
 text ybig "toolong"
+text ycut "cut"
 
 fn acapy o edit uchar * q ulong y ulong to ulong
 if eq y 0
@@ -3773,7 +3775,10 @@ end
 if eq y 9
 ret acapp o q ynoh
 end
+if eq y 10
 ret acapp o q ybig
+end
+ret acapp o q ycut
 end
 
 note acopt: v - 1 in decimal, or - when v is 0 (absent)
@@ -4416,16 +4421,16 @@ end
 ret 9
 end
 
-note acrsn: reason name to 0..10, else 11
+note acrsn: reason name to 0..11, else 12
 fn acrsn s view uchar * to ulong
 o = new uchar 32 0
-for y ulong 11
+for y ulong 12
 q = acapy o 0 y
 if heq s view part o 0 q
 ret y
 end
 end
-ret 11
+ret 12
 end
 
 note acfld: field k (tab-separated) of line s as start shl 32 | end; start = end = len s when absent
@@ -4534,7 +4539,7 @@ end
 fn acrowr s view uchar * g ulong to void
 x = acfld s 5
 y = acrsn view part s acsa x sub acsb x acsa x
-if lt y 11
+if lt y 12
 o = add mul g 12 y
 put grs o add get grs o 1
 end
@@ -4661,7 +4666,7 @@ note acrsns: the nonzero reason counts of group g as name=count, space separated
 fn acrsns o edit uchar * q ulong g ulong to ulong
 r = q
 any = false
-for y ulong 11
+for y ulong 12
 if eq y 0
 continue
 end
@@ -4870,11 +4875,11 @@ acsumld pa od
 exit int acsumo pa od th ulong t
 end
 
-note acsumld: every OUTDIR/results-W.tsv (W 0..7) into the aggregates
+note acsumld: every OUTDIR/results-W.tsv (W 0..8; 8 is written by fill) into the aggregates
 fn acsumld pa edit uchar PAN od ulong to void
 f = new uchar FIL 0
 rd = new uchar 64 0
-for w ulong 8
+for w ulong 9
 q = acapp rd 0 kres0
 q = acdec rd q w
 q = acapp rd q ktsv
@@ -4957,7 +4962,7 @@ note acldall: every OUTDIR/results-W.tsv of the outdir at pa[base, base + bl) ap
 fn acldall pa edit uchar PAN base ulong bl ulong f edit uchar * to ulong
 rd = new uchar 64 0
 t = ulong 0
-for w ulong 8
+for w ulong 9
 q = acapp rd 0 kres0
 q = acdec rd q w
 q = acapp rd q ktsv
@@ -5117,6 +5122,100 @@ end
 r = acapp o r ktab
 r = acf4 o r acmcn get pq add o6 1 get pq add o6 2
 ret acapp o r knl
+end
+
+
+note ======== fill SUITEDIR OUTDIR (PREREG.md section 4): a run that was cut off (deadline, crash) leaves items
+note without a row. fill truncates OUTDIR/results-8.tsv, then writes into it one NOT_RUN row, reason cut, for every chat item
+note (items.jsonl) and harness row (harness.jsonl) of SUITEDIR whose id has no row in OUTDIR/results-0..8.tsv (workers use 0..7).
+text kres9 "/results-8.tsv"
+
+fn acfill1 f view uchar FIL n ulong rb view uchar 3145728 wk edit uchar WKN sv edit ulong SVN pa edit uchar PAN to void
+it = new uchar ILN 0
+tp = new uint TPN 0
+b = new uchar 256 0
+p = ulong 0
+while lt p n bound 999999
+p = acline f n p it sv
+if eq get sv SILN 0
+continue
+end
+if not acpar it tp sv
+exit 4
+end
+k = acstr it tp acmem it tp 0 kid b
+if lt k 1
+exit 4
+end
+put sv SOP ulong k
+if acabsent rb sv b
+acfill2 it tp wk sv pa b
+end
+end
+end
+
+note acabsent: whether id b[0, sv[SOP]) has no row in rb[0, sv[SRN])
+fn acabsent rb view uchar 3145728 sv view ulong SVN b view uchar 256 to bool
+ret eq acpv view part rb 0 get sv SRN view part b 0 get sv SOP 2
+end
+
+fn acfill2 it view uchar ILN tp view uint TPN wk edit uchar WKN sv edit ulong SVN pa edit uchar PAN b view uchar 256 to void
+if not acsetid wk sv pa view part b 0 get sv SOP
+exit 4
+end
+c = new uchar 64 0
+x = acstr it tp acmem it tp 0 krole c
+if lt x 1
+exit 4
+end
+put sv SCAT accat view part c 0 ulong x
+if not acfamsp it tp wk sv
+exit 4
+end
+put sv SST 0
+put sv SFIN 0
+put sv SLAT 0
+put sv SPTOK 0
+put sv SCTOK 0
+acres wk sv 2 11 0
+end
+
+fn cmdfill to void
+pa = new uchar PAN 0
+wk = new uchar WKN 0
+sv = new ulong SVN 0
+rb = new uchar 3145728 0
+if ne argcnt 4
+exit 2
+end
+put sv SSDL acgeta 2 pa PSD
+put sv SODL acgeta 3 pa POD
+m = acpth pa POD get sv SODL kres9 0
+fd = fopen pa PB m 524865 420
+if lt fd 0
+exit 4
+end
+put sv SRFD ulong fd
+x0 = acwrite fd krhdr
+put sv SRN acldall pa POD get sv SODL rb
+acfillf rb wk sv pa 0
+acfillf rb wk sv pa 3
+x = fclose int fd
+exit 0
+end
+
+note acfillf: SUITEDIR items.jsonl (k 0) or harness.jsonl (k 3) through acfill1
+fn acfillf rb view uchar 3145728 wk edit uchar WKN sv edit ulong SVN pa edit uchar PAN k ulong to void
+f = new uchar FIL 0
+n = acpth pa PSD get sv SSDL fitems 0
+if eq k 3
+n = acpth pa PSD get sv SSDL fharn 0
+end
+r = acreadf view part pa PB n f
+if lt r 1
+ret
+end
+acfill1 f ulong r rb wk sv pa
 end
 
 note acpre: whether s starts with p
@@ -5672,6 +5771,7 @@ text cifsel "ifsel"
 text cself "selftest"
 text csum "sum"
 text cpair "pair"
+text cfill "fill"
 
 fn main to int
 b = new uchar 64 0
@@ -5702,6 +5802,9 @@ cmdsum
 end
 if heq view part b 0 ulong r cpair
 cmdpair
+end
+if heq view part b 0 ulong r cfill
+cmdfill
 end
 ret 2
 end
