@@ -1,0 +1,17 @@
+host_cpu: core 6 (Cortex-X925)
+beecf5fa3463c36dc44c7e4aa823aa747b55e5d0871a726d52dad243971c7631  old/ollm
+aa6cceda5358a797e463bc309d5baeac86db9fe366c8c80a5648837b608deaac  new/ollm
+211574318d28aa5109290c924205351a1019819859b5e9693a23840e59354d2e  a.ck
+064d7a08912b8d706aa828c26033840fdd0d2733c86c7e085fcc96b42f3b0aa9  train.bin
+6452567ab80ce655b7f35a56ddfac52123a323f55ce6c9bac1fb4aa104d9a7b7  held.bin
+$ taskset -c 6 nice -n 19 old/ollm eval a.ck held.bin 256
+rc=0 E 0 256 5537119 7988374
+$ taskset -c 6 nice -n 19 old/ollm train wk/old.ck train.bin 5 5
+rc=0 T 5 5538986
+$ taskset -c 6 nice -n 19 new/ollm eval a.ck held.bin 256
+rc=0 E 0 256 5537119 7988374
+$ taskset -c 6 nice -n 19 new/ollm train wk/new.ck train.bin 5 5
+rc=0 T 5 5538986
+eval lines equal
+checkpoints after step 5 equal: d08ff37ae7c28e4bbf3533916b789ec8d5d9c2a0348e81f6cd93dd4b2161fe8c
+verdict EQUAL

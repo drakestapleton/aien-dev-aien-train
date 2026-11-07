@@ -1,0 +1,8 @@
+receipt: s1-sample4-tok
+binary: ollm sha256 aa6cceda5358a797e463bc309d5baeac86db9fe366c8c80a5648837b608deaac
+$ taskset -c 6 nice -n 10 /usr/bin/time ollm sample4 s1.ck 5 16 800 /dev/shm/hive/ownmodel/wide4/prompt.u16
+--- output (u16 LE tokens, shown with od -An -tu2)
+ 12563 24623  7510  3099  6047 12346 32287 16653
+ 13847 19658 14624  4312 28591 14708 31257 30725
+TIME wall_s 10.37 rss_kb 1240220
+--- rc 0

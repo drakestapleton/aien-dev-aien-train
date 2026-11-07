@@ -1,0 +1,6 @@
+receipt: init4-l
+binary: ollm sha256 aa6cceda5358a797e463bc309d5baeac86db9fe366c8c80a5648837b608deaac
+$ taskset -c 6 nice -n 10 /dev/shm/hive/ownmodel/wide4/v4c-build/ollm init4 /dev/shm/hive/ownmodel/wide4/v4c-work/l.ck 256 2048 128 4 512 2 1 7 10 1000 1
+--- output
+I 426624
+--- rc 0 ms 55

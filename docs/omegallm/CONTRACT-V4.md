@@ -92,10 +92,10 @@ OMUTJD 0) embeds a bank-2 token from row c xor 1 in decode only. Receipts:
 
 | Command | Arguments | Output / exits |
 |---|---|---|
-| `init4` | `CK V T D H F L B SEED TOTAL LRMICRO G` | fresh CK03; `I P`; 12 shape refused |
-| `train4` | `CK TRAIN UNTIL EVERY [K]` | `T step loss_micro`; K worker processes (29 when K∤G) |
-| `eval4` | `CK HELD W [MERGES]` | as `eval` |
-| `sample4` | `CK SEED N TEMPMILLI PROMPT [MERGES]` | KV-cache decode; MERGES required when V > 256 |
+| `init4` | `CK V T D H F L B SEED TOTAL LRMICRO G` | fresh CK03; `I P`; 12 shape refused (section 2.1 limits) |
+| `train4` | `CK TRAIN UNTIL EVERY [K]` | `T step loss_micro`; K worker processes (29 when K∤G); 12 when the training layout does not fit |
+| `eval4` | `CK HELD W [MERGES]` | as `eval`; at V > 256 without MERGES (token mode) the last field is bits per token |
+| `sample4` | `CK SEED N TEMPMILLI PROMPT [MERGES]` | KV-cache decode; at V > 256 without MERGES (token mode) PROMPT is a file of u16 LE tokens (≤ T; 21 odd length, 25 a token ≥ V) and the output is u16 LE tokens, which `ollm-tok tokdec` decodes |
 | `tune4` | `CK OUT TOTAL LRMICRO` | `U P` |
 | `gcheck4` | `CK TRAIN` | central differences at 4 indices of every tensor; 40 over tolerance |
 | `ropeck` | `REF` | sin/cos vs Wolfram + shift identity; 43 |
@@ -104,8 +104,9 @@ OMUTJD 0) embeds a bank-2 token from row c xor 1 in decode only. Receipts:
 Given an OLLMCK01/02 file, `train4 eval4 sample4 gcheck4 tune4` run the v3 command. Data files are
 u8 tokens when V ≤ 256 and u16 little-endian otherwise (as v3; a wrong width is exit 21).
 `sample4`/`eval4` with MERGES use the v3 BPE loader, which holds at most 4096 tokens (exit 27
-beyond): V = 32768 text I/O needs the 32k tokenizer unit; training and evaluation on
-pre-tokenized u16 files work at V = 32768 now.
+beyond): V = 32768 text I/O inside ollm needs the 32k tokenizer unit; until then token mode composes
+with `ollm-tok tokenc`/`tokdec` (OLLMTOK1). `train4`, `eval4`, `gcheck4` and `kvck` exit 12 when the
+training activation layout does not fit (section 2.1).
 
 ## 4. Checkpoint OLLMCK03
 
@@ -119,6 +120,8 @@ bits, FNV-1a 64 of the payload; payload 24·P bytes (params, m, v; f64 little-en
 `build.sh --mutant i` rotates K with the wrong sign in the forward (the backward keeps the true
 inverse): `gcheck4` and `ropeck`'s shift check must fail. `--mutant z` applies R instead of Rᵀ in
 the backward: `gcheck4` must fail.
+
+Mutants j and jd and variant wx of the wte banks: section 2.1.
 
 ## 6. Receipts
 

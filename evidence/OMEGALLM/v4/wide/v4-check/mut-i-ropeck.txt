@@ -1,0 +1,8 @@
+receipt: mut-i-ropeck
+binary: ollm-mut-i sha256 00acfed37de82c78ac18b92ee342471d83b339eaf331cbb34c68abd2165fe643
+$ taskset -c 6 nice -n 10 /dev/shm/hive/ownmodel/wide4/v4c-build/ollm-mut-i ropeck tests/omegallm/roperef.txt
+--- output
+R s 64 111
+R c 64 111
+R h 64 10448164467260428 851
+--- rc 43 ms 8

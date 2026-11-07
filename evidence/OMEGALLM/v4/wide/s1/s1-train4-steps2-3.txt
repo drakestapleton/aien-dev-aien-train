@@ -1,0 +1,8 @@
+receipt: s1-train4-steps2-3
+binary: ollm sha256 aa6cceda5358a797e463bc309d5baeac86db9fe366c8c80a5648837b608deaac
+$ taskset -c 6 nice -n 10 /usr/bin/time ollm train4 s1.ck /dev/shm/hive/ownmodel/wide4/val3m.u16 3 2 1
+--- output
+T 2 10325464
+T 3 9995966
+TIME wall_s 368.80 rss_kb 2235580
+--- rc 0

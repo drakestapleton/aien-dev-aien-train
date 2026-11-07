@@ -1,0 +1,7 @@
+receipt: s1t4096-train4-refused
+binary: ollm sha256 aa6cceda5358a797e463bc309d5baeac86db9fe366c8c80a5648837b608deaac
+$ taskset -c 6 nice -n 10 /usr/bin/time ollm train4 s4k.ck /dev/shm/hive/ownmodel/wide4/val3m.u16 1 1 1
+--- output
+Command exited with non-zero status 12
+TIME wall_s 4.34 rss_kb 1215580
+--- rc 12

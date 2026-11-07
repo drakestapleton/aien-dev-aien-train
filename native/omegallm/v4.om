@@ -2066,6 +2066,7 @@ end
 end
 
 note eval4 CK HELD W [MERGES]: as eval (cli.om); windows of T + 1 tokens at 0, T, .., (W-1) T
+note (V > 256 without MERGES: token mode, the last field is bits per token)
 fn xceval to void
 na = oargc
 if and ne na 5 ne na 6
@@ -2314,6 +2315,8 @@ ret odraw st div f64 tm 1000.0
 end
 
 note sample4 CK SEED N TEMPMILLI PROMPT [MERGES]: as sample (cli.om) with the KV cache
+note (V > 256 without MERGES: token mode, PROMPT names a u16 LE token file and the tokens go to
+note stdout as u16 LE)
 fn xcsamp to void
 na = oargc
 if and ne na 7 ne na 8

@@ -1,0 +1,7 @@
+receipt: s1-kvck
+binary: ollm sha256 aa6cceda5358a797e463bc309d5baeac86db9fe366c8c80a5648837b608deaac
+$ taskset -c 6 nice -n 10 /usr/bin/time ollm kvck s1.ck /dev/shm/hive/ownmodel/wide4/val3m.u16
+--- output
+K 256 0 10144793
+TIME wall_s 139.45 rss_kb 1325820
+--- rc 0

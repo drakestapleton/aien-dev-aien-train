@@ -1,0 +1,5 @@
+receipt: ck03-v3eval
+binary: ollm sha256 aa6cceda5358a797e463bc309d5baeac86db9fe366c8c80a5648837b608deaac
+$ taskset -c 6 nice -n 10 /dev/shm/hive/ownmodel/wide4/v4c-build/ollm eval /dev/shm/hive/ownmodel/wide4/v4c-work/s.ck /dev/shm/hive/ownmodel/wide4/v4c-work/held.bin 2
+--- output
+--- rc 11 ms 1

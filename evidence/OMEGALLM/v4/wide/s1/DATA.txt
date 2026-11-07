@@ -1,0 +1,3 @@
+data: val3m.u16 = first 3,000,000 bytes of ~/data-omega/base/val.txt, tokc raw with merges32k.bin sha256 688b723a894baa831ee92aaf814918d30823225c45de68c85d9dd244eb79947c; e806c22207f59f7bcf8ed238b0f74bbec5efa559717406d3d0bc54413805945e
+prompt.u16: tokenc raw of the bytes 'def main():
+    print("hello' ( 3221 2215 29348 409 2527 2822 273 17392)

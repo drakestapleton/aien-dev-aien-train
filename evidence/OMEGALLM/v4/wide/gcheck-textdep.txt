@@ -1,0 +1,18 @@
+receipt: gcheck4 on v4-check.sh's init4-s checkpoint (V256 T64 D16 H2 F32 L2 B4 G2 seed 1) depends on the training text
+old binary /dev/shm/hive/ownmodel/wide4/base/ollm sha256 beecf5fa3463c36dc44c7e4aa823aa747b55e5d0871a726d52dad243971c7631 (source 63353c9)
+new binary /dev/shm/hive/ownmodel/wide4/v4c-build/ollm sha256 aa6cceda5358a797e463bc309d5baeac86db9fe366c8c80a5648837b608deaac (source d3e38e4..ce3bb2d v4.om)
+texts: v4-check.sh's recipe (cat native/omegallm/*.om docs/omegallm/*.md, story break every 40 lines) over three tree states
+  in2 = tree of ce3bb2d; in3 = v4.om of d3e38e4 + docs of 63353c9; in4 = ce3bb2d sources with an intermediate CONTRACT-V4 draft
+--- in2.txt sha256 23aecfac0aed8b2cfb3ca31467b244d026aaf887c1fef36254f0c3b03c5ab617
+$ /dev/shm/hive/ownmodel/wide4/base/ollm gcheck4 s.ck tr2.bin -> C 72 3f4a4531a9d3428f 801705 6517 0 rc 0
+$ /dev/shm/hive/ownmodel/wide4/v4c-build/ollm gcheck4 s.ck tr2.bin -> C 72 3f4a4531a9d3428f 801705 6517 0 rc 0
+old and new outputs byte-identical (all 72 coordinates)
+--- in3.txt sha256 fe54a3c357a9ffec0c3a5ea6102e89024417ebe2949adfc06cb2ddda4df97a1c
+$ /dev/shm/hive/ownmodel/wide4/base/ollm gcheck4 s.ck tr3.bin -> C 72 3f3a540e51cd562b 401738 4280 0 rc 0
+$ /dev/shm/hive/ownmodel/wide4/v4c-build/ollm gcheck4 s.ck tr3.bin -> C 72 3f3a540e51cd562b 401738 4280 0 rc 0
+old and new outputs byte-identical (all 72 coordinates)
+--- in4.txt sha256 ac5583e088f54f6a6f882079d92cf15c5deb32de5af1fecc03e6cf8fe5446a1c
+$ /dev/shm/hive/ownmodel/wide4/base/ollm gcheck4 s.ck tr4.bin -> C 72 3f578625944a7197 1435791 4119 1 rc 40
+$ /dev/shm/hive/ownmodel/wide4/v4c-build/ollm gcheck4 s.ck tr4.bin -> C 72 3f578625944a7197 1435791 4119 1 rc 40
+old and new outputs byte-identical (all 72 coordinates)
+On in4 the old (one-window) binary also exceeds GCTOL (max rel 1.44e-3 at index 4119, rc 40): a gcheck4 rc 40 in v4-check.sh can come from the repository text alone.

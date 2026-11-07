@@ -1,0 +1,6 @@
+receipt: kvck
+binary: ollm sha256 aa6cceda5358a797e463bc309d5baeac86db9fe366c8c80a5648837b608deaac
+$ taskset -c 6 nice -n 10 /dev/shm/hive/ownmodel/wide4/v4c-build/ollm kvck /dev/shm/hive/ownmodel/wide4/v4c-work/t2.ck /dev/shm/hive/ownmodel/wide4/v4c-work/held.bin
+--- output
+K 64 0 5348627
+--- rc 0 ms 5

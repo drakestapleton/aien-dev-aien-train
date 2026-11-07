@@ -1,0 +1,7 @@
+receipt: d768l8-init4
+binary: ollm sha256 aa6cceda5358a797e463bc309d5baeac86db9fe366c8c80a5648837b608deaac
+$ taskset -c 6 nice -n 10 /usr/bin/time ollm init4 d768.ck 32768 256 768 12 3072 8 1 3 10 1000 1
+--- output
+I 81801984
+TIME wall_s 10.88 rss_kb 892060
+--- rc 0

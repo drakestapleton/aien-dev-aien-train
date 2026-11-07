@@ -1,0 +1,7 @@
+receipt: s1t4096-init4
+binary: ollm sha256 aa6cceda5358a797e463bc309d5baeac86db9fe366c8c80a5648837b608deaac
+$ taskset -c 6 nice -n 10 /usr/bin/time ollm init4 s4k.ck 32768 4096 512 8 2048 8 1 2 10 1000 1
+--- output
+I 41951744
+TIME wall_s 5.63 rss_kb 560060
+--- rc 0

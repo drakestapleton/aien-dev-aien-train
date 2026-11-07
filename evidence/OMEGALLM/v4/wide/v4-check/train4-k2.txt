@@ -1,0 +1,9 @@
+receipt: train4-k2
+binary: ollm sha256 aa6cceda5358a797e463bc309d5baeac86db9fe366c8c80a5648837b608deaac
+$ taskset -c 6 nice -n 10 /dev/shm/hive/ownmodel/wide4/v4c-build/ollm train4 /dev/shm/hive/ownmodel/wide4/v4c-work/t2.ck /dev/shm/hive/ownmodel/wide4/v4c-work/train.bin 40 10 2
+--- output
+T 10 5530681
+T 20 5510075
+T 30 5437371
+T 40 5352222
+--- rc 0 ms 808

@@ -1,0 +1,7 @@
+receipt: s1-tune4
+binary: ollm sha256 aa6cceda5358a797e463bc309d5baeac86db9fe366c8c80a5648837b608deaac
+$ taskset -c 6 nice -n 10 /usr/bin/time ollm tune4 s1.ck s1t.ck 50 500
+--- output
+U 41951744
+TIME wall_s 9.59 rss_kb 1214140
+--- rc 0
