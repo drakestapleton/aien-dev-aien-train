@@ -1,0 +1,1 @@
+Save the sha256 checksum of fox.txt in fox.sha256.

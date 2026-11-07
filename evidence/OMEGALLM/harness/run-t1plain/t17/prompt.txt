@@ -1,0 +1,1 @@
+Sort the lines of names.txt alphabetically and save the result to sorted.txt.

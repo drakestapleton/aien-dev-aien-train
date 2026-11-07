@@ -1,0 +1,1 @@
+FAIL t20 trim product.txt missing

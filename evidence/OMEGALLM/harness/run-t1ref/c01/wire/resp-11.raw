@@ -1,0 +1,6 @@
+HTTP/1.1 200 OK
+Content-Type: application/json
+Content-Length: 255
+Connection: close
+
+{"id":"chatcmpl-ollm-64","object":"chat.completion","created":1794011608,"model":"ollm","choices":[{"index":0,"message":{"role":"assistant","content":"Done."},"finish_reason":"stop"}],"usage":{"prompt_tokens":282,"completion_tokens":3,"total_tokens":285}}

@@ -1,0 +1,2 @@
+init4 /dev/shm/hive/ownmodel/harness/tiny-ck03.bin 32768 8192 16 2 32 1 1 7 1 1000 1 -> I 526384 (untrained random init, serve4 ollm 62711f66)
+06724c9eeb12530f09aae21c1abbfd1c851e9e2a351a38ce98e3717082d3f62a  /dev/shm/hive/ownmodel/harness/tiny-ck03.bin

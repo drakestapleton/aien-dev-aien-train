@@ -1,0 +1,1 @@
+FAIL t02 trim greeting.txt missing

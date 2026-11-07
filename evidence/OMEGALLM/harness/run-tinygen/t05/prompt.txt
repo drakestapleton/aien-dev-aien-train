@@ -1,0 +1,1 @@
+Count the lines in data.txt and write only the number to count.txt.

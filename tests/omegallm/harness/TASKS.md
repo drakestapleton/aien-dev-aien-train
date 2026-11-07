@@ -64,6 +64,12 @@ environment). ENDPOINT is `http://HOST:PORT/v1` or a fixture (`fixture:ref`, `fi
 Hermes runs `-t terminal --max-turns 4` (`TOOLSETS`, `MAXTURNS`), each task in a fresh temp work
 dir with a per-task timeout (`TMO`, default 300 s). Results are in `OUTDIR/summary.txt`.
 
+With `INJECT=ref` (or `plain`) and an `http://` ENDPOINT that runs `ollm serve ... test=1`, the
+logging proxy adds `ollm_test_output` to every chat POST (`<|tool_call|>{"name":"terminal",
+"arguments":{"command":REF}}<|end|>` on turn 1, `Done.<|end|>` after), so the server's own CHAT1
+encoding, tool-call parsing and SSE path run on real Hermes requests; the output is scripted, so
+this too is a protocol check only. The forwarded bodies are kept as `wire/req-N.sent`.
+
 Negative controls: c01 and c02 must FAIL in every run; with `fixture:plain` (a plain answer that
 claims success, no tool call) every train and heldout task must FAIL; with `fixture:ref` every
 train and heldout task must PASS (a protocol check of runner, Hermes tool execution and verifier,
