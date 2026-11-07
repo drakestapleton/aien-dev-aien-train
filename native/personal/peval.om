@@ -60,6 +60,9 @@ text p_task "Task: "
 text p_ans "\nAnswer:\n"
 text p_done "\nDone.\n"
 text t_es "expect_stdout"
+text t_ty "type"
+text t_rg "regex"
+text t_cr "compile_run"
 text t_ee "expect_exit"
 text w_ox "omcexit "
 text s_pr "prompt"
@@ -337,6 +340,7 @@ got = or got 2
 end
 if js_streq src js_off tape k t_sc
 srul src tape add k 1 i
+got = or got 4
 end
 k = js_mnext tape k
 end
@@ -344,7 +348,8 @@ obw fd
 if ne fclose int fd 0
 exit 70
 end
-if ne got 3
+note review fix: a task without a scorer is refused (it used to pass every answer)
+if ne got 7
 exit 22
 end
 sfile src tape i 0
@@ -352,17 +357,39 @@ sfile src tape i 1
 end
 
 note the scorer object at token s: must, must_not, ci into ob; omc_stdout into NNNN.omcout
+note review fix: the scorer is validated. type regex needs must or must_not; type compile_run needs both
+note expect_stdout (a string, possibly empty) and expect_exit; any other type is refused; without type (the
+note legacy synthetic schema) it needs must, must_not or omc_stdout. Seen bits: 1 must, 2 must_not, 4 stdout
+note (expect_stdout or omc_stdout), 8 expect_exit, 16 type regex, 32 type compile_run.
 fn srul src view uchar * tape view uint * s ulong i ulong to void
 if ne js_type tape s jsobj
 exit 22
 end
+sn = ulong 0
 k = js_first tape s
 while ne k jsnone bound 999999
+if js_streq src js_off tape k t_ty
+v = add k 1
+if ne js_type tape v jsstr
+exit 22
+end
+if js_streq src js_off tape v t_rg
+sn = or sn 16
+else
+if js_streq src js_off tape v t_cr
+sn = or sn 32
+else
+exit 22
+end
+end
+end
 if js_streq src js_off tape k t_mu
 sarr src tape k 2
+sn = or sn 1
 end
 if js_streq src js_off tape k t_mn
 sarr src tape k 3
+sn = or sn 2
 end
 if js_streq src js_off tape k t_ci
 if eq js_type tape add k 1 jstrue
@@ -374,11 +401,38 @@ if or js_streq src js_off tape k t_oc js_streq src js_off tape k t_es
 s0 = get obn 0
 sval src tape k
 swoc i s0
+sn = or sn 4
 end
 if js_streq src js_off tape k t_ee
 snum src tape add k 1
+sn = or sn 8
 end
 k = js_mnext tape k
+end
+srchk sn
+end
+
+fn srchk sn ulong to void
+if ne and sn 32 0
+if ne and sn 16 0
+exit 22
+end
+if ne and sn 12 12
+exit 22
+end
+ret
+end
+if ne and sn 16 0
+if eq and sn 3 0
+exit 22
+end
+if ne and sn 12 0
+exit 22
+end
+ret
+end
+if eq and sn 7 0
+exit 22
 end
 end
 
@@ -810,6 +864,9 @@ j = add j 1
 end
 while lt j e bound 4096
 if eq pb j e 92
+if not escok pb add j 1 e true
+exit 22
+end
 j = add j 2
 else
 if eq pb j e 93
@@ -923,8 +980,9 @@ note atom at i (length al) matches answer byte at ti (< gbn)
 fn am i ulong al ulong ti ulong to bool
 t = ulong get gb ti
 c = ulong get rxp i
+note review fix: Python `.` does not match a newline (no DOTALL)
 if eq c 46
-ret true
+ret ne t 10
 end
 if eq c 92
 ret escm ulong get rxp add i 1 t
@@ -1208,6 +1266,9 @@ d = pb add i 1 get rxs 2
 if eq d 256
 exit 22
 end
+if not escok d false
+exit 22
+end
 radv 2
 if eq d 98
 x = emit 9 0 0
@@ -1236,6 +1297,24 @@ exit 22
 end
 radv 1
 x = emit 1 c 0
+end
+
+note review fix: escapes outside the supported set are refused (exit 22): a letter or digit other than
+note d D w W s S n t (and b B outside a class); escaped punctuation stays a literal. Byte (ASCII) semantics.
+fn escok d ulong incls bool to bool
+if or isd d and ge lc d 97 le lc d 122
+if or or eq d 100 eq d 68 or eq d 119 eq d 87
+ret true
+end
+if or or eq d 115 eq d 83 or eq d 110 eq d 116
+ret true
+end
+if not incls
+ret or eq d 98 eq d 66
+end
+ret false
+end
+ret lt d 256
 end
 
 note bytes refused inside a (?!literal) lookahead: end of pattern and regex operators
@@ -1279,6 +1358,14 @@ if lkbad d
 exit 22
 end
 if eq d 92
+note review fix: only an escaped punctuation byte is a literal inside (?!...); \d, \w and the like are refused
+e2 = pb add get rxs 1 1 get rxs 2
+if or isd e2 and ge lc e2 97 le lc e2 122
+exit 22
+end
+if eq e2 256
+exit 22
+end
 radv 2
 else
 radv 1
@@ -1379,9 +1466,17 @@ vadd add pc 1 i
 end
 ret
 end
+note review fix: Python `$` matches at the end and just before a final newline
 if eq o 8
-if eq i get gbn 0
+n = get gbn 0
+if eq i n
 vadd add pc 1 i
+else
+if eq add i 1 n
+if eq get gb i uchar 10
+vadd add pc 1 i
+end
+end
 end
 ret
 end
@@ -1863,11 +1958,20 @@ ret ulong get gb i
 end
 
 note email: a word byte run, @, a run with a dot inside, ending in 2+ letters
+note review fix: the byte before @ is an email local-part byte [A-Za-z0-9._%+-] (it used to reuse the word
+note predicate, so name_@ and name+@ were missed)
+fn elc c ulong to bool
+if isw c
+ret true
+end
+ret or or eq c 46 eq c 37 or eq c 43 eq c 45
+end
+
 fn pemail m ulong to ulong
 cnt = ulong 0
 for i ulong m
 if eq gbat i 64
-if and gt i 0 wb gbat sub i 1
+if and gt i 0 elc gbat sub i 1
 if pemr add i 1
 cnt = add cnt 1
 end

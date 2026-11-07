@@ -2,7 +2,7 @@
 # DRA-146 pilot: pre-registration of the three-arm personal eval (dra146-train)
 
 Written 2026-11-07 (UTC) by dra146-train (Hermes worker, claude-opus-5-5) BEFORE any eval run on private data
-and before any fine-tune on private data. Its sha256 goes into ~/private/omegallm/dra146/SEALS.txt at creation.
+and before any fine-tune on private data. Its sha256 goes into the private SEALS file at creation.
 Public aggregate-only copy: aien-train feat/dra146-eval docs/personal/PREREG-dra146.md (same rules, no private
 paths or text). Numbers marked (Wolfram) were computed with the Wolfram evaluator; queries in section 9.
 

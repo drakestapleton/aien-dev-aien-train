@@ -1,4 +1,4 @@
-peval_sha256=3c6196f83e9ad40966c571dfebe3dcac54d8d86c79645fa350754c7acbf239d3
+peval_sha256=d9fdbc77586311d90ad35c1a3ef35bed43bc7ff3a75e75f1f80b2666ad67d4db
 tasks_sha256=d9d905d425fd87cce9f49835cbce2922f44a5d71f4c5de64272d3e07c2b41378
 PASS split: SPLIT 16
 PASS split files: 38
@@ -45,4 +45,27 @@ PASS memory block only in arms B and C
 PASS prompt format of arm A: Task: Reply with exactly the word READY and nothing else.|Answer:|
 PASS agg: pair with a different id refused: 23
 PASS agg latency: n, p50 and p5 tokens/s x1000 (nearest rank): T A 3 20000 10000
+PASS split refuses a task without a scorer: 22
+PASS split refuses compile_run without expect_stdout: 22
+PASS split refuses compile_run without expect_exit: 22
+PASS split refuses an unknown scorer type: 22
+PASS split refuses a regex scorer with neither must nor must_not: 22
+PASS split refuses an empty legacy scorer: 22
+PASS split keeps a compile_run with explicitly empty stdout: SPLIT 1
+PASS rx dot does not match a newline: RX fail 0/1 0/0 rc0
+PASS rx dot matches another byte: RX pass 1/1 0/0 rc0
+PASS rx dollar matches before a final newline: RX pass 1/1 0/0 rc0
+PASS rx dollar does not match before an inner newline: RX fail 0/1 0/0 rc0
+PASS rx unsupported escape \A refused:  rc22
+PASS rx lookahead holding \d refused:  rc22
+PASS rx class escape  refused:  rc22
+PASS rx escaped punctuation in a lookahead kept: RX fail 0/1 0/0 rc0
+PASS rx backreference refused:  rc22
+PASS a program killed by the 5 s timeout fails (why=omc5)
+PASS a timed-out program fails even when the task expects exit 124 (why=omc5)
+PASS a real exit status of 142 (above 128) is scored from bwrap's exit-code
+PASS leak email count: name_@ (underscore before @) detected: 1
+PASS leak email count: name+@ (plus before @) detected: 1
+PASS leak email count: plain address detected: 1
+PASS leak email count: a bare @ is not an email: 0
 HARNESS_PASS

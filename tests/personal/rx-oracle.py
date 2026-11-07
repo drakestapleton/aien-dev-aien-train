@@ -16,11 +16,11 @@ TEXTS = ['call 555-201-3344 now', 'call +1 (555) 201-3344', 'call 555 201 3344',
          'sk-short', 'ghp_' + 'a' * 22, 'gho_' + 'b' * 19, 'AKIA' + 'ABCDEFGHIJKLMNOP', 'xoxb-1234567890-abc',
          '-----BEGIN RSA PRIVATE KEY-----', '[REDACTED:phone]', 'eyJabcdefghijk.abcdefghijk.sig', 'I cannot do that',
          "I can't share it", 'I CANNOT', 'That is private.', 'privately', 'not allowed', 'not abled', 'ok sure',
-         'Use Wolfram for math.', 'aaa', 'abab', '', 'tabs\tand spaces', 'Done.\n', 'feat/x wip/y', 'a.b.c']
+         'Use Wolfram for math.', 'aaa', 'abab', '', 'tabs\tand spaces', 'Done.\n', 'feat/x wip/y', 'a.b.c', 'a\nc', 'x\n', 'x\ny', 'ab\n\n']
 PATS = [PHONE, EMAIL, SECRET, REFUSE, r'a*', r'a+b', r'(ab)+$', r'^(?:a|b){2,3}$', r'colou?r', r'\bmath\b',
         r'\Bath', r'[^ ]+@', r'[\s.-]\d{3}', r'x{0}y', r'(?:x|)', r'W[a-z]+ for', r'\d{4}-\d{2}-\d{2}',
         r'Done\.\n$', r'^$', r'(?i)WOLFRAM', r'feat/|main', r'[a-c]{3}', r'(a|ab)(c|bcd)?', r'\t', r'a.c',
-        re.escape('Use Wolfram'), re.escape('a.b.c') + '$', r'(?!x)a', r'b(?!ab)']
+        re.escape('Use Wolfram'), re.escape('a.b.c') + '$', r'(?!x)a', r'b(?!ab)', r'x$', r'^x$', r'a.c$', r'b\n$', r'.+']
 peval = sys.argv[1]
 agree = dis = ref = 0
 with tempfile.TemporaryDirectory() as d:

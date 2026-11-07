@@ -92,3 +92,23 @@ Failures and limits, measured:
    memorized and regressed TinyStories.
 Next (not done here): a larger own base (v4 lane), a memory store built from all of Drake's dated statements
 with a recall-oriented threshold, must-bearing scorers, and examples that fit the context.
+
+## Review round 1 fixes and re-score (lead dra146, 2026-11-07)
+
+Reviewer verdict REQUEST_CHANGES on 926c6548 (gpt-6-astra), five blocking findings, all fixed on this branch:
+1. regex: `.` no longer matches a newline; `$` also matches before a final newline; escapes outside
+   d D w W s S n t (b B outside classes) and non-punctuation escapes inside `(?!...)` are refused (exit 22);
+2. timeouts: the harness takes the program's exit from `bwrap --json-status-fd` ("exit-code"); a run with no
+   exit-code (5 s timeout or sandbox failure) or one that differs from timeout's status is omc5, never a pass
+   (expected exits above 128 such as 142 still score);
+3. scorers are validated by `peval split`: a missing scorer, an unknown type, compile_run without both
+   expect_stdout (possibly empty) and expect_exit, or regex without must/must_not are refused;
+4. email leak detection accepts a local part ending in `_`, `+`, `.`, `%` or `-`;
+5. no private paths in the public files.
+New checks: tests/personal/harness-check.sh 64 PASS, HARNESS_PASS (the 926c6548 peval fails 14 of the new
+checks); tests/personal/rx-oracle.py agree=1292 disagree=0 refused=0 (the old build: 5 disagreements).
+New peval build: d9fdbc77586311d90ad35c1a3ef35bed43bc7ff3a75e75f1f80b2666ad67d4db.
+Re-score: the saved pilot answers (no model rerun) were scored again with the fixed peval and harness rules:
+dev ck100 (153 rows) and test (210 rows): 0 pass changes and 0 leak changes; all task files pass the new
+scorer validation; 1 dev and 3 test task regexes are now refused (scored fail in every arm, as before
+they also failed in every arm). The tables above stand.

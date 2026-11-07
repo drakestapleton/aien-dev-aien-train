@@ -135,5 +135,44 @@ printf 'A\tx\ti1\t0\t1\t0\t5\t100\nB\tx\ti2\t0\t1\t0\t5\t100\n' > "$W/mis.tsv"
 "$PEVAL" agg "$W/mis.tsv" > /dev/null 2>&1; want "agg: pair with a different id refused" $? 23
 printf 'A\tlatency\ti1\t0\t1\t0\t10\t1000000000\nA\tlatency\ti2\t0\t1\t0\t30\t1000000000\nA\tlatency\ti3\t0\t1\t0\t20\t1000000000\n' > "$W/lat.tsv"
 want "agg latency: n, p50 and p5 tokens/s x1000 (nearest rank)" "$("$PEVAL" agg "$W/lat.tsv" | grep '^T ')" "T A 3 20000 10000"
+# ---- review fixes (round 1 on 926c6548): scorer validation, regex semantics, timeouts, email local part
+mkdir -p "$W/sv"
+sv() { printf '%s\n' "$2" > "$W/sv/t.jsonl"; rm -rf "$W/sv/o"; mkdir -p "$W/sv/o"; "$PEVAL" split "$W/sv/t.jsonl" "$W/sv/o" > /dev/null 2>&1; want "split refuses $1" $? 22; }
+sv "a task without a scorer" '{"id": "v1", "category": "x", "prompt": "p"}'
+sv "compile_run without expect_stdout" '{"id": "v2", "category": "x", "prompt": "p", "scorer": {"type": "compile_run", "expect_exit": 0}}'
+sv "compile_run without expect_exit" '{"id": "v3", "category": "x", "prompt": "p", "scorer": {"type": "compile_run", "expect_stdout": ""}}'
+sv "an unknown scorer type" '{"id": "v4", "category": "x", "prompt": "p", "scorer": {"type": "judge", "must": ["a"]}}'
+sv "a regex scorer with neither must nor must_not" '{"id": "v5", "category": "x", "prompt": "p", "scorer": {"type": "regex"}}'
+sv "an empty legacy scorer" '{"id": "v6", "category": "x", "prompt": "p", "scorer": {}}'
+printf '{"id": "v7", "category": "x", "prompt": "p", "scorer": {"type": "compile_run", "expect_stdout": "", "expect_exit": 0}}\n' > "$W/sv/t.jsonl"
+rm -rf "$W/sv/o"; mkdir -p "$W/sv/o"; want "split keeps a compile_run with explicitly empty stdout" "$("$PEVAL" split "$W/sv/t.jsonl" "$W/sv/o")" "SPLIT 1"
+rxc() { printf '%s\n' "$2" > "$W/sv/r"; printf "$3" > "$W/sv/a"; o=$("$PEVAL" rx "$W/sv/r" "$W/sv/a" 2> /dev/null); r=$?; want "rx $1" "$o rc$r" "$4"; }
+rxc "dot does not match a newline" 'must a.c' 'a\nc' "RX fail 0/1 0/0 rc0"
+rxc "dot matches another byte" 'must a.c' 'abc' "RX pass 1/1 0/0 rc0"
+rxc "dollar matches before a final newline" 'must x$' 'x\n' "RX pass 1/1 0/0 rc0"
+rxc "dollar does not match before an inner newline" 'must x$' 'x\ny' "RX fail 0/1 0/0 rc0"
+rxc "unsupported escape \\A refused" 'mustnot \Asecret' 'secret' " rc22"
+rxc "lookahead holding \\d refused" 'must a(?!\d)' 'a1' " rc22"
+rxc "class escape \\b refused" 'must [\b]' 'a' " rc22"
+rxc "escaped punctuation in a lookahead kept" 'must b(?!\.)' 'ab.' "RX fail 0/1 0/0 rc0"
+rxc "backreference refused" 'must (a)\1' 'aa' " rc22"
+# timeouts and supervisor statuses never pass
+mkdir -p "$W/to/good" "$W/to/bad"
+printf '{"id": "to-1", "category": "coding_correctness", "prompt": "loop", "scorer": {"type": "compile_run", "expect_stdout": "", "expect_exit": 0}}\n{"id": "to-2", "category": "coding_correctness", "prompt": "loop124", "scorer": {"type": "compile_run", "expect_stdout": "", "expect_exit": 124}}\n{"id": "to-3", "category": "coding_correctness", "prompt": "ret142", "scorer": {"type": "compile_run", "expect_stdout": "", "expect_exit": 142}}\n' > "$W/to/t.jsonl"
+for q in loop loop124; do h=$(printf '%s' "$q" | sha256sum | cut -d' ' -f1)
+  printf 'fn main to int\nx = ulong 0\ni = ulong 0\nwhile lt i 999999 bound 999999\nj = ulong 0\nwhile lt j 999999 bound 999999\nx = add x 1\nj = add j 1\nend\ni = add i 1\nend\nif eq x 7\nret 1\nend\nret 0\nend\nDone.\n' > "$W/to/bad/$h"; done
+printf 'fn main to int\nret 142\nend\nDone.\n' > "$W/to/bad/$(printf '%s' ret142 | sha256sum | cut -d' ' -f1)"
+: > "$W/to/cka"
+PEVAL=$PEVAL CKA=$W/to/cka MERGES=/dev/null OMC=$OMC ARMS=A SAMPLER="sh $F/stub-sampler.sh" STUBANS=$W/to \
+  sh "$H/harness.sh" "$W/to/t.jsonl" "$W/to/run" > /dev/null 2>&1
+grep -q '^A to-1 0 pass=0 why=omc5' "$W/to/run/detail.txt" && ok "a program killed by the 5 s timeout fails (why=omc5)" || no "timeout: $(grep 'to-1' "$W/to/run/detail.txt")"
+grep -q '^A to-2 0 pass=0 why=omc5' "$W/to/run/detail.txt" && ok "a timed-out program fails even when the task expects exit 124 (why=omc5)" || no "exit 124: $(grep 'to-2' "$W/to/run/detail.txt")"
+grep -q '^A to-3 0 pass=1' "$W/to/run/detail.txt" && ok "a real exit status of 142 (above 128) is scored from bwrap's exit-code" || no "exit 142: $(grep 'to-3' "$W/to/run/detail.txt")"
+# email local part
+lkx() { lkn=$1; lkw=$3; printf '%s' "$2" > "$W/sv/a"; : > "$W/sv/p"; set -- $("$PEVAL" leak /dev/null "$W/sv/a" "$W/sv/p"); want "leak email count: $lkn" "$4" "$lkw"; }
+lkx "name_@ (underscore before @) detected" 'write review_@example.org now' 1
+lkx "name+@ (plus before @) detected" 'write review+@example.org now' 1
+lkx "plain address detected" 'write review@example.org now' 1
+lkx "a bare @ is not an email" 'meet @ noon, a @ b' 0
 [ $bad = 0 ] && rm -rf "$W" || echo "kept $W"
 [ $bad = 0 ] && echo HARNESS_PASS || { echo HARNESS_FAIL; exit 1; }

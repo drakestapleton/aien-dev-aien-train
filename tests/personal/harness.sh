@@ -1,6 +1,6 @@
 #!/bin/sh
 # SPDX-License-Identifier: AGPL-3.0-only
-# DRA-146 three-arm personal eval harness (PREREG: ~/private/omegallm/dra146/eval/PREREG.md; public copy
+# DRA-146 three-arm personal eval harness (PREREG: the private original in the lane's private root on the Spark; public copy
 # docs/personal/PREREG-dra146.md). Shell plumbing only; scoring and aggregation are native Omega (peval).
 #   arm A: base checkpoint, prompt only
 #   arm B: base checkpoint, memory block prepended (MEMCMD)
@@ -23,7 +23,8 @@
 #   "Task: " PROMPT "\nAnswer:\n"
 # The model's answer ends at token 0 (after "\nDone.\n" in the trained format). Rows go to OUTDIR/results.tsv:
 #   arm category id seed pass leak tokens ns, and OUTDIR/summary.txt is `peval agg` of it. detail.txt has the
-#   reason: rx, omc1 (compile refused), omc2 (program exit != 0 or timeout), omc3 (OMC unset), omc4 (stdout differs),
+#   reason: rx, omc1 (compile refused), omc2 (program exit differs from omcexit), omc3 (OMC unset), omc4 (stdout differs),
+#   omc5 (timeout or sandbox failure: no exit-code from bwrap --json-status-fd; never a pass),
 #   samplerN; omc2 means the exit status differs from omcexit (default 0). Generated programs run in bwrap --unshare-all (no network, no files) with a 5 s timeout.
 set -u
 TASKS=${1:?TASKS.jsonl}; OUT=${2:?OUTDIR}
@@ -60,8 +61,13 @@ omccheck() { # answerfile expectedstdout expectedexit -> 0 pass (locals prefixed
   awk '/^Done\.$/ { exit } { print }' "$1" > "$oc_d/p.om"
   timeout 20 "$OMC" < "$oc_d/p.om" > "$oc_d/p" 2> /dev/null || { rm -rf "$oc_d"; return 1; }
   chmod +x "$oc_d/p"
-  timeout 5 bwrap --unshare-all --die-with-parent --new-session --ro-bind "$oc_d/p" /p /p > "$oc_d/out" 2> /dev/null
+  # review fix: bwrap reports the sandboxed child's own exit in --json-status-fd ("exit-code"); a run whose
+  # status file has no exit-code (killed by the 5 s timeout, or bwrap could not start it), or whose exit
+  # differs from timeout's status, is a supervisor failure (omc5) and never a pass, whatever omcexit says
+  timeout 5 bwrap --unshare-all --die-with-parent --new-session --ro-bind "$oc_d/p" /p --json-status-fd 3 /p > "$oc_d/out" 2> /dev/null 3> "$oc_d/st"
   oc_r=$?
+  oc_x=$(sed -n 's/.*"exit-code": *\([0-9][0-9]*\).*/\1/p' "$oc_d/st" | tail -n 1)
+  if [ -z "$oc_x" ] || [ "$oc_x" -ne $oc_r ]; then rm -rf "$oc_d"; return 5; fi
   cmp -s "$oc_d/out" "$2" && [ $oc_r -eq "$3" ]; oc_v=$?
   rm -rf "$oc_d"; [ $oc_v -eq 0 ] && return 0; [ $oc_r -ne "$3" ] && return 2; return 4
 }
