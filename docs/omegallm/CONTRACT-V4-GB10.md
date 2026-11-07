@@ -3,7 +3,8 @@
 Source: [`native/omegallm/gpu/g4.om`](../../native/omegallm/gpu/g4.om) (header notes are normative),
 the v4 kernels in [`gpu/gr.om`](../../native/omegallm/gpu/gr.om) (slots 12, 17, 18, 60, 61, emitted only
 in v4 mode; every v3 slot keeps its code bytes, `gpu-disasm.sh` code_sha256 `f2628fda…` at the parity shape
-and `dd48823f…` at the max shape, as before), built by [`tests/omegallm/build.sh`](../../tests/omegallm/build.sh) `TARGET=gb10` (g4.om after
+and `dd48823f…` at the max shape, as before; the aarch64 CPU binary is byte-identical to
+feat/ollm-path-integ `63353c9`'s, sha256 `beecf5fa…`), built by [`tests/omegallm/build.sh`](../../tests/omegallm/build.sh) `TARGET=gb10` (g4.om after
 gg.om). Gates: [`tests/omegallm/v4-gb10-check.sh`](../../tests/omegallm/v4-gb10-check.sh). Receipts:
 [`evidence/OMEGALLM/v4/gb10/`](../../evidence/OMEGALLM/v4/gb10/). Compiler: omega-mv `e5b32567` omc
 (sha256 `2c824805…`). Raw NVIDIA driver through the vendored CUDApp `context.om`/`launch.om`; no CUDA,
@@ -150,6 +151,17 @@ per 1 GB CK save at T 1024 / 2048 / 4096, which a 20-min lease loses once):
 By the 6·P·tokens rule (attention excluded) the quiet T 1024 rate is 7.61 TFLOP/s on the chip, against
 the MEASURED v1 end-to-end 1.91 TFLOP/s that CONTRACT-V4's MODELED 13,718 tok/s assumed.
 
+**S1 training run (EXERCISED, not a quality claim)**: `ginit4` S1 T 1024 B 16 (seed 7, TOTAL 100000,
+lr 0.003), BF16 `gtrain4` on `tr40.u16` (10.1M tokens), head binary `a22f863e…`, non-quiet: leg 0 → 500
+in window g4-head10 (cut at 500 by the agent's own tool timeout after the step-500 save; the CK was
+intact and the next leg resumed from it), leg 500 → 1800 in window g4-s1leg1 `20261107T010920Z-b4c02e`:
+1300 steps, 21,299,200 tokens in 746.5 s of steps (28,530 tok/s sustained, Wolfram), saved every 250
+steps, no non-finite loss. Step losses 10.40 (ln 32768) → 6.307 (100) → 5.128 (500) → 4.974 (1000) →
+5.294 (1800, one batch each); chip `geval4` of ck1800 on the held-out `va4.u16` (first 4 MB of
+~/data-omega/base/val.txt), W 256: `E 1800 256 5252572 0` (5.252572 nats; bpb 0: no OLLMTOK1 decoder
+in the v3 loader), `s1run/`. The loss flattens after ~500 steps at this lr and on 2.9 passes over a
+10M-token file; schedule and data are the lead's to choose.
+
 ## 5. Limits found
 
 - `context.om` `nvalloc` zero-fills a new allocation with a `while` of 16 KiB `mapwrite`s under the
@@ -170,8 +182,8 @@ product plus `smoke/` and `prof/`. Rerun: `sh tests/omegallm/v4-gb10-check.sh bu
 
 ## 7. NOT_RUN
 
-- A long S1 training run and its held-out eval; `geval4` at V 32768 with OLLMTOK1 text decoding (the
-  v3 BPE loader holds ≤ 4096 tokens).
+- A long S1 training run (only the 1800-step run above); `geval4` bits per byte at V 32768 (needs an
+  OLLMTOK1 decoder in eval; the v3 BPE loader holds ≤ 4096 tokens).
 - CPU parity at V 32768 D 512 (CPU v4 refuses V·D > OWC until the wide4 window change; the S1-width
   gate uses V 16384).
 - x86 targets (gb10 only).
