@@ -4,6 +4,8 @@ note checkpoint. tools/omegallm/wprobe/build.sh appends it to ollm.om with that 
 note Commands (argument 1):
 note  gen CK MERGES NN FILE [K L I A]...  greedy decode (TEMPMILLI 0 of `ollm sample`) of every record
 note  probe CK MERGES FILE [K L I A]...   teacher-forced answer; readout at the first divergence
+note  save CK OUT [K L I A]...  rank META PROBE  controls CK SEED [K L I A]...
+note  survive BASE EDIT BASE1 EDIT1 [EDIT2]  rng SEED N  (each described at its function)
 note FILE: records, each ended by byte 0; a record is PROMPT, optionally byte 31 and the expected
 note ANSWER (probe needs it). The context is token 0, the prompt's encoding, then (probe) the
 note answer's encoding, as cmdsamp builds it; the answer starts a pre-tokenizer chunk, so the two
@@ -29,7 +31,8 @@ note  N l f the 16 largest |neuron parts| of each MLP; A l n j p tok the 4 most 
 note  the 6 heads with the largest |part|. A part of a residual stream term x is
 note  sum_c x[c] gf[c] (wte[a][c] - wte[b][c]) / s with s the final rms of the row, so the parts sum
 note  to LD. Values print with 4 decimals.
-note Exits: 2 usage, 60 layout, 61 file or record too long, 62 context full (T tokens).
+note Exits: 2 usage, 60 layout, 61 file or record too long, 62 context full (T tokens); the other
+note commands' codes are listed at their functions.
 
 global wzh ulong 256
 global wzhn ulong 1
@@ -41,8 +44,48 @@ global wzc f64 256
 global wzm f64 64
 global wzk ulong 16
 global wzr f64 16
+note rank state. wrs: 0 probe bytes, 1 cursor, 2 failure rows, 3 failures predicting ".", 4 other
+note divergences, 5 records, 6 current record is a failure row, 7 head keys, 8 neuron keys, 9 meta end,
+note 10 buffer end, 11 meta rows. Keys: head l*64+n, neuron l*4096+f, MLP l (l < 16).
+global wrs ulong 16
+global wrm ulong 1024
+global wrl ulong 1024
+global wrx ulong 1024
+global wrq f64 4
+global wrh f64 1024
+global wrhl ulong 1024
+global wrhs ulong 1024
+global wrn f64 65536
+global wrnl ulong 65536
+global wrns ulong 65536
+global wrmm f64 16
+global wrmu ulong 16
+global wrk ulong 65536
+text wt0 "target "
+text wt1 "control "
+text wt2 " | "
+text wt3 "digit-copy failure rows "
+text wt4 " (pred \".\" "
+text wt5 ", pred digit "
+text wt6 "); other divergences "
+text wt7 "mean logit gap "
+text wt8 "heads by mean part (top 8):"
+text wt9 "heads by mean part (bottom 4):"
+text wta "MLP mean part:"
+text wtb "neurons by mean part (most negative 32):"
+text wtc "neurons by mean part (most positive 8):"
+text wtd "H-control-"
+text wte " H gen"
+global wcr ulong 1
+global wmt ulong 624
+global wcu ulong 64
+global wcs ulong 4
+global wsf long 8
+global wsa f64 4
+global wsn ulong 2
+global wsb uchar 2097152
 
-note argument 1: 1 gen, 2 probe, 3 save, else 0
+note argument 1: 1 gen, 2 probe, 3 save, 4 rank, 5 controls, 6 survive, 7 rng, else 0
 fn wzcmd to ulong
 n = oargp 1
 c = get oarg 0
@@ -54,6 +97,18 @@ ret 2
 end
 if and eq n 4 eq c 115
 ret 3
+end
+if and eq n 4 eq c 114
+ret 4
+end
+if and eq n 8 eq c 99
+ret 5
+end
+if and eq n 7 eq c 115
+ret 6
+end
+if and eq n 3 eq c 114
+ret 7
 end
 ret 0
 end
@@ -71,8 +126,24 @@ if eq c 2
 wzprbc
 ret 0
 end
+if eq c 5
+wctlc
+ret 0
+end
+if eq c 6
+wsurvc
+ret 0
+end
+if eq c 7
+wrngc
+ret 0
+end
 if eq c 3
 wzsavec
+ret 0
+end
+if eq c 4
+wrankc
 ret 0
 end
 exit 2
@@ -808,5 +879,958 @@ oputc 34
 wzputt get obx j2
 oputc 34
 oputc 10
+end
+end
+
+note rank META PROBE: META has lines `idx role length kind` (role target or control), PROBE is `wprobe
+note probe` output for the same records. Prints PROBE's name, then the exact counts (div = -1) by role
+note and length; then over the digit-copy failure rows (expected a digit byte 48 .. 57, predicted "." 46
+note or a digit): their count, the mean logit gap, the mean head parts (top 8, bottom 4), the mean MLP
+note parts, the mean neuron parts (most negative 32, most positive 8; a neuron outside a row's top 16
+note counts 0 there). Means accumulate v/n in file order and ties keep first appearance, as the earlier
+note rank.py did, so its output is reproduced. Exits: 2 usage, 61 file too long, 65 PROBE and META
+note disagree on the record count.
+fn wrankc to void
+if ne oargc 4
+exit 2
+end
+nb = oprd 3 0 0 1900000
+if ge nb 1900000
+exit 61
+end
+nm = oprd 2 0 1900000 190000
+if ge nm 190000
+exit 61
+end
+put wrs 1 1900000
+put wrs 10 add 1900000 nm
+wrmeta
+put wrs 1 0
+put wrs 10 nb
+wrpas1
+wrline1
+wrline2
+if gt get wrs 2 0
+put wrs 1 0
+wrpas2
+wrtail
+end
+oflush
+end
+
+note the byte at the cursor, 0 past the end
+fn wrc to ulong
+p = get wrs 1
+if ge p get wrs 10
+ret 0
+end
+ret ulong get opw p
+end
+
+fn wradv to void
+put wrs 1 add get wrs 1 1
+end
+
+fn wrdig to bool
+c = wrc
+ret and ge c 48 le c 57
+end
+
+note true at a space, a newline or the end
+fn wrws to bool
+c = wrc
+ret or or eq c 32 eq c 10 eq c 0
+end
+
+fn wrsp to void
+while eq wrc 32 bound 999999
+wradv
+end
+end
+
+note past the next newline
+fn wreol to void
+while lt get wrs 1 get wrs 10 bound 999999
+c = wrc
+wradv
+if eq c 10
+ret
+end
+end
+end
+
+note a signed decimal integer
+fn wrint to long
+wrsp
+ng = eq wrc 45
+if ng
+wradv
+end
+v = long 0
+while wrdig bound 999999
+v = add mul v 10 long sub wrc 48
+wradv
+end
+if ng
+ret neg v
+end
+ret v
+end
+
+note a signed decimal with at most 4 decimals, in units of 1e-4
+fn wrdec to long
+wrsp
+ng = eq wrc 45
+if ng
+wradv
+end
+v = long 0
+while wrdig bound 999999
+v = add mul v 10 long sub wrc 48
+wradv
+end
+k = ulong 0
+if eq wrc 46
+wradv
+while wrdig bound 999999
+if lt k 4
+v = add mul v 10 long sub wrc 48
+k = add k 1
+end
+wradv
+end
+end
+while lt k 4 bound 5
+v = mul v 10
+k = add k 1
+end
+if ng
+ret neg v
+end
+ret v
+end
+
+note META lines: idx role length kind; role 1 target, 2 otherwise
+fn wrmeta to void
+n = ulong 0
+while lt get wrs 1 get wrs 10 bound 999999
+if wrdig
+i = ulong wrint
+if ge i 1024
+exit 61
+end
+wrsp
+r = ulong 2
+if eq wrc 116
+r = ulong 1
+end
+while not wrws bound 999999
+wradv
+end
+put wrm i r
+put wrl i ulong wrint
+n = add n 1
+end
+wreol
+end
+put wrs 11 n
+end
+
+note pass 1: per record exact (1), digit-copy failure row (2) or other divergence (3)
+fn wrpas1 to void
+while lt get wrs 1 get wrs 10 bound 999999
+if eq wrc 82
+wradv
+wrrec1
+end
+wreol
+end
+end
+
+fn wrrec1 to void
+i = ulong wrint
+if ge i 1024
+exit 61
+end
+a = wrint
+a = wrint
+d = wrint
+put wrs 5 add get wrs 5 1
+if lt d 0
+put wrx i 1
+ret
+end
+e = wrint
+p = wrint
+dg = and ge e 48 le e 57
+pd = or eq p 46 and ge p 48 le p 57
+if and dg pd
+put wrx i 2
+put wrs 2 add get wrs 2 1
+if eq p 46
+put wrs 3 add get wrs 3 1
+end
+ret
+end
+put wrx i 3
+put wrs 4 add get wrs 4 1
+end
+
+fn wrps k ulong to void
+if eq k 0
+for i ulong len wt0
+oputc ulong get wt0 i
+end
+end
+if eq k 1
+for i1 ulong len wt1
+oputc ulong get wt1 i1
+end
+end
+if eq k 2
+for i2 ulong len wt2
+oputc ulong get wt2 i2
+end
+end
+if eq k 3
+for i3 ulong len wt3
+oputc ulong get wt3 i3
+end
+end
+if eq k 4
+for i4 ulong len wt4
+oputc ulong get wt4 i4
+end
+end
+if eq k 5
+for i5 ulong len wt5
+oputc ulong get wt5 i5
+end
+end
+if eq k 6
+for i6 ulong len wt6
+oputc ulong get wt6 i6
+end
+end
+wrps2 k
+end
+
+fn wrps2 k ulong to void
+if eq k 7
+for i ulong len wt7
+oputc ulong get wt7 i
+end
+end
+if eq k 8
+for i1 ulong len wt8
+oputc ulong get wt8 i1
+end
+end
+if eq k 9
+for i2 ulong len wt9
+oputc ulong get wt9 i2
+end
+end
+if eq k 10
+for i3 ulong len wta
+oputc ulong get wta i3
+end
+end
+if eq k 11
+for i4 ulong len wtb
+oputc ulong get wtb i4
+end
+end
+if eq k 12
+for i5 ulong len wtc
+oputc ulong get wtc i5
+end
+end
+end
+
+note rows of role r and length l (99: any length); ex 1 counts exact rows only
+fn wrcnt r ulong l ulong ex ulong to ulong
+k = ulong 0
+for i ulong 1024
+if eq get wrm i r
+if or eq l 99 eq get wrl i l
+if or eq ex 0 eq get wrx i 1
+k = add k 1
+end
+end
+end
+end
+ret k
+end
+
+note `target p/t (L6 a/b L7 c/d ...)`
+fn wrrole r ulong to void
+wrps sub r 1
+oputu wrcnt r 99 1
+oputc 47
+oputu wrcnt r 99 0
+oputc 32
+oputc 40
+f = true
+for l ulong 64
+t = wrcnt r l 0
+if gt t 0
+if not f
+oputc 32
+end
+f = false
+oputc 76
+oputu l
+oputc 32
+oputu wrcnt r l 1
+oputc 47
+oputu t
+end
+end
+oputc 41
+end
+
+fn wrline1 to void
+if ne get wrs 5 get wrs 11
+exit 65
+end
+n = oargp 3
+for i ulong n
+oputc ulong get oarg i
+end
+wrps 2
+wrrole 1
+wrps 2
+wrrole 2
+oputc 10
+end
+
+fn wrline2 to void
+wrps 3
+oputu get wrs 2
+wrps 4
+oputu get wrs 3
+wrps 5
+oputu sub get wrs 2 get wrs 3
+wrps 6
+oputu get wrs 4
+oputc 10
+end
+
+note pass 2: sums over the failure rows; wrs 6 says whether the current record is one
+fn wrpas2 to void
+n = f64 get wrs 2
+while lt get wrs 1 get wrs 10 bound 999999
+c = wrc
+if eq c 82
+wradv
+i = ulong wrint
+put wrs 6 0
+if eq get wrx i 2
+put wrs 6 1
+end
+end
+if eq get wrs 6 1
+wrpart c n
+end
+wreol
+end
+end
+
+note one LD, H, M or N line of a failure row
+fn wrpart c ulong n f64 to void
+if eq c 76
+wradv
+wradv
+v = wrdec
+put wrq 0 add get wrq 0 div f64 v 10000.0
+end
+if eq c 72
+wradv
+wrhadd n
+end
+if eq c 77
+wradv
+l = ulong wrint
+if ge l 16
+exit 61
+end
+v2 = wrdec
+put wrmu l 1
+put wrmm l add get wrmm l div div f64 v2 10000.0 n
+end
+if eq c 78
+wradv
+wrnadd n
+end
+end
+
+fn wrhadd n f64 to void
+l = ulong wrint
+h = ulong wrint
+v = wrdec
+if or ge l 16 ge h 64
+exit 61
+end
+k = add mul l 64 h
+if eq get wrhs k 0
+put wrhs k 1
+put wrhl get wrs 7 k
+put wrs 7 add get wrs 7 1
+end
+put wrh k add get wrh k div div f64 v 10000.0 n
+end
+
+fn wrnadd n f64 to void
+l = ulong wrint
+f = ulong wrint
+v = wrdec
+if or ge l 16 ge f 4096
+exit 61
+end
+k = add mul l 4096 f
+if eq get wrns k 0
+put wrns k 1
+put wrnl get wrs 8 k
+put wrs 8 add get wrs 8 1
+end
+put wrn k add get wrn k div div f64 v 10000.0 n
+end
+
+fn wrtail to void
+wrps 7
+wzpf div get wrq 0 f64 get wrs 2
+oputc 10
+wrps 8
+wrsel 0 8 1
+oputc 10
+wrps 9
+wrsel 0 4 0
+oputc 10
+wrps 10
+for l ulong 16
+if eq get wrmu l 1
+oputc 32
+oputu l
+oputc 58
+wrpf3 get wrmm l
+end
+end
+oputc 10
+wrps 11
+wrsel 1 32 0
+oputc 10
+wrps 12
+wrsel 1 8 1
+oputc 10
+end
+
+note the key at list position j: heads (kd 0) or neurons (kd 1)
+fn wrkey kd ulong j ulong to ulong
+if eq kd 0
+ret get wrhl j
+end
+ret get wrnl j
+end
+
+fn wrval kd ulong k ulong to f64
+if eq kd 0
+ret get wrh k
+end
+ret get wrn k
+end
+
+note ds 1 when v ranks above b in a descending order, else in an ascending one
+fn wrbet v f64 b f64 ds ulong to bool
+if eq ds 1
+ret gt v b
+end
+ret lt v b
+end
+
+note the untaken list position with the best value, the first on ties; nk when none
+fn wrbest kd ulong nk ulong ds ulong to ulong
+bi = nk
+bv = 0.0f64
+for j ulong nk
+if eq get wrk j 0
+v = wrval kd wrkey kd j
+if or eq bi nk wrbet v bv ds
+bi = j
+bv = v
+end
+end
+end
+ret bi
+end
+
+note the first k keys in order (ds 1 descending), each ` l.i:+x.xxx`
+fn wrsel kd ulong k ulong ds ulong to void
+nk = get wrs 7
+w = ulong 64
+if eq kd 1
+nk = get wrs 8
+w = ulong 4096
+end
+for j ulong nk
+put wrk j 0
+end
+for q ulong k
+b = wrbest kd nk ds
+if lt b nk
+put wrk b 1
+key = wrkey kd b
+oputc 32
+oputu div key w
+oputc 46
+oputu rem key w
+oputc 58
+wrpf3 wrval kd key
+end
+end
+end
+
+note x as %+.3f
+fn wrpf3 x f64 to void
+y = x
+if lt y 0.0
+oputc 45
+y = neg y
+else
+oputc 43
+end
+q = ulong add mul y 1000.0 0.5
+oputu div q 1000
+oputc 46
+f = rem q 1000
+oputc add 48 div f 100
+oputc add 48 rem div f 10 10
+oputc add 48 rem f 10
+end
+
+note rng SEED N: the first N 32-bit outputs of MT19937 seeded as CPython's random.Random(SEED) seeds it
+note (init_by_array with the one key word SEED, SEED < 2^32). The controls command draws from it.
+fn wrngc to void
+if ne oargc 4
+exit 2
+end
+wmseed oargu 2
+n = oargu 3
+for i ulong n
+oputu wmgen
+oputc 10
+end
+oflush
+end
+
+fn wminit s ulong to void
+put wmt 0 s
+for i ulong 623
+p = get wmt i
+put wmt add i 1 and add mul 1812433253 xor p shr p 30 add i 1 4294967295
+end
+end
+
+note init_by_array with the key [s]; exit 2 when s needs more than 32 bits
+fn wmseed s ulong to void
+if gt s 4294967295
+exit 2
+end
+wminit 19650218
+i = ulong 1
+for k ulong 624
+p = get wmt sub i 1
+put wmt i and add xor get wmt i mul xor p shr p 30 1664525 s 4294967295
+i = wmwrap add i 1
+end
+for k2 ulong 623
+p2 = get wmt sub i 1
+put wmt i and sub xor get wmt i mul xor p2 shr p2 30 1566083941 i 4294967295
+i = wmwrap add i 1
+end
+put wmt 0 2147483648
+put wcr 0 624
+end
+
+note i, or 1 after copying mt[623] to mt[0] when i reached 624
+fn wmwrap i ulong to ulong
+if lt i 624
+ret i
+end
+put wmt 0 get wmt 623
+ret 1
+end
+
+note the next tempered 32-bit output
+fn wmgen to ulong
+if ge get wcr 0 624
+wmtwist
+end
+i = get wcr 0
+put wcr 0 add i 1
+y = get wmt i
+y = xor y shr y 11
+y = xor y and shl y 7 2636928640
+y = xor y and shl y 15 4022730752
+ret xor y shr y 18
+end
+
+fn wmtwist to void
+for k ulong 624
+y = or and get wmt k 2147483648 and get wmt rem add k 1 624 2147483647
+v = xor get wmt rem add k 397 624 shr y 1
+if eq and y 1 1
+v = xor v 2567483615
+end
+put wmt k v
+end
+put wcr 0 0
+end
+
+note CPython's _randbelow(m): k = bit length of m, draw getrandbits(k) = output >> (32 - k) until < m
+fn wcbelow m ulong to ulong
+k = ulong 0
+while gt shr m k 0 bound 64
+k = add k 1
+end
+for i ulong 100000
+x = shr wmgen sub 32 k
+if lt x m
+ret x
+end
+end
+exit 66
+end
+
+note controls CK SEED [K L I A]...: PREREG section 6 item 5. K is 1 (wo rows of head I of layer L)
+note or 2 (w2 row I of layer L). For each kind present (1 then 2) one unit of the same layer is drawn
+note per selected group (MT19937 as random.Random(SEED); a unit selected or already drawn for that kind is
+note redrawn), and one common scale A' per kind is solved so the Frobenius norm of the change equals
+note the selected one's: |A/1000 - 1| sqrt(sum of squared entries of the scaled rows), on the same side
+note of 1. A' is rounded to thousandths, the realised norm recomputed and required within 1%.
+note Prints per kind `# KIND TARGET REALISED A'`, then the arm line
+note `H-control-SEED H gen K L I A' ... 5 0 0 0`.
+note Exits: 2 usage or a selection mixing sides of 1, 60 layout, 66 norm not matched or A' above 4000.
+fn wctlc to void
+if lt oargc 8
+exit 2
+end
+ockload 2
+l = get og 5
+if or ne get og 35 l ne get og 38 l
+exit 60
+end
+wmseed oargu 3
+put wcs 3 oargu 3
+n = sub oargc 4
+if ne rem n 4 0
+exit 2
+end
+g = div n 4
+if gt g 64
+exit 2
+end
+put wzhn 0 g
+for i ulong g
+for j ulong 4
+put wzh add mul i 4 j oargu add 4 add mul i 4 j
+end
+wzhchk i
+k = get wzh mul i 4
+if or lt k 1 gt k 2
+exit 2
+end
+end
+put wcs 0 0
+wctk 1
+wctk 2
+wcarm
+oflush
+end
+
+note sum of squared entries of unit x of layer l: wo rows of a head (kd 1) or a w2 row (kd 2)
+fn wcsq kd ulong l ulong x ulong to f64
+d = get og 2
+o = add opw2 l mul x d
+n = d
+if eq kd 1
+e = get og 7
+o = add opwo l mul mul x e d
+n = mul e d
+end
+s = 0.0f64
+for i ulong n
+v = owg add o i
+s = add s mul v v
+end
+ret s
+end
+
+note 1 above 1000, else 2; exit 2 when groups of kind kd disagree
+fn wcside kd ulong to ulong
+sd = ulong 0
+for i ulong get wzhn 0
+q = mul i 4
+if eq get wzh q kd
+s = ulong 2
+if gt get wzh add q 3 1000
+s = ulong 1
+end
+if eq sd 0
+sd = s
+end
+if ne sd s
+exit 2
+end
+end
+end
+ret sd
+end
+
+fn wctk kd ulong to void
+sd = wcside kd
+if eq sd 0
+ret
+end
+tg = 0.0f64
+for i ulong get wzhn 0
+q = mul i 4
+if eq get wzh q kd
+d = sub div f64 get wzh add q 3 1000.0 1.0
+tg = add tg mul mul d d wcsq kd get wzh add q 1 get wzh add q 2
+end
+end
+tg = fsqrt tg
+ss = 0.0f64
+for i2 ulong get wzhn 0
+q2 = mul i2 4
+if eq get wzh q2 kd
+l = get wzh add q2 1
+c = wcpick kd l
+ss = add ss wcsq kd l c
+end
+end
+wcfin kd tg fsqrt ss sd
+end
+
+note draw an untaken unit of layer l for kind kd and record it
+fn wcpick kd ulong l ulong to ulong
+m = get og 3
+if eq kd 2
+m = get og 4
+end
+for t ulong 100000
+c = wcbelow m
+if not wctaken kd l c
+n = get wcs 0
+put wcu n add add shl kd 32 shl l 16 c
+put wcs 0 add n 1
+ret c
+end
+end
+exit 66
+end
+
+fn wctaken kd ulong l ulong c ulong to bool
+for i ulong get wzhn 0
+if wzhmat i kd l c
+ret true
+end
+end
+key = add add shl kd 32 shl l 16 c
+for j ulong get wcs 0
+if eq get wcu j key
+ret true
+end
+end
+ret false
+end
+
+note scale for kind kd from target norm tg and the drawn rows' root sum of squares r
+fn wcfin kd ulong tg f64 r f64 sd ulong to void
+x = div tg r
+if eq sd 2
+x = neg x
+end
+y = mul 1000.0 add 1.0 x
+if lt y -0.5
+exit 66
+end
+a = ulong add y 0.5
+if gt a 4000
+exit 66
+end
+rl = mul fabs sub div f64 a 1000.0 1.0 r
+if gt fabs sub rl tg mul 0.01 tg
+exit 66
+end
+put wcs kd a
+oputc 35
+oputc 32
+oputu kd
+oputc 32
+wzpf tg
+oputc 32
+wzpf rl
+oputc 32
+oputu a
+oputc 10
+end
+
+fn wcarm to void
+for i ulong len wtd
+oputc ulong get wtd i
+end
+oputu get wcs 3
+for i2 ulong len wte
+oputc ulong get wte i2
+end
+for j ulong get wcs 0
+key = get wcu j
+kd = shr key 32
+oputc 32
+oputu kd
+oputc 32
+oputu and shr key 16 65535
+oputc 32
+oputu and key 65535
+oputc 32
+oputu get wcs kd
+end
+oputc 32
+oputc 53
+for q ulong 3
+oputc 32
+oputc 48
+end
+oputc 10
+end
+
+note survive BASE EDIT BASE1 EDIT1 [EDIT2]: PREREG section 9. Over the parameters where EDIT differs
+note from BASE, d0 = EDIT - BASE and d1 = EDIT1 - BASE1 (both after one training step); prints
+note `S changed N survival <d1,d0>/<d0,d0> maxrel max |d1 - d0| / |d0|` with 9 decimals. EDIT2 (an
+note edit saved under another optimizer policy) must have EDIT's parameters exactly, else exit 67.
+note The checkpoints stream in chunks of 32768 parameters; all must carry BASE's header word 12 (P).
+note Exits: 2 usage, 61 short read, 67 parameter count mismatch or EDIT2 differs, 68 nothing changed,
+note 70 open error.
+fn wsurvc to void
+if or lt oargc 6 gt oargc 7
+exit 2
+end
+nf = sub oargc 2
+for f ulong nf
+n = oargp add f 2
+fd = long int fopen oarg 0 n 0 0
+if lt fd 0
+exit 70
+end
+put wsf f fd
+end
+p = wsp12 0
+for f2 ulong nf
+if ne wsp12 f2 p
+exit 67
+end
+end
+c = ulong 0
+while lt c p bound 999999
+m = sub p c
+if gt m 32768
+m = ulong 32768
+end
+for f3 ulong nf
+wsread f3 add 120 mul c 8 mul m 8
+end
+for i ulong m
+wsone i nf
+end
+c = add c m
+end
+if eq get wsn 0 0
+exit 68
+end
+oputc 83
+wzsp
+oputu get wsn 0
+wzsp
+wspf9 div get wsa 0 get wsa 1
+wzsp
+wspf9 get wsa 2
+oputc 10
+oflush
+end
+
+note header word 12 (P) of file f
+fn wsp12 f ulong to ulong
+wsread f 96 8
+ret wsw f 0
+end
+
+note n bytes of file f from byte pos into wsb at f * 262144
+fn wsread f ulong pos ulong n ulong to void
+fd = int get wsf f
+o = mul f 262144
+k = ulong 0
+while lt k n bound 999999
+r = pread fd wsb add o k sub n k long add pos k
+if le r 0
+exit 61
+end
+k = add k ulong r
+end
+end
+
+note the 8 bytes of chunk entry i of file f as a little-endian word
+fn wsw f ulong i ulong to ulong
+o = add mul f 262144 mul i 8
+x = ulong 0
+for k ulong 8
+x = or x shl ulong get wsb add o k mul k 8
+end
+ret x
+end
+
+note parameter i of the chunk of file f
+fn wsd f ulong i ulong to f64
+ret bitcast f64 wsw f i
+end
+
+fn wsone i ulong nf ulong to void
+b = wsd 0 i
+e = wsd 1 i
+if eq nf 5
+if ne wsd 4 i e
+exit 67
+end
+end
+if ne b e
+d0 = sub e b
+d1 = sub wsd 3 i wsd 2 i
+put wsa 0 add get wsa 0 mul d1 d0
+put wsa 1 add get wsa 1 mul d0 d0
+r = div fabs sub d1 d0 fabs d0
+put wsa 2 fmax get wsa 2 r
+put wsn 0 add get wsn 0 1
+end
+end
+
+note x with 9 decimals
+fn wspf9 x f64 to void
+y = x
+if lt y 0.0
+oputc 45
+y = neg y
+end
+if gt y 1.0e9
+y = 1.0e9f64
+end
+q = ulong add mul y 1000000000.0 0.5
+oputu div q 1000000000
+oputc 46
+f = rem q 1000000000
+d = ulong 100000000
+for k ulong 9
+oputc add 48 rem div f d 10
+d = div d 10
 end
 end
