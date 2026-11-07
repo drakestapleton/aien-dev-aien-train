@@ -8,6 +8,8 @@
 #   thousandths, default 700), HARNESS (the harness lane's tests/omegallm/harness dir on feat/ollm-harness;
 #   with VERIFY, its verify binary, the private held-out harness tasks HOLDOUT/harness-test.txt run through its
 #   run.sh against http://HOST:PORT/v1 with proxy port HPPORT, default 18298; else harness rows are NOT_RUN).
+#   DEVN (dry runs only): keep the first DEVN own dev items, round-robin over roles, lines verbatim; the
+#   receipt says so and a subset is never a gated result.
 # Arms: t0 (temperature 0, seed 1: the gated arm) and s1..sREPEATS (temperature STEMP, seed k).
 # Every number is printed by the .om runner (`accept sum`, `accept pair`); this driver only assembles the
 # suite, checks its frozen hashes and starts the workers.
@@ -25,7 +27,11 @@ mkdir -p "$OUT/suite"
 : > "$OUT/suite/items.jsonl"
 for sp in $SPLITS; do
   case $sp in
-    train|dev) cat "$D/suite/items-$sp.jsonl" >> "$OUT/suite/items.jsonl" ;;
+    train) cat "$D/suite/items-$sp.jsonl" >> "$OUT/suite/items.jsonl" ;;
+    dev) if [ -n "${DEVN:-}" ]; then # a dry-run subset: the first DEVN items taken round-robin over roles, lines verbatim
+           jq -r '.role' "$D/suite/items-dev.jsonl" | awk -v n="$DEVN" '{k[$1]++; print k[$1], NR}' | sort -n -k1,1 -k2,2 |
+             head -n "$DEVN" | cut -d' ' -f2 | sort -n | awk 'NR == FNR {w[$1] = 1; next} FNR in w' - "$D/suite/items-dev.jsonl" >> "$OUT/suite/items.jsonl"
+         else cat "$D/suite/items-dev.jsonl" >> "$OUT/suite/items.jsonl"; fi ;;
     test) want=$(grep ' items-test.jsonl$' "$D/suite/HOLDOUT.sha256" | cut -c1-64); got=$(sha256sum "$HOLDOUT/items-test.jsonl" | cut -c1-64)
           [ "$want" = "$got" ] || { echo "holdout hash mismatch: $got != $want" >&2; exit 4; }
           cat "$HOLDOUT/items-test.jsonl" >> "$OUT/suite/items.jsonl"
@@ -41,6 +47,7 @@ chmod -R go-rwx "$OUT"
 { echo "accept $(sha256sum "$ACCEPT" | cut -c1-64)"; echo "omc $(sha256sum "$OMC" | cut -c1-64)"
   echo "prereg $(sha256sum "$D/PREREG.md" | cut -c1-64)"; echo "thresholds $(sha256sum "$D/suite/thresholds.tsv" | cut -c1-64)"
   echo "endpoint $HOST:$PORT model $MODEL splits $SPLITS public ${PUBLIC:-1} workers $NW repeats $REPEATS stemp $STEMP"
+  [ -n "${DEVN:-}" ] && echo "devn $DEVN (dry-run subset, not the pre-registered suite) items $(sha256sum "$OUT/suite/items.jsonl" | cut -c1-64)"
   echo "start $(date -u +%Y-%m-%dT%H:%M:%SZ)"; } > "$OUT/receipt.txt"
 comb() { # verdict codes: FAIL 1 beats NOT_RUN 3 beats PASS 0
   if [ "$1" = 1 ] || [ "$2" = 1 ]; then echo 1; elif [ "$1" = 3 ] || [ "$2" = 3 ]; then echo 3; else echo "$2"; fi; }
