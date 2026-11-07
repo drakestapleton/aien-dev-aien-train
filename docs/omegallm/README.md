@@ -200,6 +200,15 @@ connections before each token); without it they are 400.
   A stream holds back a possible marker and sends the calls in one delta chunk. Role `tool`
   messages are rendered like any other role. Whether the model emits such blocks is a model
   matter; the checks script the output with `ollm_test_output`.
+- `POST /v1/completions` (raw prompt, for the Omega Node edit→verify→review workflow): `prompt`
+  (a non-empty string) is the whole template: the context is token 0 plus the prompt's encoding,
+  with no role lines and no `assistant: ` prefix, so the same SEED and TEMPMILLI give
+  `ollm sample CK SEED N TEMPMILLI PROMPT MERGES`'s bytes. The scalar members are chat's
+  (`max_tokens`, `temperature`, `seed`, `top_k`, `top_p`, `stop`, `n` = 1). JSON only:
+  `{"id":"cmpl-ollm-N","object":"text_completion","created":..,"model":"ollm","choices":[{"index":0,"text":..,"finish_reason":"stop"|"length"}],"usage":{..}}`.
+  400 `invalid_request` for `stream` true, for `messages`, `tools` or `tool_choice` present, and
+  for a missing, non-string or empty `prompt`; `tplmax` and `context_length_exceeded` apply as on
+  chat. Busy 503, client-left 499 and the log line are shared with chat.
 - Refusals are JSON `{"error":{...}}`: 400 (`invalid_json`, `invalid_request`,
   `context_length_exceeded`), 404, 405, 503 `server_busy`, and 413 `request_too_large` for a body
   over 983040 bytes (refused at the head) or over 65532 JSON tokens (the JSON parser's tape).
@@ -207,9 +216,9 @@ connections before each token); without it they are 400.
   (finish 0 none, 1 stop, 2 length, 3 tool_calls, 4 client left).
 
 `tests/omegallm/serve-check.sh` starts two servers under taskset/nice/bwrap (defaults on PORT,
-`tplmax=4000 test=1` on TPORT), referees them with `serve-check.py` (96 checks; the content oracle
-is the same binary's `sample`, decoded with Python's `errors="replace"`; the 499 log line is read
-from `server-test.log` via `SERVE_TLOG`) and stops the PIDs it started. The checks added since
+`tplmax=4000 test=1` on TPORT), referees them with `serve-check.py` (the content oracle
+is the same binary's `sample`, decoded with Python's `errors="replace"`; the 499 log lines are read
+from `server-test.log` via `SERVE_TLOG`; `cmpl_*`/`t_cmpl_*` cover `/v1/completions`) and stops the PIDs it started. The checks added since
 DRA-119's first 27 come with control checks (`*_control`, `*_is_sample`,
 `sample_differs_from_greedy`, `t_ctl_*`, `t_forced_plain`): the same request with one input
 changed, expecting the other outcome. A refusal (`refuse_*`) is controlled by the accepted

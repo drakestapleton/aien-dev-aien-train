@@ -69,6 +69,10 @@ text svtctyp "Content-Type"
 text svphlth "/health"
 text svpmods "/v1/models"
 text svpchat "/v1/chat/completions"
+text svpcomp "/v1/completions"
+text skprompt "prompt"
+text svtcomp "text_completion"
+text svcidp "cmpl-ollm-"
 text svmget "GET"
 text svmpost "POST"
 text svthlth "{\"status\":\"ok\",\"in_flight\":0,\"busy\":false}"
@@ -164,7 +168,7 @@ text sem9 "seed must be an unsigned integer"
 text sem10 "stream must be true or false"
 text sem12 "only n = 1 is supported"
 text sem13 "the request body is over 983040 bytes"
-text sem14 "no such path; routes: GET /health, GET /v1/models, POST /v1/chat/completions"
+text sem14 "no such path; routes: GET /health, GET /v1/models, POST /v1/chat/completions, POST /v1/completions"
 text sem15 "method not allowed on this path"
 text sem16 "response construction failed"
 text sem17 "message content parts must be {\"type\":\"text\",\"text\":string}; image_url, input_audio, file and other part types are not supported"
@@ -176,6 +180,9 @@ text sem22 "tool_choice must be \"none\", \"auto\", \"required\" or a {\"type\":
 text sem23 "tool_calls must be an array of {\"function\":{\"name\":string,\"arguments\":string or object}} objects"
 text sem24 "ollm_test_output (a string of at most 16384 bytes) and ollm_test_delay_ms (0 to 10000) need a server started with test=1"
 text sem25 "the request body has over 65532 JSON tokens (values, keys and closers), the JSON parser's limit"
+text sem26 "prompt must be a non-empty string"
+text sem27 "stream is not supported on /v1/completions: send stream false or leave it out"
+text sem28 "messages, tools and tool_choice belong to /v1/chat/completions; /v1/completions takes prompt"
 text sem11a "prompt is "
 text sem11b " tokens including the start token; the context window is "
 text sem11c " tokens, so no room is left for output"
@@ -540,6 +547,15 @@ end
 if eq e 25
 ret svmcat wb p z sem25
 end
+if eq e 26
+ret svmcat wb p z sem26
+end
+if eq e 27
+ret svmcat wb p z sem27
+end
+if eq e 28
+ret svmcat wb p z sem28
+end
 ret p
 end
 
@@ -675,8 +691,30 @@ end
 js_warre ob
 end
 
-note svfull: the chat.completion object (stream false)
+note svcfull: the text_completion object of /v1/completions
+fn svcfull ob edit uchar 409600 wb edit uchar 1073664 sv edit ulong 64 to long
+svhead ob wb sv svtcomp
+svwt ob skchoi
+js_warr ob
+js_wobj ob
+svwt ob skidx
+js_wulong ob 0
+svwt ob sktext
+js_wsbuf ob wb 8192 get sv 13
+svwt ob skfin
+svfr ob sv
+js_wobje ob
+js_warre ob
+svusage ob sv
+js_wobje ob
+ret js_wdone ob
+end
+
+note svfull: the chat.completion object (stream false), or svcfull on /v1/completions
 fn svfull ob edit uchar 409600 wb edit uchar 1073664 sv edit ulong 64 bd edit uchar 983040 to long
+if eq get sv 37 1
+ret svcfull ob wb sv
+end
 svhead ob wb sv svcc
 svwt ob skchoi
 js_warr ob
@@ -1515,6 +1553,9 @@ ret e
 end
 k = js_mnext tp k
 end
+if eq get sv 37 1
+ret svcprm bd tp wb sv
+end
 ma = svmem bd tp 0 skmsgs
 if eq ma jsnone
 ret 3
@@ -1527,6 +1568,37 @@ if eq get sv 30 0
 put sv 31 0
 end
 ret svmsgs bd tp ma wb sv
+end
+
+note svcprm: a /v1/completions body after its scalars: prompt (a non-empty string) is the whole
+note template, with no role lines and no assistant prefix; stream true, messages, tools and
+note tool_choice are refused; 0 or an error code
+fn svcprm bd edit uchar 983040 tp edit uint 262144 wb edit uchar 1073664 sv edit ulong 64 to ulong
+if eq get sv 0 1
+ret 27
+end
+if ne svmem bd tp 0 skmsgs jsnone
+ret 28
+end
+if ne svmem bd tp 0 sktools jsnone
+ret 28
+end
+if ne svmem bd tp 0 sktchoi jsnone
+ret 28
+end
+pr = svmem bd tp 0 skprompt
+if eq pr jsnone
+ret 26
+end
+if or ne js_type tp pr 6 eq js_slen tp pr 0
+ret 26
+end
+put sv 30 0
+put sv 31 0
+if not svpstr bd tp pr wb sv
+ret 6
+end
+ret 0
 end
 
 note ======== encoding
@@ -2198,10 +2270,16 @@ end
 
 note ======== serving
 
-note svid: response id chatcmpl-ollm-<request count> into wb[82176 ..), its length into sv15
+note svid: response id chatcmpl-ollm-<request count> (cmpl-ollm- on /v1/completions) into
+note wb[82176 ..), its length into sv15
 fn svid wb edit uchar 1073664 sv edit ulong 64 to void
 put sv 9 add get sv 9 1
-p = svmcat wb 82176 82240 svidp
+p = ulong 82176
+if eq get sv 37 1
+p = svmcat wb p 82240 svcidp
+else
+p = svmcat wb p 82240 svidp
+end
 p = svmdec wb p 82240 get sv 9
 put sv 15 sub p 82176
 end
@@ -2323,6 +2401,14 @@ fn svroute cs edit ulong 320 io edit uchar 131072 bd edit uchar 983040 wb edit u
 svbeg sv
 if hispath cs io svpchat
 if hismeth cs io svmpost
+put sv 37 0
+ret svchat cs io bd wb sv
+end
+ret svend cs io wb sv 15 405
+end
+if hispath cs io svpcomp
+if hismeth cs io svmpost
+put sv 37 1
 ret svchat cs io bd wb sv
 end
 ret svend cs io wb sv 15 405

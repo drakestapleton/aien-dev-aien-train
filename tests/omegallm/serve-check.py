@@ -348,6 +348,53 @@ check("silent_conn_closed_10s", eof == b"" and 8 < dts < 20, f"recv={eof!r} afte
 st, ct, out, _ = call("GET", "/health")
 check("alive_after_negatives", st == 200, f"{st}")
 
+
+# --- POST /v1/completions: prompt is the whole template (start token + prompt, no role lines) ---
+def cpost(body, port=None, raw=None):
+    st, ct, out, _ = call("POST", "/v1/completions", body, raw=raw, port=port)
+    j = json.loads(out) if st == 200 else {}
+    return st, j, out
+
+
+def crefused(body, word, port=None, raw=None, code_want="invalid_request"):
+    st, ct, out, _ = call("POST", "/v1/completions", body, raw=raw, port=port)
+    code, msg, typ = err_code(out)
+    return st == 400 and code == code_want and word in msg, f"{st} {code} {msg!r}"
+
+
+cprompt = "fn main to long\n"
+cwant = oracle_tpl(cprompt, 7, 8, 0)
+st, j, out = cpost({"model": "ollm", "prompt": cprompt, "max_tokens": 8, "temperature": 0, "seed": 7})
+ch = (j.get("choices") or [{}])[0]
+u = j.get("usage", {})
+check("cmpl_greedy_parity", st == 200 and j.get("object") == "text_completion" and j.get("id", "").startswith("cmpl-ollm-")
+      and ch.get("index") == 0 and ch.get("finish_reason") in ("stop", "length") and ch.get("text") == cwant
+      and "message" not in ch and u.get("total_tokens") == u.get("prompt_tokens", 0) + u.get("completion_tokens", 0)
+      and 1 <= u.get("completion_tokens", 0) <= 8, f"{st} {out[:240]!r} oracle={cwant!r}")
+chatw = oracle_tpl("user: " + cprompt + "\nassistant: ", 7, 8, 0)
+check("cmpl_no_chat_template_control", chatw != cwant, f"chat_template={chatw!r} raw={cwant!r}")
+st, j, out = cpost({"prompt": cprompt, "max_tokens": 8, "top_p": 0, "temperature": 0.8, "seed": 7})
+check("cmpl_top_p0_is_greedy", st == 200 and (j.get("choices") or [{}])[0].get("text") == cwant, f"{out[:200]!r}")
+cb = {"prompt": cprompt, "max_tokens": 4}
+for name, body, word in (("cmpl_refuse_stream", dict(cb, stream=True), "stream is not supported on /v1/completions"),
+                         ("cmpl_refuse_messages", dict(cb, messages=msgs), "takes prompt"),
+                         ("cmpl_refuse_tools", dict(cb, tools=tools), "takes prompt"),
+                         ("cmpl_refuse_tool_choice", dict(cb, tool_choice="none"), "takes prompt"),
+                         ("cmpl_refuse_no_prompt", {"max_tokens": 4}, "prompt must be a non-empty string"),
+                         ("cmpl_refuse_prompt_number", dict(cb, prompt=5), "prompt must be a non-empty string"),
+                         ("cmpl_refuse_prompt_array", dict(cb, prompt=["a"]), "prompt must be a non-empty string"),
+                         ("cmpl_refuse_prompt_empty", dict(cb, prompt=""), "prompt must be a non-empty string"),
+                         ("cmpl_refuse_n2", dict(cb, n=2), "n = 1"),
+                         ("cmpl_refuse_prompt_bytes", dict(cb, prompt="x" * 66000), "over 65536 bytes")):
+    check(name, *crefused(body, word))
+check("cmpl_refuse_context", *crefused({"prompt": long_text, "max_tokens": 4}, "context window is 256", code_want="context_length_exceeded"))
+st, ct, out, _ = call("GET", "/v1/completions")
+check("cmpl_refuse_405", st == 405 and err_code(out)[0] == "method_not_allowed", f"{st} {out!r}")
+st, ct, out, _ = call("GET", "/v1/nope")
+check("refuse_404_lists_completions", st == 404 and "POST /v1/completions" in err_code(out)[1], f"{st} {out!r}")
+st, ct, out, _ = call("GET", "/health")
+check("alive_after_cmpl", st == 200, f"{st}")
+
 # --- second server: tplmax=4000 test=1 (scripted output: protocol checks, not model checks) ----
 if TPORT:
     st, ct, out, _ = call("GET", "/health", port=TPORT)
@@ -467,7 +514,7 @@ if TPORT:
     if TLOG:
         with open(TLOG) as f:
             lines = [l.split() for l in f if l.startswith("C 499 ")]
-        check("t_disconnect_logged", len(lines) == 1 and lines[0][4] == "4", f"{lines}")
+        check("t_disconnect_logged", len(lines) >= 1 and lines[0][4] == "4", f"{lines}")
     else:
         print("NOT_RUN t_disconnect_logged SERVE_TLOG unset", flush=True)
     box = {}
@@ -482,6 +529,40 @@ if TPORT:
           and chk.get("finish_reason") == "stop", f"health={hk} {stk} {outk[:120]!r}")
     st, ch, out = post(base, port=TPORT)
     check("t_idle_not_busy_control", st == 200 and ch["message"]["content"] == greedy, f"{out[:200]!r}")
+
+    # /v1/completions on the test server: scripted output, busy 503, and a client that leaves
+    cslow = {"prompt": "x", "max_tokens": 200, "temperature": 0, "ollm_test_output": slow, "ollm_test_delay_ms": 300}
+    st, j, out = cpost(dict(cslow, ollm_test_delay_ms=0), port=TPORT)
+    check("t_cmpl_forced", st == 200 and j["choices"][0]["text"] == slow and j["choices"][0]["finish_reason"] == "stop", f"{out[:200]!r}")
+    box = {}
+    th = threading.Thread(target=lambda: box.update(r=cpost(cslow, port=TPORT)))
+    th.start()
+    time.sleep(1.5)
+    st, ct, out, _ = call("GET", "/health", port=TPORT)
+    hb = json.loads(out) if st == 200 else {}
+    st5, ct, out5, _ = call("POST", "/v1/completions", cb, port=TPORT)
+    ra = LAST[threading.get_ident()].get("retry-after")
+    code, msg, typ = err_code(out5)
+    th.join()
+    stb, jb, outb = box.get("r", (0, {}, b""))
+    check("t_cmpl_busy_503", hb.get("busy") is True and st5 == 503 and code == "server_busy" and ra == "1", f"health={hb} {st5} {code} {msg!r}")
+    check("t_cmpl_busy_whole", stb == 200 and (jb.get("choices") or [{}])[0].get("text") == slow, f"{outb[:200]!r}")
+    body = json.dumps(cslow).encode()
+    gone = socket.create_connection((HOST, TPORT), timeout=30)
+    gone.sendall(b"POST /v1/completions HTTP/1.1\r\nHost: x\r\nContent-Type: application/json\r\nContent-Length: "
+                 + str(len(body)).encode() + b"\r\n\r\n" + body)
+    time.sleep(1.0)
+    gone.close()
+    time.sleep(1.0)
+    st, ct, out, _ = call("GET", "/health", port=TPORT)
+    hg = json.loads(out) if st == 200 else {}
+    check("t_cmpl_disconnect_frees_slot", hg == {"status": "ok", "in_flight": 0, "busy": False}, f"{st} {out!r}")
+    if TLOG:
+        with open(TLOG) as f:
+            lines = [l.split() for l in f if l.startswith("C 499 ")]
+        check("t_cmpl_disconnect_logged", len(lines) == 2 and lines[1][4] == "4" and int(lines[1][3]) < 200, f"{lines}")
+    else:
+        print("NOT_RUN t_cmpl_disconnect_logged SERVE_TLOG unset", flush=True)
 
 fails = results.count(False)
 print(f"SUMMARY pass={results.count(True)} fail={fails}", flush=True)
