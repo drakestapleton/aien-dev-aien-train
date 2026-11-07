@@ -1,0 +1,87 @@
+{
+  "scope": "HOST_TESTED recorder correction, not a model-quality or performance-improvement result",
+  "source_base": "0c41a27b1e96f58377a359f5463077d286b4490f",
+  "baseline_source": "2114454340af478760903c8f721eb0119c39554b",
+  "baseline_binary_sha256": "353dde359d1b0c6aad86fee31d86ab006a288709d9a4e806561cb79338ba9fab",
+  "baseline_composed_source_sha256": "2090d7fa300c0b1245780f04d13f68c48a382d1c1e1d9c8136c2addad88f7d0b",
+  "compiler_sha256": "2c82480596bbdc50cda9626866209ef662d5834f278f839ff4ce0250c495029f",
+  "recorder_sha256": "4291b6b6d20d84b44a36da1ea44d59c4dabef58488edb79362990701b18263ff",
+  "checkpoint_sha256": "ae7559ea1cfc89269905191fb64ea31f185a0c0940965144e4f94d05f9abb452",
+  "tokenizer_sha256": "688b723a894baa831ee92aaf814918d30823225c45de68c85d9dd244eb79947c",
+  "command": "CORES=0 PORT=18281 LENS=16 DEC=1 TURN=24 ONLY=1 sh tests/omegallm/serve-bench.sh (OLLM/CK/MERGES/TEXT/OUT bound to named artifacts)",
+  "host": "spark-b87b Linux AArch64",
+  "positive": {
+    "exit": 0,
+    "stdout": "B env date=2026-11-07T05:21:00Z host=spark-b87b cores=0 ollm=353dde359d1b0c6aad86fee31d86ab006a288709d9a4e806561cb79338ba9fab ck=s2.ck ck_bytes=641885312 ck_sha256=ae7559ea1cfc89269905191fb64ea31f185a0c0940965144e4f94d05f9abb452 merges_sha256=688b723a894baa831ee92aaf814918d30823225c45de68c85d9dd244eb79947c\nB startup_ms 7845 rss_kb_after_start 841572\nB prefill target=16 bytes=41 http=200 1.452007 log=[C 200 16 1 2 1456 0 16 0]\nB decode_w1 target=16 http=200 0.122750 log=[C 200 16 1 2 124 15 1 0]\nB decode_wd target=16 http=200 0.251004 log=[C 200 16 2 2 250 15 1 0]\nB turn target=24 bytes=85 max_tokens=60 http=200 9.652518 log=[C 200 24 60 2 9654 0 24 0]\nB peak_rss_kb 847600 pss_kb 847394\nB done\n",
+    "stderr": ""
+  },
+  "refused_request": {
+    "exit": 1,
+    "env_delta": {
+      "SARGS": "tplmax=256",
+      "LENS": "128",
+      "TURN": ""
+    },
+    "stdout": "B env date=2026-11-07T05:23:07Z host=spark-b87b cores=0 ollm=353dde359d1b0c6aad86fee31d86ab006a288709d9a4e806561cb79338ba9fab ck=s2.ck ck_bytes=641885312 ck_sha256=ae7559ea1cfc89269905191fb64ea31f185a0c0940965144e4f94d05f9abb452 merges_sha256=688b723a894baa831ee92aaf814918d30823225c45de68c85d9dd244eb79947c\nB startup_ms 6998 rss_kb_after_start 841576\n",
+    "stderr": "B receipt_fail: malformed or failed completion: C 400 0 0 0 1 0 0 0\n"
+  },
+  "startup_refusal": {
+    "exit": 1,
+    "env_delta": {
+      "SARGS": "tplmax=1",
+      "TURN": ""
+    },
+    "stdout": "B env date=2026-11-07T05:22:55Z host=spark-b87b cores=0 ollm=353dde359d1b0c6aad86fee31d86ab006a288709d9a4e806561cb79338ba9fab ck=s2.ck ck_bytes=641885312 ck_sha256=ae7559ea1cfc89269905191fb64ea31f185a0c0940965144e4f94d05f9abb452 merges_sha256=688b723a894baa831ee92aaf814918d30823225c45de68c85d9dd244eb79947c\nB start_fail \n",
+    "stderr": ""
+  },
+  "controlled_log_cases": [
+    {
+      "case": "old-delayed-record-defect",
+      "expected_accept": false,
+      "observed_accept": false,
+      "check_pass": true,
+      "stdout": "rc=0 line=C 200 3072 17 2 2374 3071 1 0\n",
+      "stderr": ""
+    },
+    {
+      "case": "fixed-delayed-record",
+      "expected_accept": true,
+      "observed_accept": true,
+      "check_pass": true,
+      "stdout": "rc=0 line=C 200 2500 60 2 85852 0 2500 0\n",
+      "stderr": ""
+    },
+    {
+      "case": "missing-new-record",
+      "expected_accept": false,
+      "observed_accept": false,
+      "check_pass": true,
+      "stdout": "rc=1 line=\n",
+      "stderr": "B receipt_fail: missing completion after record 1\n"
+    },
+    {
+      "case": "failed-completion",
+      "expected_accept": false,
+      "observed_accept": false,
+      "check_pass": true,
+      "stdout": "rc=1 line=\n",
+      "stderr": "B receipt_fail: malformed or failed completion: C 499 2500 0 0 10 0 2500 0\n"
+    },
+    {
+      "case": "ambiguous-extra-completion",
+      "expected_accept": false,
+      "observed_accept": false,
+      "check_pass": true,
+      "stdout": "rc=1 line=\n",
+      "stderr": "B receipt_fail: multiple or unreadable completion records\n"
+    }
+  ],
+  "resource_release": "ss -ltnp sport = :18281 returned headers only after both successful and refused runs",
+  "limits": [
+    "Candidate inputs are own-model performance/protocol fixtures, not held-out quality evidence.",
+    "No GPU execution, no CPU/GPU contention measurement.",
+    "Controlled log cases exercise recorder timing and refusals; they are not physical fault qualification.",
+    "No new compiler/runtime implementation or pin changed."
+  ],
+  "guide_impact": "No harness skill describes serve-bench.sh or its lastlog protocol; repository docs/omegallm/README.md updated."
+}

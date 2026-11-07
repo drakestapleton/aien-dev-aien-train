@@ -287,6 +287,20 @@ skipped) must fail `c1_reuse_diverge_bitexact`; mutant `pl` (the layer-by-layer 
 last layer) must fail `c1_prefill_layer_bitexact`; `t_queue_full_503` is the queue's refusal control.
 Receipts: `evidence/OMEGALLM/serve/v4/`.
 
+### Benchmark completion records
+
+`tests/omegallm/serve-bench.sh` records checkpoint and tokenizer SHA-256 identities.
+For each serial request it records the current completion count before sending,
+then waits for exactly one new successful server record. Missing, malformed,
+failed or ambiguous completions fail the run rather than reuse the previous
+request's timing. The wait is bounded; failure also stops and reaps the server
+started by this driver. No unrelated listener is stopped.
+
+Earlier driver versions read the last successful line immediately after HTTP
+completion, although the server can log afterward. Preserve those historical
+receipts, but reject any row whose request and completion identities disagree.
+These checks establish recorder behavior, not model quality or a speedup.
+
 ### Serve v4 measurements (MEASURED, 2026-11-07, spark-b87b, core 4 only, `nice -n 10`)
 
 Binary `ollm` sha256 `f667ba15c67d0ec0f984c4462ec8bcdb717ad4d3f12d6b8d5dcce3ea1ec55ec0` (omc

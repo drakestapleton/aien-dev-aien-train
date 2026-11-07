@@ -17,7 +17,7 @@ log=$OUT/server.log
 res=$OUT/bench.txt
 : >"$res"
 say() { echo "$*" | tee -a "$res"; }
-say "B env date=$(date -u +%FT%TZ) host=$(hostname) cores=$CORES ollm=$(sha256sum "$OLLM" | cut -c1-64) ck=$(basename "$CK") ck_bytes=$(wc -c <"$CK")"
+say "B env date=$(date -u +%FT%TZ) host=$(hostname) cores=$CORES ollm=$(sha256sum "$OLLM" | cut -c1-64) ck=$(basename "$CK") ck_bytes=$(wc -c <"$CK") ck_sha256=$(sha256sum "$CK" | cut -c1-64) merges_sha256=$(sha256sum "$MERGES" | cut -c1-64)"
 # ASCII text without control bytes but newline, JSON-escaped on one line
 LC_ALL=C tr -cd '\12\40-\176' <"$TEXT" | head -c 400000 >"$OUT/text.txt"
 jtext() { head -c "$1" "$OUT/text.txt" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' | awk 'BEGIN{ORS=""} {if (NR>1) printf "\\n"; print}'; }
@@ -39,7 +39,49 @@ body() { # bytes max_tokens extra-members
 	printf '{"messages":[{"role":"user","content":"%s"}],"max_tokens":%s,"temperature":0%s}' "$(jtext "$1")" "$2" "$3"
 }
 post() { curl -s -o /dev/null -w '%{http_code} %{time_total}' -H 'Content-Type: application/json' --data-binary @"$1" "http://127.0.0.1:$PORT/v1/chat/completions"; }
-lastlog() { grep '^C 200 ' "$log" | tail -1; }
+# The server can finish the HTTP response before writing its C record. Bind each
+# serial request to the next record, never to the most recent old success.
+marklog() { awk '$1 == "C" { n++ } END { print n+0 }' "$log"; }
+lastlog() {
+	before=$1
+	tries=0
+	while [ "$tries" -lt 100 ]; do
+		record=$(awk -v before="$before" '
+			$1 == "C" { n++; if (n == before+1) row=$0 }
+			END {
+				if (n > before+1) exit 2
+				if (n <= before) exit 1
+				print row
+			}' "$log")
+		rc=$?
+		if [ "$rc" -eq 0 ]; then
+			printf '%s\n' "$record" | awk '
+				NF == 9 && $1 == "C" && $2 == "200" { print; ok=1 }
+				END { exit !ok }' && return 0
+			echo "B receipt_fail: malformed or failed completion: $record" >&2
+			return 1
+		fi
+		if [ "$rc" -ne 1 ]; then
+			echo "B receipt_fail: multiple or unreadable completion records" >&2
+			return 1
+		fi
+		tries=$((tries + 1))
+		sleep 0.01
+	done
+	echo "B receipt_fail: missing completion after record $before" >&2
+	return 1
+}
+pid=
+cleanup() {
+	if [ -n "$pid" ]; then
+		kill "$pid" 2>/dev/null || :
+		wait "$pid" 2>/dev/null || :
+		pid=
+	fi
+}
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 t0=$(date +%s%N)
 # shellcheck disable=SC2086
@@ -56,9 +98,12 @@ for L in $LENS; do
 	body "$nb" 1 ',"ollm_test_cold":true' >"$OUT/p$L-1.json"
 	body "$nb" 1 '' >"$OUT/p$L-w1.json"
 	body "$nb" $((DEC + 1)) '' >"$OUT/p$L-wd.json"
-	r1=$(post "$OUT/p$L-1.json"); l1=$(lastlog)
-	r2=$(post "$OUT/p$L-w1.json"); l2=$(lastlog)
-	r3=$(post "$OUT/p$L-wd.json"); l3=$(lastlog)
+	n=$(marklog); r1=$(post "$OUT/p$L-1.json") || exit 1
+	l1=$(lastlog "$n") || exit 1
+	n=$(marklog); r2=$(post "$OUT/p$L-w1.json") || exit 1
+	l2=$(lastlog "$n") || exit 1
+	n=$(marklog); r3=$(post "$OUT/p$L-wd.json") || exit 1
+	l3=$(lastlog "$n") || exit 1
 	say "B prefill target=$L bytes=$nb http=$r1 log=[$l1]"
 	say "B decode_w1 target=$L http=$r2 log=[$l2]"
 	say "B decode_wd target=$L http=$r3 log=[$l3]"
@@ -66,14 +111,14 @@ done
 if [ -n "${TURN:-}" ]; then # TURN=N: one cold harness-like turn, an N-token prompt then 60 tokens
 	nb=$(bytes_for "$TURN")
 	body "$nb" 60 ',"ollm_test_cold":true' >"$OUT/turn.json"
-	r=$(post "$OUT/turn.json")
-	say "B turn target=$TURN bytes=$nb max_tokens=60 http=$r log=[$(lastlog)]"
+	n=$(marklog); r=$(post "$OUT/turn.json") || exit 1
+	l=$(lastlog "$n") || exit 1
+	say "B turn target=$TURN bytes=$nb max_tokens=60 http=$r log=[$l]"
 fi
 if [ -n "${ONLY:-}" ]; then # ONLY=1: the prefill/decode lengths (and TURN) only
 	say "B peak_rss_kb $(awk '/VmHWM/{print $2}' /proc/$pid/status) pss_kb $(awk '/^Pss:/{print $2}' /proc/$pid/smaps_rollup)"
 	for k in $(pgrep -P $pid); do say "B worker pid=$k peak_rss_kb $(awk '/VmHWM/{print $2}' /proc/$k/status) pss_kb $(awk '/^Pss:/{print $2}' /proc/$k/smaps_rollup)"; done
-	kill $pid
-	wait $pid 2>/dev/null
+	cleanup
 	say "B done"
 	exit 0
 fi
@@ -86,8 +131,10 @@ for k in warm cold; do
 	ex=
 	[ $k = cold ] && ex=',"ollm_test_cold":true'
 	printf '{"messages":[{"role":"system","content":"You are a careful assistant."},{"role":"user","content":"%s"},{"role":"assistant","content":"I read it."},{"role":"user","content":"Summarise the second paragraph in one sentence."}],"max_tokens":8,"temperature":0%s}' "$u1" "$ex" >"$OUT/t2$k.json"
-	r=$(post "$OUT/t1.json"); lt1=$(lastlog)
-	r=$(post "$OUT/t2$k.json"); lt2=$(lastlog)
+	n=$(marklog); r=$(post "$OUT/t1.json") || exit 1
+	lt1=$(lastlog "$n") || exit 1
+	n=$(marklog); r=$(post "$OUT/t2$k.json") || exit 1
+	lt2=$(lastlog "$n") || exit 1
 	say "B reuse turn1 log=[$lt1]"
 	say "B reuse turn2_$k http=$r log=[$lt2]"
 done
@@ -114,6 +161,5 @@ if [ -n "${ALLEN:-}" ] && [ -r "$ALLEN" ]; then
 	say "B allen_chatenc $("$OLLM" chatenc "$MERGES" "$OUT/allen.jsonl" "$OUT/allen.u16") bytes=$(wc -c <"$ALLEN")"
 fi
 say "B peak_rss_kb $(awk '/VmHWM/{print $2}' /proc/$pid/status)"
-kill $pid
-wait $pid 2>/dev/null
+cleanup
 say "B done"
