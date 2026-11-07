@@ -4059,13 +4059,17 @@ acitem it tp wk sv rs pa
 end
 end
 
-note ======== harness role rows (PREREG.md section 1): the harness lane's runner scores these tasks; this
-note runner only records them. Each harness.jsonl line {"id","role":"harness","family","split"} becomes a row
-note from the TSV named by ACCEPT_HARNESS_TSV (lines ID TAB PASS|FAIL TAB reason TAB ms TAB ptok TAB ctok,
-note written by tests/omegallm/harness/verify.om through run.sh), else NOT_RUN reason noharness.
+note ======== harness role rows (PREREG.md section 1): the harness lane's runner (tests/omegallm/harness/run.sh
+note on feat/ollm-harness, Hermes through a logging proxy, outcome checked on disk by its verify.om) scores these
+note tasks; this runner only records its verdicts. Each harness.jsonl line {"id","role":"harness","family","split"}
+note becomes a row from the harness summary.txt named by ACCEPT_HARNESS_TSV (rows `ID FAMILY SPLIT RESULT rc ms
+note chats first_status`, space separated): RESULT PASS is PASS; any other RESULT (FAIL, INVALID, SETUP_FAIL) is
+note FAIL with reason busy (first_status 503), conn (none), http (another non-200) or rule. An id absent from the
+note file, or no file, is NOT_RUN reason noharness.
 text khenv "ACCEPT_HARNESS_TSV"
+text knonest "none"
 
-note achrow: the TSV line for id into sv (SLAT, SPTOK, SCTOK); 0 PASS, 1 FAIL, 2 absent
+note achrow: the harness summary line for id into sv (SLAT, SREAS); 0 PASS, 1 FAIL, 2 absent
 fn achrow h view uchar * id view uchar * sv edit ulong SVN to ulong
 p = ulong 0
 while lt p len h bound 999999
@@ -4074,16 +4078,9 @@ if gt e len h
 e = len h
 end
 l = sub e p
-if gt l add len id 5
-if and heq view part h p len id id eq get h add p len id 9
-v = ulong 1
-if heq view part h add add p len id 1 4 kpass
-v = 0
-end
-put sv SLAT achfld view part h p l 3
-put sv SPTOK add 1 achfld view part h p l 4
-put sv SCTOK add 1 achfld view part h p l 5
-ret v
+if gt l add len id 1
+if and heq view part h p len id id eq get h add p len id 32
+ret achrow2 view part h p l sv
 end
 end
 p = add e 1
@@ -4091,23 +4088,52 @@ end
 ret 2
 end
 
-note achfld: tab-separated field k of line s as a decimal (0 when absent or not a number)
-fn achfld s view uchar * k ulong to ulong
-f = ulong 0
-v = ulong 0
-for i ulong len s
-c = ulong get s i
-if eq c 9
-f = add f 1
-continue
+fn achrow2 s view uchar * sv edit ulong SVN to ulong
+put sv SLAT achfld s 5
+x = achsp s 3
+v = ulong 1
+if heq view part s acsa x sub acsb x acsa x kpass
+v = 0
 end
-if eq f k
-if and ge c 48 le c 57
-v = add mul v 10 sub c 48
+put sv SREAS 7
+x = achsp s 7
+st = acdecv view part s acsa x sub acsb x acsa x
+put sv SST st
+if heq view part s acsa x sub acsb x acsa x knonest
+put sv SREAS 1
 end
+if and ne st 200 gt st 0
+put sv SREAS 4
 end
+if eq st 503
+put sv SREAS 2
 end
 ret v
+end
+
+note achsp: space-separated field k of s as start shl 32 | end
+fn achsp s view uchar * k ulong to ulong
+f = ulong 0
+a = ulong 0
+for i ulong len s
+if eq get s i 32
+if eq f k
+ret or shl a 32 i
+end
+f = add f 1
+a = add i 1
+end
+end
+if eq f k
+ret or shl a 32 len s
+end
+ret or shl len s 32 len s
+end
+
+note achfld: space-separated field k of s as a decimal (0 when absent or not a number)
+fn achfld s view uchar * k ulong to ulong
+x = achsp s k
+ret acdecv view part s acsa x sub acsb x acsa x
 end
 
 note achload: the TSV named by ACCEPT_HARNESS_TSV into h; its length (0 when unset or unreadable)
@@ -4155,7 +4181,7 @@ v = achv h b ulong k sv
 if eq v 2
 acres wk sv 2 9 0
 else
-acres wk sv v mul v 7 0
+acres wk sv v mul v get sv SREAS 0
 end
 end
 
