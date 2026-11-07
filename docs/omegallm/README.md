@@ -209,7 +209,8 @@ connections before each token); without it they are 400.
   (finish 0 none, 1 stop, 2 length, 3 tool_calls, 4 client left).
 
 `tests/omegallm/serve-check.sh` starts two servers under taskset/nice/bwrap (defaults on PORT,
-`tplmax=4000 test=1` on TPORT), referees them with `serve-check.py` (96 checks; the content oracle
+`tplmax=4000 test=1` on TPORT), referees them with `serve-check.py` (96 checks at DRA-119's
+parity merge, 105 with DRA-121's queue checks; the content oracle
 is the same binary's `sample`, decoded with Python's `errors="replace"`; the 499 log line is read
 from `server-test.log` via `SERVE_TLOG`) and stops the PIDs it started. The checks added since
 DRA-119's first 27 come with control checks (`*_control`, `*_is_sample`,
@@ -269,20 +270,68 @@ request it varies. Receipts: `evidence/OMEGALLM/serve/`.
   "reused","prefilled","prompt"}` to a JSON answer (the word-wise FNV-1a of the first sampled
   step's logits and the prompt ids); `ollm_test_cold: true` drops the cache first (a cold prefill).
 
-Checks (`serve-check.py`, `SERVE_CHECK PASS` required): with OLLMTOK1 merges the referee runs the
-CHAT1 suite: content against `sample4` (same binary, chat-mode prompt), `c1_serve_eq_chatenc`
+Checks (`serve-check.py`, `SERVE_CHECK PASS` required; 105 checks with v1 merges, 43 with
+OLLMTOK1 merges): with OLLMTOK1 merges the referee runs the CHAT1 suite: content against `sample4` (same binary, chat-mode prompt), `c1_serve_eq_chatenc`
 (DRA-123: serve's prompt ids for five conversations, including tool calls, tool results, content
 parts, Unicode and forged marker text, equal chatenc's ids + 259), `c1_chatenc_eq_reference` and
 `c1_mask_eq_reference` (an independent Python reading of CHAT1 on `tok/oracle.py`'s raw encoder),
 `c1_injection_raw`, context and clamp checks, CHAT1 tool calls with controls, prefix reuse
 (`c1_reuse_two_turn`, `c1_reuse_bitexact`, `c1_reuse_diverge_bitexact`: warm logits equal a cold
-prefill's in every bit) and the queue checks (`t_queue_*`, shared with the v1 suite, where
+prefill's in every bit), the layer-by-layer prefill against the position-by-position decode
+(`c1_prefill_layer_bitexact`, test member `ollm_test_serial`) and the queue checks (`t_queue_*`, shared with the v1 suite, where
 `t_busy_503` became `t_busy_queued`). Negative controls: mutant `c1` (chatenc's writer drops each
 conversation's first token) must fail `c1_serve_eq_chatenc`; mutant `j` (prefix invalidation
-skipped) must fail `c1_reuse_diverge_bitexact`; `t_queue_full_503` is the queue's refusal control.
+skipped) must fail `c1_reuse_diverge_bitexact`; mutant `pl` (the layer-by-layer prefill skips the
+last layer) must fail `c1_prefill_layer_bitexact`; `t_queue_full_503` is the queue's refusal control.
 Receipts: `evidence/OMEGALLM/serve/v4/`.
 
-<!-- MEASURED -->
+### Serve v4 measurements (MEASURED, 2026-11-07, spark-b87b, core 4 only, `nice -n 10`)
+
+Binary `ollm` sha256 `f667ba15c67d0ec0f984c4462ec8bcdb717ad4d3f12d6b8d5dcce3ea1ec55ec0` (omc
+`2c824805…`, omega-mv e5b32567), merges `merges32k.bin` (OLLMTOK1, V 32768, sha256 `688b723a…`).
+Driver `tests/omegallm/serve-bench.sh` (server log times, serve.om's monotonic clock; cold
+prefills by `ollm_test_cold`; decode = the difference of two warm requests with 1 and 32 tokens,
+divided by 31). Receipts: `evidence/OMEGALLM/serve/v4/bench-B.txt`, `bench-A.txt`. Ratios by
+Wolfram. The checkpoints are real CK03 files of our own model, trained only 4 `train4` steps
+(B 4, T 256, lr 0.003) on tokenized `val.txt` text (losses 10.09 and 9.81 nats against ln 32768 =
+10.40), then their header T raised (RoPE has no positional parameters, so P and the payload do
+not depend on T): speed and protocol numbers, not quality.
+
+- **CK-B** V 32768, D 256, H 4, F 768, L 6, T 4096 (P 12,324,096): every layer resident in the
+  window (RW = L) and every KV layer resident (RK = L).
+- **CK-A** V 32768, D 384, H 6, F 1536, L 6, T 2048 (P 23,204,736): the largest of the requested
+  shape that loads today. T 4096 at D 384 is refused (`init4` exit 12: the v4 activation layout,
+  about T (11 D + F) values, passes OAC), and its V D + D + LSTR fills the weight window so RW = 0:
+  every layer is staged from the master mapping for each decode position (the wide4 lane's window
+  work targets this).
+
+| | CK-B (D256, T4096) | CK-A (D384, T2048) |
+|---|---|---|
+| startup to `PORT` (warm page cache) | 3.08 s | 5.45 s |
+| peak RSS (VmHWM) | 479.7 MiB | 719.2 MiB |
+| prefill, prompt 256 | 107.4 tok/s | 26.6 tok/s |
+| prefill, prompt 1024 | 72.3 tok/s | 18.9 tok/s |
+| prefill, prompt 4064 (B) / 2016 (A) | 38.4 tok/s | 19.6 tok/s |
+| decode at context 256 | 25.5 ms/token = 39.2 tok/s | 409.5 ms = 2.44 tok/s |
+| decode at context 1024 | 32.3 ms = 31.0 tok/s | 418.7 ms = 2.39 tok/s |
+| decode at context 4064 (B) / 2016 (A) | 57.9 ms = 17.3 tok/s | 434.4 ms = 2.30 tok/s |
+| 2-turn reuse: turn 2 (927 tokens) warm vs cold | 534 ms vs 11,326 ms = 21.2x (908 reused, 19 prefilled) | 5,675 ms vs 77,987 ms = 13.7x |
+| 4 concurrent clients (259-token prompts, 16 tokens): client latency | 2.74, 5.45, 8.16, 12.10 s (mean 7.11) | 25.8, 52.7, 79.5, 101.9 s (mean 65.0) |
+
+The 4 clients are served one after another in arrival order (each waits in the queue until the
+previous one finishes: the log's queue_ms); no request was refused. Prefill is O(context) per position, so its tok/s
+falls with length on CK-B; on CK-A it is bound by staging (32 positions share one staging of each
+layer; a decode position stages all six).
+
+**Fork slots, measured and rejected**: the same `sample4` decode (CK-B, 64 tokens) took 4.29 s
+alone and 8.61 s for each of two copies run at once on core 4 (8.61 / (2 x 4.29) = 1.003): one core
+gives no throughput from parallel slots, each request becomes twice as slow, and forked children
+would not share the prefix cache. `serve` keeps one generation slot and the FIFO queue
+(`evidence/OMEGALLM/serve/v4/fork-decision.txt`).
+
+**allen-chat system prompt** (`/opt/allen-chat/system-prompt.txt`, 14,364 bytes): 3,672 tokens in
+raw mode with `merges32k.bin` (`ollm-tok tokenc raw`); as a CHAT1 prompt with a user "hi" it is
+3,679 tokens (263 257 … 256 258 hi 256 259), which leaves 417 tokens of output in T 4096.
 
 ## iMac
 

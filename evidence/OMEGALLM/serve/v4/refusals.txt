@@ -1,20 +1,23 @@
-## V mismatch refused at startup (OLLMTOK1 V 32768 vs CK03 V 4096)
-$ ollm serve 18295 v4k.ck(V=4096,OLLMCK03) merges32k.bin
+## V mismatch refused at startup (OLLMTOK1 V 32768 vs a CK03 of V 4096: v4k.ck = ollm init4 v4k.ck 4096 64 32 2 64 1 1 7 100 1000 1)
+$ ollm serve 18295 v4k.ck merges32k.bin
 rc 31
 $ ollm sample4 v4k.ck 1 4 0 Hi merges32k.bin
 rc 31
 $ ollm eval4 v4k.ck val3m.u16 1 merges32k.bin
 rc 31
 ## control: the same CK03 with v1 merges (OLLMBPE1, V 4096) loads
-$ ollm sample4 v4k.ck 1 4 0 Hi merges4096.bin | od -c
-0000000   H   i   H   i   H   i   H   i
-0000010
+$ ollm sample4 v4k.ck 1 4 0 Hi merges4096.bin
+HiHiHiHi
 rc 0
-## eval4 with OLLMTOK1 merges on a V 32768 CK03 (s.ck, untrained)
-$ ollm eval4 s.ck val3m.u16 2 merges32k.bin
-E 0 2 10409716 3760019
+## eval4 with OLLMTOK1 merges on a V 32768 CK03 (the referee checkpoint t.ck)
+$ ollm eval4 t.ck val3m.u16 4 merges32k.bin
+E 20 4 9713402 3480005
+rc 0
+## sample4 with OLLMTOK1 merges (chat-mode prompt; <|end|> ends the output)
+$ ollm sample4 t.ck 7 24 800 '<|user|>What is Omega?<|end|><|assistant|>' merges32k.bin
+184 ymissibleREP?_;\q25bbedpath attractive necessary forthcomingillationipotent fixture310Servfoldneural ampl Coleridge ran Austriaevid
 rc 0
 ## chatenc refuses v1 merges
 $ ollm chatenc merges4096.bin c.jsonl x.u16
 rc 26
-binary a79559fa07b32949f3b4776788206bb405462da2dcb48678ed731ea58837874f  b2/ollm
+binary f667ba15c67d0ec0f984c4462ec8bcdb717ad4d3f12d6b8d5dcce3ea1ec55ec0  b3/ollm

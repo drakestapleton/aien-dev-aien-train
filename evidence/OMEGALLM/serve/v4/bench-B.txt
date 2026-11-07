@@ -1,0 +1,47 @@
+# serve-bench.sh on CK-B (b4096.ck)
+command: OLLM=b3/ollm CK=b4096.ck MERGES=merges32k.bin OUT=fbenchB TEXT=~/data-omega/base/val.txt CORES=4 PORT=18295 LENS="256 1024 4064" DEC=31 ALLEN=/opt/allen-chat/system-prompt.txt sh tests/omegallm/serve-bench.sh  (rc 0)
+B env date=2026-11-07T00:54:53Z host=spark-b87b cores=4 ollm=f667ba15c67d0ec0f984c4462ec8bcdb717ad4d3f12d6b8d5dcce3ea1ec55ec0 ck=b4096.ck ck_bytes=295778432
+B startup_ms 3077 rss_kb_after_start 390968
+B prefill target=256 bytes=977 http=200 2.385163 log=[C 200 256 1 2 2384 0 256 0]
+B decode_w1 target=256 http=200 0.026074 log=[C 200 256 1 2 25 255 1 0]
+B decode_wd target=256 http=200 0.815878 log=[C 200 256 32 2 815 255 1 0]
+B prefill target=1024 bytes=4065 http=200 14.168822 log=[C 200 1024 1 2 14168 0 1024 0]
+B decode_w1 target=1024 http=200 0.033469 log=[C 200 1024 1 2 33 1023 1 0]
+B decode_wd target=1024 http=200 1.033873 log=[C 200 1024 32 2 1033 1023 1 0]
+B prefill target=4064 bytes=15874 http=200 105.824236 log=[C 200 4064 1 2 105824 0 4064 0]
+B decode_w1 target=4064 http=200 0.059967 log=[C 200 4064 1 2 59 4063 1 0]
+B decode_wd target=4064 http=200 1.855202 log=[C 200 4064 32 2 1854 4063 1 0]
+B reuse turn1 log=[C 200 908 8 2 10983 1 907 0]
+B reuse turn2_warm http=200 0.534767 log=[C 200 927 8 2 534 908 19 0]
+B reuse turn1 log=[C 200 908 8 2 246 907 1 0]
+B reuse turn2_cold http=200 11.327030 log=[C 200 927 8 2 11326 0 927 0]
+B queue client=1 http_client_s=200 5.453799
+B queue client=2 http_client_s=200 8.157305
+B queue client=3 http_client_s=200 2.739779
+B queue client=4 http_client_s=200 12.099681
+B queue log=[C 200 259 16 2 2739 1 258 0]
+B queue log=[C 200 259 16 2 5452 4 255 2738]
+B queue log=[C 200 259 16 2 7902 4 255 5198]
+B queue log=[C 200 259 16 2 11848 4 255 7902]
+B allen_chatenc H 1 3677 0 bytes=14364
+B peak_rss_kb 491200
+B done
+## server.log
+PORT 18295
+C 200 256 1 2 2384 0 256 0
+C 200 256 1 2 25 255 1 0
+C 200 256 32 2 815 255 1 0
+C 200 1024 1 2 14168 0 1024 0
+C 200 1024 1 2 33 1023 1 0
+C 200 1024 32 2 1033 1023 1 0
+C 200 4064 1 2 105824 0 4064 0
+C 200 4064 1 2 59 4063 1 0
+C 200 4064 32 2 1854 4063 1 0
+C 200 908 8 2 10983 1 907 0
+C 200 927 8 2 534 908 19 0
+C 200 908 8 2 246 907 1 0
+C 200 927 8 2 11326 0 927 0
+C 200 259 16 2 2739 1 258 0
+C 200 259 16 2 5452 4 255 2738
+C 200 259 16 2 7902 4 255 5198
+C 200 259 16 2 11848 4 255 7902

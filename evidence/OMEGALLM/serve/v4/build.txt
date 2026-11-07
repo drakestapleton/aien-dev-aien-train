@@ -1,0 +1,19 @@
+# builds of feat/ollm-serve-v4 (source = this commit's native/omegallm; build.sh)
+date 2026-11-07T01:16:20Z host spark-b87b aarch64
+omc 2c82480596bbdc50cda9626866209ef662d5834f278f839ff4ce0250c495029f (pin 2c824805..., omega-mv e5b32567) /home/drakestapleton/workspace/hive-worktrees/arch-scale-x/omc/seed/out/omc
+$ OMC=$OMC OUT=b3 CORE=4 sh tests/omegallm/build.sh
+BUILD_OK f667ba15c67d0ec0f984c4462ec8bcdb717ad4d3f12d6b8d5dcce3ea1ec55ec0 /dev/shm/hive/ownmodel/serve4/b3/ollm source_sha256 acd4614f852214d956c66390e85c82d74c049f33046c1d57bdc52f10e93e67be
+$ ... build.sh --mutant c1
+BUILD_OK f7fb8c17cbfa9ae3c0324a54491ae2016bf5ec22bc1e60607bf5f7eb69e5a240 /dev/shm/hive/ownmodel/serve4/b3/ollm-mut-c1 source_sha256 29cc0097886f494a8f9dd74bd407ba63f82fe8e3684dc3064bdb611533bc5858
+  changed line: > const OMUTC1 ulong 0
+$ ... build.sh --mutant j
+BUILD_OK 6313f9d6bfb0e62d984043e77e50666dbaf0786aabf60ee40f6b099494c75110 /dev/shm/hive/ownmodel/serve4/b3/ollm-mut-j source_sha256 80953bcd4cc1dc39afad9e929508f504f6df55a49bde21bb820b97e2e813e88c
+  changed line: > const OMUTJ ulong 0
+$ ... build.sh --mutant pl
+BUILD_OK 301b2026866093a56aaf43dcf3bbaf1044a47119a2bbed9498f81b53b76efe5e /dev/shm/hive/ownmodel/serve4/b3/ollm-mut-pl source_sha256 0589aacfe9894d52364592f900e4fd022a01e17708b274b33b1e4c7c00a627a7
+  changed line: > const OMUTPL ulong 0
+$ TARGET=gb10 ... build.sh
+BUILD_OK 32043cd7712e513644bf781abf3322b9b1e7291a62af21ca12c1df675a6c9d4e /dev/shm/hive/ownmodel/serve4/bg/ollm-gb10 source_sha256 7300d33e04b070d95a375a4b2ff7e532018d585b9fe4244278320e6568951c01
+$ TARGET=x86linux OMC=/home/drakestapleton/work/dra-67-levers-3-7/omega-mv/seed/out/omc (sha256 be8c51301307555254fc59e351d281aae1aa096d91521777e33a41c8b446448a) ... build.sh
+BUILD_OK 63bb9baf31bf264b6a304f275c0861ddef0418ebfe789ed00ff56c5213a15722 /dev/shm/hive/ownmodel/serve4/bx/ollm source_sha256 8da9e3e0e84eff17f56c3e92a549fdee2f9aea8bae06cf8f8ac60cfb2b92c93f
+x86linux executable: NOT_RUN (aarch64 host); x86efi: not built here (no4.om/noserve.om unchanged except noserve's cmdchatenc exit 2 stub)

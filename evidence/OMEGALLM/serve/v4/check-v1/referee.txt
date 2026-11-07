@@ -1,0 +1,108 @@
+PASS health 200 b'{"status":"ok","in_flight":0,"queued":0,"capacity":32,"busy":false}'
+PASS models 200 ['ollm']
+PASS chat_json_t0 200 usage={'prompt_tokens': 17, 'completion_tokens': 12, 'total_tokens': 29} finish=length s=17.34 content='"I am here to help you."\nOme' oracle='"I am here to help you."\nOme'
+PASS chat_sse_t0 200 events=15 done=True usage=[{'prompt_tokens': 17, 'completion_tokens': 12, 'total_tokens': 29}] text='"I am here to help you."\nOme'
+PASS chat_json_t800 200 usage={'prompt_tokens': 17, 'completion_tokens': 12, 'total_tokens': 29} finish=length s=12.16 content='"Because I want to go to the park with' oracle='"Because I want to go to the park with'
+PASS chat_sse_t800 200 events=15 done=True usage=[{'prompt_tokens': 17, 'completion_tokens': 12, 'total_tokens': 29}] text='"Because I want to go to the park with'
+PASS allen_chat_shape 200 b'{"id":"chatcmpl-ollm-5","object":"chat.completion","created":1794013781,"model":"ollm","choices":[{"index":0,"message":{"role":"assistant","content":"\\"Let\'s"},"finish_reason":"length"}],"usage":{"pro'
+PASS health_idle {'status': 'ok', 'in_flight': 0, 'queued': 0, 'capacity': 32, 'busy': False}
+PASS content_parts 200 b'{"id":"chatcmpl-ollm-7","object":"chat.completion","created":1794013902,"model":"ollm","choices":[{"index":0,"message":{"role":"assistant","content":"\\"I am her' oracle='"I am here to help you."\nOme'
+PASS refuse_image_part 400 invalid_request 'message content parts must be {"type":"text","text":string}; image_url, input_audio, file and other part types are not supported'
+PASS refuse_part_no_text 400 invalid_request 'message content parts must be {"type":"text","text":string}; image_url, input_audio, file and other part types are not supported'
+PASS stop_str_json stop=' am' b'{"id":"chatcmpl-ollm-8","object":"chat.completion","created":1794013919,"model":"ollm","choices":[{"index":0,"message":{"role":"assistant","content":"\\"I"},"finish_reason":"stop"}],"usage":{"prompt_to' want='"I'
+PASS stop_str_sse stop=' am' text='"I' fin=stop want='"I'
+PASS stop_array_json stop=' am' b'{"id":"chatcmpl-ollm-10","object":"chat.completion","created":1794013922,"model":"ollm","choices":[{"index":0,"message":{"role":"assistant","content":"\\"I"},"finish_reason":"stop"}],"usage":{"prompt_t' want='"I'
+PASS stop_array_sse stop=' am' text='"I' fin=stop want='"I'
+PASS stop_absent_control b'{"id":"chatcmpl-ollm-12","object":"chat.completion","created":1794013928,"model":"ollm","choices":[{"index":0,"message":{"role":"assistant","content":"\\"I am here to help you.\\"\\nOme"},"finish_reason"' fin0=length
+PASS refuse_stop_empty 400 invalid_request 'stop must be null, a string or an array of at most 8 strings of 1 to 128 bytes'
+PASS refuse_stop_nine 400 invalid_request 'stop must be null, a string or an array of at most 8 strings of 1 to 128 bytes'
+PASS refuse_stop_number 400 invalid_request 'stop must be null, a string or an array of at most 8 strings of 1 to 128 bytes'
+PASS refuse_stop_long 400 invalid_request 'stop must be null, a string or an array of at most 8 strings of 1 to 128 bytes'
+PASS sample_differs_from_greedy sample='"Because I want to go to the park with' greedy='"I am here to help you."\nOme'
+PASS top_k1_is_greedy "top_k": 1 b'{"id":"chatcmpl-ollm-13","object":"chat.completion","created":1794013950,"model":"ollm","choices":[{"index":0,"message":{"role":"assistant","content":"\\"I am here to help you.\\"\\nOme"},"finish_reason"' want='"I am here to help you."\nOme'
+PASS top_p_min_is_greedy "top_p": 0.000001 b'{"id":"chatcmpl-ollm-14","object":"chat.completion","created":1794013971,"model":"ollm","choices":[{"index":0,"message":{"role":"assistant","content":"\\"I am here to help you.\\"\\nOme"},"finish_reason"' want='"I am here to help you."\nOme'
+PASS top_p0_is_greedy "top_p": 0 b'{"id":"chatcmpl-ollm-15","object":"chat.completion","created":1794013993,"model":"ollm","choices":[{"index":0,"message":{"role":"assistant","content":"\\"I am here to help you.\\"\\nOme"},"finish_reason"' want='"I am here to help you."\nOme'
+PASS top_k0_is_sample "top_k": 0 b'{"id":"chatcmpl-ollm-16","object":"chat.completion","created":1794014014,"model":"ollm","choices":[{"index":0,"message":{"role":"assistant","content":"\\"Because I want to go to the park with"},"finish' want='"Because I want to go to the park with'
+PASS top_k_neg1_is_sample "top_k": -1 b'{"id":"chatcmpl-ollm-17","object":"chat.completion","created":1794014035,"model":"ollm","choices":[{"index":0,"message":{"role":"assistant","content":"\\"Because I want to go to the park with"},"finish' want='"Because I want to go to the park with'
+PASS top_p1_is_sample "top_p": 1 b'{"id":"chatcmpl-ollm-18","object":"chat.completion","created":1794014057,"model":"ollm","choices":[{"index":0,"message":{"role":"assistant","content":"\\"Because I want to go to the park with"},"finish' want='"Because I want to go to the park with'
+PASS top_k_V_is_sample "top_k": 4096 b'{"id":"chatcmpl-ollm-19","object":"chat.completion","created":1794014070,"model":"ollm","choices":[{"index":0,"message":{"role":"assistant","content":"\\"Because I want to go to the park with"},"finish' want='"Because I want to go to the park with'
+PASS top_kp_repeat_and_sse json='"A nice man is here to help me."\n' sse='"A nice man is here to help me."\n'
+PASS top_kp_filters_control filtered='"A nice man is here to help me."\n' unfiltered='"Because I want to go to the park with'
+PASS refuse_top_p_neg 400 invalid_request 'top_p must be a number from 0 to 1 without exponent (resolution 0.000001; 0 keeps only the most probable token)'
+PASS refuse_top_p_big 400 invalid_request 'top_p must be a number from 0 to 1 without exponent (resolution 0.000001; 0 keeps only the most probable token)'
+PASS refuse_top_p_exp 400 invalid_request 'top_p must be a number from 0 to 1 without exponent (resolution 0.000001; 0 keeps only the most probable token)'
+PASS refuse_top_k_str 400 invalid_request 'top_k must be an integer from -1 to 999999 (-1 and 0 turn it off)'
+PASS refuse_top_k_frac 400 invalid_request 'top_k must be an integer from -1 to 999999 (-1 and 0 turn it off)'
+PASS refuse_top_k_neg2 400 invalid_request 'top_k must be an integer from -1 to 999999 (-1 and 0 turn it off)'
+PASS tools_history_template 200 b'{"id":"chatcmpl-ollm-23","object":"chat.completion","created":1794014220,"model":"ollm","choices":[{"index":0,"message":{"role":"assistant","content":"\\"Yes, we"},"finish_reason":"length"}],"usage":{"' oracle='"Yes, we'
+PASS tools_absent_control b'{"id":"chatcmpl-ollm-24","object":"chat.completion","created":1794014295,"model":"ollm","choices":[{"index":0,"message":{"role":"assistant","content":"\\"That\'s"'
+PASS refuse_tool_calls_shape 400 invalid_request 'tool_calls must be an array of {"function":{"name":string,"arguments":string or object}} objects'
+PASS refuse_tools_no_name 400 invalid_request 'tools must be an array of at most 128 {"type":"function","function":{"name":string of 1 to 64 bytes}} objects'
+PASS refuse_tool_choice 400 invalid_request 'tool_choice must be "none", "auto", "required" or a {"type":"function"} object'
+PASS refuse_content_absent 400 invalid_request 'message content must be a string, null or an array of text parts (absent only beside tool_calls)'
+PASS refuse_test_member 400 invalid_request 'ollm_test_output (a string of at most 16384 bytes), ollm_test_delay_ms (0 to 10000), ollm_test_info, ollm_test_cold and ollm_test_serial (booleans) need a server started with test=1'
+PASS big_template_is_context 400 context_length_exceeded 'prompt is 5011 tokens including the start token; the context window is 256 tokens, so no room is left for output'
+PASS refuse_template_bytes 400 invalid_request 'the chat template is over 65536 bytes (the serve option tplmax=N sets this cap)'
+PASS allen_prompt_context bytes=14364 400 context_length_exceeded 'prompt is 5374 tokens including the start token; the context window is 256 tokens, so no room is left for output'
+PASS refuse_context 400 context_length_exceeded 'prompt is 2453 tokens including the start token; the context window is 256 tokens, so no room is left for output'
+PASS refuse_bad_json 400 invalid_json 'request body is not valid JSON (RFC 8259)'
+PASS refuse_not_object 400 invalid_request 'the request must be a JSON object'
+PASS refuse_trailing 400 invalid_json 'request body is not valid JSON (RFC 8259)'
+PASS refuse_empty_messages 400 invalid_request 'messages must be a non-empty array of objects'
+PASS refuse_content_number 400 invalid_request 'message content must be a string, null or an array of text parts (absent only beside tool_calls)'
+PASS refuse_no_role 400 invalid_request 'message role must be a string of at most 32 bytes'
+PASS refuse_neg_temp 400 invalid_request 'temperature must be a number from 0 to 2 without exponent'
+PASS refuse_hot_temp 400 invalid_request 'temperature must be a number from 0 to 2 without exponent'
+PASS refuse_zero_max 400 invalid_request 'max_tokens must be an integer from 1 to 999999'
+PASS refuse_n2 400 invalid_request 'only n = 1 is supported'
+PASS refuse_stream_str 400 invalid_request 'stream must be true or false'
+PASS refuse_exp_temp 400 invalid_request 'temperature must be a number from 0 to 2 without exponent'
+PASS refuse_404 404 b'{"error":{"message":"no such path; routes: GET /health, GET /v1/models, POST /v1/chat/completions","type":"invalid_request_error","param":null,"code":"not_found"}}'
+PASS refuse_405 405 b'{"error":{"message":"method not allowed on this path","type":"invalid_request_error","param":null,"code":"method_not_allowed"}}'
+PASS refuse_413 b'HTTP/1.1 413 Content Too Large\r\nContent-Type: application/json\r\nContent-Length: 132\r\nConnection: close\r\n\r\n{"error":{"mes'
+PASS refuse_json_tokens zeros=70000 413 request_too_large "the request body has over 65532 JSON tokens (values, keys and closers), the JSON parser's limit"
+PASS json_tokens_under_cap_control zeros=60000 200 None ''
+PASS held_conn_not_blocking Connection='close' next=200 in 0.000s
+PASS silent_conn_not_blocking next=200 after 0.001s
+PASS partial_head_holds_control next=200 after 9.947s
+PASS silent_conn_closed_10s recv=b'' after 10.149s
+PASS alive_after_negatives 200
+PASS t_health_idle 200 b'{"status":"ok","in_flight":0,"queued":0,"capacity":32,"busy":false}'
+PASS t_refuse_template_bytes 400 invalid_request 'the chat template is over 4000 bytes (the serve option tplmax=N sets this cap)'
+PASS t_forced_plain b'{"id":"chatcmpl-ollm-1","object":"chat.completion","created":1794014349,"model":"ollm","choices":[{"index":0,"message":{"role":"assistant","content":"hello world, no tools here"},"finish_reason":"stop'
+PASS t_tool_call_json b'{"id":"chatcmpl-ollm-2","object":"chat.completion","created":1794014349,"model":"ollm","choices":[{"index":0,"message":{"role":"assistant","content":"Sure.","tool_calls":[{"id":"call_2_0","type":"function","function":{"name":"get_weather","arguments":"{\\"city\\": \\"Paris\\"}"}}]},"finish_reason":"tool'
+PASS t_tool_call_sse text='Sure.' fin=tool_calls calls=[{'index': 0, 'id': 'call_3_0', 'type': 'function', 'function': {'name': 'get_weather', 'arguments': '{"city": "Paris"}'}}]
+PASS t_tool_calls_two b'{"id":"chatcmpl-ollm-4","object":"chat.completion","created":1794014349,"model":"ollm","choices":[{"index":0,"message":{"role":"assistant","content":null,"tool_calls":[{"id":"call_4_0","type":"function","function":{"name":"get_weather","arguments":"{\\"city\\":\\"Rome\\"}"}},{"id":"call_4_1","type":"function","function":{"name":"get_time","arguments":"{}"}}]},"finish_reason":"tool_calls"}],"usage":{"p'
+PASS t_ctl_undeclared_json b'{"id":"chatcmpl-ollm-5","object":"chat.completion","created":1794014349,"model":"ollm","choices":[{"index":0,"message":{"role":"assistant","content":"Sure.\\n<tool_call>{\\"name\\": \\"launch\\", \\"arguments\\": {\\"city\\": \\"Paris\\"}}</tool_call>\\n"},"finish_reason":"stop"}],"usage":{"prompt_tokens":156,"'
+PASS t_ctl_undeclared_sse text='Sure.\n<tool_call>{"name": "launch", "arguments": {"city": "Paris"}}</tool_call>\n' fin=stop
+PASS t_ctl_bad_json_json b'{"id":"chatcmpl-ollm-7","object":"chat.completion","created":1794014349,"model":"ollm","choices":[{"index":0,"message":{"role":"assistant","content":"Sure.\\n<tool_call>{\\"name\\": \\"get_weather\\", \\"arguments\\": {\\"city\\": \\"Paris\\"}</tool_call>\\n"},"finish_reason":"stop"}],"usage":{"prompt_tokens":1'
+PASS t_ctl_bad_json_sse text='Sure.\n<tool_call>{"name": "get_weather", "arguments": {"city": "Paris"}</tool_call>\n' fin=stop
+PASS t_ctl_trailing_text_json b'{"id":"chatcmpl-ollm-9","object":"chat.completion","created":1794014349,"model":"ollm","choices":[{"index":0,"message":{"role":"assistant","content":"Sure.\\n<tool_call>{\\"name\\": \\"get_weather\\", \\"arguments\\": {\\"city\\": \\"Paris\\"}}</tool_call>\\nand more"},"finish_reason":"stop"}],"usage":{"prompt_'
+PASS t_ctl_trailing_text_sse text='Sure.\n<tool_call>{"name": "get_weather", "arguments": {"city": "Paris"}}</tool_call>\nand more' fin=stop
+PASS t_ctl_tool_choice_none_json b'{"id":"chatcmpl-ollm-11","object":"chat.completion","created":1794014349,"model":"ollm","choices":[{"index":0,"message":{"role":"assistant","content":"Sure.\\n<tool_call>{\\"name\\": \\"get_weather\\", \\"arguments\\": {\\"city\\": \\"Paris\\"}}</tool_call>\\n"},"finish_reason":"stop"}],"usage":{"prompt_tokens"'
+PASS t_ctl_tool_choice_none_sse text='Sure.\n<tool_call>{"name": "get_weather", "arguments": {"city": "Paris"}}</tool_call>\n' fin=stop
+PASS t_ctl_no_tools_json b'{"id":"chatcmpl-ollm-13","object":"chat.completion","created":1794014349,"model":"ollm","choices":[{"index":0,"message":{"role":"assistant","content":"Sure.\\n<tool_call>{\\"name\\": \\"get_weather\\", \\"arguments\\": {\\"city\\": \\"Paris\\"}}</tool_call>\\n"},"finish_reason":"stop"}],"usage":{"prompt_tokens"'
+PASS t_ctl_no_tools_sse text='Sure.\n<tool_call>{"name": "get_weather", "arguments": {"city": "Paris"}}</tool_call>\n' fin=stop
+PASS t_tool_result_turn b'{"id":"chatcmpl-ollm-15","object":"chat.completion","created":1794014349,"model":"ollm","choices":[{"index":0,"message":{"role":"assistant","content":"It is sunny in Paris."},"finish_reason":"stop"}],'
+PASS t_busy_health 200 b'{"status":"ok","in_flight":1,"queued":0,"capacity":32,"busy":true}' models=200
+PASS t_busy_queued 200 content='"I am here to help you."\nOme' want='"I am here to help you."\nOme' after_stream=True
+PASS t_busy_stream_whole text='w0 w1 w2 w3 w4 w5 w6 w7 w8 w9 w10 w11 w12 w13 w14 w15 w16 w17 w18 w19' fin=stop
+PASS t_health_after b'{"status":"ok","in_flight":0,"queued":0,"capacity":32,"busy":false}'
+PASS t_side_silent_no_stall health 0.002s {'status': 'ok', 'in_flight': 1, 'queued': 0, 'capacity': 32, 'busy': True} stream_ok=True text_ok=True
+PASS t_side_partial_head_control health 0.253s {'status': 'ok', 'in_flight': 1, 'queued': 0, 'capacity': 32, 'busy': True}
+PASS t_disconnect_frees_slot 200 b'{"status":"ok","in_flight":0,"queued":0,"capacity":32,"busy":false}'
+PASS t_disconnect_logged [['C', '499', '17', '3', '4', '1206', '0', '17', '0']]
+PASS t_connected_stays_control health={'status': 'ok', 'in_flight': 1, 'queued': 0, 'capacity': 32, 'busy': True} 200 b'{"id":"chatcmpl-ollm-20","object":"chat.completion","created":1794014395,"model":"ollm","choices":[{"index":0,"message":'
+PASS t_idle_not_busy_control b'{"id":"chatcmpl-ollm-21","object":"chat.completion","created":1794014411,"model":"ollm","choices":[{"index":0,"message":{"role":"assistant","content":"\\"I am here to help you.\\"\\nOme"},"finish_reason"'
+PASS t_queue_health {'status': 'ok', 'in_flight': 1, 'queued': 3, 'capacity': 32, 'busy': True}
+PASS t_queue_fifo order=['q-one', 'q-two', 'q-three'] {'q-one': (782055.825330258, 200, 'q-one'), 'q-two': (782055.825611252, 200, 'q-two'), 'q-three': (782055.825883175, 200, 'q-three')}
+PASS t_queue_after_stream stream_ok=True stream_end=782055.824684924 {'q-one': (782055.825330258, 200, 'q-one'), 'q-two': (782055.825611252, 200, 'q-two'), 'q-three': (782055.825883175, 200, 'q-three')}
+PASS t_queue_full_503 {'status': 'ok', 'in_flight': 1, 'queued': 32, 'capacity': 32, 'busy': True} 503 queue_full ra='1' 'the request queue is full (32 waiting chat completions): retry after 1 s'
+PASS t_queue_full_all_served served=32 bad=[]
+PASS t_queue_drained 
+PASS t_queue_disconnect_frees before={'status': 'ok', 'in_flight': 1, 'queued': 1, 'capacity': 32, 'busy': True} after={'status': 'ok', 'in_flight': 1, 'queued': 0, 'capacity': 32, 'busy': True}
+PASS t_queue_disconnect_logged [['C', '499', '0', '0', '4', '801', '0', '0', '801']]
+PASS t_queue_stays_control 200 b'{"id":"chatcmpl-ollm-61","object":"chat.completion","created":1794014487,"model":"ollm","choices":[{"index":0,"message":{"role":"assistant","content":"stays"},"'
+SUMMARY pass=105 fail=0
+bind_loopback_only 1 LISTEN 0      16     127.0.0.1:18293 0.0.0.0:* users:(("ollm",pid=3407305,fd=3)) LISTEN 0      16     127.0.0.1:18294 0.0.0.0:* users:(("ollm",pid=3411611,fd=3)) 
+SERVE_CHECK PASS
