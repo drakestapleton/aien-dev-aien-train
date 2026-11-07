@@ -1,0 +1,519 @@
+om2
+note splitcheck.om: verify a corpus split projection against the DRA-146 v4 pre-registered split rule.
+note Input on stdin, one row per record, five TAB-separated fields:
+note   conv_id  split  start_ts  text_hash  shingle_hashes
+note split is train, dev or test. start_ts is ISO-8601 UTC; its first 19 bytes are compared with the cutoffs.
+note text_hash and every shingle hash are 16 lowercase hex digits; shingles are comma separated, or a single -.
+note text_hash may also be - when a large projection is partitioned by hash prefix (one run per partition).
+note Checks: every conversation in one split, one start_ts per conversation, the split agrees with
+note train < 2026-10-29T00:00:00 <= dev < 2026-11-03T00:00:00 <= test, and no text or shingle hash is
+note shared train-dev, train-test or dev-test (sharing inside one split is allowed).
+note Output: a PASS or FAIL line per check, then SUMMARY. Exit 0 all pass, 1 a violation,
+note 2 malformed input or a full table. Conversations are keyed by FNV-1a 64 of the conv_id bytes.
+note Input up to 999999 x 999999 reads of 512 KiB. Capacity: 50331648 distinct hashes (75 percent of a 2^26 open-addressing table kept as four
+note 2^24 arrays, the per-array limit), 786432 conversations.
+global hk0 ulong 16777216
+global hk1 ulong 16777216
+global hk2 ulong 16777216
+global hk3 ulong 16777216
+global hm0 uchar 16777216
+global hm1 uchar 16777216
+global hm2 uchar 16777216
+global hm3 uchar 16777216
+global ck ulong 1048576
+global cs uchar 1048576
+global ct ulong 1048576
+global tsb uchar 32
+global S ulong 16
+global E ulong 32
+text cdev "2026-10-29T00:00:00"
+text ctst "2026-11-03T00:00:00"
+text lhead "splitcheck rows="
+text lconv " convs="
+text lhash " hashes="
+text ltr " train="
+text ldev " dev="
+text ltst " test="
+text lnl "\n"
+text lpass "PASS "
+text lfail "FAIL "
+text lviol " violations="
+text n1 "conv_one_split"
+text n2 "conv_one_start_ts"
+text n3 "split_matches_cutoffs"
+text n4 "no_shared_hash_train_dev"
+text n5 "no_shared_hash_train_test"
+text n6 "no_shared_hash_dev_test"
+text n7 "well_formed_rows"
+text n8 "table_capacity"
+text lsum "SUMMARY pass="
+text lsfail " fail="
+
+note S slots: 0 field, 1 conv FNV, 2 split byte 0, 3 split byte 1, 4 ts length, 5 ts FNV, 6 hex value,
+note 7 hex digits, 8 split bit, 9 row malformed, 10 hash entries, 11 conversations, 12 row has bytes,
+note 13 split bytes seen
+note E slots: 0 rows, 1 conv split differs, 2 cutoff mismatch, 3 conv start_ts differs, 4 malformed rows,
+note 6 table full, 7 shared train-dev, 8 shared train-test, 9 shared dev-test, 10 train, 11 dev, 12 test rows
+
+fn einc i ulong to void
+put E i add get E i 1
+end
+
+fn sinc i ulong to void
+put S i add get S i 1
+end
+
+fn say t view uchar * to void
+k = write 1 t 0 len t
+end
+
+fn putnum v ulong to void
+b = new uchar 24 0
+i = ulong 24
+x = v
+if eq x 0
+i = ulong 23
+put b 23 48
+end
+while gt x 0 bound 25
+i = sub i 1
+put b i uchar add 48 rem x 10
+x = div x 10
+end
+k = write 1 b i sub 24 i
+end
+
+fn fnvstep h ulong b uchar to ulong
+ret mul xor h ulong b 1099511628211
+end
+
+fn rowreset to void
+put S 0 0
+put S 1 14695981039346656037
+put S 2 0
+put S 3 0
+put S 4 0
+put S 5 14695981039346656037
+put S 6 0
+put S 7 0
+put S 8 0
+put S 9 0
+put S 12 0
+put S 13 0
+end
+
+note the 2^26-slot hash table is four 2^24 arrays: slot i lives in array i / 2^24 at i mod 2^24
+fn kget i ulong to ulong
+j = and i 16777215
+q = shr i 24
+if eq q 0
+ret get hk0 j
+end
+if eq q 1
+ret get hk1 j
+end
+if eq q 2
+ret get hk2 j
+end
+ret get hk3 j
+end
+
+fn kput i ulong v ulong to void
+j = and i 16777215
+q = shr i 24
+if eq q 0
+put hk0 j v
+end
+if eq q 1
+put hk1 j v
+end
+if eq q 2
+put hk2 j v
+end
+if eq q 3
+put hk3 j v
+end
+end
+
+fn mget i ulong to uchar
+j = and i 16777215
+q = shr i 24
+if eq q 0
+ret get hm0 j
+end
+if eq q 1
+ret get hm1 j
+end
+if eq q 2
+ret get hm2 j
+end
+ret get hm3 j
+end
+
+fn mput i ulong v uchar to void
+j = and i 16777215
+q = shr i 24
+if eq q 0
+put hm0 j v
+end
+if eq q 1
+put hm1 j v
+end
+if eq q 2
+put hm2 j v
+end
+if eq q 3
+put hm3 j v
+end
+end
+
+fn hput h ulong bit uchar to long
+k = h
+if eq k 0
+k = ulong 1
+end
+i = and k 67108863
+n = ulong 0
+while lt n 999999 bound 999999
+c = kget i
+if eq c 0
+kput i k
+mput i bit
+sinc 10
+ret 1
+end
+if eq c k
+mput i or mget i bit
+ret 0
+end
+i = and add i 1 67108863
+n = add n 1
+end
+ret -1
+end
+
+fn cput h ulong code uchar tsh ulong to void
+k = h
+if eq k 0
+k = ulong 1
+end
+i = and k 1048575
+n = ulong 0
+while lt n 999999 bound 999999
+c = get ck i
+if eq c 0
+put ck i k
+put cs i code
+put ct i tsh
+sinc 11
+ret
+end
+if eq c k
+if ne get cs i code
+einc 1
+end
+if ne get ct i tsh
+einc 3
+end
+ret
+end
+i = and add i 1 1048575
+n = add n 1
+end
+einc 6
+end
+
+fn tscmp c view uchar * to int
+i = ulong 0
+while lt i 19 bound 20
+a = get tsb i
+b = get c i
+if lt a b
+ret -1
+end
+if gt a b
+ret 1
+end
+i = add i 1
+end
+ret 0
+end
+
+fn hexdig b uchar to ulong
+if and ge b 48 le b 57
+ret sub ulong b 48
+end
+if and ge b 97 le b 102
+ret sub ulong b 87
+end
+ret 16
+end
+
+note insert the hex value in S 6 when 16 digits were read; anything else marks the row malformed
+fn hexend to int
+n = get S 7
+if eq n 0
+ret 0
+end
+put S 7 0
+if ne n 16
+put S 9 1
+ret 0
+end
+bit = uchar get S 8
+if eq bit 0
+put S 9 1
+ret 0
+end
+r = hput get S 6 bit
+put S 6 0
+einc 5
+if lt r 0
+einc 6
+ret -1
+end
+if gt get S 10 50331648
+einc 6
+ret -1
+end
+ret 0
+end
+
+fn splitend to void
+a = get S 2
+b = get S 3
+put S 8 0
+if eq a 100
+put S 8 2
+end
+if and eq a 116 eq b 114
+put S 8 1
+end
+if and eq a 116 eq b 101
+put S 8 4
+end
+if eq get S 8 0
+put S 9 1
+end
+end
+
+fn fend f ulong to int
+if eq f 1
+splitend
+ret 0
+end
+if eq f 3
+ret hexend
+end
+if eq f 4
+ret hexend
+end
+ret 0
+end
+
+fn rowend to void
+if eq get S 12 0
+ret
+end
+einc 0
+if ne get S 0 4
+put S 9 1
+end
+if lt get S 4 19
+put S 9 1
+end
+if ne get S 9 0
+einc 4
+rowreset
+ret
+end
+code = uchar get S 8
+cput get S 1 code get S 5
+if eq code 1
+einc 10
+if ge tscmp cdev 0
+einc 2
+end
+end
+if eq code 2
+einc 11
+if or lt tscmp cdev 0 ge tscmp ctst 0
+einc 2
+end
+end
+if eq code 4
+einc 12
+if lt tscmp ctst 0
+einc 2
+end
+end
+rowreset
+end
+
+fn feed b uchar to int
+f = get S 0
+put S 12 1
+if eq b 10
+r = fend f
+rowend
+ret r
+end
+if eq b 9
+r = fend f
+put S 0 add f 1
+if gt f 3
+put S 9 1
+end
+ret r
+end
+if eq f 0
+put S 1 fnvstep get S 1 b
+ret 0
+end
+if eq f 1
+n = get S 13
+if eq n 0
+put S 2 ulong b
+end
+if eq n 1
+put S 3 ulong b
+end
+if lt n 2
+put S 13 add n 1
+end
+ret 0
+end
+if eq f 2
+n = get S 4
+if lt n 32
+put tsb n b
+end
+put S 4 add n 1
+put S 5 fnvstep get S 5 b
+ret 0
+end
+ret hexbyte f b
+end
+
+note bytes of the hash fields (3 and 4)
+fn hexbyte f ulong b uchar to int
+if and eq f 4 eq b 44
+ret hexend
+end
+if eq b 45
+ret 0
+end
+d = hexdig b
+if gt d 15
+put S 9 1
+ret 0
+end
+put S 6 or shl get S 6 4 d
+sinc 7
+ret 0
+end
+
+fn check nm view uchar * v ulong to ulong
+if eq v 0
+say lpass
+else
+say lfail
+end
+say nm
+say lviol
+putnum v
+say lnl
+if eq v 0
+ret 0
+end
+ret 1
+end
+
+note the pinned omc accepts loop bounds up to 999999, so the 2^26 slots are scanned as 128 x 2^19
+fn scan to void
+q = ulong 0
+while lt q 128 bound 129
+j = ulong 0
+while lt j 524288 bound 524289
+m = mget add shl q 19 j
+if eq and m 3 3
+einc 7
+end
+if eq and m 5 5
+einc 8
+end
+if eq and m 6 6
+einc 9
+end
+j = add j 1
+end
+q = add q 1
+end
+end
+
+fn main to int
+rowreset
+buf = new uchar 524288 0
+go = true
+outer = ulong 0
+while and go lt outer 999999 bound 999999
+inner = ulong 0
+while and go lt inner 999999 bound 999999
+k = read 0 buf 0 524288
+if lt k 0
+ret 2
+end
+if eq k 0
+go = false
+else
+n = ulong k
+i = ulong 0
+while lt i n bound 524289
+r = feed get buf i
+i = add i 1
+end
+end
+inner = add inner 1
+end
+outer = add outer 1
+end
+if ne get S 12 0
+r2 = fend get S 0
+rowend
+end
+scan
+say lhead
+putnum get E 0
+say lconv
+putnum get S 11
+say lhash
+putnum get S 10
+say ltr
+putnum get E 10
+say ldev
+putnum get E 11
+say ltst
+putnum get E 12
+say lnl
+bad = ulong 0
+bad = add bad check n1 get E 1
+bad = add bad check n2 get E 3
+bad = add bad check n3 get E 2
+bad = add bad check n4 get E 7
+bad = add bad check n5 get E 8
+bad = add bad check n6 get E 9
+inp = check n7 get E 4
+inp = add inp check n8 get E 6
+say lsum
+putnum sub 8 add bad inp
+say lsfail
+putnum add bad inp
+say lnl
+if gt inp 0
+ret 2
+end
+if gt bad 0
+ret 1
+end
+ret 0
+end
