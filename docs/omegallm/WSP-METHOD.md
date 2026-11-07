@@ -1,8 +1,8 @@
 # Weight-space programming: method note (DRA-187)
 
-Status: method note only. Every published figure below is labelled "published, not reproduced here".
-Every Omega result is PENDING until the DRA-187 experiment fills it in. Nothing in this note is a
-measurement made by us.
+Status: method note. Every published figure below is labelled "published, not reproduced here".
+The only Omega measurement is the diagnosis in section 4.1; every Omega outcome is PENDING until the
+DRA-187 experiment fills it in.
 
 ## Sources (pinned, accessed 2026-11-07)
 
@@ -48,6 +48,7 @@ targeted, gradient-free edit fix a demonstrated failure of a language model with
 ### 1.2 The published workflow, step by step (run `p50c`, 50 passes)
 
 Reconstructed from `runs/p50c/work_notes/final_report.md`, `experiment_history.md` and `final_choice.json`.
+Every count, log-prob and score in this subsection is published, not reproduced here.
 
 1. **Behavioural contrast.** The first generation pass on 96 practice problems: 11 correct, 85 answers ran to
    the 32,768-token limit, and the cut tails were about 95% duplicated 8-word sequences
@@ -76,14 +77,20 @@ Reconstructed from `runs/p50c/work_notes/final_report.md`, `experiment_history.m
    matched within 0.03% to the full alpha 4 edit: looping-branch change +0.00955 (not selective) and, in a paired
    generation pass on 64 x 2 answers, +1.56 pp (SE 3.52), 8 rescues and 6 losses, with the cut share rising
    89.06% to 91.41%. Note: the control was matched to the full alpha 4 edit, not to the final top-64 alpha 6 edit.
-9. **Freeze, then paired confirmation.** The top-64 alpha 6 edit was frozen and hash-audited before any
-   confirmation. Confirmation used 1,152 practice problems reserved in `fresh_splits.json` (validation_3 128,
+9. **Freeze, then paired confirmation.** `final_report.md` says the edit was "Frozen before any confirmation".
+   The history is less tidy: the candidate was left unchanged from line 102 ("validation_3 still unseen" at
+   line 105), the first confirmation half of 64 problems is line 107, and both the word "FROZEN" (line 108) and
+   the hash audit (`frozen_edit_audit.json`, line 110) come after it. The audited hashes equal those in
+   `final_choice.json` and a second check at pass 49 (line 371) found them unchanged.
+   Confirmation used 1,152 practice problems reserved in `fresh_splits.json` (validation_3 128,
    validation_4 256, final_1/2/3 256 each), disjoint from every problem used in selection, generated paired within
    each pass with the evaluation sampling, one sample each, 32,768 tokens.
 10. **Submission and release.** The editor submitted float32 copies of the two tensors; the evaluation cast them
     to bfloat16 (`build_ckpt.py`). HF hosts this edited checkpoint.
 
 ### 1.3 The three published edits
+
+All rows published, not reproduced here.
 
 | Run | Passes | Edit (LOGS `final_answer.md` and `edit/manifest.json`) | bf16 entries changed |
 |---|---|---|---|
@@ -119,8 +126,9 @@ Wolfram checks for the edit sizes:
   sampling. `qwen35think` (the Experiment 8 runs) is thinking on, temperature 0.6, top_p 0.95, top_k 20,
   presence_penalty 1.5, max 32,768 tokens, seed 0. `V3_LIMITS` sets the pass sizes (512 answers, 1,024
   teacher-forced texts, 524,288 teacher-forced tokens per pass). It also holds the LFM2.5-350M and Gemma 3 270M profiles.
-- `evaluate.py`: builds the benchmark files (MATH-500, GSM8K test, AIME 24/25, AMC23, Minerva, OlympiadBench,
-  MMLU-Pro 1k, GPQA Diamond, IFEval), runs vLLM with the chat template, grades the last `\boxed{}` with math-verify,
+- `evaluate.py`: its `prepare()` builds the math files (AIME 24/25, AMC23, MATH-500, Minerva, OlympiadBench) and
+  GSM8K test. MMLU-Pro 1k, GPQA Diamond and IFEval are read by `load_set()` from `bench/<name>.jsonl` files that
+  the released code does not build. It runs vLLM with the chat template, grades the last `\boxed{}` with math-verify,
   and scores the mean accuracy over all samples. It imports IFEval and multiple-choice graders that are not released.
   Its top docstring describes an older Qwen3-1.7B non-thinking protocol; the Experiment 8 protocol is `SAMPLING_THINK35`.
 
@@ -160,19 +168,24 @@ From `runs/p50c/work_notes/final_report.md`. These are held-out practice problem
 
 579 rescues and 5 regressions; 576 of the rescues were originally truncated answers. All 696 edited correct
 answers closed their thinking, median 9,172 tokens (9,171.5 in the JSON), against 5,310.5 for the original's correct
-answers. Answers cut at the limit: 1,038 original vs 212 edited. Published, not reproduced here.
+answers. Answers cut at the limit: 1,038 original vs 212 edited. Of the 212 edited cutoffs, 51 end in a
+whitespace tail, against 0 of the original's 1,038 (`whitespace_tail_cut`): the edit introduced a new failure mode,
+whitespace degeneration, which the report lists among the remaining errors. Published, not reproduced here.
 
-Wolfram check of the paired statistic: with `n=1152; b=579; c=5; d=(b-c)/n`,
-`N[d]` -> 0.498264; `N[Sqrt[((b+c)/n - d^2)/(n-1)]]` -> 0.0149914 (equals the reported SE, so the source used the
-n-1 form); `N[{d-1.96 se, d+1.96 se}]` -> {0.46888, 0.52765} (equals the reported 95% normal interval);
+Wolfram check of the paired statistic: with
+`n=1152; b=579; c=5; d=(b-c)/n; se=Sqrt[((b+c)/n-d^2)/(n-1)]`,
+`N[d]` -> 0.498264; `N[se]` -> 0.0149914 (equals the reported SE, so the source used the n-1 form);
+`N[{d-1.96 se, d+1.96 se}]` -> {0.46888, 0.52765} (equals the reported 95% normal interval);
 `b-c` -> 574 = 696 - 122 net newly correct. `N[100*85/96]` -> 88.54 (share of the first 96 practice answers cut).
 
 ### 2.2 Other published points
 
 - HF independent re-run of the p50c checkpoint by a third party (akhaliq, 2026-11-02, H200, vLLM 0.33.0):
   MATH-500 51.0%, 31.6% at the token limit; a 25-problem base smoke test gave 5.0%. Published, not reproduced here.
-  Wolfram `51.0-48.1` -> 2.9 pp above BLOG's figure, inside what sampling variance on one run could produce
-  but not tested by us.
+  Wolfram `51.0-48.1` -> 2.9 pp above BLOG's figure. We make no claim about its cause: no uncertainty analysis
+  was done, and the re-run is not the same checkpoint file. The HF card says BLOG evaluated a text-only export,
+  while the re-run used the full multimodal release; the card states the language-model tensors are
+  hash-identical and text prompts do not use the vision tower, which we did not check.
 - Smaller budgets: p10c's own paired check on 512 practice problems was +3.71 pp (SE 1.79), described by the editor
   as "modest"; p25c's on 768 practice problems was +8.33 pp (SE 1.43). Published, not reproduced here.
 - Other runs in `RESULTS_excerpt.md`, not in BLOG: 0 and 5 passes made no edit; prompt v4 at 10 passes submitted
@@ -186,11 +199,11 @@ n-1 form); `N[{d-1.96 se, d+1.96 se}]` -> {0.46888, 0.52765} (equals the reporte
 
 DEMONSTRATED = shown with controls in the source. CONDITIONAL = shown only in their setting (one model,
 one failure mode, practice problems rather than test, agent-driven search). SPECULATIVE = a generalisation
-the sources do not test.
+the sources do not test. Every figure in this table is published, not reproduced here; the classes are our reading.
 
 | # | Claim | Class | Basis and limits |
 |---|---|---|---|
-| C1 | The p50c edit is targeted: only two tensors, 64 columns each, 131,072 weights, change | DEMONSTRATED | Bit-exact diff with sha256 per tensor (`edit/manifest.json`, `apply_edit.py`); HF lists the same two hashes |
+| C1 | The p50c edit is targeted: only two tensors and 64 columns each are touched (131,072 weights); 130,188 of them differ from the base after the bf16 cast | DEMONSTRATED | Bit-exact diff with sha256 per tensor (`edit/manifest.json` `changed_entries` 65,260 + 64,928, `apply_edit.py`); HF lists the same two hashes |
 | C2 | Removing the repetition direction causally reduces looping | DEMONSTRATED (on practice text) | Dose-response on matched branches, layer isolation, norm-matched random control (+1.56 pp, SE 3.52, not selective). Limit: the control was matched to the full alpha 4 edit, not the final top-64 alpha 6 edit, and used 128 answers |
 | C3 | The edit does not just force early termination | DEMONSTRATED (on practice text) | All 696 edited correct answers closed thinking, median 9,172 tokens; premature-close log-prob stayed near -19 |
 | C4 | The edit raises held-out practice accuracy (+49.8 pp, SE 1.5) | DEMONSTRATED (on practice text) | Frozen edit, 1,152 problems disjoint from selection, paired within pass. One sample per problem |
@@ -205,7 +218,7 @@ the sources do not test.
 
 ## 4. Reproduction status
 
-**Qwen3.5-0.8B reproduction: NOT_RUN by Drake's no-outside-models rule (2026-11-07). The method, not the model, is reproduced on our own Omega checkpoints under DRA-187.**
+**Qwen3.5-0.8B reproduction: NOT_RUN by Drake's no-outside-models rule (2026-11-07). The method, not the model, is proposed for adaptation to our own Omega checkpoints under DRA-187.**
 
 Our target is the round40 own tool model (`~/.local/share/omega-tool-model/round40/model.ck`, sha256
 `7c7b5b5260f2d9453b6076b64e7f23e88341d96498584f2dfaa229c31ad2e346`, read in place only): V 4096, T 256,
@@ -234,6 +247,17 @@ rows `j`, and nothing else.
 | Deployment check | Edited weights rounded f64 to f32 as the GPU runtime does; count edited entries that round back to the original | PENDING |
 | Restore | Byte-identical restore of the base checkpoint from the undo artifact | PENDING |
 
+### 4.1 Omega result so far (2026-11-07)
+
+- Target chosen: long numeric ID truncation in the first `read_file` path written by the round40 tool model.
+- Mechanism, MEASURED on the diagnosis split D (186 records, base model, `wprobe probe`, scored by `rank.py`):
+  59 failure rows are digit-copy failures, and their mean logit gap is -7.06. Copy heads 6.6, 7.11, 6.11 and 7.0
+  find the right digit (largest mean positive head parts), and a number-length prior written by the MLPs
+  outvotes them.
+- Pre-registration: aien-train branch `wsp/dra187-repair`, commit `d329de73`
+  (`evidence/OMEGALLM/wsp-dra187-20261107/PREREG.md`).
+- All outcomes (edit, controls, comparators, retention, restore): PENDING.
+
 ## 5. Risks and threats to validity
 
 1. **Selection on the practice set.** In the source, every candidate (alpha 1, 2, 3, top-64 at alpha 4 and 6) was
@@ -253,9 +277,12 @@ rows `j`, and nothing else.
    failure direction; the Gemma 3 270M result shows the method can find nothing to fix. A rejected method is an
    acceptable DRA-187 outcome.
 5. **f32 deployment rounding of small edits.** The deployed runtime uploads weights as f32, rounded to nearest
-   from f64. Wolfram `N[2^-24]` -> 5.96e-8, the relative half-step of f32; an edit smaller than that relative to
-   a weight disappears. For comparison, the source's bf16 cast (`N[2^-8]` -> 0.0039) erased 884 of 131,072 touched
-   entries. For us: score the f32-rounded edited file, not the f64 one, and report how many edited entries survive.
+   from f64. Whether an edit survives depends on where each weight sits between f32 values, not on a fixed relative
+   threshold. Wolfram, with `w=3/2; delta=5/2^26`: `N[delta/w]` -> 4.97e-8, below `N[2^-24]` -> 5.96e-8, yet
+   f32(w + delta) = 12582913/8388608 = w + 2^-23, so that small edit survives; conversely a larger edit can round
+   back to the original f32 value. For comparison, the source's bf16 cast erased 884 of 131,072 touched entries.
+   For us: compare f32(edited) with f32(base) entry by entry, score the f32-rounded file, not the f64 one, and
+   report how many edited entries survive.
 6. **Retention measurement.** The source has no dedicated retention suite; its "other skills" evidence is
    benchmark gains that may themselves come from fewer loops. For us: retention gets its own pre-registered tasks
    and threshold, and a loss on them rejects the edit even if the target metric improves.
@@ -267,6 +294,8 @@ rows `j`, and nothing else.
    come from the search, not the weights.
 9. **Optimizer state.** As `WEIGHT-EDIT.md` already says for our checkpoints, an edited copy keeps Adam moments
    that do not describe the edited weights; edited checkpoints are for inference until a policy exists.
+10. **New failure modes.** The source edit added one: 51 edited answers ended in whitespace degeneration against
+    0 for the original (section 2.1). For us: count new failure types in the edited model, not only fewer old ones.
 
 ## 6. What this note does not do
 
