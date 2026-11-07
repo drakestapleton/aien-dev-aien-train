@@ -1,0 +1,1369 @@
+note SPDX-License-Identifier: AGPL-3.0-only
+note OLLMWP01 checked checkpoint patches. All product operations are Omega.
+note See WSP-PATCH.md for byte layout and refusal codes. Maps are private, never shared writes.
+note Wolfram FromDigits[Reverse[ToCharacterCode["OLLMWP01"]],256] -> 3544421242629803087.
+note Wolfram FromDigits[Reverse[ToCharacterCode["OLLMWB01"]],256] -> 3544405849467014223.
+global wpm long 4
+global wpsz ulong 4
+global wpnt ulong 1
+global wpt ulong 1048
+global wpd uchar 256
+global wpout uchar 4100
+global wpol ulong 1
+global wpne ulong 1
+global wpeo ulong 1
+global wpes ulong 1
+global wpns ulong 1
+text wphex "0123456789abcdef"
+text wpins "inspect"
+text wpdif "diff"
+text wpsho "show"
+text wpval "validate"
+text wpapp "apply"
+text wpver "verify"
+text wprev "revert"
+text wpbin "bind"
+text wpchk "checkbind"
+text wpkinds "wte wpe g1  wq  wk  wv  wo  g2  w1  w2  gf  "
+text wpnan "NaN"
+text wpinf "Inf"
+text wphdr "OLLMCK02 V T D H F L B P: "
+text wphdr2 "seed step total lr G fnv: "
+text wptxt " dtype=f64 offset="
+text wpsha " sha256="
+text wprms " rms="
+text wpmax " maxabs="
+text wpnf " nonfinite="
+text wpok "PASS\n"
+text wpsurv "PASS f32_surviving="
+text wpof " changed="
+text wpjs0 "{\"patch_sha256\":\""
+text wpjs1 "\",\"base_sha256\":\""
+text wpjs2 "\",\"output_sha256\":\""
+text wpjs3 "\",\"f32_sha256\":\""
+text wpjs4 "\",\"entries_sha256\":\""
+text wpjs5 "\",\"policy\":"
+text wpjs6 ",\"changed\":"
+text wpjs7 ",\"entries_first_20\":["
+text wpjs8 "],\"params\":"
+text wpjs9 ",\"rationale\":"
+
+fn wptext s view uchar * to void
+for i ulong len s
+oputc ulong get s i
+end
+end
+fn wpcmd s view uchar * to bool
+n = oargp 1
+if ne n len s
+ret false
+end
+for i ulong n
+if ne get oarg i get s i
+ret false
+end
+end
+ret true
+end
+fn wpnl to void
+oputc 10
+end
+fn wpsp to void
+oputc 32
+end
+fn wphexout o ulong to void
+for i ulong 32
+v = ulong get wpd add o i
+oputc ulong get wphex shr v 4
+oputc ulong get wphex and v 15
+end
+end
+fn wpdget h long o ulong slot ulong to void
+r = mapread h o wpd slot 32
+end
+fn wpdeq h long o ulong slot ulong code int to void
+b = new uchar 32 0
+r = mapread h o b 0 32
+for i ulong 32
+if ne get b i get wpd add slot i
+exit code
+end
+end
+end
+fn wphash h long o ulong n ulong slot ulong to void
+b = new uchar 65536 0
+c = new uchar 104 0
+d = new uchar 32 0
+sha256_init c
+p = ulong 0
+while lt p n bound 999999
+k = sub n p
+if gt k 65536
+k = 65536
+end
+r = mapread h add o p b 0 k
+sha256_update c part b 0 k
+p = add p k
+end
+sha256_final c d
+for i ulong 32
+put wpd add slot i get d i
+end
+end
+fn wpdput h long o ulong slot ulong to void
+r = mapwrite h o wpd slot 32
+end
+fn wpclose h long to void
+r = mapdrop h
+if ne r 0
+exit 70
+end
+end
+fn wpopen ai ulong slot ulong to void
+n = oargp ai
+fd = int fopen oarg 0 n 0 0
+if lt fd 0
+exit 70
+end
+sz = fseek fd 0 2
+if le sz 0
+exit 20
+end
+if gt sz 2400000000
+exit 21
+end
+h = mapnew fd 0 ulong sz 3 2
+r = fclose fd
+if or lt h 0 ne r 0
+exit 70
+end
+put wpm slot h
+put wpsz slot ulong sz
+end
+fn wpnew slot ulong n ulong to void
+h = mapnew int -1 0 n 3 34
+if lt h 0
+exit 70
+end
+put wpm slot h
+put wpsz slot n
+end
+fn wpget slot ulong o ulong to ulong
+ret mapget get wpm slot o 8
+end
+fn wpput slot ulong o ulong v ulong to void
+r = mapset get wpm slot o 8 v
+end
+fn wpcopy src long dst long so ulong doff ulong n ulong to void
+b = new uchar 65536 0
+p = ulong 0
+while lt p n bound 999999
+k = sub n p
+if gt k 65536
+k = 65536
+end
+r = mapread src add so p b 0 k
+r = mapwrite dst add doff p b 0 k
+p = add p k
+end
+end
+fn wpfnv h long n ulong to ulong
+b = new uchar 65536 0
+v = ulong 14695981039346656037
+p = ulong 120
+while lt p n bound 999999
+k = sub n p
+if gt k 65536
+k = 65536
+end
+r = mapread h p b 0 k
+for i ulong k
+v = mul xor v ulong get b i 1099511628211
+end
+p = add p k
+end
+ret v
+end
+fn wpfput f edit uchar 32768 o ulong v ulong to void
+for j ulong 4
+put f add o j uchar and shr v mul j 8 255
+end
+end
+fn wpcast b view uchar 65536 f edit uchar 32768 k ulong to void
+for i ulong k
+u = ulong 0
+for j ulong 8
+u = or u shl ulong get b add mul i 8 j mul j 8
+end
+v = ulong bitcast uint f32 bitcast f64 u
+wpfput f mul i 4 v
+end
+end
+fn wpfchunk slot ulong p ulong k ulong c edit uchar 104 to void
+b = new uchar 65536 0
+f = new uchar 32768 0
+o = add 120 mul p 8
+n = mul k 8
+r = mapread get wpm slot o b 0 n
+wpcast b f k
+sha256_update c part f 0 mul k 4
+end
+fn wpf32 slot ulong ds ulong to void
+c = new uchar 104 0
+d = new uchar 32 0
+sha256_init c
+p = ulong 0
+while lt p get og 8 bound 999999
+k = sub get og 8 p
+if gt k 8192
+k = 8192
+end
+wpfchunk slot p k c
+p = add p k
+end
+sha256_final c d
+for i ulong 32
+put wpd add ds i get d i
+end
+end
+note Tensor table stride 8: kind, layer, rows, cols, flat offset, length, changed count, reserved.
+fn wptadd k ulong l ulong r ulong c ulong off ulong to void
+q = mul get wpnt 0 8
+put wpt q k
+put wpt add q 1 l
+put wpt add q 2 r
+put wpt add q 3 c
+put wpt add q 4 off
+put wpt add q 5 mul r c
+put wpt add q 6 0
+put wpnt 0 add get wpnt 0 1
+end
+fn wptensor to void
+put wpnt 0 0
+d = get og 2
+wptadd 0 0 get og 0 d 0
+wptadd 1 0 get og 1 d get og 30
+for l ulong get og 5
+wptadd 2 l 1 d opg1 l
+wptadd 3 l d d opwq l
+wptadd 4 l d d opwk l
+wptadd 5 l d d opwv l
+wptadd 6 l d d opwo l
+wptadd 7 l 1 d opg2 l
+wptadd 8 l d get og 4 opw1 l
+wptadd 9 l get og 4 d opw2 l
+end
+wptadd 10 0 1 d get og 33
+end
+fn wphead slot ulong to void
+if lt get wpsz slot 120
+exit 20
+end
+if ne wpget slot 0 3616473253210246223
+exit 22
+end
+for i ulong 7
+put og i wpget slot mul add i 1 8
+end
+if not ogeom
+exit 23
+end
+if ne wpget slot 96 get og 8
+exit 24
+end
+if ne get wpsz slot add 120 mul 24 get og 8
+exit 25
+end
+if not ogok2 wpget slot 104
+exit 23
+end
+if gt wpget slot 80 999999
+exit 23
+end
+wptensor
+end
+fn wpck slot ulong to void
+wphead slot
+if ne wpfnv get wpm slot get wpsz slot wpget slot 112
+exit 26
+end
+end
+fn wpvalidval u ulong to void
+v = bitcast f64 u
+if ne v v
+exit 40
+end
+if eq and shr u 52 2047 2047
+exit 41
+end
+if gt fabs v 1000000.0
+exit 42
+end
+end
+fn wptname k ulong to void
+for i ulong 4
+v = ulong get wpkinds add mul k 4 i
+if ne v 32
+oputc v
+end
+end
+end
+note Scientific decimal, 17 significant digits. Hex bits beside it are the exact authority.
+fn wpdec v f64 to void
+if ne v v
+wptext wpnan
+ret
+end
+if eq fabs v bitcast f64 ulong 9218868437227405312
+if lt v 0.0
+oputc 45
+end
+wptext wpinf
+ret
+end
+x = fabs v
+if ne and bitcast ulong v 9223372036854775808 0
+oputc 45
+end
+if eq x 0.0
+oputc 48
+ret
+end
+e = long 0
+while ge x 10.0 bound 400
+x = div x 10.0
+e = add e 1
+end
+while lt x 1.0 bound 400
+x = mul x 10.0
+e = sub e 1
+end
+for i ulong 17
+q = ulong x
+if gt q 9
+q = 9
+end
+oputc add q 48
+if eq i 0
+oputc 46
+end
+x = mul sub x f64 q 10.0
+end
+oputc 101
+oputl e
+end
+global wpsacc f64 2
+global wpnacc ulong 1
+fn wpstblk st ulong nn ulong to void
+ss = get wpsacc 0
+mx = get wpsacc 1
+nf = get wpnacc 0
+for j ulong nn
+v = bitcast f64 wpget 1 add 120 mul add st j 8
+if or ne v v eq fabs v bitcast f64 ulong 9218868437227405312
+nf = add nf 1
+else
+av = fabs v
+if gt av mx
+r = div mx av
+ss = add 1.0 mul ss mul r r
+mx = av
+else
+if gt av 0.0
+r = div av mx
+ss = add ss mul r r
+end
+end
+end
+end
+put wpsacc 0 ss
+put wpsacc 1 mx
+put wpnacc 0 nf
+end
+fn wpstats ti ulong to void
+q = mul ti 8
+st = get wpt add q 4
+nn = get wpt add q 5
+put wpsacc 0 0.0
+put wpsacc 1 0.0
+put wpnacc 0 0
+for blk ulong div add nn 65535 65536
+lo = mul blk 65536
+hi = sub nn lo
+if gt hi 65536
+hi = 65536
+end
+wpstblk add st lo hi
+end
+wptext wprms
+wpdec mul get wpsacc 1 fsqrt div get wpsacc 0 f64 nn
+wptext wpmax
+wpdec get wpsacc 1
+wptext wpnf
+oputu get wpnacc 0
+end
+fn wpht slot ulong q ulong to void
+o = add 120 mul get wpt add q 4 8
+n = mul get wpt add q 5 8
+wphash get wpm slot o n 0
+end
+fn wpinspect to void
+if and ne oargc 3 ne oargc 9
+exit 2
+end
+wpopen 2 1
+wpck 1
+wptext wphdr
+for i ulong 7
+oputu get og i
+wpsp
+end
+oputu get og 8
+wpnl
+wptext wphdr2
+for i ulong 4
+oputu wpget 1 add 64 mul i 8
+wpsp
+end
+oputu wpget 1 104
+wpsp
+oputu wpget 1 112
+wpnl
+if eq oargc 9
+wpslice
+ret
+end
+for t ulong get wpnt 0
+q = mul t 8
+wptname get wpt q
+wpsp
+oputu get wpt add q 1
+wpsp
+oputu get wpt add q 2
+oputc 120
+oputu get wpt add q 3
+wptext wptxt
+oputu get wpt add q 4
+wpht 1 q
+wptext wpsha
+wphexout 0
+wpstats t
+wpnl
+end
+end
+fn wpkmatch k ulong to bool
+n = oargp 3
+if gt n 3
+ret false
+end
+for i ulong n
+if ne get oarg i get wpkinds add mul k 4 i
+ret false
+end
+end
+ret eq get wpkinds add mul k 4 n 32
+end
+fn wpslice to void
+ly = oargu 4
+r0 = oargu 5
+r1 = oargu 6
+c0 = oargu 7
+c1 = oargu 8
+for t ulong get wpnt 0
+q = mul t 8
+if and wpkmatch get wpt q eq ly get wpt add q 1
+if or gt r0 r1 gt c0 c1
+exit 27
+end
+if gt r1 get wpt add q 2
+exit 27
+end
+if gt c1 get wpt add q 3
+exit 27
+end
+wpslcprt q r0 r1 c0 c1
+ret
+end
+end
+exit 27
+end
+fn wpslcprt q ulong r0 ulong r1 ulong c0 ulong c1 ulong to void
+for rr ulong sub r1 r0
+for cc ulong sub c1 c0
+wpslcval q add rr r0 add cc c0
+end
+end
+end
+fn wpslcval q ulong rr ulong cc ulong to void
+ix = mul rr get wpt add q 3
+ix = add ix get wpt add q 4
+ix = add ix cc
+u = wpget 1 add 120 mul ix 8
+oputu rr
+wpsp
+oputu cc
+wpsp
+wpdec bitcast f64 u
+wpsp
+oputx u
+wpnl
+end
+note Hash names are recognized in either hex case. Only canonical lower-case spelling is accepted.
+fn wpname ai ulong slot ulong to void
+n = oargp ai
+st = ulong 0
+for i ulong n
+if eq get oarg i 47
+st = add i 1
+end
+end
+if ne sub n st 67
+ret
+end
+if ne get oarg add st 64 46
+ret
+end
+if or ne get oarg add st 65 119 ne get oarg add st 66 112
+ret
+end
+for i ulong 64
+v = ulong get oarg add st i
+ok = or and ge v 48 le v 57 and ge v 97 le v 102
+ok = or ok and ge v 65 le v 70
+if not ok
+ret
+end
+end
+for i ulong 64
+v = ulong get wpd add slot div i 2
+if eq rem i 2 0
+v = shr v 4
+else
+v = and v 15
+end
+if ne get oarg add st i get wphex v
+exit 30
+end
+end
+end
+note Metadata text is strict UTF-8, including rejection of overlong and surrogate sequences.
+global wpuf ulong 3
+fn wputfb v ulong to void
+need = get wpuf 0
+lo = get wpuf 1
+hi = get wpuf 2
+if gt need 0
+if or lt v lo gt v hi
+exit 31
+end
+need = sub need 1
+lo = 128
+hi = 191
+else
+if ge v 128
+if or lt v 194 gt v 244
+exit 31
+end
+need = 1
+if ge v 224
+need = 2
+end
+if ge v 240
+need = 3
+end
+if eq v 224
+lo = 160
+end
+if eq v 237
+hi = 159
+end
+if eq v 240
+lo = 144
+end
+if eq v 244
+hi = 143
+end
+end
+end
+put wpuf 0 need
+put wpuf 1 lo
+put wpuf 2 hi
+end
+fn wputf h long off ulong nn ulong to void
+b = new uchar 65536 0
+put wpuf 0 0
+put wpuf 1 128
+put wpuf 2 191
+p = ulong 0
+while lt p nn bound 999999
+k = sub nn p
+if gt k 65536
+k = 65536
+end
+r = mapread h add off p b 0 k
+for i ulong k
+wputfb ulong get b i
+end
+p = add p k
+end
+if ne get wpuf 0 0
+exit 31
+end
+end
+fn wpload to void
+wpopen 2 0
+if lt get wpsz 0 376
+exit 32
+end
+wphash get wpm 0 0 get wpsz 0 192
+wpname 2 192
+if ne wpget 0 0 3544421242629803087
+exit 33
+end
+if ne wpget 0 8 get wpsz 0
+exit 32
+end
+put wpol 0 wpget 0 16
+if gt get wpol 0 2
+exit 34
+end
+if or ne wpget 0 240 120 ne wpget 0 248 0
+exit 33
+end
+put wpne 0 wpget 0 32
+if or eq get wpne 0 0 gt get wpne 0 29995392
+exit 35
+end
+if gt wpget 0 24 131
+exit 36
+end
+put wpes 0 24
+if ne get wpol 0 0
+put wpes 0 40
+end
+put wpeo 0 add 376 mul wpget 0 24 128
+n = add get wpeo 0 mul get wpne 0 get wpes 0
+if gt n get wpsz 0
+exit 32
+end
+if gt wpget 0 224 sub get wpsz 0 n
+exit 32
+end
+n = add n wpget 0 224
+if ne wpget 0 232 sub get wpsz 0 n
+exit 32
+end
+wputf get wpm 0 sub n wpget 0 224 wpget 0 224
+wputf get wpm 0 n wpget 0 232
+end
+fn wpgeometry to void
+if ne wpget 0 40 get og 8
+exit 36
+end
+for i ulong 6
+if ne wpget 0 add 48 mul i 8 get og i
+exit 36
+end
+end
+if ne wpget 0 24 get wpnt 0
+exit 36
+end
+for t ulong get wpnt 0
+q = mul t 8
+r = add 376 mul t 128
+for j ulong 4
+if ne wpget 0 add r mul j 8 get wpt add q j
+exit 37
+end
+end
+if or ne wpget 0 add r 32 64 ne wpget 0 add r 56 0
+exit 37
+end
+if ne wpget 0 add r 40 get wpt add q 4
+exit 37
+end
+end
+end
+fn wpefield e ulong f ulong to ulong
+ret wpget 0 add get wpeo 0 add mul e get wpes 0 f
+end
+fn wpentry e ulong prev ulong to ulong
+ix = wpefield e 0
+if ge ix get og 8
+exit 38
+end
+if gt e 0
+if lt ix prev
+exit 39
+end
+if eq ix prev
+exit 43
+end
+end
+wpvalidval wpefield e 16
+if eq wpefield e 8 wpefield e 16
+exit 44
+end
+ret ix
+end
+fn wptend t ulong to ulong
+q = mul t 8
+ret add get wpt add q 4 get wpt add q 5
+end
+global wpest ulong 2
+fn wpeblock lo ulong nn ulong to void
+prev = get wpest 0
+t = get wpest 1
+for j ulong nn
+ix = wpentry add lo j prev
+prev = ix
+while ge ix wptend t bound 132
+t = add t 1
+end
+q = add mul t 8 6
+put wpt q add get wpt q 1
+end
+put wpest 0 prev
+put wpest 1 t
+end
+fn wpentries to void
+put wpest 0 0
+put wpest 1 0
+for blk ulong div add get wpne 0 65535 65536
+lo = mul blk 65536
+nn = sub get wpne 0 lo
+if gt nn 65536
+nn = 65536
+end
+wpeblock lo nn
+end
+for t ulong get wpnt 0
+if ne get wpt add mul t 8 6 wpget 0 add 424 mul t 128
+exit 45
+end
+end
+wphash get wpm 0 get wpeo 0 mul get wpne 0 get wpes 0 0
+wpdeq get wpm 0 192 0 46
+end
+fn wpold e ulong rev bool to void
+ix = wpefield e 0
+o = add 120 mul ix 8
+want = wpefield e 8
+if rev
+want = wpefield e 16
+end
+if ne wpget 1 o want
+exit 47
+end
+if ne get wpol 0 0
+want = wpefield e 24
+if rev
+want = 0
+end
+if ne wpget 1 add o mul get og 8 8 want
+exit 48
+end
+want = wpefield e 32
+if and rev eq get wpol 0 2
+want = 0
+end
+if ne wpget 1 add o mul get og 8 16 want
+exit 48
+end
+end
+end
+fn wptchecks slot ulong rev bool to void
+for t ulong get wpnt 0
+q = mul t 8
+wpht slot q
+ao = add 440 mul t 128
+if rev
+ao = add ao 32
+end
+wpdeq get wpm 0 ao 0 49
+end
+end
+fn wpvalidate rev bool to void
+wpck 1
+wpgeometry
+wpentries
+if not rev
+for i ulong 15
+if ne wpget 0 add 256 mul i 8 wpget 1 mul i 8
+exit 36
+end
+end
+end
+wphash get wpm 1 0 get wpsz 1 0
+ao = ulong 96
+if rev
+ao = 128
+end
+wpdeq get wpm 0 ao 0 50
+wptchecks 1 rev
+for blk ulong div add get wpne 0 65535 65536
+lo = mul blk 65536
+nn = sub get wpne 0 lo
+if gt nn 65536
+nn = 65536
+end
+for j ulong nn
+wpold add lo j rev
+end
+end
+end
+fn wpchange e ulong rev bool to void
+ix = wpefield e 0
+o = add 120 mul ix 8
+want = wpefield e 16
+if rev
+want = wpefield e 8
+end
+wpput 2 o want
+if ne get wpol 0 0
+want = ulong 0
+if rev
+want = wpefield e 24
+end
+wpput 2 add o mul get og 8 8 want
+if eq get wpol 0 2
+want = 0
+if rev
+want = wpefield e 32
+end
+wpput 2 add o mul get og 8 16 want
+end
+end
+end
+fn wptransform rev bool to void
+wpnew 2 get wpsz 1
+wpcopy get wpm 1 get wpm 2 0 0 get wpsz 1
+for blk ulong div add get wpne 0 65535 65536
+lo = mul blk 65536
+nn = sub get wpne 0 lo
+if gt nn 65536
+nn = 65536
+end
+for j ulong nn
+wpchange add lo j rev
+end
+end
+wpput 2 112 wpfnv get wpm 2 get wpsz 2
+end
+fn wpoutpath ai ulong to void
+n = oargp ai
+put wpns 0 n
+for i ulong n
+put wpout i get oarg i
+end
+end
+fn wpabort fd int code int to void
+r = fclose fd
+r = unlink wpout 0 get wpns 0
+if ne r 0
+exit 71
+end
+exit code
+end
+fn wpsave slot ulong readonly bool to void
+fd = int fopen wpout 0 get wpns 0 193 384
+if eq fd -17
+exit 52
+end
+if lt fd 0
+exit 70
+end
+b = new uchar 65536 0
+p = ulong 0
+while lt p get wpsz slot bound 999999
+k = sub get wpsz slot p
+if gt k 65536
+k = 65536
+end
+r = mapread get wpm slot p b 0 k
+j = ulong 0
+while lt j k bound 65537
+r = write fd b j sub k j
+if le r 0
+wpabort fd 70
+end
+j = add j ulong r
+end
+p = add p k
+end
+if ne fsync fd 0
+wpabort fd 70
+end
+if readonly
+if ne fchmod fd 292 0
+wpabort fd 70
+end
+end
+if ne fclose fd 0
+wpabort fd 70
+end
+end
+fn wpoutputcheck rev bool to void
+wphash get wpm 2 0 get wpsz 2 0
+ao = ulong 128
+if rev
+ao = 96
+end
+wpdeq get wpm 0 ao 0 53
+wptchecks 2 not rev
+if not rev
+wpf32 2 0
+wpdeq get wpm 0 160 0 54
+end
+end
+fn wpapply rev bool to void
+if ne oargc 5
+exit 2
+end
+wpload
+wpopen 3 1
+wpvalidate rev
+wptransform rev
+wpoutputcheck rev
+wpoutpath 4
+wpsave 2 false
+wpclose get wpm 2
+wpopen 4 2
+wphash get wpm 2 0 get wpsz 2 0
+ao = ulong 128
+if rev
+ao = 96
+end
+if not wpdequal get wpm 0 ao 0
+wpabort int -1 53
+end
+if not rev
+wpf32 2 0
+if not wpdequal get wpm 0 160 0
+wpabort int -1 54
+end
+end
+wptext wpok
+end
+fn wpdequal h long o ulong slot ulong to bool
+b = new uchar 32 0
+r = mapread h o b 0 32
+for i ulong 32
+if ne get b i get wpd add slot i
+ret false
+end
+end
+ret true
+end
+fn wpsurvive e ulong to bool
+a = bitcast uint f32 bitcast f64 wpefield e 8
+b = bitcast uint f32 bitcast f64 wpefield e 16
+ret ne a b
+end
+fn wpverify to void
+if ne oargc 4
+exit 2
+end
+wpload
+wpopen 3 1
+wpvalidate true
+wpf32 1 0
+wpdeq get wpm 0 160 0 54
+surv = ulong 0
+for blk ulong div add get wpne 0 65535 65536
+lo = mul blk 65536
+nn = sub get wpne 0 lo
+if gt nn 65536
+nn = 65536
+end
+for j ulong nn
+if wpsurvive add lo j
+surv = add surv 1
+end
+end
+end
+wptext wpsurv
+oputu surv
+wptext wpof
+oputu get wpne 0
+wpnl
+end
+note Count weight changes and require identical Adam payload before creating a manifest.
+fn wpdcblk st ulong nn ulong to ulong
+cnt = ulong 0
+for j ulong nn
+o = add 120 mul add st j 8
+if ne wpget 1 o wpget 2 o
+wpvalidval wpget 2 o
+cnt = add cnt 1
+end
+end
+ret cnt
+end
+fn wpdcpart q ulong to void
+st = get wpt add q 4
+nn = get wpt add q 5
+cnt = ulong 0
+for blk ulong div add nn 65535 65536
+lo = mul blk 65536
+kk = sub nn lo
+if gt kk 65536
+kk = 65536
+end
+cnt = add cnt wpdcblk add st lo kk
+end
+put wpt add q 6 cnt
+put wpne 0 add get wpne 0 cnt
+end
+fn wpdcount to void
+put wpne 0 0
+for t ulong get wpnt 0
+wpdcpart mul t 8
+end
+if eq get wpne 0 0
+exit 55
+end
+wphash get wpm 1 add 120 mul get og 8 8 mul get og 8 16 0
+wphash get wpm 2 add 120 mul get og 8 8 mul get og 8 16 32
+for i ulong 32
+if ne get wpd i get wpd add i 32
+exit 56
+end
+end
+end
+fn wpdrecords to void
+for t ulong get wpnt 0
+q = mul t 8
+r = add 376 mul t 128
+for j ulong 4
+wpput 0 add r mul j 8 get wpt add q j
+end
+wpput 0 add r 32 64
+wpput 0 add r 40 get wpt add q 4
+wpput 0 add r 48 get wpt add q 6
+wpht 1 q
+wpdput get wpm 0 add r 64 0
+wpht 2 q
+wpdput get wpm 0 add r 96 0
+end
+end
+fn wpdemit ix ulong e ulong to void
+o = add 120 mul ix 8
+r = add get wpeo 0 mul e get wpes 0
+wpput 0 r ix
+wpput 0 add r 8 wpget 1 o
+wpput 0 add r 16 wpget 2 o
+if ne get wpol 0 0
+wpput 0 add r 24 wpget 1 add o mul get og 8 8
+wpput 0 add r 32 wpget 1 add o mul get og 8 16
+wpput 2 add o mul get og 8 8 0
+if eq get wpol 0 2
+wpput 2 add o mul get og 8 16 0
+end
+end
+end
+fn wpdeblk lo ulong nn ulong first ulong to ulong
+e = first
+for j ulong nn
+ix = add lo j
+o = add 120 mul ix 8
+if ne wpget 1 o wpget 2 o
+wpdemit ix e
+e = add e 1
+end
+end
+ret e
+end
+fn wpdentries to void
+e = ulong 0
+for blk ulong div add get og 8 65535 65536
+lo = mul blk 65536
+nn = sub get og 8 lo
+if gt nn 65536
+nn = 65536
+end
+e = wpdeblk lo nn e
+end
+wpput 2 112 wpfnv get wpm 2 get wpsz 2
+end
+fn wpmeta ai ulong off ulong nn ulong to void
+if eq nn 0
+ret
+end
+wpopen ai 3
+wputf get wpm 3 0 nn
+wpcopy get wpm 3 get wpm 0 0 off nn
+wpclose get wpm 3
+end
+fn wpdheader pn ulong rn ulong to void
+wpput 0 0 3544421242629803087
+wpput 0 8 get wpsz 0
+wpput 0 16 get wpol 0
+wpput 0 24 get wpnt 0
+wpput 0 32 get wpne 0
+wpput 0 40 get og 8
+for i ulong 6
+wpput 0 add 48 mul i 8 get og i
+end
+wpput 0 224 pn
+wpput 0 232 rn
+wpput 0 240 120
+wpcopy get wpm 1 get wpm 0 0 256 120
+wphash get wpm 1 0 get wpsz 1 0
+wpdput get wpm 0 96 0
+wphash get wpm 2 0 get wpsz 2 0
+wpdput get wpm 0 128 0
+wpf32 2 0
+wpdput get wpm 0 160 0
+wphash get wpm 0 get wpeo 0 mul get wpne 0 get wpes 0 0
+wpdput get wpm 0 192 0
+end
+fn wpdpath to void
+wpoutpath 7
+n = get wpns 0
+if gt n 4000
+exit 2
+end
+put wpout n 47
+n = add n 1
+for i ulong 32
+v = ulong get wpd add 192 i
+put wpout add n mul i 2 get wphex shr v 4
+put wpout add add n mul i 2 1 get wphex and v 15
+end
+n = add n 64
+put wpout n 46
+put wpout add n 1 119
+put wpout add n 2 112
+put wpns 0 add n 3
+end
+fn wpdiff to void
+if ne oargc 8
+exit 2
+end
+put wpol 0 oargu 4
+if gt get wpol 0 2
+exit 34
+end
+wpopen 2 1
+wpck 1
+wpopen 3 2
+if ne get wpsz 1 get wpsz 2
+exit 36
+end
+for i ulong 14
+if ne wpget 1 mul i 8 wpget 2 mul i 8
+exit 36
+end
+end
+if ne wpfnv get wpm 2 get wpsz 2 wpget 2 112
+exit 26
+end
+wpdcount
+pn = ofsz 5
+rn = ofsz 6
+if or gt pn 16777216 gt rn 16777216
+exit 57
+end
+put wpes 0 24
+if ne get wpol 0 0
+put wpes 0 40
+end
+put wpeo 0 add 376 mul get wpnt 0 128
+n = add get wpeo 0 mul get wpne 0 get wpes 0
+wpnew 0 add n add pn rn
+wpdrecords
+wpdentries
+wpdheader pn rn
+wpmeta 5 n pn
+wpmeta 6 add n pn rn
+wphash get wpm 0 0 get wpsz 0 192
+wpdpath
+wpsave 0 true
+for i ulong get wpns 0
+oputc ulong get wpout i
+end
+wpnl
+end
+fn wpjson h long off ulong nn ulong to void
+b = new uchar 65536 0
+oputc 34
+p = ulong 0
+while lt p nn bound 999999
+k = sub nn p
+if gt k 65536
+k = 65536
+end
+r = mapread h add off p b 0 k
+for i ulong k
+v = ulong get b i
+if or eq v 34 eq v 92
+oputc 92
+oputc v
+else
+if lt v 32
+oputc 92
+oputc 117
+oputc 48
+oputc 48
+oputc ulong get wphex shr v 4
+oputc ulong get wphex and v 15
+else
+oputc v
+end
+end
+end
+p = add p k
+end
+oputc 34
+end
+fn wpshow to void
+if ne oargc 3
+exit 2
+end
+wpload
+wptext wpjs0
+wphexout 192
+wptext wpjs1
+wpdget get wpm 0 96 0
+wphexout 0
+wptext wpjs2
+wpdget get wpm 0 128 0
+wphexout 0
+wptext wpjs3
+wpdget get wpm 0 160 0
+wphexout 0
+wptext wpjs4
+wpdget get wpm 0 192 0
+wphexout 0
+wptext wpjs5
+oputu get wpol 0
+wptext wpjs6
+oputu get wpne 0
+wptext wpjs7
+nn = get wpne 0
+if gt nn 20
+nn = 20
+end
+for e ulong nn
+if gt e 0
+oputc 44
+end
+oputc 91
+oputu wpefield e 0
+for j ulong sub div get wpes 0 8 1
+oputc 44
+oputc 34
+oputx wpefield e mul add j 1 8
+oputc 34
+end
+oputc 93
+end
+n = add get wpeo 0 mul get wpne 0 get wpes 0
+wptext wpjs8
+wpjson get wpm 0 n wpget 0 224
+wptext wpjs9
+wpjson get wpm 0 add n wpget 0 224 wpget 0 232
+oputc 125
+wpnl
+end
+note Binding is 168 bytes: magic, checkpoint/f32/runtime/patch SHA-256, then record SHA-256.
+fn wpbind to void
+if ne oargc 6
+exit 2
+end
+wpload
+wpopen 3 1
+wpvalidate true
+wpf32 1 0
+wpdeq get wpm 0 160 0 54
+wpnew 2 168
+wpput 2 0 3544405849467014223
+wpcopy get wpm 0 get wpm 2 128 8 64
+wphash get wpm 0 0 get wpsz 0 0
+wpdput get wpm 2 104 0
+wpopen 4 3
+wphash get wpm 3 0 get wpsz 3 0
+wpdput get wpm 2 72 0
+wphash get wpm 2 0 136 0
+wpdput get wpm 2 136 0
+wpoutpath 5
+wpsave 2 true
+wptext wpok
+end
+fn wpcheckbind to void
+if ne oargc 5
+exit 2
+end
+wpopen 2 0
+if ne get wpsz 0 168
+exit 58
+end
+if ne wpget 0 0 3544405849467014223
+exit 58
+end
+wphash get wpm 0 0 136 0
+wpdeq get wpm 0 136 0 59
+wpopen 3 1
+wpck 1
+wphash get wpm 1 0 get wpsz 1 0
+wpdeq get wpm 0 8 0 60
+wpf32 1 0
+wpdeq get wpm 0 40 0 61
+wpopen 4 3
+wphash get wpm 3 0 get wpsz 3 0
+wpdeq get wpm 0 72 0 62
+wptext wpok
+end
+fn main to int
+if lt oargc 2
+ret 2
+end
+if wpcmd wpins
+wpinspect
+else
+if wpcmd wpdif
+wpdiff
+else
+if wpcmd wpsho
+wpshow
+else
+if wpcmd wpval
+if ne oargc 4
+ret 2
+end
+wpload
+wpopen 3 1
+wpvalidate false
+wptransform false
+wpoutputcheck false
+wptext wpok
+else
+if wpcmd wpapp
+wpapply false
+else
+if wpcmd wprev
+wpapply true
+else
+if wpcmd wpver
+wpverify
+else
+if wpcmd wpbin
+wpbind
+else
+if wpcmd wpchk
+wpcheckbind
+else
+ret 2
+end
+end
+end
+end
+end
+end
+end
+end
+end
+oflush
+ret 0
+end

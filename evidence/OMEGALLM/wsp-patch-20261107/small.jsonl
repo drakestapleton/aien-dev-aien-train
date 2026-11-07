@@ -1,0 +1,787 @@
+{"instrument": "external Python stdlib only", "wpatch_sha256": "330660c5963b116aa9e50fd1c2ff3376a27d8cc73788f09878c80280f74c48e3"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/ollm", "init", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck", "256", "8", "16", "2", "32", "2", "2", "1", "10", "3000", "1"], "exit": 0, "expected": 0, "elapsed_ns": 7274099, "stdout": "I 8400\n", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/ollm init /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck 256 8 16 2 32 2 2 1 10 3000 1"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/ollm", "train", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/train.bin", "2", "1"], "exit": 0, "expected": 0, "elapsed_ns": 22430511, "stdout": "T 1 5541842\nT 2 5520363\n", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/ollm train /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck /home/drakestapleton/work/wsp/ck/wpatch-small-2/train.bin 2 1"}
+{"status": "PASS", "check": "oracle CK02 magic"}
+{"status": "PASS", "check": "oracle checkpoint length"}
+{"status": "PASS", "check": "oracle checkpoint FNV"}
+{"status": "PASS", "check": "oracle checkpoint geometry P"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "inspect", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck"], "exit": 0, "expected": 0, "elapsed_ns": 2701369, "stdout": "OLLMCK02 V T D H F L B P: 256 8 16 2 32 2 2 8400\nseed step total lr G fnv: 1 2 10 4569063951553953530 1 12929047925843260235\nwte 0 256x16 dtype=f64 offset=0 sha256=8cff8d99b6ae9164f7732cf6801ae974d3a2a7944f33ccc0505a481eefc64cc6 rms=2.0150972434014620e-2 maxabs=3.4694049902618817e-2 nonfinite=0\nwpe 0 8x16 dtype=f64 offset=4096 sha256=8466ddee307934f1d085b7fc3f2f222b33f320a47b8f72c0782cd099f53c3a56 rms=2.0597512474142969e-2 maxabs=3.4688363182317480e-2 nonfinite=0\ng1 0 1x16 dtype=f64 offset=4224 sha256=8e55ebc45ecdca0459276d85bdcc502985681ca91936c7d388f36141657e7724 rms=9.9998560202156934e-1 maxabs=1.0000898116642267e0 nonfinite=0\nwq 0 16x16 dtype=f64 offset=4240 sha256=adfe7504881e98ae49edbd9bd2a8c6259a190472f5f2a301aabf76d433a26668 rms=1.9387060051204409e-2 maxabs=3.4602970449885450e-2 nonfinite=0\nwk 0 16x16 dtype=f64 offset=4496 sha256=accdb602abdaf839de2b6e98f98e399bcb00eea03cdc1e14ffe760c6012bffa8 rms=2.0086632119378893e-2 maxabs=3.4488179470423929e-2 nonfinite=0\nwv 0 16x16 dtype=f64 offset=4752 sha256=fa6b0727cb263311c2c3b75e6fea1f7902613c5051548b6cff87fecb0556f9d0 rms=2.0442612683966512e-2 maxabs=3.4608463868511711e-2 nonfinite=0\nwo 0 16x16 dtype=f64 offset=5008 sha256=b43e998b213e289c9464b79a54a04243a629061e9351882c0af8ba717ab1f27c rms=9.3607584314112308e-3 maxabs=1.7186119006150049e-2 nonfinite=0\ng2 0 1x16 dtype=f64 offset=5264 sha256=02d1cd2862c618fa82ecbe721cef53d3f0064a85c37dc3c81b60256496a551e8 rms=1.0000317542785344e0 maxabs=1.0000900660818634e0 nonfinite=0\nw1 0 16x32 dtype=f64 offset=5280 sha256=0d43f123403113f54dc36bf858225654da6ca9b2fa6dd13d34ea03df0300162d rms=1.9707409527231671e-2 maxabs=3.4604831137893370e-2 nonfinite=0\nw2 0 32x16 dtype=f64 offset=5792 sha256=ff25c2a9843e2cb7febd7173d1310c5c38d4c3b84f80d41fe477671df90958a4 rms=9.9353752213784609e-3 maxabs=1.7383742580227750e-2 nonfinite=0\ng1 1 1x16 dtype=f64 offset=6304 sha256=d5ef48d1f1f83bea39dbec4469a83b73134a957a6f7ee5c7f55d489a085e2fc2 rms=1.0000055077295755e0 maxabs=1.0000896598909829e0 nonfinite=0\nwq 1 16x16 dtype=f64 offset=6320 sha256=cd5d9460b4f8b03c13493204e04f3499387caa9332da929e17aa53b5bf93f1b9 rms=1.9395643851273927e-2 maxabs=3.4713570183186637e-2 nonfinite=0\nwk 1 16x16 dtype=f64 offset=6576 sha256=77e6c5613a0fba859e0559bee3beb70fb9e4ac007b87134dfc1e2fe482194b44 rms=2.0451505765922823e-2 maxabs=3.4557907877036364e-2 nonfinite=0\nwv 1 16x16 dtype=f64 offset=6832 sha256=a49caf53f5f318fe312bef6bc78842f4f194d97965a34d4d1903a20c325e3af6 rms=2.0283640674707430e-2 maxabs=3.4634749954325338e-2 nonfinite=0\nwo 1 16x16 dtype=f64 offset=7088 sha256=4a99000fa39bce104d6cd39bd7e6e8f108b0a120d700c1372a14614b7d2a3cf9 rms=9.5378278603200783e-3 maxabs=1.7408843619714149e-2 nonfinite=0\ng2 1 1x16 dtype=f64 offset=7344 sha256=975a6761e290c4c1493058ce603d78cf98fe638c88792c88a13d422d00044af5 rms=1.0000051625444570e0 maxabs=1.0000900629791575e0 nonfinite=0\nw1 1 16x32 dtype=f64 offset=7360 sha256=6744256441b31f1e97fe7739e0af3edbeeabb2960c9030bde44a0940f673b254 rms=1.9646243437713831e-2 maxabs=3.4519835058524788e-2 nonfinite=0\nw2 1 32x16 dtype=f64 offset=7872 sha256=f01f41002a7e3c6afa8dbfe6c69ab753d4361cf25faae3e3ea4738e7aa1f0232 rms=9.9239498616909447e-3 maxabs=1.7320015361641458e-2 nonfinite=0\ngf 0 1x16 dtype=f64 offset=8384 sha256=65aa5211ba1921da7b4c26e7667f49bf0d2a7219f2fef32dcc828fb4cf181a9a rms=1.0000070876612532e0 maxabs=1.0000900576992735e0 nonfinite=0\n", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch inspect /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "inspect", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck", "wte", "0", "0", "1", "0", "2"], "exit": 0, "expected": 0, "elapsed_ns": 1117483, "stdout": "OLLMCK02 V T D H F L B P: 256 8 16 2 32 2 2 8400\nseed step total lr G fnv: 1 2 10 4569063951553953530 1 12929047925843260235\n0 0 4.6933608192067630e-3 3f73395873a10edd\n0 1 6.2277422802250175e-3 3f798242d6be64df\n", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch inspect /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck wte 0 0 1 0 2"}
+{"status": "PASS", "check": "inspect exact slice bits"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "inspect", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck", "wte", "0", "0", "99999", "0", "1"], "exit": 27, "expected": 27, "elapsed_ns": 1121434, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch inspect /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck wte 0 0 99999 0 1"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "diff", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/edited.ck", "0", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/params.txt", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/rationale.txt", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-0"], "exit": 0, "expected": 0, "elapsed_ns": 13808319, "stdout": "/home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-0/6be8d19f4cc5d3e37e742eabec80d62827cd59a71fdf5024e4998f8f06c03115.wp\n", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch diff /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck /home/drakestapleton/work/wsp/ck/wpatch-small-2/edited.ck 0 /home/drakestapleton/work/wsp/ck/wpatch-small-2/params.txt /home/drakestapleton/work/wsp/ck/wpatch-small-2/rationale.txt /home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-0"}
+{"status": "PASS", "check": "oracle manifest magic"}
+{"status": "PASS", "check": "oracle canonical manifest name"}
+{"status": "PASS", "check": "oracle manifest length"}
+{"status": "PASS", "check": "oracle policy"}
+{"status": "PASS", "check": "oracle edit identity"}
+{"status": "PASS", "check": "oracle metadata lengths"}
+{"status": "PASS", "check": "oracle strict order"}
+{"status": "PASS", "check": "oracle indices in bounds"}
+{"status": "PASS", "check": "oracle CK02 magic"}
+{"status": "PASS", "check": "oracle checkpoint length"}
+{"status": "PASS", "check": "oracle checkpoint FNV"}
+{"status": "PASS", "check": "oracle checkpoint geometry P"}
+{"status": "PASS", "check": "oracle preserved base header"}
+{"status": "PASS", "check": "oracle manifest geometry"}
+{"status": "PASS", "check": "oracle manifest P"}
+{"status": "PASS", "check": "oracle base SHA"}
+{"status": "PASS", "check": "oracle UTF8 provenance"}
+{"status": "PASS", "check": "oracle entry bits"}
+{"status": "PASS", "check": "oracle entry changed finite"}
+{"status": "PASS", "check": "oracle entry magnitude"}
+{"status": "PASS", "check": "oracle entry bits"}
+{"status": "PASS", "check": "oracle entry changed finite"}
+{"status": "PASS", "check": "oracle entry magnitude"}
+{"status": "PASS", "check": "oracle entry bits"}
+{"status": "PASS", "check": "oracle entry changed finite"}
+{"status": "PASS", "check": "oracle entry magnitude"}
+{"status": "PASS", "check": "oracle entry bits"}
+{"status": "PASS", "check": "oracle entry changed finite"}
+{"status": "PASS", "check": "oracle entry magnitude"}
+{"status": "PASS", "check": "oracle entry bits"}
+{"status": "PASS", "check": "oracle entry changed finite"}
+{"status": "PASS", "check": "oracle entry magnitude"}
+{"status": "PASS", "check": "oracle entry bits"}
+{"status": "PASS", "check": "oracle entry changed finite"}
+{"status": "PASS", "check": "oracle entry magnitude"}
+{"status": "PASS", "check": "oracle entry bits"}
+{"status": "PASS", "check": "oracle entry changed finite"}
+{"status": "PASS", "check": "oracle entry magnitude"}
+{"status": "PASS", "check": "oracle entry bits"}
+{"status": "PASS", "check": "oracle entry changed finite"}
+{"status": "PASS", "check": "oracle entry magnitude"}
+{"status": "PASS", "check": "oracle entry bits"}
+{"status": "PASS", "check": "oracle entry changed finite"}
+{"status": "PASS", "check": "oracle entry magnitude"}
+{"status": "PASS", "check": "oracle entry bits"}
+{"status": "PASS", "check": "oracle entry changed finite"}
+{"status": "PASS", "check": "oracle entry magnitude"}
+{"status": "PASS", "check": "oracle entry bits"}
+{"status": "PASS", "check": "oracle entry changed finite"}
+{"status": "PASS", "check": "oracle entry magnitude"}
+{"status": "PASS", "check": "oracle entry bits"}
+{"status": "PASS", "check": "oracle entry changed finite"}
+{"status": "PASS", "check": "oracle entry magnitude"}
+{"status": "PASS", "check": "oracle entry bits"}
+{"status": "PASS", "check": "oracle entry changed finite"}
+{"status": "PASS", "check": "oracle entry magnitude"}
+{"status": "PASS", "check": "oracle entry bits"}
+{"status": "PASS", "check": "oracle entry changed finite"}
+{"status": "PASS", "check": "oracle entry magnitude"}
+{"status": "PASS", "check": "oracle entry bits"}
+{"status": "PASS", "check": "oracle entry changed finite"}
+{"status": "PASS", "check": "oracle entry magnitude"}
+{"status": "PASS", "check": "oracle entry bits"}
+{"status": "PASS", "check": "oracle entry changed finite"}
+{"status": "PASS", "check": "oracle entry magnitude"}
+{"status": "PASS", "check": "oracle entry bits"}
+{"status": "PASS", "check": "oracle entry changed finite"}
+{"status": "PASS", "check": "oracle entry magnitude"}
+{"status": "PASS", "check": "oracle entry bits"}
+{"status": "PASS", "check": "oracle entry changed finite"}
+{"status": "PASS", "check": "oracle entry magnitude"}
+{"status": "PASS", "check": "oracle entry bits"}
+{"status": "PASS", "check": "oracle entry changed finite"}
+{"status": "PASS", "check": "oracle entry magnitude"}
+{"status": "PASS", "check": "oracle entry bits"}
+{"status": "PASS", "check": "oracle entry changed finite"}
+{"status": "PASS", "check": "oracle entry magnitude"}
+{"status": "PASS", "check": "oracle expected output SHA"}
+{"status": "PASS", "check": "oracle expected f32 SHA"}
+{"status": "PASS", "check": "oracle all tensors present"}
+{"status": "PASS", "check": "oracle tensor record geometry"}
+{"status": "PASS", "check": "oracle tensor changed count"}
+{"status": "PASS", "check": "oracle tensor base SHA"}
+{"status": "PASS", "check": "oracle tensor output SHA"}
+{"status": "PASS", "check": "oracle tensor record geometry"}
+{"status": "PASS", "check": "oracle tensor changed count"}
+{"status": "PASS", "check": "oracle tensor base SHA"}
+{"status": "PASS", "check": "oracle tensor output SHA"}
+{"status": "PASS", "check": "oracle tensor record geometry"}
+{"status": "PASS", "check": "oracle tensor changed count"}
+{"status": "PASS", "check": "oracle tensor base SHA"}
+{"status": "PASS", "check": "oracle tensor output SHA"}
+{"status": "PASS", "check": "oracle tensor record geometry"}
+{"status": "PASS", "check": "oracle tensor changed count"}
+{"status": "PASS", "check": "oracle tensor base SHA"}
+{"status": "PASS", "check": "oracle tensor output SHA"}
+{"status": "PASS", "check": "oracle tensor record geometry"}
+{"status": "PASS", "check": "oracle tensor changed count"}
+{"status": "PASS", "check": "oracle tensor base SHA"}
+{"status": "PASS", "check": "oracle tensor output SHA"}
+{"status": "PASS", "check": "oracle tensor record geometry"}
+{"status": "PASS", "check": "oracle tensor changed count"}
+{"status": "PASS", "check": "oracle tensor base SHA"}
+{"status": "PASS", "check": "oracle tensor output SHA"}
+{"status": "PASS", "check": "oracle tensor record geometry"}
+{"status": "PASS", "check": "oracle tensor changed count"}
+{"status": "PASS", "check": "oracle tensor base SHA"}
+{"status": "PASS", "check": "oracle tensor output SHA"}
+{"status": "PASS", "check": "oracle tensor record geometry"}
+{"status": "PASS", "check": "oracle tensor changed count"}
+{"status": "PASS", "check": "oracle tensor base SHA"}
+{"status": "PASS", "check": "oracle tensor output SHA"}
+{"status": "PASS", "check": "oracle tensor record geometry"}
+{"status": "PASS", "check": "oracle tensor changed count"}
+{"status": "PASS", "check": "oracle tensor base SHA"}
+{"status": "PASS", "check": "oracle tensor output SHA"}
+{"status": "PASS", "check": "oracle tensor record geometry"}
+{"status": "PASS", "check": "oracle tensor changed count"}
+{"status": "PASS", "check": "oracle tensor base SHA"}
+{"status": "PASS", "check": "oracle tensor output SHA"}
+{"status": "PASS", "check": "oracle tensor record geometry"}
+{"status": "PASS", "check": "oracle tensor changed count"}
+{"status": "PASS", "check": "oracle tensor base SHA"}
+{"status": "PASS", "check": "oracle tensor output SHA"}
+{"status": "PASS", "check": "oracle tensor record geometry"}
+{"status": "PASS", "check": "oracle tensor changed count"}
+{"status": "PASS", "check": "oracle tensor base SHA"}
+{"status": "PASS", "check": "oracle tensor output SHA"}
+{"status": "PASS", "check": "oracle tensor record geometry"}
+{"status": "PASS", "check": "oracle tensor changed count"}
+{"status": "PASS", "check": "oracle tensor base SHA"}
+{"status": "PASS", "check": "oracle tensor output SHA"}
+{"status": "PASS", "check": "oracle tensor record geometry"}
+{"status": "PASS", "check": "oracle tensor changed count"}
+{"status": "PASS", "check": "oracle tensor base SHA"}
+{"status": "PASS", "check": "oracle tensor output SHA"}
+{"status": "PASS", "check": "oracle tensor record geometry"}
+{"status": "PASS", "check": "oracle tensor changed count"}
+{"status": "PASS", "check": "oracle tensor base SHA"}
+{"status": "PASS", "check": "oracle tensor output SHA"}
+{"status": "PASS", "check": "oracle tensor record geometry"}
+{"status": "PASS", "check": "oracle tensor changed count"}
+{"status": "PASS", "check": "oracle tensor base SHA"}
+{"status": "PASS", "check": "oracle tensor output SHA"}
+{"status": "PASS", "check": "oracle tensor record geometry"}
+{"status": "PASS", "check": "oracle tensor changed count"}
+{"status": "PASS", "check": "oracle tensor base SHA"}
+{"status": "PASS", "check": "oracle tensor output SHA"}
+{"status": "PASS", "check": "oracle tensor record geometry"}
+{"status": "PASS", "check": "oracle tensor changed count"}
+{"status": "PASS", "check": "oracle tensor base SHA"}
+{"status": "PASS", "check": "oracle tensor output SHA"}
+{"status": "PASS", "check": "oracle tensor record geometry"}
+{"status": "PASS", "check": "oracle tensor changed count"}
+{"status": "PASS", "check": "oracle tensor base SHA"}
+{"status": "PASS", "check": "oracle tensor output SHA"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "show", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-0/6be8d19f4cc5d3e37e742eabec80d62827cd59a71fdf5024e4998f8f06c03115.wp"], "exit": 0, "expected": 0, "elapsed_ns": 1265676, "stdout": "{\"patch_sha256\":\"6be8d19f4cc5d3e37e742eabec80d62827cd59a71fdf5024e4998f8f06c03115\",\"base_sha256\":\"0f7c5cce37a019be53786dfc27fd01146f7606343ccbe7f632d19661dc6f7004\",\"output_sha256\":\"df9ba29d0123bf5852c13765b758998bd1e5a49f63b983dcf934e0b63f261eb3\",\"f32_sha256\":\"b61cbd26710589e5e352794c1b05e08a1fe954e982d135c3bcfa88f95b077068\",\"entries_sha256\":\"1f2e4172184215f85733f111b30a46cdd694b2d887c0280698f2ea7c7f2f1d04\",\"policy\":0,\"changed\":20,\"entries_first_20\":[[0,\"3f73395873a10edd\",\"3f7751ebe85d795c\"],[1,\"3f798242d6be64df\",\"3f798242d6be64de\"],[4096,\"3f9d71eaecf958fb\",\"3f9e780fca28739b\"],[4224,\"3fefff43cec7fbde\",\"3ff003ba7ad8ba59\"],[4240,\"3f91335e055b2e52\",\"3f923982e28a48f2\"],[4496,\"3f7e376430d30470\",\"3f8127fbd2c7b778\"],[4752,\"bf8127b4d0942b41\",\"bf7e36d62c6bec03\"],[5008,\"bf642a283fb3a03a\",\"bf57f202ac759678\"],[5264,\"3ff0005e70ee046f\",\"3ff004770462c0d9\"],[5280,\"3f937e8c81983fca\",\"3f9484b15ec75a6a\"],[5792,\"bf8d0a85a19f1a66\",\"bf8afe3be740e526\"],[6304,\"3ff0005d56c1676d\",\"3ff00475ea3623d7\"],[6320,\"3f478f6a628528cb\",\"3f5c2a0304343e62\"],[6576,\"3f96ddb9cf3d8cbd\",\"3f97e3deac6ca75d\"],[6832,\"bf85cdb8b6e68c3d\",\"bf83c16efc8856fe\"],[7088,\"3f66903abb2fa5f3\",\"3f6ec161a4a87af1\"],[7344,\"3fefff43cf3b0247\",\"3ff003ba7b123d8e\"],[7360,\"bfa157e08134d98b\",\"bfa0d4ce129d4c3b\"],[7872,\"bf908b27ddd68b5c\",\"bf8f0a06014ee178\"],[8384,\"3fefffe8aac28f0e\",\"3ff0040ce8d603f1\"]],\"params\":\"{\\\"delta\\\":0.001,\\\"name\\\":\\\"Ω patch\\\"}\\u000a\",\"rationale\":\"Own-model fixture. Preserve exact rollback.\\u000a\"}\n", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch show /home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-0/6be8d19f4cc5d3e37e742eabec80d62827cd59a71fdf5024e4998f8f06c03115.wp"}
+{"status": "PASS", "check": "show UTF8 provenance"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "validate", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-0/6be8d19f4cc5d3e37e742eabec80d62827cd59a71fdf5024e4998f8f06c03115.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck"], "exit": 0, "expected": 0, "elapsed_ns": 6679118, "stdout": "PASS\n", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch validate /home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-0/6be8d19f4cc5d3e37e742eabec80d62827cd59a71fdf5024e4998f8f06c03115.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "apply", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-0/6be8d19f4cc5d3e37e742eabec80d62827cd59a71fdf5024e4998f8f06c03115.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-0.ck"], "exit": 0, "expected": 0, "elapsed_ns": 12582196, "stdout": "PASS\n", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch apply /home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-0/6be8d19f4cc5d3e37e742eabec80d62827cd59a71fdf5024e4998f8f06c03115.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck /home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-0.ck"}
+{"status": "PASS", "check": "apply exact oracle bytes"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "verify", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-0/6be8d19f4cc5d3e37e742eabec80d62827cd59a71fdf5024e4998f8f06c03115.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-0.ck"], "exit": 0, "expected": 0, "elapsed_ns": 3730338, "stdout": "PASS f32_surviving=19 changed=20\n", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch verify /home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-0/6be8d19f4cc5d3e37e742eabec80d62827cd59a71fdf5024e4998f8f06c03115.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-0.ck"}
+{"status": "PASS", "check": "oracle manifest magic"}
+{"status": "PASS", "check": "oracle canonical manifest name"}
+{"status": "PASS", "check": "oracle manifest length"}
+{"status": "PASS", "check": "oracle policy"}
+{"status": "PASS", "check": "oracle edit identity"}
+{"status": "PASS", "check": "oracle metadata lengths"}
+{"status": "PASS", "check": "oracle strict order"}
+{"status": "PASS", "check": "oracle indices in bounds"}
+{"status": "PASS", "check": "verify f32 survival count"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "revert", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-0/6be8d19f4cc5d3e37e742eabec80d62827cd59a71fdf5024e4998f8f06c03115.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-0.ck", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/reverted-0.ck"], "exit": 0, "expected": 0, "elapsed_ns": 12254993, "stdout": "PASS\n", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch revert /home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-0/6be8d19f4cc5d3e37e742eabec80d62827cd59a71fdf5024e4998f8f06c03115.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-0.ck /home/drakestapleton/work/wsp/ck/wpatch-small-2/reverted-0.ck"}
+{"status": "PASS", "check": "revert byte-identical base"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "bind", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-0/6be8d19f4cc5d3e37e742eabec80d62827cd59a71fdf5024e4998f8f06c03115.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-0.ck", "/home/drakestapleton/work/wsp/wpatch-build/wpatch", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/binding-0"], "exit": 0, "expected": 0, "elapsed_ns": 9592297, "stdout": "PASS\n", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch bind /home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-0/6be8d19f4cc5d3e37e742eabec80d62827cd59a71fdf5024e4998f8f06c03115.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-0.ck /home/drakestapleton/work/wsp/wpatch-build/wpatch /home/drakestapleton/work/wsp/ck/wpatch-small-2/binding-0"}
+{"status": "PASS", "check": "oracle binding format"}
+{"status": "PASS", "check": "oracle binding CK and f32"}
+{"status": "PASS", "check": "oracle binding runtime and patch"}
+{"status": "PASS", "check": "oracle binding self digest"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "checkbind", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/binding-0", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-0.ck", "/home/drakestapleton/work/wsp/wpatch-build/wpatch"], "exit": 0, "expected": 0, "elapsed_ns": 4999583, "stdout": "PASS\n", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch checkbind /home/drakestapleton/work/wsp/ck/wpatch-small-2/binding-0 /home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-0.ck /home/drakestapleton/work/wsp/wpatch-build/wpatch"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "checkbind", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/binding-0", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck", "/home/drakestapleton/work/wsp/wpatch-build/wpatch"], "exit": 60, "expected": 60, "elapsed_ns": 2705817, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch checkbind /home/drakestapleton/work/wsp/ck/wpatch-small-2/binding-0 /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck /home/drakestapleton/work/wsp/wpatch-build/wpatch"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "checkbind", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/binding-0", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-0.ck", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/runtime-0"], "exit": 62, "expected": 62, "elapsed_ns": 4658731, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch checkbind /home/drakestapleton/work/wsp/ck/wpatch-small-2/binding-0 /home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-0.ck /home/drakestapleton/work/wsp/ck/wpatch-small-2/runtime-0"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "checkbind", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/wrong-f32-binding-0", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-0.ck", "/home/drakestapleton/work/wsp/wpatch-build/wpatch"], "exit": 61, "expected": 61, "elapsed_ns": 2842282, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch checkbind /home/drakestapleton/work/wsp/ck/wpatch-small-2/wrong-f32-binding-0 /home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-0.ck /home/drakestapleton/work/wsp/wpatch-build/wpatch"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "checkbind", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/wrong-f32-binding-0", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-0.ck", "/home/drakestapleton/work/wsp/wpatch-build/wpatch"], "exit": 59, "expected": 59, "elapsed_ns": 1029417, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch checkbind /home/drakestapleton/work/wsp/ck/wpatch-small-2/wrong-f32-binding-0 /home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-0.ck /home/drakestapleton/work/wsp/wpatch-build/wpatch"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "apply", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-0/6be8d19f4cc5d3e37e742eabec80d62827cd59a71fdf5024e4998f8f06c03115.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-0.ck"], "exit": 52, "expected": 52, "elapsed_ns": 6705005, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch apply /home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-0/6be8d19f4cc5d3e37e742eabec80d62827cd59a71fdf5024e4998f8f06c03115.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck /home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-0.ck"}
+{"status": "PASS", "check": "OUT exists preserved"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "apply", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-0/6be8d19f4cc5d3e37e742eabec80d62827cd59a71fdf5024e4998f8f06c03115.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck"], "exit": 52, "expected": 52, "elapsed_ns": 6728190, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch apply /home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-0/6be8d19f4cc5d3e37e742eabec80d62827cd59a71fdf5024e4998f8f06c03115.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "revert", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-0/6be8d19f4cc5d3e37e742eabec80d62827cd59a71fdf5024e4998f8f06c03115.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-0.ck", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck"], "exit": 52, "expected": 52, "elapsed_ns": 6346874, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch revert /home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-0/6be8d19f4cc5d3e37e742eabec80d62827cd59a71fdf5024e4998f8f06c03115.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-0.ck /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "diff", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/edited.ck", "0", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/params.txt", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/rationale.txt", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-0"], "exit": 52, "expected": 52, "elapsed_ns": 10173806, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch diff /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck /home/drakestapleton/work/wsp/ck/wpatch-small-2/edited.ck 0 /home/drakestapleton/work/wsp/ck/wpatch-small-2/params.txt /home/drakestapleton/work/wsp/ck/wpatch-small-2/rationale.txt /home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-0"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "diff", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/edited.ck", "1", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/params.txt", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/rationale.txt", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-1"], "exit": 0, "expected": 0, "elapsed_ns": 13842144, "stdout": "/home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-1/66814db53a261b61e9fad68ad91c0fae6e5d5ffd73d589557f898a17d08793f8.wp\n", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch diff /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck /home/drakestapleton/work/wsp/ck/wpatch-small-2/edited.ck 1 /home/drakestapleton/work/wsp/ck/wpatch-small-2/params.txt /home/drakestapleton/work/wsp/ck/wpatch-small-2/rationale.txt /home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-1"}
+{"status": "PASS", "check": "oracle manifest magic"}
+{"status": "PASS", "check": "oracle canonical manifest name"}
+{"status": "PASS", "check": "oracle manifest length"}
+{"status": "PASS", "check": "oracle policy"}
+{"status": "PASS", "check": "oracle edit identity"}
+{"status": "PASS", "check": "oracle metadata lengths"}
+{"status": "PASS", "check": "oracle strict order"}
+{"status": "PASS", "check": "oracle indices in bounds"}
+{"status": "PASS", "check": "oracle CK02 magic"}
+{"status": "PASS", "check": "oracle checkpoint length"}
+{"status": "PASS", "check": "oracle checkpoint FNV"}
+{"status": "PASS", "check": "oracle checkpoint geometry P"}
+{"status": "PASS", "check": "oracle preserved base header"}
+{"status": "PASS", "check": "oracle manifest geometry"}
+{"status": "PASS", "check": "oracle manifest P"}
+{"status": "PASS", "check": "oracle base SHA"}
+{"status": "PASS", "check": "oracle UTF8 provenance"}
+{"status": "PASS", "check": "oracle entry bits"}
+{"status": "PASS", "check": "oracle entry changed finite"}
+{"status": "PASS", "check": "oracle entry magnitude"}
+{"status": "PASS", "check": "oracle saved moments"}
+{"status": "PASS", "check": "oracle entry bits"}
+{"status": "PASS", "check": "oracle entry changed finite"}
+{"status": "PASS", "check": "oracle entry magnitude"}
+{"status": "PASS", "check": "oracle saved moments"}
+{"status": "PASS", "check": "oracle entry bits"}
+{"status": "PASS", "check": "oracle entry changed finite"}
+{"status": "PASS", "check": "oracle entry magnitude"}
+{"status": "PASS", "check": "oracle saved moments"}
+{"status": "PASS", "check": "oracle entry bits"}
+{"status": "PASS", "check": "oracle entry changed finite"}
+{"status": "PASS", "check": "oracle entry magnitude"}
+{"status": "PASS", "check": "oracle saved moments"}
+{"status": "PASS", "check": "oracle entry bits"}
+{"status": "PASS", "check": "oracle entry changed finite"}
+{"status": "PASS", "check": "oracle entry magnitude"}
+{"status": "PASS", "check": "oracle saved moments"}
+{"status": "PASS", "check": "oracle entry bits"}
+{"status": "PASS", "check": "oracle entry changed finite"}
+{"status": "PASS", "check": "oracle entry magnitude"}
+{"status": "PASS", "check": "oracle saved moments"}
+{"status": "PASS", "check": "oracle entry bits"}
+{"status": "PASS", "check": "oracle entry changed finite"}
+{"status": "PASS", "check": "oracle entry magnitude"}
+{"status": "PASS", "check": "oracle saved moments"}
+{"status": "PASS", "check": "oracle entry bits"}
+{"status": "PASS", "check": "oracle entry changed finite"}
+{"status": "PASS", "check": "oracle entry magnitude"}
+{"status": "PASS", "check": "oracle saved moments"}
+{"status": "PASS", "check": "oracle entry bits"}
+{"status": "PASS", "check": "oracle entry changed finite"}
+{"status": "PASS", "check": "oracle entry magnitude"}
+{"status": "PASS", "check": "oracle saved moments"}
+{"status": "PASS", "check": "oracle entry bits"}
+{"status": "PASS", "check": "oracle entry changed finite"}
+{"status": "PASS", "check": "oracle entry magnitude"}
+{"status": "PASS", "check": "oracle saved moments"}
+{"status": "PASS", "check": "oracle entry bits"}
+{"status": "PASS", "check": "oracle entry changed finite"}
+{"status": "PASS", "check": "oracle entry magnitude"}
+{"status": "PASS", "check": "oracle saved moments"}
+{"status": "PASS", "check": "oracle entry bits"}
+{"status": "PASS", "check": "oracle entry changed finite"}
+{"status": "PASS", "check": "oracle entry magnitude"}
+{"status": "PASS", "check": "oracle saved moments"}
+{"status": "PASS", "check": "oracle entry bits"}
+{"status": "PASS", "check": "oracle entry changed finite"}
+{"status": "PASS", "check": "oracle entry magnitude"}
+{"status": "PASS", "check": "oracle saved moments"}
+{"status": "PASS", "check": "oracle entry bits"}
+{"status": "PASS", "check": "oracle entry changed finite"}
+{"status": "PASS", "check": "oracle entry magnitude"}
+{"status": "PASS", "check": "oracle saved moments"}
+{"status": "PASS", "check": "oracle entry bits"}
+{"status": "PASS", "check": "oracle entry changed finite"}
+{"status": "PASS", "check": "oracle entry magnitude"}
+{"status": "PASS", "check": "oracle saved moments"}
+{"status": "PASS", "check": "oracle entry bits"}
+{"status": "PASS", "check": "oracle entry changed finite"}
+{"status": "PASS", "check": "oracle entry magnitude"}
+{"status": "PASS", "check": "oracle saved moments"}
+{"status": "PASS", "check": "oracle entry bits"}
+{"status": "PASS", "check": "oracle entry changed finite"}
+{"status": "PASS", "check": "oracle entry magnitude"}
+{"status": "PASS", "check": "oracle saved moments"}
+{"status": "PASS", "check": "oracle entry bits"}
+{"status": "PASS", "check": "oracle entry changed finite"}
+{"status": "PASS", "check": "oracle entry magnitude"}
+{"status": "PASS", "check": "oracle saved moments"}
+{"status": "PASS", "check": "oracle entry bits"}
+{"status": "PASS", "check": "oracle entry changed finite"}
+{"status": "PASS", "check": "oracle entry magnitude"}
+{"status": "PASS", "check": "oracle saved moments"}
+{"status": "PASS", "check": "oracle entry bits"}
+{"status": "PASS", "check": "oracle entry changed finite"}
+{"status": "PASS", "check": "oracle entry magnitude"}
+{"status": "PASS", "check": "oracle saved moments"}
+{"status": "PASS", "check": "oracle expected output SHA"}
+{"status": "PASS", "check": "oracle expected f32 SHA"}
+{"status": "PASS", "check": "oracle all tensors present"}
+{"status": "PASS", "check": "oracle tensor record geometry"}
+{"status": "PASS", "check": "oracle tensor changed count"}
+{"status": "PASS", "check": "oracle tensor base SHA"}
+{"status": "PASS", "check": "oracle tensor output SHA"}
+{"status": "PASS", "check": "oracle tensor record geometry"}
+{"status": "PASS", "check": "oracle tensor changed count"}
+{"status": "PASS", "check": "oracle tensor base SHA"}
+{"status": "PASS", "check": "oracle tensor output SHA"}
+{"status": "PASS", "check": "oracle tensor record geometry"}
+{"status": "PASS", "check": "oracle tensor changed count"}
+{"status": "PASS", "check": "oracle tensor base SHA"}
+{"status": "PASS", "check": "oracle tensor output SHA"}
+{"status": "PASS", "check": "oracle tensor record geometry"}
+{"status": "PASS", "check": "oracle tensor changed count"}
+{"status": "PASS", "check": "oracle tensor base SHA"}
+{"status": "PASS", "check": "oracle tensor output SHA"}
+{"status": "PASS", "check": "oracle tensor record geometry"}
+{"status": "PASS", "check": "oracle tensor changed count"}
+{"status": "PASS", "check": "oracle tensor base SHA"}
+{"status": "PASS", "check": "oracle tensor output SHA"}
+{"status": "PASS", "check": "oracle tensor record geometry"}
+{"status": "PASS", "check": "oracle tensor changed count"}
+{"status": "PASS", "check": "oracle tensor base SHA"}
+{"status": "PASS", "check": "oracle tensor output SHA"}
+{"status": "PASS", "check": "oracle tensor record geometry"}
+{"status": "PASS", "check": "oracle tensor changed count"}
+{"status": "PASS", "check": "oracle tensor base SHA"}
+{"status": "PASS", "check": "oracle tensor output SHA"}
+{"status": "PASS", "check": "oracle tensor record geometry"}
+{"status": "PASS", "check": "oracle tensor changed count"}
+{"status": "PASS", "check": "oracle tensor base SHA"}
+{"status": "PASS", "check": "oracle tensor output SHA"}
+{"status": "PASS", "check": "oracle tensor record geometry"}
+{"status": "PASS", "check": "oracle tensor changed count"}
+{"status": "PASS", "check": "oracle tensor base SHA"}
+{"status": "PASS", "check": "oracle tensor output SHA"}
+{"status": "PASS", "check": "oracle tensor record geometry"}
+{"status": "PASS", "check": "oracle tensor changed count"}
+{"status": "PASS", "check": "oracle tensor base SHA"}
+{"status": "PASS", "check": "oracle tensor output SHA"}
+{"status": "PASS", "check": "oracle tensor record geometry"}
+{"status": "PASS", "check": "oracle tensor changed count"}
+{"status": "PASS", "check": "oracle tensor base SHA"}
+{"status": "PASS", "check": "oracle tensor output SHA"}
+{"status": "PASS", "check": "oracle tensor record geometry"}
+{"status": "PASS", "check": "oracle tensor changed count"}
+{"status": "PASS", "check": "oracle tensor base SHA"}
+{"status": "PASS", "check": "oracle tensor output SHA"}
+{"status": "PASS", "check": "oracle tensor record geometry"}
+{"status": "PASS", "check": "oracle tensor changed count"}
+{"status": "PASS", "check": "oracle tensor base SHA"}
+{"status": "PASS", "check": "oracle tensor output SHA"}
+{"status": "PASS", "check": "oracle tensor record geometry"}
+{"status": "PASS", "check": "oracle tensor changed count"}
+{"status": "PASS", "check": "oracle tensor base SHA"}
+{"status": "PASS", "check": "oracle tensor output SHA"}
+{"status": "PASS", "check": "oracle tensor record geometry"}
+{"status": "PASS", "check": "oracle tensor changed count"}
+{"status": "PASS", "check": "oracle tensor base SHA"}
+{"status": "PASS", "check": "oracle tensor output SHA"}
+{"status": "PASS", "check": "oracle tensor record geometry"}
+{"status": "PASS", "check": "oracle tensor changed count"}
+{"status": "PASS", "check": "oracle tensor base SHA"}
+{"status": "PASS", "check": "oracle tensor output SHA"}
+{"status": "PASS", "check": "oracle tensor record geometry"}
+{"status": "PASS", "check": "oracle tensor changed count"}
+{"status": "PASS", "check": "oracle tensor base SHA"}
+{"status": "PASS", "check": "oracle tensor output SHA"}
+{"status": "PASS", "check": "oracle tensor record geometry"}
+{"status": "PASS", "check": "oracle tensor changed count"}
+{"status": "PASS", "check": "oracle tensor base SHA"}
+{"status": "PASS", "check": "oracle tensor output SHA"}
+{"status": "PASS", "check": "oracle tensor record geometry"}
+{"status": "PASS", "check": "oracle tensor changed count"}
+{"status": "PASS", "check": "oracle tensor base SHA"}
+{"status": "PASS", "check": "oracle tensor output SHA"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "show", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-1/66814db53a261b61e9fad68ad91c0fae6e5d5ffd73d589557f898a17d08793f8.wp"], "exit": 0, "expected": 0, "elapsed_ns": 1770049, "stdout": "{\"patch_sha256\":\"66814db53a261b61e9fad68ad91c0fae6e5d5ffd73d589557f898a17d08793f8\",\"base_sha256\":\"0f7c5cce37a019be53786dfc27fd01146f7606343ccbe7f632d19661dc6f7004\",\"output_sha256\":\"a094ea3f1ddb087d13316f882b44e4ba3e3fe8d4d32efcfcb9f86cbae7049f28\",\"f32_sha256\":\"b61cbd26710589e5e352794c1b05e08a1fe954e982d135c3bcfa88f95b077068\",\"entries_sha256\":\"a4d6249a009e496434ea6f1eed97e59b6d26560225e1727bc6213b69f0f22f77\",\"policy\":1,\"changed\":20,\"entries_first_20\":[[0,\"3f73395873a10edd\",\"3f7751ebe85d795c\",\"bf8552a73209b7de\",\"3f14fbfe29a9774b\"],[1,\"3f798242d6be64df\",\"3f798242d6be64de\",\"3f8ae1fb0b51213f\",\"3f18d79eff023b06\"],[4096,\"3f9d71eaecf958fb\",\"3f9e780fca28739b\",\"bf6fda794c7f4356\",\"3ee4874452c54ea4\"],[4224,\"3fefff43cec7fbde\",\"3ff003ba7ad8ba59\",\"3f1256c5dd67068a\",\"3e2760769ce5b9f8\"],[4240,\"3f91335e055b2e52\",\"3f923982e28a48f2\",\"3e8c82f3e951ecd7\",\"3d22dc1b3d5ebae0\"],[4496,\"3f7e376430d30470\",\"3f8127fbd2c7b778\",\"bea74810b3835236\",\"3d5affaac6d4f0e8\"],[4752,\"bf8127b4d0942b41\",\"bf7e36d62c6bec03\",\"3f2ff9fda43ff4ce\",\"3e655d362beed931\"],[5008,\"bf642a283fb3a03a\",\"bf57f202ac759678\",\"3f3502ff80b87ea6\",\"3e72e5c1e1efe469\"],[5264,\"3ff0005e70ee046f\",\"3ff004770462c0d9\",\"bf18ed43b60b63b7\",\"3e355bda46217552\"],[5280,\"3f937e8c81983fca\",\"3f9484b15ec75a6a\",\"bf48faf52cc05b78\",\"3e965b7796fddabc\"],[5792,\"bf8d0a85a19f1a66\",\"bf8afe3be740e526\",\"3f4a9cc4b0ff81ae\",\"3e99124af81315f5\"],[6304,\"3ff0005d56c1676d\",\"3ff00475ea3623d7\",\"bf183fc5d9e8349e\",\"3e34f092d477879a\"],[6320,\"3f478f6a628528cb\",\"3f5c2a0304343e62\",\"bea91b8ad8d8fa88\",\"3d711f50953c987a\"],[6576,\"3f96ddb9cf3d8cbd\",\"3f97e3deac6ca75d\",\"bea1d46f2116bc66\",\"3d46551f111a70d4\"],[6832,\"bf85cdb8b6e68c3d\",\"bf83c16efc8856fe\",\"bf4f1c7c31f855d4\",\"3ea2ab72a16c8090\"],[7088,\"3f66903abb2fa5f3\",\"3f6ec161a4a87af1\",\"bf50fdbc8214d868\",\"3ea5d7a369874dbc\"],[7344,\"3fefff43cf3b0247\",\"3ff003ba7b123d8e\",\"3f0d8004986b399c\",\"3e1e3eb1e77eda8e\"],[7360,\"bfa157e08134d98b\",\"bfa0d4ce129d4c3b\",\"3f1d076f4cc62d48\",\"3e421f608bd657e5\"],[7872,\"bf908b27ddd68b5c\",\"bf8f0a06014ee178\",\"3f549ba6f596fe71\",\"3ead9cd639986443\"],[8384,\"3fefffe8aac28f0e\",\"3ff0040ce8d603f1\",\"3f27d30ec44cacbd\",\"3e64d03ccafe7fec\"]],\"params\":\"{\\\"delta\\\":0.001,\\\"name\\\":\\\"Ω patch\\\"}\\u000a\",\"rationale\":\"Own-model fixture. Preserve exact rollback.\\u000a\"}\n", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch show /home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-1/66814db53a261b61e9fad68ad91c0fae6e5d5ffd73d589557f898a17d08793f8.wp"}
+{"status": "PASS", "check": "show UTF8 provenance"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "validate", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-1/66814db53a261b61e9fad68ad91c0fae6e5d5ffd73d589557f898a17d08793f8.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck"], "exit": 0, "expected": 0, "elapsed_ns": 7115633, "stdout": "PASS\n", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch validate /home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-1/66814db53a261b61e9fad68ad91c0fae6e5d5ffd73d589557f898a17d08793f8.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "apply", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-1/66814db53a261b61e9fad68ad91c0fae6e5d5ffd73d589557f898a17d08793f8.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-1.ck"], "exit": 0, "expected": 0, "elapsed_ns": 13531021, "stdout": "PASS\n", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch apply /home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-1/66814db53a261b61e9fad68ad91c0fae6e5d5ffd73d589557f898a17d08793f8.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck /home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-1.ck"}
+{"status": "PASS", "check": "apply exact oracle bytes"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "verify", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-1/66814db53a261b61e9fad68ad91c0fae6e5d5ffd73d589557f898a17d08793f8.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-1.ck"], "exit": 0, "expected": 0, "elapsed_ns": 4289944, "stdout": "PASS f32_surviving=19 changed=20\n", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch verify /home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-1/66814db53a261b61e9fad68ad91c0fae6e5d5ffd73d589557f898a17d08793f8.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-1.ck"}
+{"status": "PASS", "check": "oracle manifest magic"}
+{"status": "PASS", "check": "oracle canonical manifest name"}
+{"status": "PASS", "check": "oracle manifest length"}
+{"status": "PASS", "check": "oracle policy"}
+{"status": "PASS", "check": "oracle edit identity"}
+{"status": "PASS", "check": "oracle metadata lengths"}
+{"status": "PASS", "check": "oracle strict order"}
+{"status": "PASS", "check": "oracle indices in bounds"}
+{"status": "PASS", "check": "verify f32 survival count"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "revert", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-1/66814db53a261b61e9fad68ad91c0fae6e5d5ffd73d589557f898a17d08793f8.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-1.ck", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/reverted-1.ck"], "exit": 0, "expected": 0, "elapsed_ns": 11703916, "stdout": "PASS\n", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch revert /home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-1/66814db53a261b61e9fad68ad91c0fae6e5d5ffd73d589557f898a17d08793f8.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-1.ck /home/drakestapleton/work/wsp/ck/wpatch-small-2/reverted-1.ck"}
+{"status": "PASS", "check": "revert byte-identical base"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "bind", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-1/66814db53a261b61e9fad68ad91c0fae6e5d5ffd73d589557f898a17d08793f8.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-1.ck", "/home/drakestapleton/work/wsp/wpatch-build/wpatch", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/binding-1"], "exit": 0, "expected": 0, "elapsed_ns": 10830164, "stdout": "PASS\n", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch bind /home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-1/66814db53a261b61e9fad68ad91c0fae6e5d5ffd73d589557f898a17d08793f8.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-1.ck /home/drakestapleton/work/wsp/wpatch-build/wpatch /home/drakestapleton/work/wsp/ck/wpatch-small-2/binding-1"}
+{"status": "PASS", "check": "oracle binding format"}
+{"status": "PASS", "check": "oracle binding CK and f32"}
+{"status": "PASS", "check": "oracle binding runtime and patch"}
+{"status": "PASS", "check": "oracle binding self digest"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "checkbind", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/binding-1", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-1.ck", "/home/drakestapleton/work/wsp/wpatch-build/wpatch"], "exit": 0, "expected": 0, "elapsed_ns": 4922125, "stdout": "PASS\n", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch checkbind /home/drakestapleton/work/wsp/ck/wpatch-small-2/binding-1 /home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-1.ck /home/drakestapleton/work/wsp/wpatch-build/wpatch"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "checkbind", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/binding-1", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck", "/home/drakestapleton/work/wsp/wpatch-build/wpatch"], "exit": 60, "expected": 60, "elapsed_ns": 2720809, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch checkbind /home/drakestapleton/work/wsp/ck/wpatch-small-2/binding-1 /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck /home/drakestapleton/work/wsp/wpatch-build/wpatch"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "checkbind", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/binding-1", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-1.ck", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/runtime-1"], "exit": 62, "expected": 62, "elapsed_ns": 4714764, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch checkbind /home/drakestapleton/work/wsp/ck/wpatch-small-2/binding-1 /home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-1.ck /home/drakestapleton/work/wsp/ck/wpatch-small-2/runtime-1"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "checkbind", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/wrong-f32-binding-1", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-1.ck", "/home/drakestapleton/work/wsp/wpatch-build/wpatch"], "exit": 61, "expected": 61, "elapsed_ns": 3195565, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch checkbind /home/drakestapleton/work/wsp/ck/wpatch-small-2/wrong-f32-binding-1 /home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-1.ck /home/drakestapleton/work/wsp/wpatch-build/wpatch"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "checkbind", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/wrong-f32-binding-1", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-1.ck", "/home/drakestapleton/work/wsp/wpatch-build/wpatch"], "exit": 59, "expected": 59, "elapsed_ns": 689494, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch checkbind /home/drakestapleton/work/wsp/ck/wpatch-small-2/wrong-f32-binding-1 /home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-1.ck /home/drakestapleton/work/wsp/wpatch-build/wpatch"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "apply", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-1/66814db53a261b61e9fad68ad91c0fae6e5d5ffd73d589557f898a17d08793f8.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-1.ck"], "exit": 52, "expected": 52, "elapsed_ns": 6712574, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch apply /home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-1/66814db53a261b61e9fad68ad91c0fae6e5d5ffd73d589557f898a17d08793f8.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck /home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-1.ck"}
+{"status": "PASS", "check": "OUT exists preserved"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "apply", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-1/66814db53a261b61e9fad68ad91c0fae6e5d5ffd73d589557f898a17d08793f8.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck"], "exit": 52, "expected": 52, "elapsed_ns": 6951968, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch apply /home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-1/66814db53a261b61e9fad68ad91c0fae6e5d5ffd73d589557f898a17d08793f8.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "revert", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-1/66814db53a261b61e9fad68ad91c0fae6e5d5ffd73d589557f898a17d08793f8.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-1.ck", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck"], "exit": 52, "expected": 52, "elapsed_ns": 6762847, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch revert /home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-1/66814db53a261b61e9fad68ad91c0fae6e5d5ffd73d589557f898a17d08793f8.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-1.ck /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "diff", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/edited.ck", "1", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/params.txt", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/rationale.txt", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-1"], "exit": 52, "expected": 52, "elapsed_ns": 17105294, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch diff /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck /home/drakestapleton/work/wsp/ck/wpatch-small-2/edited.ck 1 /home/drakestapleton/work/wsp/ck/wpatch-small-2/params.txt /home/drakestapleton/work/wsp/ck/wpatch-small-2/rationale.txt /home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-1"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "diff", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/edited.ck", "2", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/params.txt", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/rationale.txt", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-2"], "exit": 0, "expected": 0, "elapsed_ns": 24733252, "stdout": "/home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-2/b892bfe7a5fe096ae56c4edb58169bbdc98c4091ca03e703dee46398a85e4dea.wp\n", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch diff /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck /home/drakestapleton/work/wsp/ck/wpatch-small-2/edited.ck 2 /home/drakestapleton/work/wsp/ck/wpatch-small-2/params.txt /home/drakestapleton/work/wsp/ck/wpatch-small-2/rationale.txt /home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-2"}
+{"status": "PASS", "check": "oracle manifest magic"}
+{"status": "PASS", "check": "oracle canonical manifest name"}
+{"status": "PASS", "check": "oracle manifest length"}
+{"status": "PASS", "check": "oracle policy"}
+{"status": "PASS", "check": "oracle edit identity"}
+{"status": "PASS", "check": "oracle metadata lengths"}
+{"status": "PASS", "check": "oracle strict order"}
+{"status": "PASS", "check": "oracle indices in bounds"}
+{"status": "PASS", "check": "oracle CK02 magic"}
+{"status": "PASS", "check": "oracle checkpoint length"}
+{"status": "PASS", "check": "oracle checkpoint FNV"}
+{"status": "PASS", "check": "oracle checkpoint geometry P"}
+{"status": "PASS", "check": "oracle preserved base header"}
+{"status": "PASS", "check": "oracle manifest geometry"}
+{"status": "PASS", "check": "oracle manifest P"}
+{"status": "PASS", "check": "oracle base SHA"}
+{"status": "PASS", "check": "oracle UTF8 provenance"}
+{"status": "PASS", "check": "oracle entry bits"}
+{"status": "PASS", "check": "oracle entry changed finite"}
+{"status": "PASS", "check": "oracle entry magnitude"}
+{"status": "PASS", "check": "oracle saved moments"}
+{"status": "PASS", "check": "oracle entry bits"}
+{"status": "PASS", "check": "oracle entry changed finite"}
+{"status": "PASS", "check": "oracle entry magnitude"}
+{"status": "PASS", "check": "oracle saved moments"}
+{"status": "PASS", "check": "oracle entry bits"}
+{"status": "PASS", "check": "oracle entry changed finite"}
+{"status": "PASS", "check": "oracle entry magnitude"}
+{"status": "PASS", "check": "oracle saved moments"}
+{"status": "PASS", "check": "oracle entry bits"}
+{"status": "PASS", "check": "oracle entry changed finite"}
+{"status": "PASS", "check": "oracle entry magnitude"}
+{"status": "PASS", "check": "oracle saved moments"}
+{"status": "PASS", "check": "oracle entry bits"}
+{"status": "PASS", "check": "oracle entry changed finite"}
+{"status": "PASS", "check": "oracle entry magnitude"}
+{"status": "PASS", "check": "oracle saved moments"}
+{"status": "PASS", "check": "oracle entry bits"}
+{"status": "PASS", "check": "oracle entry changed finite"}
+{"status": "PASS", "check": "oracle entry magnitude"}
+{"status": "PASS", "check": "oracle saved moments"}
+{"status": "PASS", "check": "oracle entry bits"}
+{"status": "PASS", "check": "oracle entry changed finite"}
+{"status": "PASS", "check": "oracle entry magnitude"}
+{"status": "PASS", "check": "oracle saved moments"}
+{"status": "PASS", "check": "oracle entry bits"}
+{"status": "PASS", "check": "oracle entry changed finite"}
+{"status": "PASS", "check": "oracle entry magnitude"}
+{"status": "PASS", "check": "oracle saved moments"}
+{"status": "PASS", "check": "oracle entry bits"}
+{"status": "PASS", "check": "oracle entry changed finite"}
+{"status": "PASS", "check": "oracle entry magnitude"}
+{"status": "PASS", "check": "oracle saved moments"}
+{"status": "PASS", "check": "oracle entry bits"}
+{"status": "PASS", "check": "oracle entry changed finite"}
+{"status": "PASS", "check": "oracle entry magnitude"}
+{"status": "PASS", "check": "oracle saved moments"}
+{"status": "PASS", "check": "oracle entry bits"}
+{"status": "PASS", "check": "oracle entry changed finite"}
+{"status": "PASS", "check": "oracle entry magnitude"}
+{"status": "PASS", "check": "oracle saved moments"}
+{"status": "PASS", "check": "oracle entry bits"}
+{"status": "PASS", "check": "oracle entry changed finite"}
+{"status": "PASS", "check": "oracle entry magnitude"}
+{"status": "PASS", "check": "oracle saved moments"}
+{"status": "PASS", "check": "oracle entry bits"}
+{"status": "PASS", "check": "oracle entry changed finite"}
+{"status": "PASS", "check": "oracle entry magnitude"}
+{"status": "PASS", "check": "oracle saved moments"}
+{"status": "PASS", "check": "oracle entry bits"}
+{"status": "PASS", "check": "oracle entry changed finite"}
+{"status": "PASS", "check": "oracle entry magnitude"}
+{"status": "PASS", "check": "oracle saved moments"}
+{"status": "PASS", "check": "oracle entry bits"}
+{"status": "PASS", "check": "oracle entry changed finite"}
+{"status": "PASS", "check": "oracle entry magnitude"}
+{"status": "PASS", "check": "oracle saved moments"}
+{"status": "PASS", "check": "oracle entry bits"}
+{"status": "PASS", "check": "oracle entry changed finite"}
+{"status": "PASS", "check": "oracle entry magnitude"}
+{"status": "PASS", "check": "oracle saved moments"}
+{"status": "PASS", "check": "oracle entry bits"}
+{"status": "PASS", "check": "oracle entry changed finite"}
+{"status": "PASS", "check": "oracle entry magnitude"}
+{"status": "PASS", "check": "oracle saved moments"}
+{"status": "PASS", "check": "oracle entry bits"}
+{"status": "PASS", "check": "oracle entry changed finite"}
+{"status": "PASS", "check": "oracle entry magnitude"}
+{"status": "PASS", "check": "oracle saved moments"}
+{"status": "PASS", "check": "oracle entry bits"}
+{"status": "PASS", "check": "oracle entry changed finite"}
+{"status": "PASS", "check": "oracle entry magnitude"}
+{"status": "PASS", "check": "oracle saved moments"}
+{"status": "PASS", "check": "oracle entry bits"}
+{"status": "PASS", "check": "oracle entry changed finite"}
+{"status": "PASS", "check": "oracle entry magnitude"}
+{"status": "PASS", "check": "oracle saved moments"}
+{"status": "PASS", "check": "oracle expected output SHA"}
+{"status": "PASS", "check": "oracle expected f32 SHA"}
+{"status": "PASS", "check": "oracle all tensors present"}
+{"status": "PASS", "check": "oracle tensor record geometry"}
+{"status": "PASS", "check": "oracle tensor changed count"}
+{"status": "PASS", "check": "oracle tensor base SHA"}
+{"status": "PASS", "check": "oracle tensor output SHA"}
+{"status": "PASS", "check": "oracle tensor record geometry"}
+{"status": "PASS", "check": "oracle tensor changed count"}
+{"status": "PASS", "check": "oracle tensor base SHA"}
+{"status": "PASS", "check": "oracle tensor output SHA"}
+{"status": "PASS", "check": "oracle tensor record geometry"}
+{"status": "PASS", "check": "oracle tensor changed count"}
+{"status": "PASS", "check": "oracle tensor base SHA"}
+{"status": "PASS", "check": "oracle tensor output SHA"}
+{"status": "PASS", "check": "oracle tensor record geometry"}
+{"status": "PASS", "check": "oracle tensor changed count"}
+{"status": "PASS", "check": "oracle tensor base SHA"}
+{"status": "PASS", "check": "oracle tensor output SHA"}
+{"status": "PASS", "check": "oracle tensor record geometry"}
+{"status": "PASS", "check": "oracle tensor changed count"}
+{"status": "PASS", "check": "oracle tensor base SHA"}
+{"status": "PASS", "check": "oracle tensor output SHA"}
+{"status": "PASS", "check": "oracle tensor record geometry"}
+{"status": "PASS", "check": "oracle tensor changed count"}
+{"status": "PASS", "check": "oracle tensor base SHA"}
+{"status": "PASS", "check": "oracle tensor output SHA"}
+{"status": "PASS", "check": "oracle tensor record geometry"}
+{"status": "PASS", "check": "oracle tensor changed count"}
+{"status": "PASS", "check": "oracle tensor base SHA"}
+{"status": "PASS", "check": "oracle tensor output SHA"}
+{"status": "PASS", "check": "oracle tensor record geometry"}
+{"status": "PASS", "check": "oracle tensor changed count"}
+{"status": "PASS", "check": "oracle tensor base SHA"}
+{"status": "PASS", "check": "oracle tensor output SHA"}
+{"status": "PASS", "check": "oracle tensor record geometry"}
+{"status": "PASS", "check": "oracle tensor changed count"}
+{"status": "PASS", "check": "oracle tensor base SHA"}
+{"status": "PASS", "check": "oracle tensor output SHA"}
+{"status": "PASS", "check": "oracle tensor record geometry"}
+{"status": "PASS", "check": "oracle tensor changed count"}
+{"status": "PASS", "check": "oracle tensor base SHA"}
+{"status": "PASS", "check": "oracle tensor output SHA"}
+{"status": "PASS", "check": "oracle tensor record geometry"}
+{"status": "PASS", "check": "oracle tensor changed count"}
+{"status": "PASS", "check": "oracle tensor base SHA"}
+{"status": "PASS", "check": "oracle tensor output SHA"}
+{"status": "PASS", "check": "oracle tensor record geometry"}
+{"status": "PASS", "check": "oracle tensor changed count"}
+{"status": "PASS", "check": "oracle tensor base SHA"}
+{"status": "PASS", "check": "oracle tensor output SHA"}
+{"status": "PASS", "check": "oracle tensor record geometry"}
+{"status": "PASS", "check": "oracle tensor changed count"}
+{"status": "PASS", "check": "oracle tensor base SHA"}
+{"status": "PASS", "check": "oracle tensor output SHA"}
+{"status": "PASS", "check": "oracle tensor record geometry"}
+{"status": "PASS", "check": "oracle tensor changed count"}
+{"status": "PASS", "check": "oracle tensor base SHA"}
+{"status": "PASS", "check": "oracle tensor output SHA"}
+{"status": "PASS", "check": "oracle tensor record geometry"}
+{"status": "PASS", "check": "oracle tensor changed count"}
+{"status": "PASS", "check": "oracle tensor base SHA"}
+{"status": "PASS", "check": "oracle tensor output SHA"}
+{"status": "PASS", "check": "oracle tensor record geometry"}
+{"status": "PASS", "check": "oracle tensor changed count"}
+{"status": "PASS", "check": "oracle tensor base SHA"}
+{"status": "PASS", "check": "oracle tensor output SHA"}
+{"status": "PASS", "check": "oracle tensor record geometry"}
+{"status": "PASS", "check": "oracle tensor changed count"}
+{"status": "PASS", "check": "oracle tensor base SHA"}
+{"status": "PASS", "check": "oracle tensor output SHA"}
+{"status": "PASS", "check": "oracle tensor record geometry"}
+{"status": "PASS", "check": "oracle tensor changed count"}
+{"status": "PASS", "check": "oracle tensor base SHA"}
+{"status": "PASS", "check": "oracle tensor output SHA"}
+{"status": "PASS", "check": "oracle tensor record geometry"}
+{"status": "PASS", "check": "oracle tensor changed count"}
+{"status": "PASS", "check": "oracle tensor base SHA"}
+{"status": "PASS", "check": "oracle tensor output SHA"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "show", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-2/b892bfe7a5fe096ae56c4edb58169bbdc98c4091ca03e703dee46398a85e4dea.wp"], "exit": 0, "expected": 0, "elapsed_ns": 1656559, "stdout": "{\"patch_sha256\":\"b892bfe7a5fe096ae56c4edb58169bbdc98c4091ca03e703dee46398a85e4dea\",\"base_sha256\":\"0f7c5cce37a019be53786dfc27fd01146f7606343ccbe7f632d19661dc6f7004\",\"output_sha256\":\"2c2a6304ba02509b12b70174ed70d586d1a0e1da4226257bc56be24e1e7eefe0\",\"f32_sha256\":\"b61cbd26710589e5e352794c1b05e08a1fe954e982d135c3bcfa88f95b077068\",\"entries_sha256\":\"a4d6249a009e496434ea6f1eed97e59b6d26560225e1727bc6213b69f0f22f77\",\"policy\":2,\"changed\":20,\"entries_first_20\":[[0,\"3f73395873a10edd\",\"3f7751ebe85d795c\",\"bf8552a73209b7de\",\"3f14fbfe29a9774b\"],[1,\"3f798242d6be64df\",\"3f798242d6be64de\",\"3f8ae1fb0b51213f\",\"3f18d79eff023b06\"],[4096,\"3f9d71eaecf958fb\",\"3f9e780fca28739b\",\"bf6fda794c7f4356\",\"3ee4874452c54ea4\"],[4224,\"3fefff43cec7fbde\",\"3ff003ba7ad8ba59\",\"3f1256c5dd67068a\",\"3e2760769ce5b9f8\"],[4240,\"3f91335e055b2e52\",\"3f923982e28a48f2\",\"3e8c82f3e951ecd7\",\"3d22dc1b3d5ebae0\"],[4496,\"3f7e376430d30470\",\"3f8127fbd2c7b778\",\"bea74810b3835236\",\"3d5affaac6d4f0e8\"],[4752,\"bf8127b4d0942b41\",\"bf7e36d62c6bec03\",\"3f2ff9fda43ff4ce\",\"3e655d362beed931\"],[5008,\"bf642a283fb3a03a\",\"bf57f202ac759678\",\"3f3502ff80b87ea6\",\"3e72e5c1e1efe469\"],[5264,\"3ff0005e70ee046f\",\"3ff004770462c0d9\",\"bf18ed43b60b63b7\",\"3e355bda46217552\"],[5280,\"3f937e8c81983fca\",\"3f9484b15ec75a6a\",\"bf48faf52cc05b78\",\"3e965b7796fddabc\"],[5792,\"bf8d0a85a19f1a66\",\"bf8afe3be740e526\",\"3f4a9cc4b0ff81ae\",\"3e99124af81315f5\"],[6304,\"3ff0005d56c1676d\",\"3ff00475ea3623d7\",\"bf183fc5d9e8349e\",\"3e34f092d477879a\"],[6320,\"3f478f6a628528cb\",\"3f5c2a0304343e62\",\"bea91b8ad8d8fa88\",\"3d711f50953c987a\"],[6576,\"3f96ddb9cf3d8cbd\",\"3f97e3deac6ca75d\",\"bea1d46f2116bc66\",\"3d46551f111a70d4\"],[6832,\"bf85cdb8b6e68c3d\",\"bf83c16efc8856fe\",\"bf4f1c7c31f855d4\",\"3ea2ab72a16c8090\"],[7088,\"3f66903abb2fa5f3\",\"3f6ec161a4a87af1\",\"bf50fdbc8214d868\",\"3ea5d7a369874dbc\"],[7344,\"3fefff43cf3b0247\",\"3ff003ba7b123d8e\",\"3f0d8004986b399c\",\"3e1e3eb1e77eda8e\"],[7360,\"bfa157e08134d98b\",\"bfa0d4ce129d4c3b\",\"3f1d076f4cc62d48\",\"3e421f608bd657e5\"],[7872,\"bf908b27ddd68b5c\",\"bf8f0a06014ee178\",\"3f549ba6f596fe71\",\"3ead9cd639986443\"],[8384,\"3fefffe8aac28f0e\",\"3ff0040ce8d603f1\",\"3f27d30ec44cacbd\",\"3e64d03ccafe7fec\"]],\"params\":\"{\\\"delta\\\":0.001,\\\"name\\\":\\\"Ω patch\\\"}\\u000a\",\"rationale\":\"Own-model fixture. Preserve exact rollback.\\u000a\"}\n", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch show /home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-2/b892bfe7a5fe096ae56c4edb58169bbdc98c4091ca03e703dee46398a85e4dea.wp"}
+{"status": "PASS", "check": "show UTF8 provenance"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "validate", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-2/b892bfe7a5fe096ae56c4edb58169bbdc98c4091ca03e703dee46398a85e4dea.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck"], "exit": 0, "expected": 0, "elapsed_ns": 6398331, "stdout": "PASS\n", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch validate /home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-2/b892bfe7a5fe096ae56c4edb58169bbdc98c4091ca03e703dee46398a85e4dea.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "apply", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-2/b892bfe7a5fe096ae56c4edb58169bbdc98c4091ca03e703dee46398a85e4dea.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-2.ck"], "exit": 0, "expected": 0, "elapsed_ns": 13036008, "stdout": "PASS\n", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch apply /home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-2/b892bfe7a5fe096ae56c4edb58169bbdc98c4091ca03e703dee46398a85e4dea.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck /home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-2.ck"}
+{"status": "PASS", "check": "apply exact oracle bytes"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "verify", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-2/b892bfe7a5fe096ae56c4edb58169bbdc98c4091ca03e703dee46398a85e4dea.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-2.ck"], "exit": 0, "expected": 0, "elapsed_ns": 3864563, "stdout": "PASS f32_surviving=19 changed=20\n", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch verify /home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-2/b892bfe7a5fe096ae56c4edb58169bbdc98c4091ca03e703dee46398a85e4dea.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-2.ck"}
+{"status": "PASS", "check": "oracle manifest magic"}
+{"status": "PASS", "check": "oracle canonical manifest name"}
+{"status": "PASS", "check": "oracle manifest length"}
+{"status": "PASS", "check": "oracle policy"}
+{"status": "PASS", "check": "oracle edit identity"}
+{"status": "PASS", "check": "oracle metadata lengths"}
+{"status": "PASS", "check": "oracle strict order"}
+{"status": "PASS", "check": "oracle indices in bounds"}
+{"status": "PASS", "check": "verify f32 survival count"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "revert", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-2/b892bfe7a5fe096ae56c4edb58169bbdc98c4091ca03e703dee46398a85e4dea.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-2.ck", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/reverted-2.ck"], "exit": 0, "expected": 0, "elapsed_ns": 11429769, "stdout": "PASS\n", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch revert /home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-2/b892bfe7a5fe096ae56c4edb58169bbdc98c4091ca03e703dee46398a85e4dea.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-2.ck /home/drakestapleton/work/wsp/ck/wpatch-small-2/reverted-2.ck"}
+{"status": "PASS", "check": "revert byte-identical base"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "bind", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-2/b892bfe7a5fe096ae56c4edb58169bbdc98c4091ca03e703dee46398a85e4dea.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-2.ck", "/home/drakestapleton/work/wsp/wpatch-build/wpatch", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/binding-2"], "exit": 0, "expected": 0, "elapsed_ns": 10246510, "stdout": "PASS\n", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch bind /home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-2/b892bfe7a5fe096ae56c4edb58169bbdc98c4091ca03e703dee46398a85e4dea.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-2.ck /home/drakestapleton/work/wsp/wpatch-build/wpatch /home/drakestapleton/work/wsp/ck/wpatch-small-2/binding-2"}
+{"status": "PASS", "check": "oracle binding format"}
+{"status": "PASS", "check": "oracle binding CK and f32"}
+{"status": "PASS", "check": "oracle binding runtime and patch"}
+{"status": "PASS", "check": "oracle binding self digest"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "checkbind", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/binding-2", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-2.ck", "/home/drakestapleton/work/wsp/wpatch-build/wpatch"], "exit": 0, "expected": 0, "elapsed_ns": 4948862, "stdout": "PASS\n", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch checkbind /home/drakestapleton/work/wsp/ck/wpatch-small-2/binding-2 /home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-2.ck /home/drakestapleton/work/wsp/wpatch-build/wpatch"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "checkbind", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/binding-2", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck", "/home/drakestapleton/work/wsp/wpatch-build/wpatch"], "exit": 60, "expected": 60, "elapsed_ns": 2913771, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch checkbind /home/drakestapleton/work/wsp/ck/wpatch-small-2/binding-2 /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck /home/drakestapleton/work/wsp/wpatch-build/wpatch"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "checkbind", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/binding-2", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-2.ck", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/runtime-2"], "exit": 62, "expected": 62, "elapsed_ns": 4735036, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch checkbind /home/drakestapleton/work/wsp/ck/wpatch-small-2/binding-2 /home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-2.ck /home/drakestapleton/work/wsp/ck/wpatch-small-2/runtime-2"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "checkbind", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/wrong-f32-binding-2", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-2.ck", "/home/drakestapleton/work/wsp/wpatch-build/wpatch"], "exit": 61, "expected": 61, "elapsed_ns": 2938619, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch checkbind /home/drakestapleton/work/wsp/ck/wpatch-small-2/wrong-f32-binding-2 /home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-2.ck /home/drakestapleton/work/wsp/wpatch-build/wpatch"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "checkbind", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/wrong-f32-binding-2", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-2.ck", "/home/drakestapleton/work/wsp/wpatch-build/wpatch"], "exit": 59, "expected": 59, "elapsed_ns": 920008, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch checkbind /home/drakestapleton/work/wsp/ck/wpatch-small-2/wrong-f32-binding-2 /home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-2.ck /home/drakestapleton/work/wsp/wpatch-build/wpatch"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "apply", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-2/b892bfe7a5fe096ae56c4edb58169bbdc98c4091ca03e703dee46398a85e4dea.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-2.ck"], "exit": 52, "expected": 52, "elapsed_ns": 6484188, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch apply /home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-2/b892bfe7a5fe096ae56c4edb58169bbdc98c4091ca03e703dee46398a85e4dea.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck /home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-2.ck"}
+{"status": "PASS", "check": "OUT exists preserved"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "apply", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-2/b892bfe7a5fe096ae56c4edb58169bbdc98c4091ca03e703dee46398a85e4dea.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck"], "exit": 52, "expected": 52, "elapsed_ns": 6800575, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch apply /home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-2/b892bfe7a5fe096ae56c4edb58169bbdc98c4091ca03e703dee46398a85e4dea.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "revert", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-2/b892bfe7a5fe096ae56c4edb58169bbdc98c4091ca03e703dee46398a85e4dea.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-2.ck", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck"], "exit": 52, "expected": 52, "elapsed_ns": 6104568, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch revert /home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-2/b892bfe7a5fe096ae56c4edb58169bbdc98c4091ca03e703dee46398a85e4dea.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-2.ck /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "diff", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/edited.ck", "2", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/params.txt", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/rationale.txt", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-2"], "exit": 52, "expected": 52, "elapsed_ns": 10063053, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch diff /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck /home/drakestapleton/work/wsp/ck/wpatch-small-2/edited.ck 2 /home/drakestapleton/work/wsp/ck/wpatch-small-2/params.txt /home/drakestapleton/work/wsp/ck/wpatch-small-2/rationale.txt /home/drakestapleton/work/wsp/ck/wpatch-small-2/patches-2"}
+{"status": "PASS", "check": "BASE never written"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "validate", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/wrong-base-sha.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck"], "exit": 50, "expected": 50, "elapsed_ns": 2811098, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch validate /home/drakestapleton/work/wsp/ck/wpatch-small-2/wrong-base-sha.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "apply", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/wrong-base-sha.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/wrong-base-sha.ck"], "exit": 50, "expected": 50, "elapsed_ns": 2387286, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch apply /home/drakestapleton/work/wsp/ck/wpatch-small-2/wrong-base-sha.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck /home/drakestapleton/work/wsp/ck/wpatch-small-2/wrong-base-sha.ck"}
+{"status": "PASS", "check": "wrong-base-sha: refusal creates no output"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "validate", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/geometry.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck"], "exit": 36, "expected": 36, "elapsed_ns": 1285564, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch validate /home/drakestapleton/work/wsp/ck/wpatch-small-2/geometry.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "apply", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/geometry.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/geometry.ck"], "exit": 36, "expected": 36, "elapsed_ns": 1165466, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch apply /home/drakestapleton/work/wsp/ck/wpatch-small-2/geometry.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck /home/drakestapleton/work/wsp/ck/wpatch-small-2/geometry.ck"}
+{"status": "PASS", "check": "geometry: refusal creates no output"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "validate", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/shape.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck"], "exit": 37, "expected": 37, "elapsed_ns": 1244859, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch validate /home/drakestapleton/work/wsp/ck/wpatch-small-2/shape.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "apply", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/shape.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/shape.ck"], "exit": 37, "expected": 37, "elapsed_ns": 1231643, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch apply /home/drakestapleton/work/wsp/ck/wpatch-small-2/shape.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck /home/drakestapleton/work/wsp/ck/wpatch-small-2/shape.ck"}
+{"status": "PASS", "check": "shape: refusal creates no output"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "validate", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/oob.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck"], "exit": 38, "expected": 38, "elapsed_ns": 1211852, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch validate /home/drakestapleton/work/wsp/ck/wpatch-small-2/oob.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "apply", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/oob.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/oob.ck"], "exit": 38, "expected": 38, "elapsed_ns": 1205739, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch apply /home/drakestapleton/work/wsp/ck/wpatch-small-2/oob.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck /home/drakestapleton/work/wsp/ck/wpatch-small-2/oob.ck"}
+{"status": "PASS", "check": "oob: refusal creates no output"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "validate", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/nan.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck"], "exit": 40, "expected": 40, "elapsed_ns": 1110122, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch validate /home/drakestapleton/work/wsp/ck/wpatch-small-2/nan.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "apply", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/nan.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/nan.ck"], "exit": 40, "expected": 40, "elapsed_ns": 1138570, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch apply /home/drakestapleton/work/wsp/ck/wpatch-small-2/nan.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck /home/drakestapleton/work/wsp/ck/wpatch-small-2/nan.ck"}
+{"status": "PASS", "check": "nan: refusal creates no output"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "validate", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/inf.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck"], "exit": 41, "expected": 41, "elapsed_ns": 1191435, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch validate /home/drakestapleton/work/wsp/ck/wpatch-small-2/inf.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "apply", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/inf.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/inf.ck"], "exit": 41, "expected": 41, "elapsed_ns": 1102922, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch apply /home/drakestapleton/work/wsp/ck/wpatch-small-2/inf.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck /home/drakestapleton/work/wsp/ck/wpatch-small-2/inf.ck"}
+{"status": "PASS", "check": "inf: refusal creates no output"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "validate", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/magnitude.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck"], "exit": 42, "expected": 42, "elapsed_ns": 1106698, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch validate /home/drakestapleton/work/wsp/ck/wpatch-small-2/magnitude.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "apply", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/magnitude.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/magnitude.ck"], "exit": 42, "expected": 42, "elapsed_ns": 1164187, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch apply /home/drakestapleton/work/wsp/ck/wpatch-small-2/magnitude.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck /home/drakestapleton/work/wsp/ck/wpatch-small-2/magnitude.ck"}
+{"status": "PASS", "check": "magnitude: refusal creates no output"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "validate", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/unsorted.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck"], "exit": 39, "expected": 39, "elapsed_ns": 1410077, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch validate /home/drakestapleton/work/wsp/ck/wpatch-small-2/unsorted.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "apply", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/unsorted.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/unsorted.ck"], "exit": 39, "expected": 39, "elapsed_ns": 1172619, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch apply /home/drakestapleton/work/wsp/ck/wpatch-small-2/unsorted.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck /home/drakestapleton/work/wsp/ck/wpatch-small-2/unsorted.ck"}
+{"status": "PASS", "check": "unsorted: refusal creates no output"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "validate", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/duplicate.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck"], "exit": 43, "expected": 43, "elapsed_ns": 1121594, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch validate /home/drakestapleton/work/wsp/ck/wpatch-small-2/duplicate.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "apply", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/duplicate.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/duplicate.ck"], "exit": 43, "expected": 43, "elapsed_ns": 1089162, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch apply /home/drakestapleton/work/wsp/ck/wpatch-small-2/duplicate.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck /home/drakestapleton/work/wsp/ck/wpatch-small-2/duplicate.ck"}
+{"status": "PASS", "check": "duplicate: refusal creates no output"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "validate", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/old-bits.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck"], "exit": 47, "expected": 47, "elapsed_ns": 3363743, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch validate /home/drakestapleton/work/wsp/ck/wpatch-small-2/old-bits.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "apply", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/old-bits.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/old-bits.ck"], "exit": 47, "expected": 47, "elapsed_ns": 3522656, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch apply /home/drakestapleton/work/wsp/ck/wpatch-small-2/old-bits.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck /home/drakestapleton/work/wsp/ck/wpatch-small-2/old-bits.ck"}
+{"status": "PASS", "check": "old-bits: refusal creates no output"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "validate", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/old-moment.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck"], "exit": 48, "expected": 48, "elapsed_ns": 3162446, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch validate /home/drakestapleton/work/wsp/ck/wpatch-small-2/old-moment.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "apply", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/old-moment.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/old-moment.ck"], "exit": 48, "expected": 48, "elapsed_ns": 3389008, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch apply /home/drakestapleton/work/wsp/ck/wpatch-small-2/old-moment.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck /home/drakestapleton/work/wsp/ck/wpatch-small-2/old-moment.ck"}
+{"status": "PASS", "check": "old-moment: refusal creates no output"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "validate", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/entries-hash.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck"], "exit": 46, "expected": 46, "elapsed_ns": 1404237, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch validate /home/drakestapleton/work/wsp/ck/wpatch-small-2/entries-hash.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "apply", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/entries-hash.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/entries-hash.ck"], "exit": 46, "expected": 46, "elapsed_ns": 1303324, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch apply /home/drakestapleton/work/wsp/ck/wpatch-small-2/entries-hash.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck /home/drakestapleton/work/wsp/ck/wpatch-small-2/entries-hash.ck"}
+{"status": "PASS", "check": "entries-hash: refusal creates no output"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "validate", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/tensor-count.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck"], "exit": 45, "expected": 45, "elapsed_ns": 1213323, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch validate /home/drakestapleton/work/wsp/ck/wpatch-small-2/tensor-count.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "apply", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/tensor-count.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/tensor-count.ck"], "exit": 45, "expected": 45, "elapsed_ns": 1290380, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch apply /home/drakestapleton/work/wsp/ck/wpatch-small-2/tensor-count.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck /home/drakestapleton/work/wsp/ck/wpatch-small-2/tensor-count.ck"}
+{"status": "PASS", "check": "tensor-count: refusal creates no output"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "validate", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/tensor-base-sha.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck"], "exit": 49, "expected": 49, "elapsed_ns": 2556584, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch validate /home/drakestapleton/work/wsp/ck/wpatch-small-2/tensor-base-sha.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "apply", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/tensor-base-sha.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/tensor-base-sha.ck"], "exit": 49, "expected": 49, "elapsed_ns": 2865994, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch apply /home/drakestapleton/work/wsp/ck/wpatch-small-2/tensor-base-sha.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck /home/drakestapleton/work/wsp/ck/wpatch-small-2/tensor-base-sha.ck"}
+{"status": "PASS", "check": "tensor-base-sha: refusal creates no output"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "validate", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/tensor-out-sha.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck"], "exit": 49, "expected": 49, "elapsed_ns": 5435458, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch validate /home/drakestapleton/work/wsp/ck/wpatch-small-2/tensor-out-sha.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "apply", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/tensor-out-sha.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/tensor-out-sha.ck"], "exit": 49, "expected": 49, "elapsed_ns": 5513843, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch apply /home/drakestapleton/work/wsp/ck/wpatch-small-2/tensor-out-sha.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck /home/drakestapleton/work/wsp/ck/wpatch-small-2/tensor-out-sha.ck"}
+{"status": "PASS", "check": "tensor-out-sha: refusal creates no output"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "validate", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/output-sha.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck"], "exit": 53, "expected": 53, "elapsed_ns": 5364897, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch validate /home/drakestapleton/work/wsp/ck/wpatch-small-2/output-sha.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "apply", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/output-sha.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/output-sha.ck"], "exit": 53, "expected": 53, "elapsed_ns": 5665028, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch apply /home/drakestapleton/work/wsp/ck/wpatch-small-2/output-sha.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck /home/drakestapleton/work/wsp/ck/wpatch-small-2/output-sha.ck"}
+{"status": "PASS", "check": "output-sha: refusal creates no output"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "validate", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/output-f32-sha.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck"], "exit": 54, "expected": 54, "elapsed_ns": 6710846, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch validate /home/drakestapleton/work/wsp/ck/wpatch-small-2/output-f32-sha.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "apply", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/output-f32-sha.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/output-f32-sha.ck"], "exit": 54, "expected": 54, "elapsed_ns": 7075937, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch apply /home/drakestapleton/work/wsp/ck/wpatch-small-2/output-f32-sha.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck /home/drakestapleton/work/wsp/ck/wpatch-small-2/output-f32-sha.ck"}
+{"status": "PASS", "check": "output-f32-sha: refusal creates no output"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "show", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/flipped/66814db53a261b61e9fad68ad91c0fae6e5d5ffd73d589557f898a17d08793f8.wp"], "exit": 30, "expected": 30, "elapsed_ns": 1077306, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch show /home/drakestapleton/work/wsp/ck/wpatch-small-2/flipped/66814db53a261b61e9fad68ad91c0fae6e5d5ffd73d589557f898a17d08793f8.wp"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "validate", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/flipped/66814db53a261b61e9fad68ad91c0fae6e5d5ffd73d589557f898a17d08793f8.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck"], "exit": 30, "expected": 30, "elapsed_ns": 746839, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch validate /home/drakestapleton/work/wsp/ck/wpatch-small-2/flipped/66814db53a261b61e9fad68ad91c0fae6e5d5ffd73d589557f898a17d08793f8.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "verify", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/flipped/66814db53a261b61e9fad68ad91c0fae6e5d5ffd73d589557f898a17d08793f8.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-1.ck"], "exit": 30, "expected": 30, "elapsed_ns": 726423, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch verify /home/drakestapleton/work/wsp/ck/wpatch-small-2/flipped/66814db53a261b61e9fad68ad91c0fae6e5d5ffd73d589557f898a17d08793f8.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-1.ck"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "apply", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/flipped/66814db53a261b61e9fad68ad91c0fae6e5d5ffd73d589557f898a17d08793f8.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/bad-apply.ck"], "exit": 30, "expected": 30, "elapsed_ns": 716439, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch apply /home/drakestapleton/work/wsp/ck/wpatch-small-2/flipped/66814db53a261b61e9fad68ad91c0fae6e5d5ffd73d589557f898a17d08793f8.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck /home/drakestapleton/work/wsp/ck/wpatch-small-2/bad-apply.ck"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "revert", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/flipped/66814db53a261b61e9fad68ad91c0fae6e5d5ffd73d589557f898a17d08793f8.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-1.ck", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/bad-revert.ck"], "exit": 30, "expected": 30, "elapsed_ns": 570374, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch revert /home/drakestapleton/work/wsp/ck/wpatch-small-2/flipped/66814db53a261b61e9fad68ad91c0fae6e5d5ffd73d589557f898a17d08793f8.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-1.ck /home/drakestapleton/work/wsp/ck/wpatch-small-2/bad-revert.ck"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "bind", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/flipped/66814db53a261b61e9fad68ad91c0fae6e5d5ffd73d589557f898a17d08793f8.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-1.ck", "/home/drakestapleton/work/wsp/wpatch-build/wpatch", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/bad-bind"], "exit": 30, "expected": 30, "elapsed_ns": 613622, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch bind /home/drakestapleton/work/wsp/ck/wpatch-small-2/flipped/66814db53a261b61e9fad68ad91c0fae6e5d5ffd73d589557f898a17d08793f8.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/applied-1.ck /home/drakestapleton/work/wsp/wpatch-build/wpatch /home/drakestapleton/work/wsp/ck/wpatch-small-2/bad-bind"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "validate", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/truncated.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck"], "exit": 32, "expected": 32, "elapsed_ns": 592422, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch validate /home/drakestapleton/work/wsp/ck/wpatch-small-2/truncated.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "show", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/truncated.wp"], "exit": 32, "expected": 32, "elapsed_ns": 598453, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch show /home/drakestapleton/work/wsp/ck/wpatch-small-2/truncated.wp"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "diff", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck", "0", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/params.txt", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/rationale.txt", "/home/drakestapleton/work/wsp/ck/wpatch-small-2"], "exit": 55, "expected": 55, "elapsed_ns": 2252389, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch diff /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck 0 /home/drakestapleton/work/wsp/ck/wpatch-small-2/params.txt /home/drakestapleton/work/wsp/ck/wpatch-small-2/rationale.txt /home/drakestapleton/work/wsp/ck/wpatch-small-2"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "diff", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/wrong-m.ck", "0", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/params.txt", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/rationale.txt", "/home/drakestapleton/work/wsp/ck/wpatch-small-2"], "exit": 56, "expected": 56, "elapsed_ns": 4047478, "stdout": "", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch diff /home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck /home/drakestapleton/work/wsp/ck/wpatch-small-2/wrong-m.ck 0 /home/drakestapleton/work/wsp/ck/wpatch-small-2/params.txt /home/drakestapleton/work/wsp/ck/wpatch-small-2/rationale.txt /home/drakestapleton/work/wsp/ck/wpatch-small-2"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "diff", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/exotic.ck", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/exotic-edited.ck", "0", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/params.txt", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/rationale.txt", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/exotic-patches"], "exit": 0, "expected": 0, "elapsed_ns": 14241987, "stdout": "/home/drakestapleton/work/wsp/ck/wpatch-small-2/exotic-patches/a426d92627d93db4de09b0e6bed92dccf6c744bb91bf13f19b1cc0ee50b63e6b.wp\n", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch diff /home/drakestapleton/work/wsp/ck/wpatch-small-2/exotic.ck /home/drakestapleton/work/wsp/ck/wpatch-small-2/exotic-edited.ck 0 /home/drakestapleton/work/wsp/ck/wpatch-small-2/params.txt /home/drakestapleton/work/wsp/ck/wpatch-small-2/rationale.txt /home/drakestapleton/work/wsp/ck/wpatch-small-2/exotic-patches"}
+{"status": "PASS", "check": "f32 cast boundary vectors"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "validate", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/exotic-patches/a426d92627d93db4de09b0e6bed92dccf6c744bb91bf13f19b1cc0ee50b63e6b.wp", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/exotic.ck"], "exit": 0, "expected": 0, "elapsed_ns": 7170258, "stdout": "PASS\n", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch validate /home/drakestapleton/work/wsp/ck/wpatch-small-2/exotic-patches/a426d92627d93db4de09b0e6bed92dccf6c744bb91bf13f19b1cc0ee50b63e6b.wp /home/drakestapleton/work/wsp/ck/wpatch-small-2/exotic.ck"}
+{"command": ["/home/drakestapleton/work/wsp/wpatch-build/wpatch", "inspect", "/home/drakestapleton/work/wsp/ck/wpatch-small-2/exotic.ck"], "exit": 0, "expected": 0, "elapsed_ns": 2490855, "stdout": "OLLMCK02 V T D H F L B P: 256 8 16 2 32 2 2 8400\nseed step total lr G fnv: 1 2 10 4569063951553953530 1 3717650157346357865\nwte 0 256x16 dtype=f64 offset=0 sha256=898afc07405721fe16488b80d246453413e7b593856b7a09cf8021bab210d1c1 rms=2.8088955232223696e306 maxabs=1.7976931348623164e308 nonfinite=3\nwpe 0 8x16 dtype=f64 offset=4096 sha256=8466ddee307934f1d085b7fc3f2f222b33f320a47b8f72c0782cd099f53c3a56 rms=2.0597512474142969e-2 maxabs=3.4688363182317480e-2 nonfinite=0\ng1 0 1x16 dtype=f64 offset=4224 sha256=8e55ebc45ecdca0459276d85bdcc502985681ca91936c7d388f36141657e7724 rms=9.9998560202156934e-1 maxabs=1.0000898116642267e0 nonfinite=0\nwq 0 16x16 dtype=f64 offset=4240 sha256=adfe7504881e98ae49edbd9bd2a8c6259a190472f5f2a301aabf76d433a26668 rms=1.9387060051204409e-2 maxabs=3.4602970449885450e-2 nonfinite=0\nwk 0 16x16 dtype=f64 offset=4496 sha256=accdb602abdaf839de2b6e98f98e399bcb00eea03cdc1e14ffe760c6012bffa8 rms=2.0086632119378893e-2 maxabs=3.4488179470423929e-2 nonfinite=0\nwv 0 16x16 dtype=f64 offset=4752 sha256=fa6b0727cb263311c2c3b75e6fea1f7902613c5051548b6cff87fecb0556f9d0 rms=2.0442612683966512e-2 maxabs=3.4608463868511711e-2 nonfinite=0\nwo 0 16x16 dtype=f64 offset=5008 sha256=b43e998b213e289c9464b79a54a04243a629061e9351882c0af8ba717ab1f27c rms=9.3607584314112308e-3 maxabs=1.7186119006150049e-2 nonfinite=0\ng2 0 1x16 dtype=f64 offset=5264 sha256=02d1cd2862c618fa82ecbe721cef53d3f0064a85c37dc3c81b60256496a551e8 rms=1.0000317542785344e0 maxabs=1.0000900660818634e0 nonfinite=0\nw1 0 16x32 dtype=f64 offset=5280 sha256=0d43f123403113f54dc36bf858225654da6ca9b2fa6dd13d34ea03df0300162d rms=1.9707409527231671e-2 maxabs=3.4604831137893370e-2 nonfinite=0\nw2 0 32x16 dtype=f64 offset=5792 sha256=ff25c2a9843e2cb7febd7173d1310c5c38d4c3b84f80d41fe477671df90958a4 rms=9.9353752213784609e-3 maxabs=1.7383742580227750e-2 nonfinite=0\ng1 1 1x16 dtype=f64 offset=6304 sha256=d5ef48d1f1f83bea39dbec4469a83b73134a957a6f7ee5c7f55d489a085e2fc2 rms=1.0000055077295755e0 maxabs=1.0000896598909829e0 nonfinite=0\nwq 1 16x16 dtype=f64 offset=6320 sha256=cd5d9460b4f8b03c13493204e04f3499387caa9332da929e17aa53b5bf93f1b9 rms=1.9395643851273927e-2 maxabs=3.4713570183186637e-2 nonfinite=0\nwk 1 16x16 dtype=f64 offset=6576 sha256=77e6c5613a0fba859e0559bee3beb70fb9e4ac007b87134dfc1e2fe482194b44 rms=2.0451505765922823e-2 maxabs=3.4557907877036364e-2 nonfinite=0\nwv 1 16x16 dtype=f64 offset=6832 sha256=a49caf53f5f318fe312bef6bc78842f4f194d97965a34d4d1903a20c325e3af6 rms=2.0283640674707430e-2 maxabs=3.4634749954325338e-2 nonfinite=0\nwo 1 16x16 dtype=f64 offset=7088 sha256=4a99000fa39bce104d6cd39bd7e6e8f108b0a120d700c1372a14614b7d2a3cf9 rms=9.5378278603200783e-3 maxabs=1.7408843619714149e-2 nonfinite=0\ng2 1 1x16 dtype=f64 offset=7344 sha256=975a6761e290c4c1493058ce603d78cf98fe638c88792c88a13d422d00044af5 rms=1.0000051625444570e0 maxabs=1.0000900629791575e0 nonfinite=0\nw1 1 16x32 dtype=f64 offset=7360 sha256=6744256441b31f1e97fe7739e0af3edbeeabb2960c9030bde44a0940f673b254 rms=1.9646243437713831e-2 maxabs=3.4519835058524788e-2 nonfinite=0\nw2 1 32x16 dtype=f64 offset=7872 sha256=f01f41002a7e3c6afa8dbfe6c69ab753d4361cf25faae3e3ea4738e7aa1f0232 rms=9.9239498616909447e-3 maxabs=1.7320015361641458e-2 nonfinite=0\ngf 0 1x16 dtype=f64 offset=8384 sha256=65aa5211ba1921da7b4c26e7667f49bf0d2a7219f2fef32dcc828fb4cf181a9a rms=1.0000070876612532e0 maxabs=1.0000900576992735e0 nonfinite=0\n", "stderr": ""}
+{"status": "PASS", "check": "exit: /home/drakestapleton/work/wsp/wpatch-build/wpatch inspect /home/drakestapleton/work/wsp/ck/wpatch-small-2/exotic.ck"}
+{"status": "PASS", "check": "scaled RMS survives maximum finite f64, counts nonfinite separately"}
+{"status": "PASS", "check": "final base identity"}
+{"status": "PASS", "checks": 685, "commands": 100, "failures": 0}

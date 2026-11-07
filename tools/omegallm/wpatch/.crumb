@@ -1,0 +1,20 @@
+{
+  "extensions": {
+    "generated": {
+      "children": [],
+      "children_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "compiled_at": "2026-11-07T06:17:25Z",
+      "compiler": "crumb-compile/1",
+      "digest": "sha256:b422d64b6374255960b48112a3d7e2911b55c4868af25c5262907a58e74fe031",
+      "evidence_files": 0,
+      "evidence_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "files": 0,
+      "generated_at_commit": "0518c915dea370b3bffbb90d579b1daa5ba8b8f5",
+      "source_tree": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "layer": "tooling",
+  "name": "wpatch",
+  "purpose": "Checked Omega checkpoint patches, exact rollback, and runtime identity binding.",
+  "schema_version": "1.0.0"
+}

@@ -1,0 +1,237 @@
+--- /home/drakestapleton/work/wsp/wpatch-build/sha256-source.om	2026-11-07 00:14:57.196092902 -0600
++++ /home/drakestapleton/work/wsp/wpatch-build/sha256-vendored.om	2026-11-07 00:14:57.208093013 -0600
+@@ -1,3 +1,9 @@
++om2
++layout shactx 104
++field state uint 8 at 0 little
++field count ulong at 32 little
++field buf uchar 64 at 40 little
++end
+ note SPDX-License-Identifier: Apache-2.0
+ note sha256-om2.om: FIPS 180-4 SHA-256 in OM-2 (spec/omegese-om2.md, #747/#748, ledger L838).
+ note The four entries are the API of src/sha256.h, exported through omega-bridge ABI v2 as
+@@ -18,17 +24,11 @@
+ note bridge c-type shactx sha256_ctx
+ note bridge c-define SHA256_DIGEST_SIZE 32
+ note bridge c-define SHA256_BLOCK_SIZE 64
+-om2
+ 
+-layout shactx 104
+-field state uint 8 at 0 little
+-field count ulong at 32 little
+-field buf uchar 64 at 40 little
+-end
+ 
+ note K[0..63]: the first 32 bits of the fractional parts of the cube roots of the first 64 primes.
+ note Copied mechanically from seed/qualification/om2/fixtures/sha256-k.dec (tool-computed, never typed).
+-fn kinit k edit uint 64 to void
++fn wskinit k edit uint 64 to void
+ put k 0 0x428a2f98
+ put k 1 0x71374491
+ put k 2 0xb5c0fbcf
+@@ -97,7 +97,7 @@
+ 
+ note H(0): the first 32 bits of the fractional parts of the square roots of the first 8 primes
+ note (fixtures/sha256-iv.dec).
+-fn iv s edit uint 8 to void
++fn wsiv s edit uint 8 to void
+ put s 0 0x6a09e667
+ put s 1 0xbb67ae85
+ put s 2 0x3c6ef372
+@@ -111,7 +111,7 @@
+ note Message schedule of the block m[o .. o+64). w is fresh: its incoming contents are never read.
+ note The compiler proves that every get of w reads an element written earlier in this function
+ note (error 27 otherwise): w[0..16) are the block's big-endian words, w[16..64) the FIPS recurrence.
+-fn sched w edit uint 64 fresh m view uchar * o ulong to void
++fn wssched w edit uint 64 fresh m view uchar * o ulong to void
+ q = ulong 0
+ x = uint 0
+ y = uint 0
+@@ -137,7 +137,7 @@
+ note identities. h first becomes T1, then T1 + T2, which is the next a; the names then shift by one.
+ note The sums are built a term per line and each Sigma in two lines through t: 12 names are live, and
+ note omc hands out 16 registers with no spilling (error 12 under compiler-s1/s2 for longer lines).
+-fn rounds s edit uint 8 w view uint 64 kt view uint 64 to void
++fn wsround s edit uint 8 w view uint 64 kt view uint 64 to void
+ a = get s 0
+ b = get s 1
+ c = get s 2
+@@ -182,15 +182,15 @@
+ 
+ note One block m[o .. o+64) into s. sched and rounds stay calls: inlined, their names would share
+ note one 16-register frame with this function's parameters (no spilling, error 12).
+-fn compress s edit uint 8 w edit uint 64 kt view uint 64 m view uchar * o ulong to void
+-sched w m o
+-rounds s w kt
++fn wscomp s edit uint 8 w edit uint 64 kt view uint 64 m view uchar * o ulong to void
++wssched w m o
++wsround s w kt
+ end
+ 
+ note The whole blocks of m (len m is a multiple of 64 and at most 2^25, so under 2^19 passes).
+-fn run s edit uint 8 w edit uint 64 kt view uint 64 m view uchar * to void
++fn wsrun s edit uint 8 w edit uint 64 kt view uint 64 m view uchar * to void
+ for j ulong shr len m 6
+-compress s w kt m shl j 6
++wscomp s w kt m shl j 6
+ end
+ end
+ 
+@@ -198,24 +198,24 @@
+ note (OMEGESE.md section 2; omc s_for), so m is cut into runs of 2^25 bytes (2^19 blocks):
+ note len m = top * 2^44 + mid * 2^25 + rest, and no loop passes 2^20 times. top reaches 1000000
+ note only above 1.7e19 bytes, which no AArch64 address space holds.
+-fn blocks s edit uint 8 w edit uint 64 kt view uint 64 m view uchar * to void
++fn wsblks s edit uint 8 w edit uint 64 kt view uint 64 m view uchar * to void
+ q = ulong 0
+ for a ulong shr len m 44
+ for b ulong 0x80000
+-run s w kt part m q 0x2000000
++wsrun s w kt part m q 0x2000000
+ q = add q 0x2000000
+ end
+ end
+ for b ulong and shr len m 25 0x7ffff
+-run s w kt part m q 0x2000000
++wsrun s w kt part m q 0x2000000
+ q = add q 0x2000000
+ end
+-run s w kt part m q sub len m q
++wsrun s w kt part m q sub len m q
+ end
+ 
+ note Pad the k pending bytes already in p (k < 64; p was all zero past them): 0x80, zeros, and the
+ note 64-bit big-endian bit length of the n-byte message in the last 8 bytes of one or two blocks.
+-fn finish s edit uint 8 w edit uint 64 kt view uint 64 p edit uchar 128 k ulong n ulong to void
++fn wsfin s edit uint 8 w edit uint 64 kt view uint 64 p edit uchar 128 k ulong n ulong to void
+ put p k 0x80
+ e = ulong 64
+ if ge k 56
+@@ -225,15 +225,15 @@
+ for i ulong 8 unroll
+ put p sub e add i 1 uchar and shr bits mul i 8 0xff
+ end
+-compress s w kt view p 0
++wscomp s w kt view p 0
+ if eq e 128
+-compress s w kt view p 64
++wscomp s w kt view p 64
+ end
+ end
+ 
+-export fn sha256_init c edit shactx to void
++fn sha256_init c edit shactx to void
+ s = new uint 8 0
+-iv s
++wsiv s
+ for i ulong 8 unroll
+ put c state i get s i
+ end
+@@ -242,20 +242,20 @@
+ 
+ note k bytes of d from o into the context's buffer at bi (bi + k <= 64). A function of its own: inside
+ note absorb the copy loop needs more than the 16 registers (error 12 under compiler-s4).
+-fn tobuf c edit shactx bi ulong d view uchar * o ulong k ulong to void
++fn wstobuf c edit shactx bi ulong d view uchar * o ulong k ulong to void
+ for i ulong k
+ put c buf add bi i get d add o i
+ end
+ end
+ 
+ note Whole blocks are hashed straight from d; the bytes that complete a pending block go through blk.
+-fn absorb c edit shactx d view uchar * bi ulong to void
++fn wsabsb c edit shactx d view uchar * bi ulong to void
+ n = len d
+ s = new uint 8 0
+ w = new uint 64 0
+ kt = new uint 64 0
+ blk = new uchar 64 0
+-kinit kt
++wskinit kt
+ for i ulong 8 unroll
+ put s i get c state i
+ end
+@@ -268,37 +268,37 @@
+ for i ulong off
+ put blk add bi i get d i
+ end
+-compress s w kt view blk 0
++wscomp s w kt view blk 0
+ end
+ nb = shr sub n off 6
+-blocks s w kt part d off shl nb 6
++wsblks s w kt part d off shl nb 6
+ off = add off shl nb 6
+-tobuf c 0 d off sub n off
++wstobuf c 0 d off sub n off
+ for i ulong 8 unroll
+ put c state i get s i
+ end
+ end
+ 
+ note Any length, including 0 and >= 2^32. lt n sub 64 bi cannot wrap (bi < 64); add bi n could.
+-export fn sha256_update c edit shactx d view uchar * to void
++fn sha256_update c edit shactx d view uchar * to void
+ n = len d
+ cnt = get c count
+ bi = and cnt 63
+ put c count add cnt n
+ if lt n sub 64 bi
+-tobuf c bi d 0 n
++wstobuf c bi d 0 n
+ ret
+ end
+-absorb c d bi
++wsabsb c d bi
+ end
+ 
+-export fn sha256_final c edit shactx o out uchar 32 to void
++fn sha256_final c edit shactx o out uchar 32 to void
+ s = new uint 8 0
+ w = new uint 64 0
+ kt = new uint 64 0
+ p = new uchar 128 0
+ v = ulong 0
+-kinit kt
++wskinit kt
+ for i ulong 8 unroll
+ put s i get c state i
+ end
+@@ -307,7 +307,7 @@
+ for i ulong k
+ put p i get c buf i
+ end
+-finish s w kt p k cnt
++wsfin s w kt p k cnt
+ for i ulong 8 unroll
+ v = ulong get s i
+ for j ulong 4 unroll
+@@ -318,23 +318,23 @@
+ 
+ note Equal to init, update(d), final on a fresh context (section 7), with the state in locals. o may
+ note overlap d: the binding copies o out only after the call returns status 0.
+-export fn sha256_hash d view uchar * o out uchar 32 to void
++fn sha256_hash d view uchar * o out uchar 32 to void
+ s = new uint 8 0
+ w = new uint 64 0
+ kt = new uint 64 0
+ p = new uchar 128 0
+ v = ulong 0
+-kinit kt
+-iv s
++wskinit kt
++wsiv s
+ n = len d
+ nb = shr n 6
+-blocks s w kt part d 0 shl nb 6
++wsblks s w kt part d 0 shl nb 6
+ off = shl nb 6
+ k = sub n off
+ for i ulong k
+ put p i get d add off i
+ end
+-finish s w kt p k n
++wsfin s w kt p k n
+ for i ulong 8 unroll
+ v = ulong get s i
+ for j ulong 4 unroll
