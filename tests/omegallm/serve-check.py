@@ -41,6 +41,41 @@ def check(name, ok, detail=""):
     print(("PASS" if ok else "FAIL"), name, detail, flush=True)
 
 
+def clog_lines(path):
+    with open(path) as f:
+        return [l.split() for l in f if l.startswith("C ")]
+
+
+def clog_count(path, settle=0.2, limit=5.0):
+    """Completion records in the server log once no new one has appeared for `settle` seconds
+    (the server may write the previous request's record after its HTTP response); at most `limit` s."""
+    t_end = time.monotonic() + limit
+    n = len(clog_lines(path))
+    while time.monotonic() < t_end:
+        time.sleep(settle)
+        m = len(clog_lines(path))
+        if m == n:
+            return n
+        n = m
+    return n
+
+
+def clog_nth(path, i, limit=5.0):
+    """Completion record number i (0-based, every status) of the server log, waiting at most `limit` s."""
+    t_end = time.monotonic() + limit
+    while True:
+        ll = clog_lines(path)
+        if len(ll) > i or time.monotonic() >= t_end:
+            return ll[i] if len(ll) > i else None
+        time.sleep(0.01)
+
+
+def reuse_record_ok(rec, t):
+    """rec is `C 200 ...` (9 fields) with this request's reused and prefilled counts."""
+    return (rec is not None and len(rec) == 9 and rec[1] == "200"
+            and rec[6] == str(t.get("reused")) and rec[7] == str(t.get("prefilled")))
+
+
 def call(method, path, body=None, raw=None, timeout=600, port=None):
     c = http.client.HTTPConnection(HOST, port or PORT, timeout=timeout)
     data = raw if raw is not None else (json.dumps(body).encode() if body is not None else None)
@@ -413,6 +448,7 @@ if TOK1:
         m1 = [{"role": "system", "content": "You are a helpful assistant for the Omega project."}, {"role": "user", "content": "What is a token?"}]
         m2 = m1 + [{"role": "assistant", "content": "A unit of text."}, {"role": "user", "content": "And a merge?"}]
         m3 = [m1[0], {"role": "user", "content": "What is a byte?"}] + m2[2:]
+        n0 = clog_count(TLOG) if TLOG else 0
         st1, ch1, t1, _ = info(dict(g, messages=m1), TPORT)
         st2, ch2, t2, _ = info(dict(g, messages=m2), TPORT)
         st2c, ch2c, t2c, _ = info(dict(g, messages=m2, ollm_test_cold=True), TPORT)
@@ -431,9 +467,10 @@ if TOK1:
         check("c1_reuse_diverge_bitexact", t4.get("reused") == lcp and t4.get("logits_fnv") == t4c.get("logits_fnv") != 0
               and ch4.get("message") == ch4c.get("message"), f"lcp={lcp} reused={t4.get('reused')} warm={t4.get('logits_fnv')} cold={t4c.get('logits_fnv')}")
         if TLOG:
-            with open(TLOG) as f:
-                ll = [l.split() for l in f if l.startswith("C 200 ")]
-            check("c1_reuse_logged", any(len(l) == 9 and l[6] == str(t2.get("reused")) and l[7] == str(t2.get("prefilled")) for l in ll), f"{ll[-6:]}")
+            # serial requests write their completion records in order: record n0 is the m1 request's,
+            # record n0 + 1 the m2 request's; an older matching line must not satisfy the check
+            rec = clog_nth(TLOG, n0 + 1)
+            check("c1_reuse_logged", reuse_record_ok(rec, t2), f"record={rec}")
         queue_checks(TPORT, user)
 
     fails = results.count(False)

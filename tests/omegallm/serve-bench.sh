@@ -40,12 +40,13 @@ body() { # bytes max_tokens extra-members
 }
 post() { curl -s -o /dev/null -w '%{http_code} %{time_total}' -H 'Content-Type: application/json' --data-binary @"$1" "http://127.0.0.1:$PORT/v1/chat/completions"; }
 # The server can finish the HTTP response before writing its C record. Bind each
-# serial request to the next record, never to the most recent old success.
+# serial request to the next record, never to the most recent old success. The wait
+# for that record is bounded at 1000 x 10 ms (about 10 s, plus awk time per try).
 marklog() { awk '$1 == "C" { n++ } END { print n+0 }' "$log"; }
 lastlog() {
 	before=$1
 	tries=0
-	while [ "$tries" -lt 100 ]; do
+	while [ "$tries" -lt 1000 ]; do
 		record=$(awk -v before="$before" '
 			$1 == "C" { n++; if (n == before+1) row=$0 }
 			END {
