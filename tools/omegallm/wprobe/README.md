@@ -12,16 +12,12 @@ It never changes the checkpoint it reads. `save` writes a new file and refuses t
 
 ## Build
 
-`ollm.om` comes from `tests/omegallm/build.sh` (it writes `OUT/ollm.om` beside `OUT/ollm`). Then, with
-the pinned omc and the Omega build driver in `tools/omegallm/wdrive/`:
-
-```sh
-OMC=<omc pinned in tests/omegallm/build.sh> CORE=0 wbuild OUT/wprobe OUT/ollm.om@ollmmain tools/omegallm/wprobe/wprobe.om
-```
-
-`wbuild` renames `ollm.om`'s `main` to `ollmmain`, appends `wprobe.om`, compiles and prints the binary's,
-the composed source's and the compiler's sha256. How to bootstrap `wbuild` is in
-`tools/omegallm/wdrive/README.md`.
+wprobe is the ollm program (its `main` renamed `ollmmain`) with `wprobe.om` appended, built by the Omega
+build driver `tools/omegallm/wdrive/wbuild` with omc sha256
+`2c82480596bbdc50cda9626866209ef662d5834f278f839ff4ce0250c495029f` (omega-mv `e5b32567`). The exact part
+list, which names the ollm source files directly so no shell script is involved, and how to bootstrap
+`wbuild` are in `tools/omegallm/wdrive/README.md`. wbuild prints the binary's, the composed source's and
+the compiler's sha256.
 
 ## Records file
 

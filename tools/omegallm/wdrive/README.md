@@ -30,13 +30,27 @@ Each of the others is composed after `wbuild.om`, with that unit's `main` rename
 OMC=OMC CORE=0 wbuild OUT/wrun    tools/omegallm/wdrive/wbuild.om@wbmain tools/omegallm/wdrive/wrun.om
 OMC=OMC CORE=0 wbuild OUT/wcheck  tools/omegallm/wdrive/wbuild.om@wbmain tools/omegallm/wdrive/wcheck.om
 OMC=OMC CORE=0 wbuild OUT/wpolicy tools/omegallm/wdrive/wbuild.om@wbmain tools/omegallm/wdrive/wpolicy.om
-OMC=OMC CORE=0 wbuild OUT/wprobe  OUT/ollm.om@ollmmain tools/omegallm/wprobe/wprobe.om
+OMC=OMC CORE=0 wbuild OUT/wprobe  $ODRV/om2.om $NET $OLLM_PRE $N/lio.om@ollmmain $OLLM_POST tools/omegallm/wprobe/wprobe.om
+OMC=OMC CORE=0 wbuild OUT/ollm    $ODRV/om2.om $NET $OLLM_PRE $N/lio.om $OLLM_POST
 OMC=OMC CORE=0 wbuild OUT/wsplit  ../omega-mv/om/sha256/sha256-om2.om tools/omegallm/wsplit/wsplit.om
 OMC=OMC CORE=0 wbuild OUT/wscore  tools/omegallm/wscore/wscore.om
 ```
 
-`OUT/ollm.om` is written by `tests/omegallm/build.sh`. That script predates lane wsp and this port
-does not replace it. `../omega-mv` is omega-mv at `e5b32567`.
+with
+
+```sh
+ODRV=tools/omegallm/wdrive  N=native/omegallm
+NET="$N/net/http.om $N/net/json.om $N/net/jsonw.om"
+OLLM_PRE="$N/math.om $N/data.om $N/lpool.om $N/model.om $N/adam.om $N/ckpt.om $N/bpe.om $N/cli.om"
+OLLM_POST="$N/serve.om $N/nogpu.om"
+```
+
+These are the files, in the same order, that the aarch64 target of the ollm lane's
+`tests/omegallm/build.sh` joins after its `om2` line (`om2.om` is that one line), so no shell script is
+in this build path. MEASURED 2026-11-07 at omega-mv `e5b32567`: ollm built this way is byte-identical
+to build.sh's (`819664d5…`), and so is wprobe (`cdfd3150…`, against the build.sh-composed route).
+build.sh also checks the three `net/` files against pinned sha256s; here the `source_sha256` that
+wbuild prints identifies the whole composed source instead. `../omega-mv` is omega-mv at `e5b32567`.
 
 ## wbuild
 
