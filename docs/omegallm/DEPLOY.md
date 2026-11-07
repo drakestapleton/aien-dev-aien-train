@@ -42,13 +42,24 @@ section *loaded identity*), filled once at start after both loaders succeeded:
 ```
 {"status":"ok","in_flight":0,"queued":0,"capacity":32,"busy":false,"model":{"ck":"OLLMCK03","V":32768,
 "T":1024,"D":384,"H":6,"F":1536,"L":8,"B":16,"step":2450,"P":26745216,"ck_bytes":641885312,
-"ck_fnv":"0604f180eef533cb","tok":"OLLMTOK1","tok_V":32768,"tok_fnv":"920b3046a17db9be"}}
+"ck_fnv":"0604f180eef533cb","rope":"40c3880000000000","tok":"OLLMTOK1","tok_V":32768,
+"tok_fnv":"920b3046a17db9be"}}
 ```
 
 `ck_fnv` is the payload FNV-1a 64 the loader recomputed over every payload byte it decoded and found
 equal to the header (load exits 14 otherwise); `tok_fnv` is the OLLMTOK1 checksum `tkload` verified
-(exit 26 otherwise). The queue fields are unchanged, so `/health` readers (allen-chat `status` and
-`in_flight`, spark-baseline's `"busy":false` substring) keep working.
+(exit 26 otherwise). `rope` is the RoPE base the model runs with (OLLMCK03 header offset 112, as f64
+bits in hex; `null` for OLLMCK01/02, which have no RoPE). The payload FNV does not cover the header,
+so `rope` (and `T`) are reported from the header the loader admitted, and `mancheck live` compares
+`rope` with the staged checkpoint's header.
+
+Every value comes from the load itself (DRA-420): `ockload` and `xload` read the file through one
+descriptor held for the whole load (lio.om `ohold`/`ofree`) and keep the admitted header and the
+verified FNV (ckpt.om `ockhd`/`ockid`); serve never reads the checkpoint from disk again. A file
+renamed over the path mid-load cannot mix two files, and a file changed after the load cannot change
+`/health`, so `deploy.sh live` refuses a server whose loaded weights differ from the stage directory.
+The queue fields are unchanged, so `/health` readers (allen-chat `status` and `in_flight`,
+spark-baseline's `"busy":false` substring) keep working.
 
 ## 2. Tools (tests/omegallm/deploy/)
 

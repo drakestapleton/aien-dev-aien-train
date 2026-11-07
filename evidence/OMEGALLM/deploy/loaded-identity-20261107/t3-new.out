@@ -1,0 +1,4 @@
+stage rc=0
+0000112 00 00 00 00 00 88 90 40
+"ck_fnv":"e36a5ab14795bcc5","rope":"4090880000000000"
+live rc=1 MANCHECK FAIL the running server's /health identity differs from deploy.manifest

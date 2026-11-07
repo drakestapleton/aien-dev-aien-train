@@ -1,0 +1,15 @@
+== T1 new
+stage a rc=0
+stage b rc=0
+gate a rc=0 MANCHECK PASS name=s2 ck=OLLMCK03 step=0 ck_fnv=e36a5ab14795bcc5 tok_fnv=920b3046a17db9be
+live before restage rc=0 MANCHECK PASS name=s2 ck=OLLMCK03 step=0 ck_fnv=e36a5ab14795bcc5 tok_fnv=920b3046a17db9be live=exe,path,argv,health
+live after restage rc=1 MANCHECK FAIL the running server's /health identity differs from deploy.manifest
+T1 health unchanged
+"model":{"ck":"OLLMCK03","V":32768,"T":4096,"D":384,"H":6,"F":1536,"L":8,"B":1,"step":0,"P":26745216,"ck_bytes":641885312,"ck_fnv":"e36a5ab14795bcc5","rope":"40c3880000000000","tok":"OLLMTOK1","tok_V":32768,"tok_fnv":"920b3046a17db9be"}}
+"model":{"ck":"OLLMCK03","V":32768,"T":4096,"D":384,"H":6,"F":1536,"L":8,"B":1,"step":0,"P":26745216,"ck_bytes":641885312,"ck_fnv":"e36a5ab14795bcc5","rope":"40c3880000000000","tok":"OLLMTOK1","tok_V":32768,"tok_fnv":"920b3046a17db9be"}}
+server rc=143
+== T2 new
+renamed at rchar=214968726 of 641885312
+"model":{"ck":"OLLMCK03","V":32768,"T":4096,"D":384,"H":6,"F":1536,"L":8,"B":1,"step":0,"P":26745216,"ck_bytes":641885312,"ck_fnv":"e36a5ab14795bcc5","rope":"40c3880000000000","tok":"OLLMTOK1","tok_V":32768,"tok_fnv":"920b3046a17db9be"}}
+server rc=143
+s2 identity: "model":{"ck":"OLLMCK03","V":32768,"T":4096,"D":384,"H":6,"F":1536,"L":8,"B":1,"step":0,"P":26745216,"ck_bytes":641885312,"ck_fnv":"e36a5ab14795bcc5","rope":"40c3880000000000","tok":"OLLMTOK1","tok_V":32768,"tok_fnv":"920b3046a17db9be"}}
