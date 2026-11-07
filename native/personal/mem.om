@@ -175,13 +175,17 @@ end
 put obn 0 0
 end
 
-note read the store named by argument 2 into sb; a missing file is an empty store
+note read the store named by argument 2 into sb; only a missing file (ENOENT, -2) is an empty store; any
+note other open failure (for example EACCES on a write-only file) exits 70 before an edit can append
 fn rdstore to void
 n = argp 2
 put sbn 0 0
 fd = fopen pth 0 n 0 0
-if lt fd 0
+if eq fd -2
 ret
+end
+if lt fd 0
+exit 70
 end
 o = ulong 0
 dn = false
@@ -490,13 +494,14 @@ end
 end
 end
 
-note r is active: if a newer active record of the same identity exists, r is superseded by the newest
+note r is active: if a newer asserted (add or correct) record of the same identity exists, whatever its final
+note status, r is superseded by the newest; so retracting a replacement never revives its predecessor
 fn idwin r ulong to void
 n = get nrec 0
 b = r
 for j ulong n
 if ne j r
-if eq get rst j uchar 0
+if ne get rop j uchar 3
 if eq get rih j get rih r
 if eq get rkd j get rkd r
 if newer j b

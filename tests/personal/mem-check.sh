@@ -21,28 +21,36 @@ qcase() { # name bin store k text expected
   [ "$2" = "$MEM" ] && show "$1" $r "$W/out"
   [ $r -eq 0 ] && cmp -s "$W/out" "$6"
 }
-build() { # bin store-name: the synthetic stores
-  B=$1; S=$W/$2; rm -f "$S"
+build() { # bin store-name: the synthetic stores; returns nonzero if any edit command failed
+  B=$1; S=$W/$2; rm -f "$S"; set +e; bf=0
   case ${2#ns-} in
-  stale)  "$B" add "$S" preference "editor indent" "use tabs" $T1 syn:c1:r1 > /dev/null
-          "$B" add "$S" preference "editor indent" "never use tabs, use 4 spaces" $T2 syn:c2:r7 > /dev/null ;;
-  chain)  "$B" add "$S" fact "deploy host" "alpha" $T1 syn:c3:r1 > /dev/null
-          "$B" correct "$S" 1 fact "deploy host" "beta" $T2 syn:c3:r4 > /dev/null
-          "$B" correct "$S" 2 fact "deploy host" "gamma" $T3 syn:c4:r2 > /dev/null ;;
-  retract) "$B" add "$S" decision "gpu lease mode" "exclusive" $T1 syn:c5:r1 > /dev/null
-          "$B" retract "$S" 1 $T2 syn:c5:r9 > /dev/null ;;
-  retchain) "$B" add "$S" fact "mirror url" "old mirror" $T1 syn:c6:r1 > /dev/null
-          "$B" correct "$S" 1 fact "mirror url" "new mirror" $T2 syn:c6:r2 > /dev/null
-          "$B" retract "$S" 2 $T3 syn:c6:r3 > /dev/null ;;
-  tie)    "$B" add "$S" preference "login shell" "bash" $T2 syn:c7:r1 > /dev/null
-          "$B" add "$S" preference "login shell" "zsh" $T2 syn:c7:r2 > /dev/null ;;
-  kinds)  "$B" add "$S" preference "deploy" "manual approval" $T1 syn:c8:r1 > /dev/null
-          "$B" add "$S" project_fact "deploy" "runs via ci" $T2 syn:c8:r2 > /dev/null ;;
-  old)    "$B" add "$S" preference "editor" "use emacs" $T1 syn:c9:r1 > /dev/null
-          "$B" add "$S" preference "Editor" "use vim" $T2 syn:c9:r2 > /dev/null ;;
+  stale)  "$B" add "$S" preference "editor indent" "use tabs" $T1 syn:c1:r1 > /dev/null || bf=1
+          "$B" add "$S" preference "editor indent" "never use tabs, use 4 spaces" $T2 syn:c2:r7 > /dev/null || bf=1 ;;
+  chain)  "$B" add "$S" fact "deploy host" "alpha" $T1 syn:c3:r1 > /dev/null || bf=1
+          "$B" correct "$S" 1 fact "deploy host" "beta" $T2 syn:c3:r4 > /dev/null || bf=1
+          "$B" correct "$S" 2 fact "deploy host" "gamma" $T3 syn:c4:r2 > /dev/null || bf=1 ;;
+  retract) "$B" add "$S" decision "gpu lease mode" "exclusive" $T1 syn:c5:r1 > /dev/null || bf=1
+          "$B" retract "$S" 1 $T2 syn:c5:r9 > /dev/null || bf=1 ;;
+  retchain) "$B" add "$S" fact "mirror url" "old mirror" $T1 syn:c6:r1 > /dev/null || bf=1
+          "$B" correct "$S" 1 fact "mirror url" "new mirror" $T2 syn:c6:r2 > /dev/null || bf=1
+          "$B" retract "$S" 2 $T3 syn:c6:r3 > /dev/null || bf=1 ;;
+  tie)    "$B" add "$S" preference "login shell" "bash" $T2 syn:c7:r1 > /dev/null || bf=1
+          "$B" add "$S" preference "login shell" "zsh" $T2 syn:c7:r2 > /dev/null || bf=1 ;;
+  kinds)  "$B" add "$S" preference "deploy" "manual approval" $T1 syn:c8:r1 > /dev/null || bf=1
+          "$B" add "$S" project_fact "deploy" "runs via ci" $T2 syn:c8:r2 > /dev/null || bf=1 ;;
+  old)    "$B" add "$S" preference "editor" "use emacs" $T1 syn:c9:r1 > /dev/null || bf=1
+          "$B" add "$S" preference "Editor" "use vim" $T2 syn:c9:r2 > /dev/null || bf=1 ;;
+  revive) "$B" add "$S" preference "editor indent" "use tabs" $T1 syn:c10:r1 > /dev/null || bf=1
+          "$B" add "$S" preference "editor indent" "use spaces" $T2 syn:c10:r2 > /dev/null || bf=1
+          "$B" retract "$S" 2 $T3 syn:c10:r3 > /dev/null || bf=1 ;;
   esac
+  [ -s "$S" ] || bf=1
+  return $bf
 }
-for s in stale chain retract retchain tie kinds old; do build "$MEM" $s; build "$MEMNS" ns-$s 2> /dev/null; done
+for s in stale chain retract retchain tie kinds old revive; do
+  build "$MEM" $s || no "fixture build failed: $s"
+  build "$MEMNS" ns-$s 2> /dev/null || no "negative-control fixture build failed: ns-$s"
+done
 printf '[memory: 1 current]\n- editor indent: never use tabs, use 4 spaces (preference, 2026-10-05)\n- superseded: editor indent: use tabs (2026-09-01) -> now: never use tabs, use 4 spaces (2026-10-05)\n' > "$W/e.stale"
 printf '[memory: 0 current]\n- superseded: deploy host: alpha (2026-09-01) -> now: gamma (2026-10-20)\n' > "$W/e.chain"
 : > "$W/e.retract"
@@ -50,6 +58,7 @@ printf '[memory: 0 current]\n- superseded: mirror url: old mirror (2026-09-01) -
 printf '[memory: 1 current]\n- login shell: zsh (preference, 2026-10-05)\n- superseded: login shell: bash (2026-10-05) -> now: zsh (2026-10-05)\n' > "$W/e.tie"
 printf '[memory: 2 current]\n- deploy: manual approval (preference, 2026-09-01)\n- deploy: runs via ci (project_fact, 2026-10-05)\n' > "$W/e.kinds"
 printf '[memory: 0 current]\n- superseded: editor: use emacs (2026-09-01) -> now: use vim (2026-10-05)\n' > "$W/e.old"
+printf '[memory: 0 current]\n- superseded: editor indent: use tabs (2026-09-01) -> retracted\n' > "$W/e.revive"
 qcase stale "$MEM" "$W/stale" 3 "indent tabs" "$W/e.stale" && ok "stale preference: the newer 'never use tabs' is current, 'use tabs' only as superseded" || no "stale preference"
 qcase chain "$MEM" "$W/chain" 3 "deploy host alpha" "$W/e.chain" && ok "chained supersession alpha -> beta -> gamma: the query matching only alpha reports alpha superseded with the chain end gamma" || no "chained supersession"
 qcase retract "$MEM" "$W/retract" 3 "gpu lease mode" "$W/e.retract" && ok "retract: a retracted record is never returned (empty block)" || no "retract"
@@ -57,11 +66,26 @@ qcase retchain "$MEM" "$W/retchain" 3 "old mirror url" "$W/e.retchain" && ok "ch
 qcase tie "$MEM" "$W/tie" 3 "login shell" "$W/e.tie" && ok "same-ts tie: the larger rid wins" || no "same-ts tie"
 qcase kinds "$MEM" "$W/kinds" 3 "deploy" "$W/e.kinds" && ok "key collision across kinds: preference and project_fact both current" || no "kinds"
 qcase old "$MEM" "$W/old" 3 "emacs" "$W/e.old" && ok "query matching only the old text: reported superseded with its replacement, never current" || no "old text"
+qcase revive "$MEM" "$W/revive" 3 "indent tabs" "$W/e.revive" && ok "add, add, retract the newer: the older stays superseded (not revived), nothing current" || no "retract revived a superseded record"
 for s in stale chain retract retchain tie old; do
   k="indent tabs"; [ $s = chain ] && k="deploy host alpha"; [ $s = retract ] && k="gpu lease mode"; [ $s = retchain ] && k="old mirror url"
   [ $s = tie ] && k="login shell"; [ $s = old ] && k="emacs"
-  qcase ns-$s "$MEMNS" "$W/ns-$s" 3 "$k" "$W/e.$s" && no "negative control NOT caught: $s passes with supersession disabled" || ok "negative control caught: $s fails with supersession disabled ($("$MEMNS" query "$W/ns-$s" 3 "$k" | head -n 2 | tail -n 1))"
+  "$MEMNS" query "$W/ns-$s" 3 "$k" > "$W/ns.out" 2>&1; nr=$?
+  if [ $nr -ne 0 ] || [ ! -s "$W/ns.out" ]; then no "negative control did not run: ns-$s rc $nr"
+  elif cmp -s "$W/ns.out" "$W/e.$s"; then no "negative control NOT caught: $s passes with supersession disabled"
+  else ok "negative control caught: $s fails with supersession disabled ($(head -n 2 "$W/ns.out" | tail -n 1))"; fi
 done
+# the stale mutant must show the specific wrong answer: the superseded value as current
+"$MEMNS" query "$W/ns-stale" 3 "indent tabs" | grep -qxF -- "- editor indent: use tabs (preference, 2026-09-01)" \
+  && ok "negative control prints the superseded 'use tabs' as current" || no "negative control did not print the stale value as current"
+# a store that exists but cannot be read: edits refused (file unchanged), query fails (not an empty result)
+S=$W/unread; "$MEM" add "$S" fact "k1" "v1" $T1 syn:u:1 > /dev/null; h0=$(sha256sum "$S" | cut -d' ' -f1)
+chmod 0200 "$S"; "$MEM" add "$S" fact "k2" "v2" $T2 syn:u:2 > /dev/null 2>&1; ra=$?
+"$MEM" query "$S" 3 "k1" > "$W/out" 2>&1; rq=$?; chmod 0600 "$S"
+[ $ra -ne 0 ] && [ "$(sha256sum "$S" | cut -d' ' -f1)" = "$h0" ] && ok "unreadable store: add refused (rc $ra), file byte-identical" || no "unreadable store add rc $ra"
+[ $rq -ne 0 ] && ok "unreadable store: query fails (rc $rq), not an empty block" || no "unreadable store query rc $rq"
+"$MEM" check "$S" | head -n 1 | grep -qx "MEM 1 1 0 0 0" && ok "unreadable store: still one valid record after the refused add" || no "unreadable store check"
+
 # unicode: bytes kept, ASCII tokens match, a cut value ends on a UTF-8 boundary
 S=$W/uni; "$MEM" add "$S" fact "café menu" "crème brûlée 日本語" $T1 syn:u:1 > /dev/null
 "$MEM" query "$S" 3 "café menu" > "$W/out"; r=$?; show unicode $r "$W/out"

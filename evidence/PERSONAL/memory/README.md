@@ -115,3 +115,21 @@ In the other 7 items no current record ranked in the top 3 for the question's wo
   The personal store is a 48-record curated preference/decision memory, not a full-history index. Most of the 40 ChatMemory questions ask about topics it does not hold. The two systems complement each other.
 
 Ratios were computed with Wolfram.
+
+## Review fix (lead dra146, 2026-11-07)
+
+Reviewer verdict COMMENT on 24f14cb7 (gpt-6-astra): B1 retracting a replacement revived its superseded
+predecessor; B2 an existing but unreadable store was treated as empty, so `add` appended a duplicate rid 1;
+N1 the negative-control gate passed with MEMNS=/bin/false. Fixed:
+- `idwin` now counts any newer asserted (add/correct) record of the same identity, whatever its final status;
+  a retracted replacement keeps its predecessor superseded (query: `- superseded: ... -> retracted`).
+- `rdstore` treats only ENOENT (-2) as an empty store; any other open failure exits 70 before any append.
+- mem-check.sh: fixture builds must succeed (both binaries), the mutant query must run (rc 0, nonempty) and
+  the stale mutant must print the superseded value as current; new cases `revive` and unreadable store.
+- Lean: `newest` counts every record of the key; new `status_edit_no_revive` (a status edit of one record
+  never changes whether another is current) and `old_model_revives` (the old rule revives, by `decide`).
+  lean MCP `lean_run_code` 2026-11-07: success; axioms within [propext, Classical.choice, Quot.sound].
+Results: fresh build mem 15180a17ef315795..., mem-nosup f5e1138065e76dc7...;
+`sh tests/personal/mem-check.sh` -> 34 PASS, 0 FAIL, MEM_PASS (mem-check.txt). The 24f14cb7 build
+fails the new cases (revive; unreadable add rc 0; unreadable query rc 0); MEMNS=/bin/false now fails.
+On the private 48-record store the fix changes no dump and no query output (137 eval queries compared).
