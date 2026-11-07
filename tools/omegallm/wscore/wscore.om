@@ -1,0 +1,1834 @@
+om2
+note wscore: score `wprobe gen` output against a split (pure Omega port of DRA-187 EV/score.py).
+note usage: wscore SPLIT.rec SPLIT.meta GEN.out
+note SPLIT.rec: records PROMPT 0x1f ANSWER 0x00, or a G prompt alone (answer derived, see prec).
+note SPLIT.meta: lines `idx role length kind`, role
+note target|control, kind path|word, idx equal to the line number from 0. GEN.out: `G idx<TAB>text`
+note lines, text escaped as \t \n \r \" \\ \xHH. A path row passes when its text, cut at the first
+note `\nDone.` and stripped of Python whitespace, equals the answer as JSON (both parse) or as a
+note string. A word row passes when the stripped first line equals the answer.
+note Prints `target P/T  L<n> p/t ...`, `control P/T  ...`, then `P idx 0|1` per row.
+note Exit: 0 ok, 2 usage, 3 open/read, 4 capacity, 5 malformed rec/meta/G key, 6 G rows do not
+note cover the split exactly, 7 bad escape in GEN text, 8 JSON nesting over 9990 (inside the scorer's
+note check_answer, CPython 3.12.3 raises RecursionError on some inputs from 9991 levels), 9 write failure.
+
+global ab uchar 4096
+global rb uchar 16777216
+global mb uchar 4194304
+global gb uchar 16777216
+global fz ulong 3
+global rn ulong 1
+global ra ulong 262144
+global rl ulong 262144
+global rr ulong 262144
+global rw ulong 262144
+global rg ulong 262144
+global rk ulong 262144
+global gs ulong 262144
+global gl ulong 262144
+global gq ulong 262144
+global pv ulong 262144
+global mp ulong 1
+global ca ulong 1048576
+global cb ulong 1048576
+global sr ulong 2
+global pw ulong 1
+global pp ulong 1
+global px ulong 1
+global pd ulong 1
+global pf ulong 1
+global nt ulong 2097152
+global n1 ulong 2097152
+global n2 ulong 2097152
+global nx ulong 2097152
+global nq ulong 2097152
+global nv long 2097152
+global nf ulong 2097152
+global bg ulong 1536
+global bgl ulong 4
+global fr ulong 4
+global nn ulong 1
+global pl ulong 2097152
+global pn ulong 1
+global js long 4
+global tp ulong 8192
+global tt ulong 8192
+global ob uchar 65536
+global obn ulong 1
+text ttarget "target"
+text tcontr "control"
+text tpath "path"
+text tword "word"
+text tnull "null"
+text ttrue "true"
+text tfalse "false"
+text tnan "NaN"
+text tinf "Infinity"
+text tdone "\nDone."
+text tgpre "Task: Write Omega that prints "
+text tgpost " followed by a newline.\nAnswer:\n"
+text tmsg "text msg \""
+
+fn main to int
+if ne argcnt 4
+exit 2
+end
+ldfile 1 0
+ldfile 2 1
+ldfile 3 2
+prec
+pmeta
+pgen
+tally
+pline 0
+pline 1
+prows
+oflush
+ret 0
+end
+
+note ---- output ----
+fn oflush to void
+n = get obn 0
+o = ulong 0
+while lt o n bound 65537
+k = write 1 ob o sub n o
+if le k 0
+exit 9
+end
+o = add o ulong k
+end
+put obn 0 0
+end
+
+fn oput c uchar to void
+n = get obn 0
+if ge n 65536
+oflush
+n = ulong 0
+end
+put ob n c
+put obn 0 add n 1
+end
+
+fn pdec v ulong to void
+d = new uchar 24 0
+k = ulong 0
+x = v
+c = true
+while c bound 25
+put d k uchar add 48 rem x 10
+k = add k 1
+x = div x 10
+if eq x 0
+c = false
+end
+end
+while gt k 0 bound 25
+k = sub k 1
+oput get d k
+end
+end
+
+fn pstr t view uchar * to void
+for i ulong len t
+oput get t i
+end
+end
+
+fn pline r ulong to void
+if eq r 0
+pstr ttarget
+else
+pstr tcontr
+end
+b = mul r 4096
+p = ulong 0
+t = ulong 0
+for l ulong 4096
+p = add p get tp add b l
+t = add t get tt add b l
+end
+oput 32
+pdec p
+oput 47
+pdec t
+oput 32
+oput 32
+pbylen b
+oput 10
+end
+
+fn pbylen b ulong to void
+c = true
+for l ulong 4096
+x = add b l
+if gt get tt x 0
+if not c
+oput 32
+end
+c = false
+oput 76
+pdec l
+oput 32
+pdec get tp x
+oput 47
+pdec get tt x
+end
+end
+end
+
+fn prows to void
+nr = get rn 0
+i = ulong 0
+while lt i nr bound 999999
+oput 80
+oput 32
+pdec i
+oput 32
+pdec get pv i
+oput 10
+i = add i 1
+end
+end
+
+note ---- input files ----
+fn capof w ulong to ulong
+if eq w 0
+ret ulong 16777216
+end
+if eq w 1
+ret ulong 4194304
+end
+ret ulong 16777216
+end
+
+fn rdbuf w ulong fd int off ulong to long
+if eq w 0
+ret read fd rb off sub 16777216 off
+end
+if eq w 1
+ret read fd mb off sub 4194304 off
+end
+ret read fd gb off sub 16777216 off
+end
+
+fn ldfile ai ulong w ulong to void
+k = argread ai ab 0 4096
+if lt k 0
+exit 3
+end
+if ge k 4096
+exit 3
+end
+fd = int fopen ab 0 ulong k 0 0
+if lt fd 0
+exit 3
+end
+cap = capof w
+off = ulong 0
+go = true
+while go bound 999999
+if ge off cap
+exit 4
+end
+r = rdbuf w fd off
+if lt r 0
+exit 3
+end
+if eq r 0
+go = false
+else
+off = add off ulong r
+end
+end
+x = fclose fd
+put fz w off
+end
+
+note SPLIT.rec: record i ends at its 0x00; its answer is the bytes after the first 0x1f in it.
+note A record without 0x1f is a G prompt (make_splits.py gsplit, wsplit): the answer is
+note `text msg "WORD\n"` with WORD cut from `Task: Write Omega that prints WORD followed by a
+note newline.\nAnswer:\n`; ra/rl then hold WORD and rw is 1. Any other record is malformed.
+fn prec to void
+n = get fz 0
+p = ulong 0
+i = ulong 0
+while lt p n bound 999999
+e = recsep p n 0
+if ge e n
+exit 5
+end
+if ge i 262144
+exit 4
+end
+q = recsep p e 31
+if lt q e
+a = add q 1
+put ra i a
+put rl i sub e a
+put rw i 0
+else
+gword i p e
+end
+i = add i 1
+p = add e 1
+end
+put rn 0 i
+end
+
+fn rbeq p ulong t view uchar * to bool
+for k ulong len t
+if ne get rb add p k get t k
+ret false
+end
+end
+ret true
+end
+
+fn gword i ulong p ulong e ulong to void
+a = add p len tgpre
+b = sub e len tgpost
+if or lt e add a len tgpost ge a b
+exit 5
+end
+if or not rbeq p tgpre not rbeq b tgpost
+exit 5
+end
+put ra i a
+put rl i sub b a
+put rw i 1
+end
+
+fn recsep p ulong n ulong b uchar to ulong
+q = p
+while lt q n bound 999999
+if ge sub q p 999990
+exit 4
+end
+if eq get rb q b
+ret q
+end
+q = add q 1
+end
+ret n
+end
+
+note SPLIT.meta
+fn pmeta to void
+n = get fz 1
+nr = get rn 0
+put mp 0 0
+i = ulong 0
+while lt get mp 0 n bound 999999
+if ge i nr
+exit 5
+end
+if ne mnum i
+exit 5
+end
+msp
+put rr i mrole
+msp
+x = mnum
+if ge x 4096
+exit 5
+end
+put rg i x
+msp
+put rk i mkind
+meol
+i = add i 1
+end
+if ne i nr
+exit 5
+end
+end
+
+fn mnum to ulong
+p = get mp 0
+n = get fz 1
+v = ulong 0
+s = p
+while lt p n bound 999999
+if ge sub p s 999990
+exit 5
+end
+c = ulong get mb p
+if or lt c 48 gt c 57
+break
+end
+if lt v 100000000000
+v = add mul v 10 sub c 48
+end
+p = add p 1
+end
+if eq p s
+exit 5
+end
+put mp 0 p
+ret v
+end
+
+fn msp to void
+p = get mp 0
+if ge p get fz 1
+exit 5
+end
+if ne get mb p 32
+exit 5
+end
+put mp 0 add p 1
+end
+
+fn meol to void
+p = get mp 0
+if lt p get fz 1
+if ne get mb p 10
+exit 5
+end
+put mp 0 add p 1
+end
+end
+
+fn mtok to ulong
+p = get mp 0
+n = get fz 1
+while lt p n bound 999999
+if ge sub p get mp 0 999990
+exit 5
+end
+c = get mb p
+if or eq c 32 eq c 10
+break
+end
+p = add p 1
+end
+ret p
+end
+
+fn mteq s ulong e ulong t view uchar * to bool
+if ne sub e s len t
+ret false
+end
+for i ulong len t
+if ne get mb add s i get t i
+ret false
+end
+end
+ret true
+end
+
+fn mrole to ulong
+s = get mp 0
+e = mtok
+put mp 0 e
+if mteq s e ttarget
+ret ulong 0
+end
+if mteq s e tcontr
+ret ulong 1
+end
+exit 5
+end
+
+fn mkind to ulong
+s = get mp 0
+e = mtok
+put mp 0 e
+if mteq s e tpath
+ret ulong 0
+end
+if mteq s e tword
+ret ulong 1
+end
+exit 5
+end
+
+note GEN.out: lines end at \n, \r\n or \r (Python universal newlines); `G ` lines carry rows
+fn pgen to void
+n = get fz 2
+p = ulong 0
+c = ulong 0
+ln = ulong 0
+while lt p n bound 999999
+ln = add ln 1
+if ge ln 999990
+exit 4
+end
+e = lnend p n
+if isg p e
+c = add c gline p e
+end
+p = lnnext e n
+end
+if ne c get rn 0
+exit 6
+end
+end
+
+fn lnend p ulong n ulong to ulong
+q = p
+while lt q n bound 999999
+if ge sub q p 999990
+exit 4
+end
+c = get gb q
+if or eq c 10 eq c 13
+ret q
+end
+q = add q 1
+end
+ret n
+end
+
+fn lnnext e ulong n ulong to ulong
+if ge e n
+ret n
+end
+if eq get gb e 13
+q = add e 1
+if lt q n
+if eq get gb q 10
+ret add e 2
+end
+end
+end
+ret add e 1
+end
+
+fn isg p ulong e ulong to bool
+if ge add p 1 e
+ret false
+end
+ret and eq get gb p 71 eq get gb add p 1 32
+end
+
+note a G line: decimal key, TAB, text; returns 1 when the key is new (later lines replace earlier)
+fn gline p ulong e ulong to ulong
+q = add p 2
+v = ulong 0
+s = q
+while lt q e bound 999999
+c = ulong get gb q
+if eq c 9
+break
+end
+if or lt c 48 gt c 57
+exit 5
+end
+if lt v 100000000000
+v = add mul v 10 sub c 48
+end
+q = add q 1
+end
+if eq q s
+exit 5
+end
+if ge v get rn 0
+exit 6
+end
+t = q
+if lt q e
+t = add q 1
+end
+gchk t e
+put gs v t
+put gl v sub e t
+if eq get gq v 1
+ret ulong 0
+end
+put gq v 1
+ret ulong 1
+end
+
+note ---- decoding to code points: w 0 is GEN text into ca, w 1 is the answer into cb ----
+fn bat w ulong p ulong to ulong
+if eq w 0
+ret ulong get gb p
+end
+ret ulong get rb p
+end
+
+fn cput w ulong i ulong v ulong to void
+if ge i 999990
+exit 4
+end
+if eq w 0
+put ca i v
+else
+put cb i v
+end
+end
+
+fn u8n b ulong to ulong
+if and ge b 194 le b 223
+ret ulong 1
+end
+if and ge b 224 le b 239
+ret ulong 2
+end
+if and ge b 240 le b 244
+ret ulong 3
+end
+ret ulong 0
+end
+
+fn u8ok b ulong i ulong c ulong to bool
+lo = ulong 128
+hi = ulong 191
+if eq i 0
+if eq b 224
+lo = ulong 160
+end
+if eq b 240
+lo = ulong 144
+end
+if eq b 237
+hi = ulong 159
+end
+if eq b 244
+hi = ulong 143
+end
+end
+ret and ge c lo le c hi
+end
+
+note one UTF-8 character at p, maximal ill-formed subparts become U+FFFD (Python errors=replace)
+fn dutf w ulong p ulong e ulong o ulong to ulong
+b = bat w p
+if lt b 128
+cput w o b
+ret add p 1
+end
+k = u8n b
+if eq k 0
+cput w o 65533
+ret add p 1
+end
+v = and b shr 127 add k 1
+q = add p 1
+for i ulong k
+if ge q e
+cput w o 65533
+ret q
+end
+c = bat w q
+if not u8ok b i c
+cput w o 65533
+ret q
+end
+v = or shl v 6 and c 63
+q = add q 1
+end
+cput w o v
+ret q
+end
+
+fn hexv c ulong to ulong
+if and ge c 48 le c 57
+ret sub c 48
+end
+if and ge c 97 le c 102
+ret sub c 87
+end
+if and ge c 65 le c 70
+ret sub c 55
+end
+ret ulong 16
+end
+
+fn gsimp c ulong to ulong
+if eq c 116
+ret ulong 9
+end
+if eq c 110
+ret ulong 10
+end
+if eq c 114
+ret ulong 13
+end
+if or eq c 34 eq c 92
+ret c
+end
+exit 7
+end
+
+note value of the escape at p (a backslash); exits 7 when it is not one score.py's unescape takes
+fn escv p ulong e ulong to ulong
+if ge add p 1 e
+exit 7
+end
+c = ulong get gb add p 1
+if ne c 120
+ret gsimp c
+end
+if ge add p 3 e
+exit 7
+end
+h = hexv ulong get gb add p 2
+l = hexv ulong get gb add p 3
+if or gt h 15 gt l 15
+exit 7
+end
+ret add shl h 4 l
+end
+
+fn esclen p ulong to ulong
+if eq get gb add p 1 120
+ret ulong 4
+end
+ret ulong 2
+end
+
+fn desc p ulong e ulong o ulong to ulong
+cput 0 o escv p e
+ret add p esclen p
+end
+
+note score.py unescapes every G line as it reads it, so a bad escape fails even on a replaced line
+fn gchk p ulong e ulong to void
+q = p
+while lt q e bound 999999
+if eq get gb q 92
+v = escv q e
+q = add q esclen q
+else
+q = add q 1
+end
+end
+end
+
+fn dgen i ulong to ulong
+p = get gs i
+e = add p get gl i
+o = ulong 0
+while lt p e bound 999999
+if eq get gb p 92
+p = desc p e o
+else
+p = dutf 0 p e o
+end
+o = add o 1
+end
+ret o
+end
+
+fn dans i ulong to ulong
+p = get ra i
+e = add p get rl i
+o = ulong 0
+w = eq get rw i 1
+if w
+if ne get rk i 1
+exit 5
+end
+for k ulong len tmsg
+cput 1 o ulong get tmsg k
+o = add o 1
+end
+end
+while lt p e bound 999999
+p = dutf 1 p e o
+o = add o 1
+end
+if w
+cput 1 o 92
+cput 1 add o 1 110
+cput 1 add o 2 34
+o = add o 3
+end
+ret o
+end
+
+note ---- text cuts on ca ----
+note Python str.isspace
+fn isws c ulong to bool
+if and ge c 9 le c 13
+ret true
+end
+if and ge c 28 le c 32
+ret true
+end
+if or eq c 133 eq c 160
+ret true
+end
+if or eq c 5760 and ge c 8192 le c 8202
+ret true
+end
+if or or eq c 8232 eq c 8233 or eq c 8239 eq c 8287
+ret true
+end
+ret eq c 12288
+end
+
+fn strip e ulong to void
+s = ulong 0
+t = e
+while lt s t bound 999999
+if not isws get ca s
+break
+end
+s = add s 1
+end
+while gt t s bound 999999
+if not isws get ca sub t 1
+break
+end
+t = sub t 1
+end
+put sr 0 s
+put sr 1 t
+end
+
+fn fnl n ulong to ulong
+i = ulong 0
+while lt i n bound 999999
+if eq get ca i 10
+ret i
+end
+i = add i 1
+end
+ret n
+end
+
+fn isdone i ulong to bool
+for k ulong 6
+if ne get ca add i k ulong get tdone k
+ret false
+end
+end
+ret true
+end
+
+fn fdone n ulong to ulong
+i = ulong 0
+while le add i 6 n bound 999999
+if isdone i
+ret i
+end
+i = add i 1
+end
+ret n
+end
+
+fn cmpab s ulong e ulong m ulong to bool
+if ne sub e s m
+ret false
+end
+k = ulong 0
+while lt k m bound 999999
+if ne get ca add s k get cb k
+ret false
+end
+k = add k 1
+end
+ret true
+end
+
+note ---- JSON (Python json.loads) ----
+note node types: 0 null, 1 false, 2 true, 3 number, 4 string, 5 array, 6 object, 7 NaN,
+note 8 Infinity, 9 -Infinity. Strings: n1 pool start, n2 count of code points. Numbers and bools:
+note value = (pool digits n1, count n2, no leading or trailing zero) * 10^nv, nq 1 when negative,
+note n2 0 for zero. Arrays and objects: n1 first child, n2 child count, nx next sibling; an object's
+note children alternate key, value.
+fn pc i ulong to ulong
+if eq get pw 0 0
+ret get ca i
+end
+ret get cb i
+end
+
+fn pat k ulong to ulong
+p = add get pp 0 k
+if lt p get px 0
+ret pc p
+end
+ret ulong 4294967295
+end
+
+fn pcur to ulong
+ret pat 0
+end
+
+fn padv k ulong to void
+put pp 0 add get pp 0 k
+end
+
+fn jfail to ulong
+put pf 0 1
+ret ulong 0
+end
+
+fn bad to bool
+ret ne get pf 0 0
+end
+
+fn isdig c ulong to bool
+ret and ge c 48 le c 57
+end
+
+fn nnew t ulong to ulong
+i = get nn 0
+if ge i 2097152
+exit 4
+end
+put nt i t
+put n1 i 0
+put n2 i 0
+put nx i 0
+put nq i 0
+put nv i 0
+put nf i 0
+put nn 0 add i 1
+ret i
+end
+
+fn ppush v ulong to void
+i = get pn 0
+if ge i 2097152
+exit 4
+end
+put pl i v
+put pn 0 add i 1
+end
+
+fn jlink nd ulong last ulong v ulong to void
+if eq get n2 nd 0
+put n1 nd v
+else
+put nx last v
+end
+put n2 nd add get n2 nd 1
+end
+
+fn jdeep to void
+d = add get pd 0 1
+if gt d 9990
+exit 8
+end
+put pd 0 d
+end
+
+fn jup to void
+put pd 0 sub get pd 0 1
+end
+
+fn jws to void
+c = true
+while c bound 999999
+x = pcur
+if or or eq x 32 eq x 9 or eq x 10 eq x 13
+padv 1
+else
+c = false
+end
+end
+end
+
+fn jlit t view uchar * to bool
+for i ulong len t
+if ne pat i ulong get t i
+ret false
+end
+end
+padv len t
+ret true
+end
+
+fn jkw t view uchar * ty ulong to ulong
+if not jlit t
+ret jfail
+end
+nd = nnew ty
+if eq ty 2
+put n1 nd get pn 0
+put n2 nd 1
+ppush 1
+end
+ret nd
+end
+
+fn jtop w ulong s ulong e ulong to ulong
+put pw 0 w
+put pp 0 s
+put px 0 e
+put pf 0 0
+put pd 0 0
+jws
+v = jval
+if bad
+ret ulong 0
+end
+jws
+if ne get pp 0 e
+ret jfail
+end
+ret v
+end
+
+fn jval to ulong
+c = pcur
+if eq c 34
+ret jstr
+end
+if eq c 123
+ret jobj
+end
+if eq c 91
+ret jarr
+end
+if eq c 110
+ret jkw tnull 0
+end
+if eq c 116
+ret jkw ttrue 2
+end
+if eq c 102
+ret jkw tfalse 1
+end
+if eq c 78
+ret jkw tnan 7
+end
+if eq c 73
+ret jkw tinf 8
+end
+if eq c 45
+if eq pat 1 73
+padv 1
+ret jkw tinf 9
+end
+end
+ret jnum
+end
+
+fn jdigs to void
+c = true
+while c bound 999999
+if isdig pcur
+padv 1
+else
+c = false
+end
+end
+end
+
+note exponent after the number body; js 0 is 1 when present; saturates near 1e15
+fn jexp to long
+put js 0 0
+c = pcur
+if and ne c 101 ne c 69
+ret long 0
+end
+k = ulong 1
+s = long 1
+c2 = pat 1
+if or eq c2 43 eq c2 45
+if eq c2 45
+s = long -1
+end
+k = ulong 2
+end
+if not isdig pat k
+ret long 0
+end
+padv k
+put js 0 1
+v = long 0
+while isdig pcur bound 999999
+if lt v 1000000000000000
+v = add mul v 10 long sub pcur 48
+end
+padv 1
+end
+ret mul s v
+end
+
+fn jnum to ulong
+put js 1 0
+if eq pcur 45
+put js 1 1
+padv 1
+end
+if not isdig pcur
+ret jfail
+end
+i0 = get pp 0
+if eq pcur 48
+padv 1
+else
+jdigs
+end
+i1 = get pp 0
+f0 = i1
+f1 = i1
+if eq pcur 46
+if isdig pat 1
+padv 1
+f0 = get pp 0
+jdigs
+f1 = get pp 0
+end
+end
+put js 2 jexp
+put js 3 get js 0
+if ne f0 f1
+put js 3 1
+end
+if eq get js 3 0
+if gt sub i1 i0 4300
+ret jfail
+end
+end
+ret jmkn i0 i1 f0 f1
+end
+
+fn jpush a ulong b ulong st ulong to void
+k = a
+while lt k b bound 999999
+d = sub pc k 48
+if or ne d 0 gt get pn 0 st
+ppush d
+end
+k = add k 1
+end
+end
+
+fn jmkn i0 ulong i1 ulong f0 ulong f1 ulong to ulong
+nd = nnew 3
+st = get pn 0
+put n1 nd st
+jpush i0 i1 st
+jpush f0 f1 st
+t = ulong 0
+e = get pn 0
+while gt e st bound 999999
+if ne get pl sub e 1 0
+break
+end
+e = sub e 1
+t = add t 1
+end
+put pn 0 e
+put n2 nd sub e st
+put nf nd ulong get js 3
+if gt e st
+put nq nd ulong get js 1
+x = sub long t long sub f1 f0
+put nv nd add get js 2 x
+end
+ret nd
+end
+
+fn jsimp c ulong to ulong
+if or or eq c 34 eq c 92 eq c 47
+ret c
+end
+if eq c 98
+ret ulong 8
+end
+if eq c 102
+ret ulong 12
+end
+if eq c 110
+ret ulong 10
+end
+if eq c 114
+ret ulong 13
+end
+if eq c 116
+ret ulong 9
+end
+ret ulong 4294967295
+end
+
+fn hex4 k ulong to ulong
+v = ulong 0
+for i ulong 4
+h = hexv pat add k i
+if gt h 15
+ret ulong 65536
+end
+v = add shl v 4 h
+end
+ret v
+end
+
+note one escape at pp (a backslash); surrogate pairs combine, lone surrogates stay
+fn jesc to bool
+c = pat 1
+v = jsimp c
+if ne v 4294967295
+ppush v
+padv 2
+ret true
+end
+if ne c 117
+ret false
+end
+u = hex4 2
+if gt u 65535
+ret false
+end
+padv 6
+if and ge u 55296 le u 56319
+if and eq pcur 92 eq pat 1 117
+u2 = hex4 2
+if gt u2 65535
+ret false
+end
+if and ge u2 56320 le u2 57343
+u = add add 65536 shl sub u 55296 10 sub u2 56320
+padv 6
+end
+end
+end
+ppush u
+ret true
+end
+
+fn jstr to ulong
+padv 1
+nd = nnew 4
+st = get pn 0
+put n1 nd st
+go = true
+while go bound 999999
+c = pcur
+if eq c 34
+padv 1
+go = false
+else
+if lt c 32
+ret jfail
+end
+if eq c 4294967295
+ret jfail
+end
+if eq c 92
+if not jesc
+ret jfail
+end
+else
+ppush c
+padv 1
+end
+end
+end
+put n2 nd sub get pn 0 st
+ret nd
+end
+
+fn jarr to ulong
+padv 1
+nd = nnew 5
+jdeep
+jws
+if eq pcur 93
+padv 1
+jup
+ret nd
+end
+last = nd
+go = true
+while go bound 999999
+v = jval
+if bad
+ret ulong 0
+end
+jlink nd last v
+last = v
+jws
+c = pcur
+if eq c 93
+padv 1
+go = false
+else
+if ne c 44
+ret jfail
+end
+padv 1
+jws
+end
+end
+jup
+ret nd
+end
+
+fn jobj to ulong
+padv 1
+nd = nnew 6
+jdeep
+jws
+if eq pcur 125
+padv 1
+jup
+ret nd
+end
+last = nd
+go = true
+while go bound 999999
+if ne pcur 34
+ret jfail
+end
+k = jstr
+if bad
+ret ulong 0
+end
+jlink nd last k
+jws
+if ne pcur 58
+ret jfail
+end
+padv 1
+jws
+v = jval
+if bad
+ret ulong 0
+end
+jlink nd k v
+last = v
+jws
+c = pcur
+if eq c 125
+padv 1
+go = false
+else
+if ne c 44
+ret jfail
+end
+padv 1
+jws
+end
+end
+jup
+ret nd
+end
+
+note ---- Python == on the parsed values: bool equals 0/1, ints compare exactly, a float equals
+note what its literal rounds to in binary64 (ties to even), -0 equals 0, NaN equals nothing at the
+note top level but equals NaN inside a list or dict (json shares one NaN object, and Python
+note containers compare identical items as equal), dicts compare as key sets with the last
+note duplicate key winning ----
+fn pooleq x ulong y ulong k ulong to bool
+i = ulong 0
+while lt i k bound 999999
+if ne get pl add x i get pl add y i
+ret false
+end
+i = add i 1
+end
+ret true
+end
+
+fn isnum t ulong to bool
+if and ge t 1 le t 3
+ret true
+end
+ret or eq t 8 eq t 9
+end
+
+fn isint a ulong to bool
+t = get nt a
+if or eq t 1 eq t 2
+ret true
+end
+ret and eq t 3 eq get nf a 0
+end
+
+fn nsign a ulong to ulong
+t = get nt a
+if eq t 9
+ret ulong 1
+end
+if eq t 3
+ret get nq a
+end
+ret ulong 0
+end
+
+note two exact decimals
+fn deq a ulong b ulong to bool
+k = get n2 a
+if ne k get n2 b
+ret false
+end
+if eq k 0
+ret true
+end
+if ne get nq a get nq b
+ret false
+end
+if ne get nv a get nv b
+ret false
+end
+ret pooleq get n1 a get n1 b k
+end
+
+note bignums: slot d (0..3) is limbs bg[d*384 ..], 32 bits per limb, low limb first
+fn bclr d ulong to void
+put bgl d 0
+end
+
+fn nrm d ulong m ulong to void
+b = mul d 384
+n = m
+while gt n 0 bound 999999
+if ne get bg add b sub n 1 0
+break
+end
+n = sub n 1
+end
+put bgl d n
+end
+
+fn bmuladd d ulong m ulong a ulong to void
+b = mul d 384
+n = get bgl d
+c = a
+i = ulong 0
+while lt i n bound 999999
+t = add mul get bg add b i m c
+put bg add b i and t 4294967295
+c = shr t 32
+i = add i 1
+end
+if ne c 0
+if ge n 384
+exit 4
+end
+put bg add b n c
+put bgl d add n 1
+end
+end
+
+fn bsv d ulong j ulong w ulong r ulong to ulong
+b = mul d 384
+n = get bgl d
+hi = ulong 0
+lo = ulong 0
+if ge j w
+x = sub j w
+if lt x n
+hi = get bg add b x
+end
+end
+if gt j w
+x = sub sub j w 1
+if lt x n
+lo = get bg add b x
+end
+end
+v = shl hi r
+if gt r 0
+v = or v shr lo sub 32 r
+end
+ret and v 4294967295
+end
+
+fn bshl d ulong k ulong to void
+n = get bgl d
+if eq n 0
+ret
+end
+b = mul d 384
+w = shr k 5
+r = and k 31
+m = add n add w 1
+if gt m 384
+exit 4
+end
+j = m
+while gt j 0 bound 999999
+j = sub j 1
+put bg add b j bsv d j w r
+end
+nrm d m
+end
+
+fn bshr1 d ulong to void
+b = mul d 384
+n = get bgl d
+i = ulong 0
+while lt i n bound 999999
+v = shr get bg add b i 1
+if lt add i 1 n
+v = or v and shl get bg add b add i 1 31 4294967295
+end
+put bg add b i v
+i = add i 1
+end
+nrm d n
+end
+
+note 0 when slot x is less than slot y, 1 equal, 2 greater
+fn bcmp x ulong y ulong to ulong
+na = get bgl x
+nb = get bgl y
+if ne na nb
+if gt na nb
+ret ulong 2
+end
+ret ulong 0
+end
+i = na
+while gt i 0 bound 999999
+i = sub i 1
+u = get bg add mul x 384 i
+v = get bg add mul y 384 i
+if ne u v
+if gt u v
+ret ulong 2
+end
+ret ulong 0
+end
+end
+ret ulong 1
+end
+
+note slot x minus slot y, x not less than y
+fn bsub x ulong y ulong to void
+na = get bgl x
+nb = get bgl y
+bo = ulong 0
+i = ulong 0
+while lt i na bound 999999
+u = get bg add mul x 384 i
+v = bo
+if lt i nb
+v = add v get bg add mul y 384 i
+end
+if ge u v
+put bg add mul x 384 i sub u v
+bo = ulong 0
+else
+put bg add mul x 384 i sub add u 4294967296 v
+bo = ulong 1
+end
+i = add i 1
+end
+nrm x na
+end
+
+fn bcopy d ulong s ulong to void
+n = get bgl s
+for i ulong n
+put bg add mul d 384 i get bg add mul s 384 i
+end
+put bgl d n
+end
+
+fn bbits d ulong to ulong
+n = get bgl d
+if eq n 0
+ret ulong 0
+end
+t = get bg add mul d 384 sub n 1
+k = mul sub n 1 32
+while gt t 0 bound 64
+t = shr t 1
+k = add k 1
+end
+ret k
+end
+
+note fr 2 = floor(num * 2^s / den) (num slot 0, den slot 1), fr 3 = 1 when a remainder is left
+fn fqs s long to void
+bcopy 2 0
+bcopy 3 1
+if ge s 0
+bshl 2 ulong s
+else
+bshl 3 ulong sub long 0 s
+end
+bshl 3 55
+q = ulong 0
+for i ulong 56
+q = shl q 1
+if ne bcmp 2 3 0
+bsub 2 3
+q = or q 1
+end
+bshr1 3
+end
+put fr 2 q
+put fr 3 0
+if gt get bgl 2 0
+put fr 3 1
+end
+end
+
+note num/den into binary64 bits (fr 0) and an exact flag (fr 1); st 1 when digits were dropped
+fn fround st ulong to void
+d = sub long bbits 0 long bbits 1
+s = sub long 54 d
+fqs s
+if ge get fr 2 18014398509481984
+s = sub s 1
+fqs s
+end
+e2 = sub long 53 s
+if lt e2 -1022
+s = long 1075
+fqs s
+e2 = long -1022
+end
+q = get fr 2
+m = shr q 1
+r = and q 1
+sk = or get fr 3 st
+if ne r 0
+if or ne sk 0 ne and m 1 0
+m = add m 1
+end
+end
+ex = ulong 0
+if and eq r 0 eq sk 0
+ex = ulong 1
+end
+bits = add shl ulong add e2 1022 52 m
+if ge bits 9218868437227405312
+bits = ulong 9218868437227405312
+ex = ulong 0
+end
+put fr 0 bits
+put fr 1 ex
+end
+
+note magnitude of number node a in binary64: fr 0 bits, fr 1 = 1 when exact
+fn f64of a ulong to void
+put fr 0 0
+put fr 1 1
+t = get nt a
+if or eq t 8 eq t 9
+put fr 0 9218868437227405312
+put fr 1 0
+ret
+end
+n = get n2 a
+if eq n 0
+ret
+end
+e = get nv a
+p = add long n e
+if gt p 310
+put fr 0 9218868437227405312
+put fr 1 0
+ret
+end
+if lt p -330
+put fr 0 0
+put fr 1 0
+ret
+end
+k = n
+st = ulong 0
+if gt n 800
+k = ulong 800
+st = ulong 1
+e = add e long sub n 800
+end
+bclr 0
+b = get n1 a
+for i ulong k
+bmuladd 0 10 get pl add b i
+end
+bclr 1
+bmuladd 1 1 1
+if ge e 0
+for i ulong ulong e
+bmuladd 0 10 0
+end
+else
+for i ulong ulong sub long 0 e
+bmuladd 1 10 0
+end
+end
+fround st
+end
+
+fn numeq a ulong b ulong to bool
+if and isint a isint b
+ret deq a b
+end
+f64of a
+x = get fr 0
+xe = get fr 1
+f64of b
+y = get fr 0
+ye = get fr 1
+if and eq x 0 eq y 0
+ret true
+end
+if ne x y
+ret false
+end
+if ne nsign a nsign b
+ret false
+end
+if and isint a eq xe 0
+ret false
+end
+if and isint b eq ye 0
+ret false
+end
+ret true
+end
+
+fn streq a ulong b ulong to bool
+k = get n2 a
+if ne k get n2 b
+ret false
+end
+ret pooleq get n1 a get n1 b k
+end
+
+fn arreq a ulong b ulong to bool
+k = get n2 a
+if ne k get n2 b
+ret false
+end
+x = get n1 a
+y = get n1 b
+i = ulong 0
+while lt i k bound 999999
+if not jeq x y 0
+ret false
+end
+x = get nx x
+y = get nx y
+i = add i 1
+end
+ret true
+end
+
+note key x has no equal key among the r keys after it
+fn klast x ulong r ulong to bool
+y = x
+i = ulong 0
+while lt i r bound 999999
+y = get nx get nx y
+if streq x y
+ret false
+end
+i = add i 1
+end
+ret true
+end
+
+fn okeys a ulong to ulong
+m = shr get n2 a 1
+x = get n1 a
+c = ulong 0
+i = ulong 0
+while lt i m bound 999999
+if klast x sub sub m i 1
+c = add c 1
+end
+x = get nx get nx x
+i = add i 1
+end
+ret c
+end
+
+note value of the last key in object b equal to key x, else 4294967295
+fn ofind b ulong x ulong to ulong
+m = shr get n2 b 1
+y = get n1 b
+v = ulong 4294967295
+i = ulong 0
+while lt i m bound 999999
+if streq x y
+v = get nx y
+end
+y = get nx get nx y
+i = add i 1
+end
+ret v
+end
+
+fn objeq a ulong b ulong to bool
+if ne okeys a okeys b
+ret false
+end
+m = shr get n2 a 1
+x = get n1 a
+i = ulong 0
+while lt i m bound 999999
+if klast x sub sub m i 1
+v = ofind b x
+if eq v 4294967295
+ret false
+end
+if not jeq get nx x v 0
+ret false
+end
+end
+x = get nx get nx x
+i = add i 1
+end
+ret true
+end
+
+note top 1 for the two whole documents, 0 for items inside a list or dict
+fn jeq a ulong b ulong top ulong to bool
+ta = get nt a
+tb = get nt b
+if or eq ta 7 eq tb 7
+ret and and eq ta 7 eq tb 7 eq top 0
+end
+if and isnum ta isnum tb
+ret numeq a b
+end
+if ne ta tb
+ret false
+end
+if eq ta 4
+ret streq a b
+end
+if eq ta 5
+ret arreq a b
+end
+if eq ta 6
+ret objeq a b
+end
+ret true
+end
+
+note ---- rows ----
+fn srow i ulong to bool
+n = dgen i
+m = dans i
+if eq get rk i 1
+strip fnl n
+ret cmpab get sr 0 get sr 1 m
+end
+strip fdone n
+s = get sr 0
+t = get sr 1
+put nn 0 0
+put pn 0 0
+a = jtop 0 s t
+if not bad
+b = jtop 1 0 m
+if not bad
+ret jeq a b 1
+end
+end
+ret cmpab s t m
+end
+
+fn tally to void
+nr = get rn 0
+i = ulong 0
+while lt i nr bound 999999
+ok = srow i
+x = add mul get rr i 4096 get rg i
+put tt x add get tt x 1
+if ok
+put tp x add get tp x 1
+put pv i 1
+end
+i = add i 1
+end
+end

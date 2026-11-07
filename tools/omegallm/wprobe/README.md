@@ -12,12 +12,16 @@ It never changes the checkpoint it reads. `save` writes a new file and refuses t
 
 ## Build
 
+`ollm.om` comes from `tests/omegallm/build.sh` (it writes `OUT/ollm.om` beside `OUT/ollm`). Then, with
+the pinned omc and the Omega build driver in `tools/omegallm/wdrive/`:
+
 ```sh
-OUT=~/work/wsp/build OMC=<omc pinned in tests/omegallm/build.sh> sh tools/omegallm/wprobe/build.sh
+OMC=<omc pinned in tests/omegallm/build.sh> CORE=0 wbuild OUT/wprobe OUT/ollm.om@ollmmain tools/omegallm/wprobe/wprobe.om
 ```
 
-The build makes `ollm.om` with `tests/omegallm/build.sh` if `OUT` has none, renames its `main`, appends
-`wprobe.om` and compiles. It prints the binary's sha256 and the compiler's sha256.
+`wbuild` renames `ollm.om`'s `main` to `ollmmain`, appends `wprobe.om`, compiles and prints the binary's,
+the composed source's and the compiler's sha256. How to bootstrap `wbuild` is in
+`tools/omegallm/wdrive/README.md`.
 
 ## Records file
 
@@ -38,7 +42,9 @@ the expected answer. `tools/omegallm/wsplit` writes them.
 
 ## Hooks
 
-Groups of four numbers `K L I A`, at most 64 groups. A is in thousandths (1500 means 1.5).
+Groups of four numbers `K L I A`, at most 64 groups. A is in thousandths (1500 means 1.5). Instead of
+typing them, give one last argument `@PATH`: the same numbers in a file, separated by spaces or newlines.
+A program started from Omega can pass at most 64 arguments in total, so large edits need the file form.
 
 | K | Meaning | Kind |
 |---|---|---|
@@ -60,6 +66,6 @@ loader's own codes (10 to 15) for a bad checkpoint.
 
 ## Checks
 
-`python3 tools/omegallm/wprobe/check.py BUILD` is an independent outside check of `save` (8 cases,
+`wcheck BUILD` (`tools/omegallm/wdrive/wcheck.om`) is an independent outside check of `save` (8 cases,
 including every refusal). Parity of `gen` with `ollm sample` and the readout sum are recorded in
 `evidence/OMEGALLM/wsp-dra187-20261107/`.

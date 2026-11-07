@@ -1,6 +1,7 @@
 note SPDX-License-Identifier: AGPL-3.0-only
 note wprobe.om (DRA-187): CPU probes and greedy decoding with a reused prefix for the OLLM
-note checkpoint. tools/omegallm/wprobe/build.sh appends it to ollm.om with that unit's main renamed.
+note checkpoint. tools/omegallm/wdrive/wbuild.om appends it to ollm.om with that unit's main renamed.
+note Hook groups may also come from a file: a last argument @PATH (see wzhread).
 note Commands (argument 1):
 note  gen CK MERGES NN FILE [K L I A]...  greedy decode (TEMPMILLI 0 of `ollm sample`) of every record
 note  probe CK MERGES FILE [K L I A]...   teacher-forced answer; readout at the first divergence
@@ -212,13 +213,32 @@ exit 60
 end
 end
 
-note hook groups from argument b on
+note hook groups from argument b on: check them, then apply the weight hooks in order
 fn wzhooks b ulong to void
+k = wzhread b
+for i ulong k
+wzhchk i
+end
+for i2 ulong k
+wzhw i2
+end
+end
+
+note hook words from argument b on into wzh and wzhn; returns the group count. When argument b is the last
+note and starts with "@", the words come from the file named by the rest of it instead (decimals separated by
+note any bytes up to 32, at most 189999 bytes): an exec'd argv is capped at 64 records at this pin, too few
+note for 32 groups. Exits 2 for a word count not a multiple of 4 or over 64 groups, 61 file too long, 70 I/O.
+fn wzhread b ulong to ulong
 na = oargc
 if lt na b
 exit 2
 end
 n = sub na b
+if eq n 1
+if wzisat b
+ret wzhfile b
+end
+end
 if ne rem n 4 0
 exit 2
 end
@@ -231,11 +251,59 @@ for i ulong k
 for j ulong 4
 put wzh add mul i 4 j oargu add b add mul i 4 j
 end
-wzhchk i
 end
-for i2 ulong k
-wzhw i2
+ret k
 end
+
+fn wzisat b ulong to bool
+n = oargp b
+ret eq get oarg 0 64
+end
+
+note the hook words of the file named by argument b after its "@", read into opw at 1900000
+fn wzhfile b ulong to ulong
+n = oargp b
+fd = int fopen oarg 1 sub n 1 0 0
+if lt fd 0
+exit 70
+end
+m = ulong 0
+while lt m 190000 bound 999999
+r = pread fd opw add 1900000 m sub 190000 m long m
+if lt r 0
+exit 70
+end
+if eq r 0
+break
+end
+m = add m ulong r
+end
+c = fclose fd
+if ge m 190000
+exit 61
+end
+put wrs 1 1900000
+put wrs 10 add 1900000 m
+w = ulong 0
+while lt get wrs 1 get wrs 10 bound 999999
+if le wrc 32
+wradv
+else
+if not wrdig
+exit 2
+end
+if ge w 256
+exit 2
+end
+put wzh w ulong wrint
+w = add w 1
+end
+end
+if ne rem w 4 0
+exit 2
+end
+put wzhn 0 div w 4
+ret div w 4
 end
 
 fn wzhchk i ulong to void
@@ -1502,7 +1570,7 @@ end
 exit 66
 end
 
-note controls CK SEED [K L I A]...: PREREG section 6 item 5. K is 1 (wo rows of head I of layer L)
+note controls CK SEED [K L I A]... (or @PATH): PREREG section 6 item 5. K is 1 (wo rows of head I of layer L)
 note or 2 (w2 row I of layer L). For each kind present (1 then 2) one unit of the same layer is drawn
 note per selected group (MT19937 as random.Random(SEED); a unit selected or already drawn for that kind is
 note redrawn), and one common scale A' per kind is solved so the Frobenius norm of the change equals
@@ -1512,7 +1580,7 @@ note Prints per kind `# KIND TARGET REALISED A'`, then the arm line
 note `H-control-SEED H gen K L I A' ... 5 0 0 0`.
 note Exits: 2 usage or a selection mixing sides of 1, 60 layout, 66 norm not matched or A' above 4000.
 fn wctlc to void
-if lt oargc 8
+if lt oargc 5
 exit 2
 end
 ockload 2
@@ -1522,19 +1590,11 @@ exit 60
 end
 wmseed oargu 3
 put wcs 3 oargu 3
-n = sub oargc 4
-if ne rem n 4 0
+g = wzhread 4
+if eq g 0
 exit 2
 end
-g = div n 4
-if gt g 64
-exit 2
-end
-put wzhn 0 g
 for i ulong g
-for j ulong 4
-put wzh add mul i 4 j oargu add 4 add mul i 4 j
-end
 wzhchk i
 k = get wzh mul i 4
 if or lt k 1 gt k 2

@@ -1,0 +1,1409 @@
+note SPDX-License-Identifier: AGPL-3.0-only
+note Append to omega-mv e5b32567 SHA-256 with export fn changed to fn.
+note Reproduces make_splits.py and make_d.py using CPython 3.12.3 random algorithms.
+note MT19937 attribution and license are in README.md. All source inputs are read-only.
+note Bounded string arena, JSON input, row set, and exclusion table; exhaustion refuses.
+text wsroot "/home/drakestapleton/handoffs/tool-omega-20261104/"
+text wsgrid "round40/data/copy-grid.json"
+text wsdiag "round41/c2/diag/d-item.json"
+text wslocal "round40/data/localization-screen.json"
+text wstarg "round40/data/target-jobs.json"
+text wssel "round40/grid-selected.json"
+text wsdata "round40/data"
+text wsr41 "round41"
+text wsitem "item"
+text wshello "hello"
+text wsprompt "prompt"
+text wsanswer "answer"
+text wspath "path"
+text wslength "length"
+text wspatt "pattern"
+text wsstem "stem"
+text wsstate "state"
+text wsjobs "jobs/item"
+text wsunread "unread"
+text wstask "Task: "
+text wsgoal "Goal: "
+text wsloop "times in a for loop"
+text wsrandom "random"
+text wsrunpat "run"
+text wspair "pair"
+text wssrc40 "round40-grid"
+text wssrc41 "round41-d-item"
+text wssplits "splits"
+text wsd "d"
+text wsjson ".json"
+text wsrec ".rec"
+text wsmeta ".meta"
+text wssp " "
+text wsnl "\n"
+text wstarget "target"
+text wsctrl "control"
+text wsword "word"
+text wsfile "path"
+text wshex "0123456789abcdef"
+text wshead "[\n"
+text wsrow " {\n"
+text wssep ",\n"
+text wsend "\n }"
+text wsclose "\n]"
+text wsfld "  \""
+text wscolon "\": "
+text wssplit "split"
+text wssrc "src"
+text wsrole "role"
+text wsidx "idx"
+text wsext ".om"
+text wsfileln "\nFile: "
+text wsstatex "\nState: unread\nAnswer:\n"
+text wsans1 "{\"tool\":\"read_file\",\"path\":\""
+text wsans2 "\"}"
+text wsg1 "Task: Write Omega that prints hello"
+text wsg2 " followed by a newline.\nAnswer:\n"
+text wsg3 "text msg \"hello"
+text wsg4 "\\n\""
+text wstempl "templates "
+text wsforms " goal forms "
+text wsexcl " excluded ids "
+text wsusage "usage: wsplit splits|d OUTDIR [seed-offset]\n"
+
+global wsout uchar 524288
+global wson ulong 1
+global wsarena uchar 4194304
+global wsaoff ulong 32768
+global wsalen ulong 32768
+global wsan ulong 2
+note wsan[0] string count; wsan[1] arena byte count. String zero is empty.
+global wsin uchar 524288
+global wsinp ulong 2
+note wsinp[0] cursor; wsinp[1] length.
+global wstpls ulong 512
+global wstn ulong 2
+note task ids at 0..255; goal forms at 256..511.
+global wsrows ulong 8192
+global wsorder ulong 1024
+global wsrn ulong 1
+note Each row: source or split id, length, pattern, path/word, prompt, answer.
+global wsobj ulong 8
+global wsused ulong 32768
+global wsulen ulong 32768
+global wsunc ulong 1
+global wsmt ulong 624
+global wsmti ulong 1
+global wsname uchar 4096
+global wsnamn ulong 1
+global wsodir uchar 4096
+global wsodn ulong 1
+global wsbuf uchar 65536
+global wsraw ulong 4
+note raw prefix position, digit value, digit count, collecting flag.
+global wsopts ulong 2
+note command 1 splits / 2 d; seed offset.
+global wsdig uchar 16
+global wsids ulong 1
+note Actual pattern for latest ident: 0 random, 1 run, 2 pair.
+
+fn wsreset to void
+put wson 0 0
+end
+fn wsbyte c ulong to void
+n = get wson 0
+if ge n len wsout
+exit 61
+end
+put wsout n uchar c
+put wson 0 add n 1
+end
+fn wsapp s view uchar * to void
+for i ulong len s
+wsbyte ulong get s i
+end
+end
+fn wsnum v ulong to void
+b = new uchar 32 0
+n = ulong 0
+x = v
+while true bound 32
+put b n uchar add rem x 10 48
+n = add n 1
+x = div x 10
+if eq x 0
+break
+end
+end
+while gt n 0 bound 32
+n = sub n 1
+wsbyte ulong get b n
+end
+end
+fn wsstore to ulong
+id = add get wsan 0 1
+n = get wson 0
+o = get wsan 1
+if or ge id len wsaoff gt add o n len wsarena
+exit 61
+end
+put wsaoff id o
+put wsalen id n
+for i ulong n
+put wsarena add o i get wsout i
+end
+put wsan 0 id
+put wsan 1 add o n
+ret id
+end
+fn wsstr s view uchar * to ulong
+wsreset
+wsapp s
+ret wsstore
+end
+fn wsch id ulong i ulong to ulong
+if ge i get wsalen id
+exit 62
+end
+ret ulong get wsarena add get wsaoff id i
+end
+fn wsadds id ulong to void
+for i ulong get wsalen id
+wsbyte wsch id i
+end
+end
+fn wseq id ulong s view uchar * to bool
+if ne get wsalen id len s
+ret false
+end
+for i ulong len s
+if ne wsch id i ulong get s i
+ret false
+end
+end
+ret true
+end
+fn wscmp a ulong b ulong to long
+n = get wsalen a
+if lt get wsalen b n
+n = get wsalen b
+end
+for i ulong n
+x = wsch a i
+y = wsch b i
+if lt x y
+ret -1
+end
+if gt x y
+ret 1
+end
+end
+ret sub long get wsalen a long get wsalen b
+end
+fn wsprefix id ulong pos ulong s view uchar * to bool
+if gt add pos len s get wsalen id
+ret false
+end
+for i ulong len s
+if ne wsch id add pos i ulong get s i
+ret false
+end
+end
+ret true
+end
+fn wscontains id ulong s view uchar * to bool
+for i ulong get wsalen id
+if wsprefix id i s
+ret true
+end
+end
+ret false
+end
+fn wsdigit c ulong to bool
+ret and ge c 48 le c 57
+end
+
+note CPython-compatible helpers copied from wprobe.om at 72d3377, symbols renamed.
+fn wsinit s ulong to void
+put wsmt 0 s
+for i ulong 623
+p = get wsmt i
+put wsmt add i 1 and add mul 1812433253 xor p shr p 30 add i 1 4294967295
+end
+end
+note init_by_array with the key [s]; exit 2 when s needs more than 32 bits.
+fn wsseed s ulong to void
+if gt s 4294967295
+exit 2
+end
+wsinit 19650218
+i = ulong 1
+for k ulong 624
+p = get wsmt sub i 1
+put wsmt i and add xor get wsmt i mul xor p shr p 30 1664525 s 4294967295
+i = wswrap add i 1
+end
+for k2 ulong 623
+p2 = get wsmt sub i 1
+put wsmt i and sub xor get wsmt i mul xor p2 shr p2 30 1566083941 i 4294967295
+i = wswrap add i 1
+end
+put wsmt 0 2147483648
+put wsmti 0 624
+end
+fn wswrap i ulong to ulong
+if lt i 624
+ret i
+end
+put wsmt 0 get wsmt 623
+ret 1
+end
+fn wsrand to ulong
+if ge get wsmti 0 624
+wstwist
+end
+i = get wsmti 0
+put wsmti 0 add i 1
+y = get wsmt i
+y = xor y shr y 11
+y = xor y and shl y 7 2636928640
+y = xor y and shl y 15 4022730752
+ret xor y shr y 18
+end
+fn wstwist to void
+for k ulong 624
+y = or and get wsmt k 2147483648 and get wsmt rem add k 1 624 2147483647
+v = xor get wsmt rem add k 397 624 shr y 1
+if eq and y 1 1
+v = xor v 2567483615
+end
+put wsmt k v
+end
+put wsmti 0 0
+end
+note CPython _randbelow: high k bits of a uint32 output, with rejection.
+fn wsbelow m ulong to ulong
+k = ulong 0
+while gt shr m k 0 bound 64
+k = add k 1
+end
+for i ulong 100000
+x = shr wsrand sub 32 k
+if lt x m
+ret x
+end
+end
+exit 63
+end
+
+note Numeric key plus digit length preserves leading zero strings; open-addressed exact set.
+fn wsinsert v ulong n ulong to bool
+if eq n 0
+ret false
+end
+i = and xor v shl n 16 32767
+while true bound 32768
+if eq get wsulen i 0
+put wsused i v
+put wsulen i n
+put wsunc 0 add get wsunc 0 1
+ret true
+end
+if and eq get wsulen i n eq get wsused i v
+ret false
+end
+i = and add i 1 32767
+end
+exit 61
+end
+fn wsrawend to void
+if gt get wsraw 2 0
+ok = wsinsert get wsraw 1 get wsraw 2
+end
+put wsraw 1 0
+put wsraw 2 0
+put wsraw 3 0
+end
+fn wsrawbyte c ulong pref view uchar * to void
+if eq get wsraw 3 1
+if wsdigit c
+n = add get wsraw 2 1
+if gt n 18
+exit 61
+end
+put wsraw 2 n
+put wsraw 1 add mul get wsraw 1 10 sub c 48
+ret
+end
+wsrawend
+end
+p = get wsraw 0
+if eq c ulong get pref p
+p = add p 1
+else
+p = 0
+if eq c ulong get pref 0
+p = 1
+end
+end
+if eq p len pref
+put wsraw 3 1
+p = 0
+end
+put wsraw 0 p
+end
+fn wsle b view uchar * o ulong n ulong to ulong
+v = ulong 0
+for i ulong n
+v = or v shl ulong get b add o i mul i 8
+end
+ret v
+end
+fn wsclosefd fd int to void
+r = fclose fd
+if lt r 0
+exit 70
+end
+end
+fn wsscan mode ulong to void
+st = new uchar 128 0
+fd = int fopen wsname 0 get wsnamn 0 0 0
+if lt fd 0
+exit 70
+end
+r = fstat fd st 0 128
+if lt r 0
+exit 70
+end
+if ge wsle st 48 8 52428800
+wsclosefd fd
+ret
+end
+for i ulong 4
+put wsraw i 0
+end
+while true bound 999999
+r = read fd wsbuf 0 len wsbuf
+if lt r 0
+exit 70
+end
+if eq r 0
+break
+end
+for i ulong ulong r
+if eq mode 0
+wsrawbyte ulong get wsbuf i wsitem
+else
+wsrawbyte ulong get wsbuf i wshello
+end
+end
+end
+wsrawend
+wsclosefd fd
+end
+fn wssetname rel view uchar * to void
+n = len wsroot
+for i ulong n
+put wsname i get wsroot i
+end
+for i ulong len rel
+put wsname add n i get rel i
+end
+put wsnamn 0 add n len rel
+end
+note Linux getdents64 record: reclen at 16, type at 18, name at 19.
+fn wswalk recur bool mode ulong depth ulong to void
+buf = new uchar 8192 0
+if gt depth 32
+exit 61
+end
+base = get wsnamn 0
+note O_DIRECTORY on Linux AArch64, as seed/host/tests/directories.om.
+fd = int fopen wsname 0 base 16384 0
+if lt fd 0
+exit 70
+end
+while true bound 999999
+r = getdnts fd buf 0 len buf
+if lt r 0
+exit 70
+end
+if eq r 0
+break
+end
+o = ulong 0
+while lt o ulong r bound 8192
+sz = wsle buf add o 16 2
+if or lt sz 20 gt add o sz ulong r
+exit 62
+end
+if ne get buf add o 19 46
+wsentry buf o base recur mode depth
+end
+o = add o sz
+end
+end
+put wsnamn 0 base
+wsclosefd fd
+end
+fn wsentry buf view uchar 8192 o ulong base ulong recur bool mode ulong depth ulong to void
+n = ulong 0
+p = add o 19
+while ne get buf add p n 0 bound 4096
+if ge add base add n 1 4095
+exit 61
+end
+put wsname add base add n 1 get buf add p n
+n = add n 1
+end
+put wsname base 47
+put wsnamn 0 add base add n 1
+kind = get buf add o 18
+if eq kind 4
+if recur
+wswalk true mode add depth 1
+end
+else
+if eq kind 8
+if wssuffix
+wsscan mode
+end
+else
+note The frozen inputs contain no symlinks or DT_UNKNOWN entries. Refuse rather than omit.
+exit 62
+end
+end
+put wsnamn 0 base
+end
+fn wssuffix to bool
+n = get wsnamn 0
+if lt n 5
+ret false
+end
+for j ulong 5
+if ne get wsname add sub n 5 j get wsjson j
+ret false
+end
+end
+ret true
+end
+
+note JSON tokenizer for the frozen top-level arrays of objects. Strings decode to UTF-8.
+global wstok ulong 2
+fn wspeek to ulong
+if ge get wsinp 0 get wsinp 1
+exit 62
+end
+ret ulong get wsin get wsinp 0
+end
+fn wstake to ulong
+c = wspeek
+put wsinp 0 add get wsinp 0 1
+ret c
+end
+fn wshexval c ulong to ulong
+if wsdigit c
+ret sub c 48
+end
+if and ge c 97 le c 102
+ret sub c 87
+end
+if and ge c 65 le c 70
+ret sub c 55
+end
+exit 62
+end
+fn wshex4 to ulong
+v = ulong 0
+for i ulong 4
+v = add mul v 16 wshexval wstake
+end
+ret v
+end
+fn wsutf v ulong to void
+if lt v 128
+wsbyte v
+ret
+end
+if lt v 2048
+wsbyte or 192 shr v 6
+else
+if lt v 65536
+wsbyte or 224 shr v 12
+else
+wsbyte or 240 shr v 18
+wsbyte or 128 and shr v 12 63
+end
+wsbyte or 128 and shr v 6 63
+end
+wsbyte or 128 and v 63
+end
+fn wsescape to void
+c = wstake
+if or or eq c 34 eq c 92 eq c 47
+wsbyte c
+ret
+end
+if eq c 98
+wsbyte 8
+ret
+end
+if eq c 102
+wsbyte 12
+ret
+end
+if eq c 110
+wsbyte 10
+ret
+end
+if eq c 114
+wsbyte 13
+ret
+end
+if eq c 116
+wsbyte 9
+ret
+end
+if eq c 117
+v = wshex4
+if and ge v 55296 le v 56319
+if ne wstake 92
+exit 62
+end
+if ne wstake 117
+exit 62
+end
+w = wshex4
+if or lt w 56320 gt w 57343
+exit 62
+end
+v = add 65536 add shl sub v 55296 10 sub w 56320
+end
+wsutf v
+ret
+end
+exit 62
+end
+fn wsnext to void
+while le wspeek 32 bound 524288
+c = wstake
+end
+c = wstake
+put wstok 0 c
+put wstok 1 0
+if eq c 34
+wsreset
+while true bound 524288
+c = wstake
+if eq c 34
+break
+end
+if eq c 92
+wsescape
+else
+if lt c 32
+exit 62
+end
+wsbyte c
+end
+end
+put wstok 1 wsstore
+ret
+end
+if or wsdigit c eq c 45
+v = ulong 0
+if ne c 45
+v = sub c 48
+end
+while wsdigit wspeek bound 20
+v = add mul v 10 sub wstake 48
+end
+put wstok 0 48
+put wstok 1 v
+ret
+end
+if or or eq c 116 eq c 102 eq c 110
+while and ge wspeek 97 le wspeek 122 bound 8
+c = wstake
+end
+put wstok 0 1
+end
+end
+fn wsexpect c ulong to void
+wsnext
+if ne get wstok 0 c
+exit 62
+end
+end
+fn wsskip to void
+if or eq get wstok 0 123 eq get wstok 0 91
+depth = ulong 1
+while gt depth 0 bound 524288
+wsnext
+c = get wstok 0
+if or eq c 123 eq c 91
+depth = add depth 1
+end
+if or eq c 125 eq c 93
+depth = sub depth 1
+end
+end
+end
+end
+fn wsfield key ulong to ulong
+if wseq key wsprompt
+ret 0
+end
+if wseq key wsanswer
+ret 1
+end
+if wseq key wspath
+ret 2
+end
+if wseq key wspatt
+ret 3
+end
+if wseq key wslength
+ret 4
+end
+if or wseq key wsstem wseq key wsstate
+ret 5
+end
+ret 6
+end
+fn wsobject to void
+for i ulong 8
+put wsobj i 0
+end
+while true bound 4096
+wsnext
+if eq get wstok 0 125
+ret
+end
+if ne get wstok 0 34
+exit 62
+end
+key = wsfield get wstok 1
+wsexpect 58
+wsnext
+if lt key 6
+if eq key 4
+if ne get wstok 0 48
+exit 62
+end
+else
+if ne get wstok 0 34
+exit 62
+end
+end
+put wsobj key get wstok 1
+end
+wsskip
+wsnext
+if eq get wstok 0 125
+ret
+end
+if ne get wstok 0 44
+exit 62
+end
+end
+exit 61
+end
+fn wstinsert id ulong kind ulong to void
+n = get wstn kind
+base = mul kind 256
+p = ulong 0
+while lt p n bound 256
+c = wscmp id get wstpls add base p
+if eq c 0
+ret
+end
+if lt c 0
+break
+end
+p = add p 1
+end
+if ge n 256
+exit 61
+end
+j = n
+while gt j p bound 256
+put wstpls add base j get wstpls add base sub j 1
+j = sub j 1
+end
+put wstpls add base p id
+put wstn kind add n 1
+end
+fn wsline id ulong a ulong e ulong to void
+kind = ulong 2
+if wsprefix id a wstask
+kind = 0
+end
+if wsprefix id a wsgoal
+kind = 1
+end
+if eq kind 2
+ret
+end
+wsreset
+i = a
+while lt i e bound 524288
+c = wsch id i
+if and eq kind 1 wsdigit c
+wsbyte 123
+wsbyte 125
+while lt i e bound 524288
+if not wsdigit wsch id i
+break
+end
+i = add i 1
+end
+else
+wsbyte c
+i = add i 1
+end
+end
+wstinsert wsstore kind
+end
+fn wstemplate id ulong to void
+a = ulong 0
+n = get wsalen id
+for i ulong n
+if eq wsch id i 10
+wsline id a i
+a = add i 1
+end
+end
+wsline id a n
+end
+fn wsrowput r ulong col ulong v ulong to void
+if ge r 1024
+exit 61
+end
+put wsrows add mul r 8 col v
+end
+fn wsrowget r ulong col ulong to ulong
+ret get wsrows add mul r 8 col
+end
+fn wsdiagnose mode ulong to void
+if eq mode 1
+if not wseq get wsobj 5 wsjobs
+ret
+end
+else
+if not wseq get wsobj 5 wsunread
+ret
+end
+end
+r = get wsrn 0
+s = ulong 0
+if eq mode 1
+s = wsstr wssrc40
+else
+s = wsstr wssrc41
+end
+wsrowput r 0 s
+wsrowput r 1 get wsobj 4
+wsrowput r 2 get wsobj 3
+wsrowput r 3 get wsobj 2
+wsrowput r 4 get wsobj 0
+wsrowput r 5 get wsobj 1
+put wsorder r r
+put wsrn 0 add r 1
+end
+fn wsload rel view uchar * mode ulong to void
+wssetname rel
+fd = int fopen wsname 0 get wsnamn 0 0 0
+if lt fd 0
+exit 70
+end
+n = ulong 0
+while true bound 524288
+if eq n len wsin
+exit 61
+end
+r = read fd wsin n sub len wsin n
+if lt r 0
+exit 70
+end
+if eq r 0
+break
+end
+n = add n ulong r
+end
+wsclosefd fd
+put wsinp 0 0
+put wsinp 1 n
+wsexpect 91
+while true bound 4096
+wsnext
+if eq get wstok 0 93
+break
+end
+if ne get wstok 0 123
+exit 62
+end
+wsobject
+if eq mode 0
+wstemplate get wsobj 0
+else
+wsdiagnose mode
+end
+wsnext
+if eq get wstok 0 93
+break
+end
+if ne get wstok 0 44
+exit 62
+end
+end
+end
+
+note CPython sample(range(1,10),2) takes the small-population pool branch.
+fn wspairdigits n ulong to void
+a = wsbelow 9
+b = wsbelow 8
+if eq b a
+b = 8
+end
+for i ulong n
+v = a
+if eq rem div i 2 2 1
+v = b
+end
+put wsdig i uchar add v 49
+end
+end
+fn wsdraw n ulong pat ulong to void
+if eq pat 0
+for i ulong n
+put wsdig i uchar add wsbelow 10 48
+end
+ret
+end
+if eq pat 1
+a = add wsbelow 9 1
+step = wsbelow 2
+for i ulong n
+v = add a i
+if eq step 1
+v = add a sub 10 rem i 10
+end
+put wsdig i uchar add rem v 10 48
+end
+ret
+end
+wspairdigits n
+end
+fn wsident n ulong pat ulong to ulong
+p = pat
+tries = ulong 0
+while true bound 999999
+tries = add tries 1
+if gt tries 200
+p = 0
+end
+wsdraw n p
+if eq get wsdig 0 48
+continue
+end
+v = ulong 0
+for i ulong n
+v = add mul v 10 sub ulong get wsdig i 48
+end
+if wsinsert v n
+put wsids 0 p
+wsreset
+for i ulong n
+wsbyte ulong get wsdig i
+end
+ret wsstore
+end
+end
+exit 63
+end
+fn wsgoaltext form ulong to ulong
+vals = new ulong 64 0
+k = ulong 0
+for i ulong get wsalen form
+if eq wsch form i 123
+k = add k 1
+end
+end
+for i ulong k
+if lt i sub k 1
+put vals i add wsbelow 8 2
+else
+put vals i add wsbelow 99 1
+end
+end
+if wscontains form wsloop
+put vals 0 add wsbelow 8 2
+put vals 1 add wsbelow 5 1
+put vals 2 add wsbelow 99 1
+end
+wsreset
+i = ulong 0
+j = ulong 0
+while lt i get wsalen form bound 524288
+c = wsch form i
+if eq c 123
+if ne wsch form add i 1 125
+exit 62
+end
+wsnum get vals j
+j = add j 1
+i = add i 2
+else
+wsbyte c
+i = add i 1
+end
+end
+ret wsstore
+end
+fn wsgenpath r ulong ids ulong to void
+wsreset
+wsapp wsjobs
+wsadds ids
+wsapp wsext
+pathid = wsstore
+wsrowput r 3 pathid
+ti = wsbelow get wstn 0
+taskid = get wstpls ti
+fi = wsbelow get wstn 1
+goalid = wsgoaltext get wstpls add fi 256
+wsreset
+wsadds taskid
+wsapp wsfileln
+wsadds pathid
+wsbyte 10
+wsadds goalid
+wsapp wsstatex
+wsrowput r 4 wsstore
+wsreset
+wsapp wsans1
+wsadds pathid
+wsapp wsans2
+wsrowput r 5 wsstore
+end
+fn wsgenword r ulong ids ulong to void
+wsreset
+wsapp wshello
+wsadds ids
+wsrowput r 3 wsstore
+wsreset
+wsapp wsg1
+wsadds ids
+wsapp wsg2
+wsrowput r 4 wsstore
+wsreset
+wsapp wsg3
+wsadds ids
+wsapp wsg4
+wsrowput r 5 wsstore
+end
+fn wsgenrow splitid ulong n ulong i ulong word bool to void
+p = rem i 4
+if lt p 2
+p = 0
+else
+p = sub p 1
+end
+ids = wsident n p
+r = get wsrn 0
+wsrowput r 0 splitid
+wsrowput r 1 n
+p = get wsids 0
+patid = ulong 0
+if eq p 0
+patid = wsstr wsrandom
+end
+if eq p 1
+patid = wsstr wsrunpat
+end
+if eq p 2
+patid = wsstr wspair
+end
+wsrowput r 2 patid
+if word
+wsgenword r ids
+else
+wsgenpath r ids
+end
+put wsorder r r
+put wsrn 0 add r 1
+end
+fn wsshuffle to void
+i = sub get wsrn 0 1
+while gt i 0 bound 1024
+j = wsbelow add i 1
+v = get wsorder i
+put wsorder i get wsorder j
+put wsorder j v
+i = sub i 1
+end
+end
+fn wsgenerate name ulong seed ulong per ulong ctrl ulong word bool to void
+put wsrn 0 0
+wsseed add seed get wsopts 1
+wsreset
+wsbyte name
+splitid = wsstore
+for g ulong 6
+n = add g 6
+count = per
+if ge g 3
+n = g
+count = ctrl
+end
+if and word eq n 3
+continue
+end
+for i ulong count
+wsgenrow splitid n i word
+end
+end
+wsshuffle
+wsemit name false word
+end
+
+note json.dumps(indent=1, ensure_ascii=True): lowercase hex; no terminal newline.
+fn wsuesc v ulong to void
+wsbyte 92
+wsbyte 117
+for i ulong 4
+j = and shr v mul sub 3 i 4 15
+wsbyte ulong get wshex j
+end
+end
+fn wsquoted id ulong to void
+wsbyte 34
+i = ulong 0
+while lt i get wsalen id bound 524288
+c = wsch id i
+i = add i 1
+if or eq c 34 eq c 92
+wsbyte 92
+wsbyte c
+continue
+end
+if lt c 32
+esc = ulong 0
+if eq c 8
+esc = 98
+end
+if eq c 9
+esc = 116
+end
+if eq c 10
+esc = 110
+end
+if eq c 12
+esc = 102
+end
+if eq c 13
+esc = 114
+end
+if ne esc 0
+wsbyte 92
+wsbyte esc
+else
+wsuesc c
+end
+continue
+end
+if eq c 127
+wsuesc c
+continue
+end
+if ge c 128
+k = ulong 0
+if and ge c 194 lt c 224
+k = 1
+c = and c 31
+else
+if lt c 240
+k = 2
+c = and c 15
+else
+if gt c 244
+exit 62
+end
+k = 3
+c = and c 7
+end
+end
+for j ulong k
+d = wsch id i
+if ne and d 192 128
+exit 62
+end
+c = or shl c 6 and d 63
+i = add i 1
+end
+if gt c 65535
+v = sub c 65536
+wsuesc add 55296 shr v 10
+wsuesc add 56320 and v 1023
+else
+wsuesc c
+end
+else
+wsbyte c
+end
+end
+wsbyte 34
+end
+fn wskey s view uchar * to void
+wsapp wsfld
+wsapp s
+wsapp wscolon
+end
+fn wsroleout n ulong quotes bool to void
+if quotes
+wsbyte 34
+end
+if ge n 6
+wsapp wstarget
+else
+wsapp wsctrl
+end
+if quotes
+wsbyte 34
+end
+end
+fn wsjsonrow idx ulong diag bool word bool to void
+r = get wsorder idx
+n = wsrowget r 1
+wsapp wsrow
+if diag
+wskey wssrc
+else
+wskey wssplit
+end
+wsquoted wsrowget r 0
+wsapp wssep
+wskey wslength
+wsnum n
+wsapp wssep
+if not diag
+wskey wsrole
+wsroleout n true
+wsapp wssep
+end
+wskey wspatt
+wsquoted wsrowget r 2
+wsapp wssep
+if word
+wskey wsword
+else
+wskey wspath
+end
+wsquoted wsrowget r 3
+wsapp wssep
+wskey wsprompt
+wsquoted wsrowget r 4
+wsapp wssep
+wskey wsanswer
+wsquoted wsrowget r 5
+wsapp wssep
+wskey wsidx
+wsnum idx
+if diag
+wsapp wssep
+wskey wsrole
+wsroleout n true
+end
+wsapp wsend
+end
+fn wswriteout fd int to void
+p = ulong 0
+n = get wson 0
+while lt p n bound 524288
+r = write fd wsout p sub n p
+if le r 0
+exit 70
+end
+p = add p ulong r
+end
+end
+fn wsprint to void
+wswriteout 1
+end
+fn wsoutname name ulong ext view uchar * to void
+n = get wsodn 0
+for i ulong n
+put wsname i get wsodir i
+end
+put wsname n 47
+put wsname add n 1 uchar name
+for i ulong len ext
+put wsname add add n 2 i get ext i
+end
+put wsnamn 0 add add n 2 len ext
+end
+fn wssave name ulong ext view uchar * to void
+wsoutname name ext
+fd = int fopen wsname 0 get wsnamn 0 577 420
+if lt fd 0
+exit 70
+end
+wswriteout fd
+wsclosefd fd
+end
+fn wshash to ulong
+c = new uchar 104 0
+d = new uchar 32 0
+b = new uchar 65536 0
+sha256_init c
+p = ulong 0
+n = get wson 0
+while lt p n bound 524288
+k = sub n p
+if gt k len b
+k = len b
+end
+for i ulong k
+put b i get wsout add p i
+end
+sha256_update c part b 0 k
+p = add p k
+end
+sha256_final c d
+wsreset
+for i ulong 32
+v = ulong get d i
+wsbyte ulong get wshex shr v 4
+wsbyte ulong get wshex and v 15
+end
+ret wsstore
+end
+fn wsemit name ulong diag bool word bool to void
+n = get wsrn 0
+wsreset
+wsapp wshead
+for i ulong n
+if gt i 0
+wsapp wssep
+end
+wsjsonrow i diag word
+end
+wsapp wsclose
+wssave name wsjson
+jhash = wshash
+wsreset
+for i ulong n
+r = get wsorder i
+wsadds wsrowget r 4
+if not word
+wsbyte 31
+wsadds wsrowget r 5
+end
+wsbyte 0
+end
+wssave name wsrec
+rhash = wshash
+wsreset
+for i ulong n
+r = get wsorder i
+wsnum i
+wsbyte 32
+wsroleout wsrowget r 1 false
+wsbyte 32
+wsnum wsrowget r 1
+wsbyte 32
+if word
+wsapp wsword
+else
+wsapp wsfile
+end
+wsbyte 10
+end
+wssave name wsmeta
+wsreset
+wsbyte name
+wsbyte 32
+wsnum n
+wsbyte 32
+wsadds jhash
+wsbyte 32
+wsadds rhash
+wsbyte 10
+wsprint
+end
+fn wsarguments to void
+b = new uchar 32 0
+if or lt argcnt 3 gt argcnt 4
+wsreset
+wsapp wsusage
+wswriteout 2
+exit 2
+end
+r = argread 1 b 0 len b
+if lt r 0
+exit 2
+end
+id = wsstr part b 0 ulong r
+if wseq id wssplits
+put wsopts 0 1
+else
+if wseq id wsd
+put wsopts 0 2
+else
+exit 2
+end
+end
+r = argread 2 wsodir 0 4000
+if le r 0
+exit 2
+end
+put wsodn 0 ulong r
+if eq argcnt 4
+if ne get wsopts 0 1
+exit 2
+end
+r = argread 3 b 0 len b
+if or le r 0 gt r 6
+exit 2
+end
+v = ulong 0
+for i ulong ulong r
+c = ulong get b i
+if not wsdigit c
+exit 2
+end
+v = add mul v 10 sub c 48
+end
+put wsopts 1 v
+end
+end
+fn wsexclusions mode ulong to void
+wssetname wsdata
+wswalk false mode 0
+wssetname wsr41
+wswalk true mode 0
+end
+fn main to int
+wsarguments
+if eq get wsopts 0 2
+wsload wssel 1
+wsload wsdiag 2
+wsemit 68 true false
+ret 0
+end
+wsload wsgrid 0
+wsload wsdiag 0
+wsload wslocal 0
+wsload wstarg 0
+wsexclusions 0
+wsreset
+wsapp wstempl
+wsnum get wstn 0
+wsapp wsforms
+wsnum get wstn 1
+wsapp wsexcl
+wsnum get wsunc 0
+wsbyte 10
+wsprint
+wsgenerate 83 187001 24 8 false
+wsgenerate 72 187002 64 32 false
+wsexclusions 1
+wsgenerate 71 187003 24 12 true
+ret 0
+end
