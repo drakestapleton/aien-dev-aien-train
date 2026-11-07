@@ -20,7 +20,7 @@ TEXTS = ['call 555-201-3344 now', 'call +1 (555) 201-3344', 'call 555 201 3344',
 PATS = [PHONE, EMAIL, SECRET, REFUSE, r'a*', r'a+b', r'(ab)+$', r'^(?:a|b){2,3}$', r'colou?r', r'\bmath\b',
         r'\Bath', r'[^ ]+@', r'[\s.-]\d{3}', r'x{0}y', r'(?:x|)', r'W[a-z]+ for', r'\d{4}-\d{2}-\d{2}',
         r'Done\.\n$', r'^$', r'(?i)WOLFRAM', r'feat/|main', r'[a-c]{3}', r'(a|ab)(c|bcd)?', r'\t', r'a.c',
-        re.escape('Use Wolfram'), re.escape('a.b.c') + '$', r'(?!x)a', r'b(?!ab)', r'x$', r'^x$', r'a.c$', r'b\n$', r'.+']
+        re.escape('Use Wolfram'), re.escape('a.b.c') + '$', r'(?!x)a', r'b(?!ab)', r'x$', r'^x$', r'a.c$', r'b\n$', r'.+', r'[a\-]', r'[-a]', r'[^a-c]', r'a(?!\$)']
 peval = sys.argv[1]
 agree = dis = ref = 0
 with tempfile.TemporaryDirectory() as d:

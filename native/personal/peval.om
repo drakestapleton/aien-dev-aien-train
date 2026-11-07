@@ -862,15 +862,23 @@ end
 if eq pb j e 93
 j = add j 1
 end
+note review round 2: a range with an escaped endpoint ([\--0], [a-\~]) is refused (exit 22): ranges are
+note matched on raw bytes, so an escaped endpoint would silently mean a different set
 while lt j e bound 4096
 if eq pb j e 92
 if not escok pb add j 1 e true
+exit 22
+end
+if and eq pb add j 2 e 45 ne pb add j 3 e 93
 exit 22
 end
 j = add j 2
 else
 if eq pb j e 93
 ret add sub j i 1
+end
+if and eq pb add j 1 e 45 eq pb add j 2 e 92
+exit 22
 end
 j = add j 1
 end
@@ -1320,6 +1328,10 @@ end
 note bytes refused inside a (?!literal) lookahead: end of pattern and regex operators
 fn lkbad d ulong to bool
 if or eq d 256 eq d 40
+ret true
+end
+note review round 2: unescaped anchors ^ and $ are operators, refused inside the literal-only lookahead
+if or eq d 94 eq d 36
 ret true
 end
 if or eq d 124 eq d 91

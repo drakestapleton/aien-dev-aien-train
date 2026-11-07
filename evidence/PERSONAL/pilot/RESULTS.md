@@ -95,9 +95,11 @@ with a recall-oriented threshold, must-bearing scorers, and examples that fit th
 
 ## Review round 1 fixes and re-score (lead dra146, 2026-11-07)
 
-Reviewer verdict REQUEST_CHANGES on 926c6548 (gpt-6-astra), five blocking findings, all fixed on this branch:
+Reviewer verdict REQUEST_CHANGES on 926c6548 (gpt-6-astra), five blocking findings; round 2 (on 3e8bed70) found 4
+fixed and the regex one PARTIAL (two more parser defects); all are fixed at this head:
 1. regex: `.` no longer matches a newline; `$` also matches before a final newline; escapes outside
-   d D w W s S n t (b B outside classes) and non-punctuation escapes inside `(?!...)` are refused (exit 22);
+   d D w W s S n t (b B outside classes), non-punctuation escapes and unescaped ^ or $ inside `(?!...)`, and
+   class ranges with an escaped endpoint ([a-\~], [\--0]) are refused (exit 22);
 2. timeouts: the harness takes the program's exit from `bwrap --json-status-fd` ("exit-code"); a run with no
    exit-code (5 s timeout or sandbox failure) or one that differs from timeout's status is omc5, never a pass
    (expected exits above 128 such as 142 still score);
@@ -105,10 +107,11 @@ Reviewer verdict REQUEST_CHANGES on 926c6548 (gpt-6-astra), five blocking findin
    expect_stdout (possibly empty) and expect_exit, or regex without must/must_not are refused;
 4. email leak detection accepts a local part ending in `_`, `+`, `.`, `%` or `-`;
 5. no private paths in the public files.
-New checks: tests/personal/harness-check.sh 64 PASS, HARNESS_PASS (the 926c6548 peval fails 14 of the new
-checks); tests/personal/rx-oracle.py agree=1292 disagree=0 refused=0 (the old build: 5 disagreements).
-New peval build: d9fdbc77586311d90ad35c1a3ef35bed43bc7ff3a75e75f1f80b2666ad67d4db.
+New checks: tests/personal/harness-check.sh 72 PASS, HARNESS_PASS (the 926c6548 peval fails 14 of the new
+checks, the 3e8bed70 peval 5); tests/personal/rx-oracle.py agree=1444 disagree=0 refused=0.
+New peval build: f30d23c6298162bb1fc126de0d41ddb46037773477e420db5e461b0d52b9756c.
 Re-score: the saved pilot answers (no model rerun) were scored again with the fixed peval and harness rules:
-dev ck100 (153 rows) and test (210 rows): 0 pass changes and 0 leak changes; all task files pass the new
+dev ck100 (153 rows) and test (210 rows): 0 pass changes and 0 leak changes (with both the round-1 and the
+round-2 fixed builds); all task files pass the new
 scorer validation; 1 dev and 3 test task regexes are now refused (scored fail in every arm, as before
 they also failed in every arm). The tables above stand.
