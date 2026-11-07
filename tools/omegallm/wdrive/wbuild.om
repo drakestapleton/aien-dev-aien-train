@@ -1,0 +1,1315 @@
+note SPDX-License-Identifier: AGPL-3.0-only
+note wbuild.om (DRA-187, lane wsp): build driver for the Omega tools in tools/omegallm, and the
+note shared driver library of tools/omegallm/wdrive (wrun, wcheck, wpolicy are composed with this
+note unit's main renamed to wbmain). Bootstrap, from the aien-train checkout:
+note   OMC < tools/omegallm/wdrive/wbuild.om > wbuild && chmod +x wbuild
+note Usage: wbuild OUTBIN PART...   (environment OMC = the pinned omc, CORE = taskset core, default 0)
+note A PART is FILE, appended as is, or FILE@NAME, appended with its one line `fn main to int`
+note renamed to `fn NAME to int` (exit 4 unless that line occurs exactly once). Composition:
+note when any part has a line `om2`, the output starts with one line `om2`, then every
+note `layout ... end` block of every part in order, then the parts without their `om2` lines and
+note layout blocks. Every line starting `export fn ` is written as `fn ` (the output is a program,
+note and a program has no exports; om/sha256/sha256-om2.om has four). With no layout blocks, no
+note exports and `om2` only as the first line of the first part, this is plain concatenation (cat,
+note sed main rename) as tools/omegallm/wprobe/build.sh did.
+note Writes OUTBIN-all.om, runs `taskset -c CORE nice -n 19 OMC < OUTBIN-all.om > OUTBIN.tmp`,
+note sets mode 0775, renames OUTBIN.tmp to OUTBIN and prints
+note   BUILD_OK <sha256 OUTBIN> OUTBIN source_sha256 <sha256 OUTBIN-all.om> omc <sha256 OMC>
+note Exits: 0 built, 1 omc refused the unit (stderr BUILD_FAIL omc rc=N, OUTBIN.tmp removed), 2 usage,
+note 3 OMC is not the pinned compiler (stderr OMC_PIN_MISMATCH <sha256>), 4 main count in a renamed
+note part is not 1, 61 a part over 8 MiB, 70 I/O.
+note The SHA-256 below is omega-mv e5b32567 om/sha256/sha256-om2.om (sha256 dbf002dd6aa36585632b9d01d
+note 98ac3f0bd2fa0f0475082940de53638847994bb), composed as aien-train-wpatch tools/omegallm/wpatch/
+note build.sh composes it: the layout shactx first, `export fn` made `fn`, private names renamed
+note (kinit wskinit, iv wsiv, sched wssched, rounds wsround, compress wscomp, run wsrun, blocks wsblks,
+note finish wsfin, tobuf wstobuf, absorb wsabsb). The lines from the next `layout` to the line
+note before `note wdrive library` are byte for byte that build's sha256-layout.om followed by its
+note sha256-functions.om.
+om2
+layout shactx 104
+field state uint 8 at 0 little
+field count ulong at 32 little
+field buf uchar 64 at 40 little
+end
+note SPDX-License-Identifier: Apache-2.0
+note sha256-om2.om: FIPS 180-4 SHA-256 in OM-2 (spec/omegese-om2.md, #747/#748, ledger L838).
+note The four entries are the API of src/sha256.h, exported through omega-bridge ABI v2 as
+note omega2_sha256_init/update/final/hash; the bridge's generated omega_api.h maps the C names.
+note
+note Invariants:
+note - All hashing state is the caller's 104-byte context (layout shactx below, equal to sha256_ctx
+note   on LP64 AArch64). Nothing else persists between calls, so a byte copy of a live context is an
+note   equivalent context (erratum E3).
+note - count is the number of bytes absorbed since init, modulo 2^64. buf[0 .. count mod 64) holds the
+note   pending bytes of the current block; the rest of buf is unspecified. state is the chaining value
+note   after the count div 64 whole blocks.
+note - final reads the context and writes only the digest, so the context is unchanged by it. The
+note   contract promises less (after final the context is unspecified, memory safety only).
+note - Every branch and every loop count depends only on lengths, never on message bytes (section 8).
+note - Indices into the unsized input view are checked at run time (trap 3); indices into sized
+note   arrays inside unrolled bodies are constants and checked when compiled.
+note bridge c-type shactx sha256_ctx
+note bridge c-define SHA256_DIGEST_SIZE 32
+note bridge c-define SHA256_BLOCK_SIZE 64
+
+
+note K[0..63]: the first 32 bits of the fractional parts of the cube roots of the first 64 primes.
+note Copied mechanically from seed/qualification/om2/fixtures/sha256-k.dec (tool-computed, never typed).
+fn wskinit k edit uint 64 to void
+put k 0 0x428a2f98
+put k 1 0x71374491
+put k 2 0xb5c0fbcf
+put k 3 0xe9b5dba5
+put k 4 0x3956c25b
+put k 5 0x59f111f1
+put k 6 0x923f82a4
+put k 7 0xab1c5ed5
+put k 8 0xd807aa98
+put k 9 0x12835b01
+put k 10 0x243185be
+put k 11 0x550c7dc3
+put k 12 0x72be5d74
+put k 13 0x80deb1fe
+put k 14 0x9bdc06a7
+put k 15 0xc19bf174
+put k 16 0xe49b69c1
+put k 17 0xefbe4786
+put k 18 0x0fc19dc6
+put k 19 0x240ca1cc
+put k 20 0x2de92c6f
+put k 21 0x4a7484aa
+put k 22 0x5cb0a9dc
+put k 23 0x76f988da
+put k 24 0x983e5152
+put k 25 0xa831c66d
+put k 26 0xb00327c8
+put k 27 0xbf597fc7
+put k 28 0xc6e00bf3
+put k 29 0xd5a79147
+put k 30 0x06ca6351
+put k 31 0x14292967
+put k 32 0x27b70a85
+put k 33 0x2e1b2138
+put k 34 0x4d2c6dfc
+put k 35 0x53380d13
+put k 36 0x650a7354
+put k 37 0x766a0abb
+put k 38 0x81c2c92e
+put k 39 0x92722c85
+put k 40 0xa2bfe8a1
+put k 41 0xa81a664b
+put k 42 0xc24b8b70
+put k 43 0xc76c51a3
+put k 44 0xd192e819
+put k 45 0xd6990624
+put k 46 0xf40e3585
+put k 47 0x106aa070
+put k 48 0x19a4c116
+put k 49 0x1e376c08
+put k 50 0x2748774c
+put k 51 0x34b0bcb5
+put k 52 0x391c0cb3
+put k 53 0x4ed8aa4a
+put k 54 0x5b9cca4f
+put k 55 0x682e6ff3
+put k 56 0x748f82ee
+put k 57 0x78a5636f
+put k 58 0x84c87814
+put k 59 0x8cc70208
+put k 60 0x90befffa
+put k 61 0xa4506ceb
+put k 62 0xbef9a3f7
+put k 63 0xc67178f2
+end
+
+note H(0): the first 32 bits of the fractional parts of the square roots of the first 8 primes
+note (fixtures/sha256-iv.dec).
+fn wsiv s edit uint 8 to void
+put s 0 0x6a09e667
+put s 1 0xbb67ae85
+put s 2 0x3c6ef372
+put s 3 0xa54ff53a
+put s 4 0x510e527f
+put s 5 0x9b05688c
+put s 6 0x1f83d9ab
+put s 7 0x5be0cd19
+end
+
+note Message schedule of the block m[o .. o+64). w is fresh: its incoming contents are never read.
+note The compiler proves that every get of w reads an element written earlier in this function
+note (error 27 otherwise): w[0..16) are the block's big-endian words, w[16..64) the FIPS recurrence.
+fn wssched w edit uint 64 fresh m view uchar * o ulong to void
+q = ulong 0
+x = uint 0
+y = uint 0
+for i ulong 16 unroll
+q = add o mul i 4
+x = uint get m q
+x = or shl x 8 uint get m add q 1
+x = or shl x 8 uint get m add q 2
+put w i or shl x 8 uint get m add q 3
+end
+for i ulong 48 unroll
+x = get w add i 1
+y = get w add i 14
+x = add add get w i get w add i 9 xor xor rotr x 7 rotr x 18 shr x 3
+put w add i 16 add x xor xor rotr y 17 rotr y 19 shr y 10
+end
+end
+
+note The 64 rounds on the chaining value s. One round body, emitted 64 times by unroll; i is a constant
+note in each copy, so get kt i and get w i need no run-time check. uint arithmetic wraps mod 2^32.
+note Ch(e,f,g) = (e and f) xor (not e and g) is written g xor (e and (f xor g)); Maj(a,b,c) =
+note (a and b) xor (a and c) xor (b and c) is written (a and b) or (c and (a or b)). Both are bitwise
+note identities. h first becomes T1, then T1 + T2, which is the next a; the names then shift by one.
+note The sums are built a term per line and each Sigma in two lines through t: 12 names are live, and
+note omc hands out 16 registers with no spilling (error 12 under compiler-s1/s2 for longer lines).
+fn wsround s edit uint 8 w view uint 64 kt view uint 64 to void
+a = get s 0
+b = get s 1
+c = get s 2
+d = get s 3
+e = get s 4
+f = get s 5
+g = get s 6
+h = get s 7
+t = uint 0
+for i ulong 64 unroll
+h = add h get kt i
+h = add h get w i
+t = xor rotr e 6 rotr e 11
+t = xor t rotr e 25
+h = add h t
+h = add h xor g and e xor f g
+d = add d h
+t = xor rotr a 2 rotr a 13
+t = xor t rotr a 22
+h = add h t
+t = and c or a b
+h = add h or and a b t
+t = h
+h = g
+g = f
+f = e
+e = d
+d = c
+c = b
+b = a
+a = t
+end
+put s 0 add get s 0 a
+put s 1 add get s 1 b
+put s 2 add get s 2 c
+put s 3 add get s 3 d
+put s 4 add get s 4 e
+put s 5 add get s 5 f
+put s 6 add get s 6 g
+put s 7 add get s 7 h
+end
+
+note One block m[o .. o+64) into s. sched and rounds stay calls: inlined, their names would share
+note one 16-register frame with this function's parameters (no spilling, error 12).
+fn wscomp s edit uint 8 w edit uint 64 kt view uint 64 m view uchar * o ulong to void
+wssched w m o
+wsround s w kt
+end
+
+note The whole blocks of m (len m is a multiple of 64 and at most 2^25, so under 2^19 passes).
+fn wsrun s edit uint 8 w edit uint 64 kt view uint 64 m view uchar * to void
+for j ulong shr len m 6
+wscomp s w kt m shl j 6
+end
+end
+
+note The whole blocks of m (len m a multiple of 64). A rolled loop traps 4 after 1000000 passes
+note (OMEGESE.md section 2; omc s_for), so m is cut into runs of 2^25 bytes (2^19 blocks):
+note len m = top * 2^44 + mid * 2^25 + rest, and no loop passes 2^20 times. top reaches 1000000
+note only above 1.7e19 bytes, which no AArch64 address space holds.
+fn wsblks s edit uint 8 w edit uint 64 kt view uint 64 m view uchar * to void
+q = ulong 0
+for a ulong shr len m 44
+for b ulong 0x80000
+wsrun s w kt part m q 0x2000000
+q = add q 0x2000000
+end
+end
+for b ulong and shr len m 25 0x7ffff
+wsrun s w kt part m q 0x2000000
+q = add q 0x2000000
+end
+wsrun s w kt part m q sub len m q
+end
+
+note Pad the k pending bytes already in p (k < 64; p was all zero past them): 0x80, zeros, and the
+note 64-bit big-endian bit length of the n-byte message in the last 8 bytes of one or two blocks.
+fn wsfin s edit uint 8 w edit uint 64 kt view uint 64 p edit uchar 128 k ulong n ulong to void
+put p k 0x80
+e = ulong 64
+if ge k 56
+e = 128
+end
+bits = shl n 3
+for i ulong 8 unroll
+put p sub e add i 1 uchar and shr bits mul i 8 0xff
+end
+wscomp s w kt view p 0
+if eq e 128
+wscomp s w kt view p 64
+end
+end
+
+fn sha256_init c edit shactx to void
+s = new uint 8 0
+wsiv s
+for i ulong 8 unroll
+put c state i get s i
+end
+put c count 0
+end
+
+note k bytes of d from o into the context's buffer at bi (bi + k <= 64). A function of its own: inside
+note absorb the copy loop needs more than the 16 registers (error 12 under compiler-s4).
+fn wstobuf c edit shactx bi ulong d view uchar * o ulong k ulong to void
+for i ulong k
+put c buf add bi i get d add o i
+end
+end
+
+note Whole blocks are hashed straight from d; the bytes that complete a pending block go through blk.
+fn wsabsb c edit shactx d view uchar * bi ulong to void
+n = len d
+s = new uint 8 0
+w = new uint 64 0
+kt = new uint 64 0
+blk = new uchar 64 0
+wskinit kt
+for i ulong 8 unroll
+put s i get c state i
+end
+off = ulong 0
+if gt bi 0
+off = sub 64 bi
+for i ulong bi
+put blk i get c buf i
+end
+for i ulong off
+put blk add bi i get d i
+end
+wscomp s w kt view blk 0
+end
+nb = shr sub n off 6
+wsblks s w kt part d off shl nb 6
+off = add off shl nb 6
+wstobuf c 0 d off sub n off
+for i ulong 8 unroll
+put c state i get s i
+end
+end
+
+note Any length, including 0 and >= 2^32. lt n sub 64 bi cannot wrap (bi < 64); add bi n could.
+fn sha256_update c edit shactx d view uchar * to void
+n = len d
+cnt = get c count
+bi = and cnt 63
+put c count add cnt n
+if lt n sub 64 bi
+wstobuf c bi d 0 n
+ret
+end
+wsabsb c d bi
+end
+
+fn sha256_final c edit shactx o out uchar 32 to void
+s = new uint 8 0
+w = new uint 64 0
+kt = new uint 64 0
+p = new uchar 128 0
+v = ulong 0
+wskinit kt
+for i ulong 8 unroll
+put s i get c state i
+end
+cnt = get c count
+k = and cnt 63
+for i ulong k
+put p i get c buf i
+end
+wsfin s w kt p k cnt
+for i ulong 8 unroll
+v = ulong get s i
+for j ulong 4 unroll
+put o add mul i 4 j uchar and shr v sub 24 mul j 8 0xff
+end
+end
+end
+
+note Equal to init, update(d), final on a fresh context (section 7), with the state in locals. o may
+note overlap d: the binding copies o out only after the call returns status 0.
+fn sha256_hash d view uchar * o out uchar 32 to void
+s = new uint 8 0
+w = new uint 64 0
+kt = new uint 64 0
+p = new uchar 128 0
+v = ulong 0
+wskinit kt
+wsiv s
+n = len d
+nb = shr n 6
+wsblks s w kt part d 0 shl nb 6
+off = shl nb 6
+k = sub n off
+for i ulong k
+put p i get d add off i
+end
+wsfin s w kt p k n
+for i ulong 8 unroll
+v = ulong get s i
+for j ulong 4 unroll
+put o add mul i 4 j uchar and shr v sub 24 mul j 8 0xff
+end
+end
+end
+
+note wdrive library. Globals are named wd*, functions wd*. Host words take these globals directly;
+note an Omega function never receives a global as an argument (error 19).
+note wdab argument and scratch bytes; wdp/wdpn the path builder; wdk/wdkn the execprog packed list
+note (count, write position); wdo/wdon/wdofd the output buffer and the descriptor it flushes to when
+note full; wdsrc/wdsn a whole file; wdd the last digest; wdv/wdvn the last environment value.
+global wdab uchar 4096
+global wdp uchar 4096
+global wdpn ulong 1
+global wdk uchar 4096
+global wdkn ulong 2
+global wdo uchar 65536
+global wdon ulong 1
+global wdofd int 1
+global wdsrc uchar 8388608
+global wdsn ulong 1
+global wdd uchar 32
+global wdv uchar 4096
+global wdvn ulong 1
+global wdst uchar 4
+note wdlkf: the held pool lock's descriptor plus 1, 0 when none (closed in spawned children, as
+note flock -o does)
+global wdlkf long 1
+global wdt uchar 24
+text wdhex "0123456789abcdef"
+
+note argument i into wdab; returns its length (exit 2 when it does not fit)
+fn wdarg i ulong to ulong
+r = argread i wdab 0 4096
+if lt r 0
+exit 2
+end
+ret ulong r
+end
+
+fn wdpclr to void
+put wdpn 0 0
+end
+
+fn wdpc c ulong to void
+n = get wdpn 0
+if ge n 4095
+exit 2
+end
+put wdp n uchar c
+put wdpn 0 add n 1
+end
+
+fn wdpt s view uchar * to void
+for i ulong len s
+wdpc ulong get s i
+end
+end
+
+fn wdpa i ulong to void
+n = wdarg i
+for j ulong n
+wdpc ulong get wdab j
+end
+end
+
+fn wdpv to void
+for j ulong get wdvn 0
+wdpc ulong get wdv j
+end
+end
+
+note wdsrc[o .. o + n) onto the path
+fn wdpb o ulong n ulong to void
+for j ulong n
+wdpc ulong get wdsrc add o j
+end
+end
+
+note decimal digits of v into wdt, least significant first; returns the count
+fn wddec v ulong to ulong
+k = ulong 0
+x = v
+c = true
+while c bound 25
+put wdt k uchar add 48 rem x 10
+k = add k 1
+x = div x 10
+c = gt x 0
+end
+ret k
+end
+
+fn wdpd v ulong to void
+k = wddec v
+while gt k 0 bound 25
+k = sub k 1
+wdpc ulong get wdt k
+end
+end
+
+note open the path in wdp; returns the descriptor or minus errno
+fn wdopen fl int md int to int
+r = fopen wdp 0 get wdpn 0 fl md
+ret int r
+end
+
+fn wdexists to bool
+r = faccess wdp 0 get wdpn 0 0
+ret eq r 0
+end
+
+note packed list for execprog: u16 count, then per record u16 length and bytes
+fn wdkclr to void
+put wdkn 0 0
+put wdkn 1 2
+end
+
+note push the path builder's bytes as the next record
+fn wdkp to void
+c = get wdkn 0
+p = get wdkn 1
+n = get wdpn 0
+if or ge c 64 gt add add p 2 n 4096
+exit 2
+end
+put wdk p uchar and n 255
+put wdk add p 1 uchar shr n 8
+for j ulong n
+put wdk add add p 2 j get wdp j
+end
+put wdkn 0 add c 1
+put wdkn 1 add add p 2 n
+end
+
+fn wdkt s view uchar * to void
+wdpclr
+wdpt s
+wdkp
+end
+
+fn wdka i ulong to void
+wdpclr
+wdpa i
+wdkp
+end
+
+fn wdkfin to ulong
+c = get wdkn 0
+put wdk 0 uchar and c 255
+put wdk 1 uchar shr c 8
+ret get wdkn 1
+end
+
+note fork and exec the packed list (empty environment, no PATH search); the child takes fi as
+note stdin, fo as stdout and fe as stderr when they are not negative. Returns the child's pid.
+fn wdspawn fi int fo int fe int to long
+pn = wdkfin
+pid = fork
+if lt pid 0
+exit 70
+end
+if eq pid 0
+if gt get wdlkf 0 0
+cl = fclose int sub get wdlkf 0 1
+end
+if ge fi 0
+d0 = dupfd fi 0 0
+end
+if ge fo 0
+d1 = dupfd fo 1 0
+end
+if ge fe 0
+d2 = dupfd fe 2 0
+end
+e = execprog wdk 0 pn
+exit 127
+end
+ret pid
+end
+
+note wait for pid; its exit status, or 128 + the signal that ended it
+fn wdwait pid long to long
+r = waitpid int pid wdst 0 4 0
+while eq r -4 bound 1000
+r = waitpid int pid wdst 0 4 0
+end
+if lt r 0
+exit 70
+end
+s = uint get wdst 0
+s = or s shl uint get wdst 1 8
+s = or s shl uint get wdst 2 16
+s = or s shl uint get wdst 3 24
+if eq and s 127 0
+ret long and shr s 8 255
+end
+ret add long and s 127 128
+end
+
+note value of environment entry NM=VALUE into wdv/wdvn; false when absent
+fn wdenv nm view uchar * to bool
+c = ulong envcnt
+for i ulong c
+r = envread i wdv 0 4096
+if gt r long len nm
+if wdenvm nm ulong r
+ret true
+end
+end
+end
+ret false
+end
+
+fn wdenvm nm view uchar * r ulong to bool
+k = len nm
+for i ulong k
+if ne get wdv i get nm i
+ret false
+end
+end
+if ne get wdv k 61
+ret false
+end
+m = sub r add k 1
+for j ulong m
+put wdv j get wdv add add k 1 j
+end
+put wdvn 0 m
+ret true
+end
+
+note the output buffer; wdoc flushes to wdofd when full
+fn wdowr fd int to void
+n = get wdon 0
+t = ulong 0
+while lt t n bound 999999
+w = write fd wdo t sub n t
+if le w 0
+exit 70
+end
+t = add t ulong w
+end
+end
+
+fn wdoclr to void
+put wdon 0 0
+end
+
+fn wdoflush fd int to void
+wdowr fd
+wdoclr
+end
+
+fn wdoc c ulong to void
+n = get wdon 0
+if ge n 65536
+wdoflush get wdofd 0
+n = 0
+end
+put wdo n uchar c
+put wdon 0 add n 1
+end
+
+fn wdot s view uchar * to void
+for i ulong len s
+wdoc ulong get s i
+end
+end
+
+fn wdod v ulong to void
+k = wddec v
+while gt k 0 bound 25
+k = sub k 1
+wdoc ulong get wdt k
+end
+end
+
+fn wdop to void
+for j ulong get wdpn 0
+wdoc ulong get wdp j
+end
+end
+
+fn wdohex to void
+for i ulong 32
+v = ulong get wdd i
+wdoc ulong get wdhex shr v 4
+wdoc ulong get wdhex and v 15
+end
+end
+
+note true when the hex of wdd equals the 64 bytes of h
+fn wdhexeq h view uchar * to bool
+if ne len h 64
+ret false
+end
+for i ulong 32
+v = ulong get wdd i
+if ne get h mul i 2 get wdhex shr v 4
+ret false
+end
+if ne get h add mul i 2 1 get wdhex and v 15
+ret false
+end
+end
+ret true
+end
+
+note read the whole file named by wdp into wdsrc; returns its size or minus errno; exit 61 when it
+note is larger than wdsrc
+fn wdload to long
+b = new uchar 1 0
+fd = wdopen 0 0
+if lt fd 0
+ret long fd
+end
+t = ulong 0
+fin = false
+while and lt t len wdsrc not fin bound 999999
+r = read fd wdsrc t sub len wdsrc t
+if lt r 0
+c = fclose fd
+ret r
+end
+if eq r 0
+fin = true
+end
+t = add t ulong r
+end
+if not fin
+r2 = read fd b 0 1
+if ne r2 0
+exit 61
+end
+end
+c2 = fclose fd
+put wdsn 0 t
+ret long t
+end
+
+note SHA-256 of the file named by wdp into wdd; false when it cannot be opened, exit 70 on a read error
+fn wdfsha to bool
+fd = wdopen 0 0
+if lt fd 0
+ret false
+end
+b = new uchar 65536 0
+c = new uchar 104 0
+d = new uchar 32 0
+sha256_init c
+fin = false
+while not fin bound 999999
+r = read fd b 0 65536
+if lt r 0
+exit 70
+end
+if eq r 0
+fin = true
+else
+sha256_update c part b 0 ulong r
+end
+end
+c2 = fclose fd
+sha256_final c d
+for i ulong 32
+put wdd i get d i
+end
+ret true
+end
+
+note copy everything readable from descriptor fi to descriptor fo
+fn wdcopyfd fi int fo int to void
+b = new uchar 65536 0
+fin = false
+while not fin bound 999999
+r = read fi b 0 65536
+if lt r 0
+exit 70
+end
+if eq r 0
+fin = true
+else
+wdwrall fo b ulong r
+end
+end
+end
+
+fn wdwrall fd int b view uchar * n ulong to void
+t = ulong 0
+while lt t n bound 999999
+w = write fd b t sub n t
+if le w 0
+exit 70
+end
+t = add t ulong w
+end
+end
+
+note rename the first record of the packed list to the second (renameat2 flags 0)
+fn wdrename to void
+pn = wdkfin
+r = renames wdk 0 pn 0
+if ne r 0
+exit 70
+end
+end
+
+note string slots: slot k is wdz[wdzo[k] .. wdzo[k] + wdzl[k]). wdzpool fills 0 HOME, 1 POOL, 2 LOCK;
+note a tool numbers its own slots from 3.
+global wdz uchar 65536
+global wdzo ulong 16
+global wdzl ulong 16
+global wdzn ulong 1
+text wdthome "HOME"
+text wdtpool "POOL"
+text wdtlock "LOCK"
+text wddpool "19"
+text wddlock "/handoffs/hive/queen/pool-"
+text wddlk2 ".lock"
+text wdtlkto "LOCK_TIMEOUT "
+text wdtlkno "cannot open lock "
+text wdtnl "\n"
+text wdxts "/usr/bin/taskset"
+text wdxc "-c"
+text wdxnice "/usr/bin/nice"
+text wdxn "-n"
+text wdx10 "10"
+text wdtnoh "HOME is not set\n"
+
+note save the path builder as slot k
+fn wdzsave k ulong to void
+p = get wdzn 0
+n = get wdpn 0
+if gt add p n 65536
+exit 2
+end
+for j ulong n
+put wdz add p j get wdp j
+end
+put wdzo k p
+put wdzl k n
+put wdzn 0 add p n
+end
+
+note append slot k to the path builder
+fn wdzp k ulong to void
+o = get wdzo k
+for j ulong get wdzl k
+wdpc ulong get wdz add o j
+end
+end
+
+note slot k from environment entry nm, else HOME followed by d
+fn wdzenv nm view uchar * k ulong d view uchar * to void
+wdpclr
+if wdenv nm
+wdpv
+else
+wdzp 0
+wdpt d
+end
+wdzsave k
+end
+
+note slots 0 HOME (exit 2 when unset), 1 POOL (default 19), 2 LOCK (default
+note HOME/handoffs/hive/queen/pool-POOL.lock)
+fn wdzpool to void
+if not wdenv wdthome
+wdoclr
+wdot wdtnoh
+wdoflush 2
+exit 2
+end
+wdpclr
+wdpv
+wdzsave 0
+wdpclr
+if wdenv wdtpool
+wdpv
+else
+wdpt wddpool
+end
+wdzsave 1
+wdpclr
+if wdenv wdtlock
+wdpv
+else
+wdzp 0
+wdpt wddlock
+wdzp 1
+wdpt wddlk2
+end
+wdzsave 2
+end
+
+note start the packed list with the pool prefix (7 records):
+note /usr/bin/taskset -c POOL /usr/bin/nice -n 10
+fn wdkpre to void
+wdkclr
+wdkt wdxts
+wdkt wdxc
+wdpclr
+wdzp 1
+wdkp
+wdkt wdxnice
+wdkt wdxn
+wdkt wdx10
+end
+
+
+fn wdlkmsg t view uchar * to void
+wdoclr
+wdot t
+wdpclr
+wdzp 2
+wdop
+wdot wdtnl
+wdoflush 2
+end
+
+note take the pool lock LOCK (slot 2) as `flock -w 7200` did: open it read-only, creating it with
+note mode 0666, and try an exclusive flock every 10 ms for at most 7200 s. False on timeout.
+fn wdlock to bool
+wdpclr
+wdzp 2
+fd = wdopen 64 438
+if lt fd 0
+wdlkmsg wdtlkno
+exit 70
+end
+d = add monons 7200000000000
+while true bound 999999
+r = flock fd 6
+if eq r 0
+put wdlkf 0 add long fd 1
+ret true
+end
+if ne r -11
+wdlkmsg wdtlkno
+exit 70
+end
+if gt monons d
+c = fclose fd
+wdlkmsg wdtlkto
+ret false
+end
+s = sleepns 10000000
+end
+ret false
+end
+
+note run the packed list (built after wdkpre) under the pool lock: lock, spawn, wait, unlock.
+note Returns the child's status, or 1 when the lock was not had within 7200 s (flock -w's status).
+fn wdpoolrun fi int fo int fe int to long
+if not wdlock
+ret 1
+end
+pid = wdspawn fi fo fe
+rc = wdwait pid
+c = fclose int sub get wdlkf 0 1
+put wdlkf 0 0
+ret rc
+end
+
+note wbuild ------------------------------------------------------------------------------------
+global wbomc uchar 4096
+global wbomn ulong 1
+global wbcore uchar 64
+global wbcn ulong 1
+global wbren uchar 64
+global wbrnn ulong 1
+global wbom2 ulong 1
+text wbpin "2c82480596bbdc50cda9626866209ef662d5834f278f839ff4ce0250c495029f"
+text wbtomc "OMC"
+text wbtcore "CORE"
+text wbtall "-all.om"
+text wbttmp ".tmp"
+text wbtts "/usr/bin/taskset"
+text wbtc "-c"
+text wbtnice "/usr/bin/nice"
+text wbtn "-n"
+text wbt19 "19"
+text wbtom2 "om2"
+text wbtlay "layout "
+text wbtend "end"
+text wbtmain "fn main to int"
+text wbtfn "fn "
+text wbtto " to int"
+text wbtnl "\n"
+text wbtok "BUILD_OK "
+text wbtsrc " source_sha256 "
+text wbtomcs " omc "
+text wbtfail "BUILD_FAIL omc rc="
+text wbtpinm "OMC_PIN_MISMATCH "
+text wbtmc "MAIN_COUNT "
+text wbtwant ", want 1 in "
+text wbtrd "cannot read "
+text wbtexp "export fn "
+text wbtuse "usage: OMC=omc [CORE=n] wbuild OUTBIN PART... (PART is FILE or FILE@NAME)\n"
+
+fn wbusage to void
+wdoclr
+wdot wbtuse
+wdoflush 2
+exit 2
+end
+
+fn wbpomc to void
+wdpclr
+for j ulong get wbomn 0
+wdpc ulong get wbomc j
+end
+end
+
+fn wbpcore to void
+wdpclr
+for j ulong get wbcn 0
+wdpc ulong get wbcore j
+end
+end
+
+note index of the end of the line starting at s (after its newline, or n)
+fn wbeol s ulong n ulong to ulong
+i = s
+while lt i n bound 999999
+if eq get wdsrc i 10
+ret add i 1
+end
+i = add i 1
+end
+ret n
+end
+
+note content length of the line [s, e): without its newline
+fn wbcl s ulong e ulong to ulong
+if gt e s
+if eq get wdsrc sub e 1 10
+ret sub sub e s 1
+end
+end
+ret sub e s
+end
+
+note wdsrc[s .. s + cl) equals t (pre false) or starts with t (pre true)
+fn wbeq s ulong cl ulong t view uchar * pre bool to bool
+k = len t
+if lt cl k
+ret false
+end
+if and not pre ne cl k
+ret false
+end
+for i ulong k
+if ne get wdsrc add s i get t i
+ret false
+end
+end
+ret true
+end
+
+note 1 om2, 2 layout start, 3 end, 4 main, else 0
+fn wbkind s ulong e ulong to ulong
+cl = wbcl s e
+if wbeq s cl wbtom2 false
+ret 1
+end
+if wbeq s cl wbtlay true
+ret 2
+end
+if wbeq s cl wbtend false
+ret 3
+end
+if wbeq s cl wbtmain false
+ret 4
+end
+ret 0
+end
+
+fn wbemit s ulong e ulong to void
+for j ulong sub e s
+wdoc ulong get wdsrc add s j
+end
+end
+
+fn wbemitm s ulong e ulong to void
+wdot wbtfn
+for j ulong get wbrnn 0
+wdoc ulong get wbren j
+end
+wdot wbtto
+if ne wbcl s e sub e s
+wdoc 10
+end
+end
+
+note one pass over the part in wdsrc: 0 counts om2 and main lines, 1 emits layout blocks, 2 emits
+note the rest (main renamed when the part has a name; a line starting `export fn ` loses its
+note `export `, since the output is a program and a program has no exports); returns the number of
+note main lines
+fn wblines pass ulong to ulong
+n = get wdsn 0
+s = ulong 0
+mains = ulong 0
+inl = false
+while lt s n bound 999999
+e = wbeol s n
+k = wbkind s e
+if eq k 2
+inl = true
+end
+if eq pass 0
+if eq k 1
+put wbom2 0 1
+end
+if eq k 4
+mains = add mains 1
+end
+end
+if eq pass 1
+if inl
+wbemit s e
+end
+end
+if eq pass 2
+if not or inl eq k 1
+if and eq k 4 gt get wbrnn 0 0
+wbemitm s e
+else
+if wbeq s wbcl s e wbtexp true
+wbemit add s 7 e
+else
+wbemit s e
+end
+end
+end
+end
+if and inl eq k 3
+inl = false
+end
+s = e
+end
+ret mains
+end
+
+note argument i is FILE or FILE@NAME: load FILE, set the rename, run pass
+fn wbpart i ulong pass ulong to void
+n = wdarg i
+ap = n
+for j ulong n
+if eq get wdab j 64
+ap = j
+end
+end
+put wbrnn 0 0
+if lt ap n
+m = sub sub n ap 1
+if or eq m 0 gt m 63
+exit 2
+end
+for j2 ulong m
+put wbren j2 get wdab add add ap 1 j2
+end
+put wbrnn 0 m
+end
+wdpclr
+for j3 ulong ap
+wdpc ulong get wdab j3
+end
+r = wdload
+if lt r 0
+wdoclr
+wdot wbtrd
+wdop
+wdot wbtnl
+wdoflush 2
+exit 70
+end
+c = wblines pass
+if and eq pass 0 gt get wbrnn 0 0
+if ne c 1
+wdoclr
+wdot wbtmc
+wdod c
+wdot wbtwant
+wdop
+wdot wbtnl
+wdoflush 2
+exit 4
+end
+end
+end
+
+note OUTBIN followed by the suffix t
+fn wbpout t view uchar * to void
+wdpclr
+wdpa 1
+wdpt t
+end
+
+fn wbcompose na ulong to void
+for i ulong sub na 2
+wbpart add i 2 0
+end
+wbpout wbtall
+fd = wdopen 577 436
+if lt fd 0
+exit 70
+end
+put wdofd 0 fd
+wdoclr
+if eq get wbom2 0 1
+wdot wbtom2
+wdot wbtnl
+end
+for p ulong 2
+for i2 ulong sub na 2
+wbpart add i2 2 add p 1
+end
+end
+wdoflush fd
+put wdofd 0 1
+c = fclose fd
+if ne c 0
+exit 70
+end
+end
+
+note taskset -c CORE nice -n 19 OMC < OUTBIN-all.om > OUTBIN.tmp; returns omc's exit status
+fn wbcomp to long
+wbpout wbtall
+fi = wdopen 0 0
+wbpout wbttmp
+fo = wdopen 577 436
+if or lt fi 0 lt fo 0
+exit 70
+end
+wdkclr
+wdkt wbtts
+wdkt wbtc
+wbpcore
+wdkp
+wdkt wbtnice
+wdkt wbtn
+wdkt wbt19
+wbpomc
+wdkp
+pid = wdspawn fi fo -1
+c1 = fclose fi
+c2 = fclose fo
+ret wdwait pid
+end
+
+fn wbenv to void
+if not wdenv wbtomc
+wbusage
+end
+for j ulong get wdvn 0
+put wbomc j get wdv j
+end
+put wbomn 0 get wdvn 0
+put wbcore 0 48
+put wbcn 0 1
+if wdenv wbtcore
+if or eq get wdvn 0 0 gt get wdvn 0 63
+exit 2
+end
+for j2 ulong get wdvn 0
+put wbcore j2 get wdv j2
+end
+put wbcn 0 get wdvn 0
+end
+end
+
+fn wbchkpin to void
+wbpomc
+if not wdfsha
+exit 70
+end
+if not wdhexeq wbpin
+wdoclr
+wdot wbtpinm
+wdohex
+wdot wbtnl
+wdoflush 2
+exit 3
+end
+end
+
+fn wbfinish to void
+wbpout wbttmp
+r = chmod wdp 0 get wdpn 0 509
+if ne r 0
+exit 70
+end
+wdkclr
+wdkp
+wdpclr
+wdpa 1
+wdkp
+wdrename
+end
+
+fn main to int
+na = ulong argcnt
+if lt na 3
+wbusage
+end
+wbenv
+wbchkpin
+wbcompose na
+rc = wbcomp
+if ne rc 0
+wbpout wbttmp
+u = unlink wdp 0 get wdpn 0
+wdoclr
+wdot wbtfail
+wdod ulong rc
+wdot wbtnl
+wdoflush 2
+exit 1
+end
+wbfinish
+wdoclr
+wdot wbtok
+wdpclr
+wdpa 1
+if not wdfsha
+exit 70
+end
+wdohex
+wdoc 32
+wdop
+wdot wbtsrc
+wbpout wbtall
+if not wdfsha
+exit 70
+end
+wdohex
+wdot wbtomcs
+wbpomc
+if not wdfsha
+exit 70
+end
+wdohex
+wdot wbtnl
+wdoflush 1
+ret 0
+end

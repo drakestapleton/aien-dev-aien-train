@@ -1,0 +1,315 @@
+note SPDX-License-Identifier: AGPL-3.0-only
+note wpolicy.om (DRA-187, lane wsp): PREREG section 9 driver. Composed after wbuild.om:
+note   OMC=omc wbuild OUT/wpolicy tools/omegallm/wdrive/wbuild.om@wbmain tools/omegallm/wdrive/wpolicy.om
+note Usage: wpolicy prep|run BASE P0 P2 WORKDIR
+note BASE is the unedited checkpoint, P0 the edit with Adam m and v kept (wpatch policy 0 or wprobe save),
+note P2 the same edit applied by wpatch with policy 2 (m and v of the changed entries zeroed).
+note Both modes first run `WPROBE survive BASE P0 BASE P0 P2` and print its line after PRE: it exits 67
+note when P2's weights differ from P0's and 68 when P0 changes nothing. Then each of BASE, P0, P2 is
+note copied to WORKDIR/base.ck, p0.ck, p2.ck; its header word 9 (step) and word 10 (total) must both be
+note 600, and word 10 is set to 601 so that `ollm train` takes exactly one step (the payload FNV covers
+note only the payload, so it stays valid). Prints PREP NAME PATH per copy.
+note run then trains each copy one step on TRAIN, stdout to WORKDIR/NAME.train.log, printing
+note TRAIN NAME RC LOG, and prints the edit survival of each policy against the base's own step:
+note   p0 S ...   from WPROBE survive BASE P0 WORKDIR/base.ck WORKDIR/p0.ck P2
+note   p2 S ...   from WPROBE survive BASE P2 WORKDIR/base.ck WORKDIR/p2.ck
+note (wprobe's survive: changed count, survival <d1,d0>/<d0,d0>, largest |d1 - d0| / |d0|).
+note Every child runs under the pool lock LOCK (taken in this process with flock(2), at most 7200 s, as
+note `flock -w 7200 -o` did; a timeout counts as exit status 1), with an empty environment, as
+note   /usr/bin/taskset -c POOL /usr/bin/nice -n 10 ...
+note Environment: HOME (required), POOL (default 19), LOCK (default HOME/handoffs/hive/queen/pool-POOL.lock),
+note OLLM (default HOME/work/wsp/build/ollm), WPROBE (default HOME/work/wsp/build/wprobe), TRAIN (default
+note HOME/handoffs/tool-omega-20261104/round40/data/train.tok).
+note Exits: 0 done, 1 a child exited nonzero (stderr FAIL STEP rc=N), 2 usage, 65 a header is not at
+note step 600 of 600 (stderr HEADER NAME STEP TOTAL), 70 I/O.
+
+note string slots (wdz, see wbuild.om): 0 HOME, 1 POOL, 2 LOCK, 3 OLLM, 4 WPROBE, 5 TRAIN, 6 BASE,
+note 7 P0, 8 P2, 9 WORKDIR, 10 11 12 the copies WORKDIR/base.ck, p0.ck, p2.ck
+text wptollm "OLLM"
+text wptwp "WPROBE"
+text wpttr "TRAIN"
+text wpdollm "/work/wsp/build/ollm"
+text wpdwp "/work/wsp/build/wprobe"
+text wpdtr "/handoffs/tool-omega-20261104/round40/data/train.tok"
+text wpprep "prep"
+text wprun "run"
+text wpsvt "survive"
+text wptrain "train"
+text wp601 "601"
+text wpone "1"
+text wpkb "base"
+text wpk0 "p0"
+text wpk2 "p2"
+text wpsck ".ck"
+text wpslog ".train.log"
+text wppre "PRE "
+text wpprp "PREP "
+text wptrn "TRAIN "
+text wphdr "HEADER "
+text wpfail "FAIL "
+text wprc " rc="
+text wpcantt "cannot open "
+text wpnl "\n"
+text wpuse "usage: wpolicy prep|run BASE P0 P2 WORKDIR\n"
+
+fn wpusage to void
+wdoclr
+wdot wpuse
+wdoflush 2
+exit 2
+end
+
+note argument bytes wdab[0 .. n) equal t
+fn wpargeq n ulong t view uchar * to bool
+if ne n len t
+ret false
+end
+for j ulong n
+if ne get wdab j get t j
+ret false
+end
+end
+ret true
+end
+
+note the name of copy i (0 base, 1 p0, 2 p2) to the output, to the path builder
+fn wponame i ulong to void
+if eq i 0
+wdot wpkb
+end
+if eq i 1
+wdot wpk0
+end
+if eq i 2
+wdot wpk2
+end
+end
+
+fn wppname i ulong to void
+if eq i 0
+wdpt wpkb
+end
+if eq i 1
+wdpt wpk0
+end
+if eq i 2
+wdpt wpk2
+end
+end
+
+note WORKDIR/NAME followed by sfx
+fn wpdst i ulong sfx view uchar * to void
+wdpclr
+wdzp 9
+wdpc 47
+wppname i
+wdpt sfx
+end
+
+fn wpslot k ulong to void
+wdpclr
+wdzp k
+wdkp
+end
+
+note the path in wdp could not be opened
+fn wpcant to void
+wdoclr
+wdot wpcantt
+wdop
+wdot wpnl
+wdoflush 2
+exit 70
+end
+
+fn wpfailx st view uchar * rc long to void
+wdoclr
+wdot wpfail
+wdot st
+wdot wprc
+wdod ulong rc
+wdot wpnl
+wdoflush 2
+exit 1
+end
+
+note survive BASE EDIT BASE1 EDIT1 [EDIT2] from slots; e2 0 leaves EDIT2 out. Prints pre first, then
+note wprobe's line follows on the same stdout.
+fn wpsurv a ulong b ulong c ulong d ulong e2 ulong to void
+wdkpre
+wpslot 4
+wdkt wpsvt
+wpslot a
+wpslot b
+wpslot c
+wpslot d
+if gt e2 0
+wpslot e2
+end
+rc = wdpoolrun -1 -1 -1
+if ne rc 0
+wpfailx wpsvt rc
+end
+end
+
+fn wpu64 h view uchar * o ulong to ulong
+x = ulong 0
+for k ulong 8
+x = or x shl ulong get h add o k mul k 8
+end
+ret x
+end
+
+note copy source slot 6 + i to WORKDIR/NAME.ck; check and raise the header's total
+fn wpcopy i ulong to void
+h = new uchar 120 0
+wdpclr
+wdzp add 6 i
+fi = wdopen 0 0
+if lt fi 0
+wpcant
+end
+wpdst i wpsck
+fo = wdopen 578 436
+if lt fo 0
+wpcant
+end
+wdcopyfd fi fo
+c = fclose fi
+r = pread fo h 0 120 0
+if ne r 120
+exit 70
+end
+st = wpu64 h 72
+tot = wpu64 h 80
+if or ne st 600 ne tot 600
+wdoclr
+wdot wphdr
+wponame i
+wdoc 32
+wdod st
+wdoc 32
+wdod tot
+wdot wpnl
+wdoflush 2
+exit 65
+end
+v = ulong 601
+for k ulong 8
+put h k uchar and shr v mul k 8 255
+end
+w = pwrite fo h 0 8 80
+if ne w 8
+exit 70
+end
+c2 = fclose fo
+if ne c2 0
+exit 70
+end
+wdoclr
+wdot wpprp
+wponame i
+wdoc 32
+wpdst i wpsck
+wdop
+wdot wpnl
+wdoflush 1
+end
+
+note one training step of WORKDIR/NAME.ck, stdout to WORKDIR/NAME.train.log
+fn wptrain1 i ulong to void
+wpdst i wpslog
+fo = wdopen 577 436
+if lt fo 0
+wpcant
+end
+wdkpre
+wpslot 3
+wdkt wptrain
+wpdst i wpsck
+wdkp
+wpslot 5
+wdkt wp601
+wdkt wpone
+rc = wdpoolrun -1 fo -1
+c = fclose fo
+wdoclr
+wdot wptrn
+wponame i
+wdoc 32
+wdod ulong rc
+wdoc 32
+wpdst i wpslog
+wdop
+wdot wpnl
+wdoflush 1
+if ne rc 0
+wpfailx wptrain rc
+end
+end
+
+note copy i's path into slot 10 + i
+fn wpsetdst i ulong to void
+wpdst i wpsck
+wdzsave add 10 i
+end
+
+fn wpsetup to void
+wdzpool
+wdzenv wptollm 3 wpdollm
+wdzenv wptwp 4 wpdwp
+wdzenv wpttr 5 wpdtr
+for i ulong 4
+wdpclr
+wdpa add i 2
+wdzsave add i 6
+end
+end
+
+fn main to int
+if ne argcnt 6
+wpusage
+end
+n = wdarg 1
+md = ulong 0
+if wpargeq n wpprep
+md = 1
+end
+if wpargeq n wprun
+md = 2
+end
+if eq md 0
+wpusage
+end
+wpsetup
+wdpclr
+wdzp 9
+m = makedir wdp 0 get wdpn 0 509
+for i ulong 3
+wpsetdst i
+end
+wdoclr
+wdot wppre
+wdoflush 1
+wpsurv 6 7 6 7 8
+for i2 ulong 3
+wpcopy i2
+end
+if eq md 1
+ret 0
+end
+for i3 ulong 3
+wptrain1 i3
+end
+wdoclr
+wdot wpk0
+wdoc 32
+wdoflush 1
+wpsurv 6 7 10 11 8
+wdoclr
+wdot wpk2
+wdoc 32
+wdoflush 1
+wpsurv 6 8 10 12 0
+ret 0
+end

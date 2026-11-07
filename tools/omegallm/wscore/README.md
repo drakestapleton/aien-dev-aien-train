@@ -9,13 +9,13 @@ A row passes under these rules, the same as round40's `check_answer`:
 
 ## Build
 
-With the pinned omc (omega-mv `e5b32567`, sha256 `2c82480596bbdc50cda9626866209ef662d5834f278f839ff4ce0250c495029f`):
+With the pinned omc (omega-mv `e5b32567`, sha256 `2c82480596bbdc50cda9626866209ef662d5834f278f839ff4ce0250c495029f`) and `wbuild` built as in `tools/omegallm/wdrive/README.md`:
 
 ```sh
-taskset -c 0 nice -n 19 omc < tools/omegallm/wscore/wscore.om > OUT/wscore && chmod +x OUT/wscore
+OMC=omc CORE=0 wbuild OUT/wscore tools/omegallm/wscore/wscore.om
 ```
 
-The exit status of omc is its error code. 0 means it compiled.
+wscore is one standalone unit, so `OUT/wscore-all.om` is `wscore.om` unchanged and the binary is the one plain `omc < wscore.om` gives (MEASURED 2026-11-07, sha256 `8da6494e...207e`). wbuild prints `BUILD_OK`; on a compile error it exits 1 with omc's code in `BUILD_FAIL omc rc=N` and leaves no binary.
 
 ## Usage
 

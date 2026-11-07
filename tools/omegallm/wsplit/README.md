@@ -17,20 +17,22 @@ Linux AArch64. Pin `omega-mv` to
 - `om/sha256/sha256-om2.om` SHA-256:
   `dbf002dd6aa36585632b9d01d98ac3f0bd2fa0f0475082940de53638847994bb`
 
-From the aien-train root, with `OUT` an existing private build directory:
+From the aien-train root, with `OUT` an existing private build directory and `wbuild` built as in
+`tools/omegallm/wdrive/README.md`:
 
 ```sh
 OMEGA_MV=../omega-mv
 sha256sum "$OMEGA_MV/seed/out/omc" "$OMEGA_MV/om/sha256/sha256-om2.om"
-sed 's/^export fn /fn /' "$OMEGA_MV/om/sha256/sha256-om2.om" > "$OUT/sha256.om"
-cat "$OUT/sha256.om" tools/omegallm/wsplit/wsplit.om > "$OUT/wsplit-all.om"
-taskset -c 0 nice -n 19 "$OMEGA_MV/seed/out/omc" < "$OUT/wsplit-all.om" > "$OUT/wsplit" && chmod +x "$OUT/wsplit"
+OMC="$OMEGA_MV/seed/out/omc" CORE=0 wbuild "$OUT/wsplit" "$OMEGA_MV/om/sha256/sha256-om2.om" tools/omegallm/wsplit/wsplit.om
 ```
 
-The composition only changes SHA's four `export fn` declarations to `fn` for
-program mode. Its layout, implementation and constants are unchanged. Never
-execute an output from a failed compile. There is no foreign runtime dependency.
-The build utilities above compose source; they implement no split behavior.
+wbuild writes every line starting `export fn ` as `fn `, because the output is a program, so SHA's
+four `export fn` declarations become `fn`. It also moves the `om2` line and the `layout shactx`
+block to the top of `$OUT/wsplit-all.om`. The layout, implementation and constants are unchanged.
+wbuild checks omc's sha256, compiles with `taskset -c CORE nice -n 19`, and leaves no output from a
+failed compile. On 2026-11-07 (MEASURED) the binary was byte for byte the one from the earlier
+`sed 's/^export fn /fn /'` and `cat` route, sha256 `be6f7f0d...f19f`. There is no foreign runtime
+dependency.
 
 ## Commands
 

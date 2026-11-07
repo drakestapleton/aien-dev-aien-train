@@ -1,0 +1,506 @@
+note SPDX-License-Identifier: AGPL-3.0-only
+note wcheck.om (DRA-187, lane wsp): outside check of `wprobe save`. Composed after wbuild.om:
+note   OMC=omc wbuild OUT/wcheck tools/omegallm/wdrive/wbuild.om@wbmain tools/omegallm/wdrive/wcheck.om
+note Usage: wcheck BUILD_DIR [MILLI]   (BUILD_DIR holds ollm and wprobe)
+note In a fresh /tmp/wcheck-<realtime ns> directory it makes a small checkpoint
+note (ollm init base.ck 256 8 16 2 32 2 2 1 10 3000 1, then ollm train base.ck tr.bin 2 1 on 200 copies
+note of "abc abcd abcde" and a zero byte) and checks eight cases, printing CASE <name> PASS|FAIL each:
+note   edit     wprobe save base e1 1 1 1 1500 2 0 7 250 exits 0; header words 0..13 kept; word 14 is the
+note            FNV-1a 64 of every byte after the header; the attention output rows of layer 1 head 1 are
+note            the base value times MILLI/1000 (default 1500, so 1.5), the w2 rows of layer 0 neuron 7
+note            times 0.25, every other weight and the whole optimizer state equal (f64 comparison)
+note   f32      wprobe save base f32 5 0 0 0 exits 0; every weight is the base weight rounded to f32 and
+note            back, and at least one differs from the base
+note   exists   save onto the existing e1 exits 63
+note   act      kind 3 (activation hook) exits 2
+note   dec      kind 4 (decoding hook) exits 2
+note   badhook  kind 1 at layer 2 of 2 exits 2
+note   nofiles  the three refused saves left no file
+note   big      a checkpoint with weight 5 set to 2.0e6 (payload FNV rewritten) exits 64, writes nothing
+note Rows (as tools/omegallm/wprobe/check.py had them): lay0 = V*D + T*D, lstr = 4*D*D + 2*D*F + 2*D,
+note wo(l) = lay0 + l*lstr + D + 3*D*D, w2(l) = lay0 + l*lstr + D + 4*D*D + D + D*F, E = D/H; the head
+note rows are [wo(1) + E*D, wo(1) + 2*E*D), the neuron rows [w2(0) + 7*D, w2(0) + 8*D).
+note Prints WPROBE_SAVE_CHECK PASS 8 cases and exits 0, or WPROBE_SAVE_CHECK FAIL <passed> of 8 cases
+note and exits 1. MILLI other than 1500 is the negative control: the edit case must then FAIL.
+note Exits 2 usage, 70 I/O, 1 also when the small checkpoint cannot be made (SETUP_FAIL).
+
+global wcb uchar 1048576
+global wcbn ulong 1
+global wcbd uchar 4096
+global wcbdn ulong 1
+global wctd uchar 256
+global wctdn ulong 1
+note wclay: head rows start, end, neuron rows start, end
+global wclay ulong 4
+global wcok ulong 1
+global wcnul int 1
+text wctmp "/tmp/wcheck-"
+text wcollm "ollm"
+text wcwp "wprobe"
+text wcinit "init"
+text wctrain "train"
+text wcsave "save"
+text wcfbase "base.ck"
+text wcftr "tr.bin"
+text wcfe1 "e1.ck"
+text wcff32 "f32.ck"
+text wcfa3 "a3.ck"
+text wcfa4 "a4.ck"
+text wcfbad "bad.ck"
+text wcfbig "big.ck"
+text wcfbo "big-out.ck"
+text wcnull "/dev/null"
+text wctrrec "abc abcd abcde"
+text wccase "CASE "
+text wcpass " PASS\n"
+text wcfail " FAIL\n"
+text wcsedit "edit"
+text wcsf32 "f32"
+text wcsex "exists"
+text wcsact "act"
+text wcsdec "dec"
+text wcsbad "badhook"
+text wcsnof "nofiles"
+text wcsbig "big"
+text wcok8 "WPROBE_SAVE_CHECK PASS 8 cases\n"
+text wcbad8 "WPROBE_SAVE_CHECK FAIL "
+text wcof8 " of 8 cases\n"
+text wcsetup "SETUP_FAIL "
+text wcnl "\n"
+text wcuse "usage: wcheck BUILD_DIR [MILLI]\n"
+
+fn wcusage to void
+wdoclr
+wdot wcuse
+wdoflush 2
+exit 2
+end
+
+note BUILD_DIR/t and TMP/t into the path builder
+fn wcpb t view uchar * to void
+wdpclr
+for j ulong get wcbdn 0
+wdpc ulong get wcbd j
+end
+wdpc 47
+wdpt t
+end
+
+fn wcpt t view uchar * to void
+wdpclr
+for j ulong get wctdn 0
+wdpc ulong get wctd j
+end
+wdpc 47
+wdpt t
+end
+
+fn wckt t view uchar * to void
+wcpt t
+wdkp
+end
+
+fn wckn v ulong to void
+wdpclr
+wdpd v
+wdkp
+end
+
+note run the packed list with stdout and stderr to /dev/null; its exit status
+fn wcrun to long
+pid = wdspawn -1 get wcnul 0 get wcnul 0
+ret wdwait pid
+end
+
+note wprobe save SRC OUT; the caller adds the hook words (wch4) before wcrun
+fn wcsv src view uchar * dst view uchar * to void
+wdkclr
+wcpb wcwp
+wdkp
+wdkt wcsave
+wckt src
+wckt dst
+end
+
+fn wch4 k ulong l ulong i ulong a ulong to void
+wckn k
+wckn l
+wckn i
+wckn a
+end
+
+fn wccase1 nm view uchar * ok bool to void
+wdoclr
+wdot wccase
+wdot nm
+if ok
+wdot wcpass
+put wcok 0 add get wcok 0 1
+else
+wdot wcfail
+end
+wdoflush 1
+end
+
+fn wcsetupf nm view uchar * to void
+wdoclr
+wdot wcsetup
+wdot nm
+wdot wcnl
+wdoflush 2
+wcclean
+exit 1
+end
+
+note little-endian u64 at byte o of wcb, of wdsrc; store into wdsrc
+fn wcbu o ulong to ulong
+x = ulong 0
+for k ulong 8
+x = or x shl ulong get wcb add o k mul k 8
+end
+ret x
+end
+
+fn wcsu o ulong to ulong
+x = ulong 0
+for k ulong 8
+x = or x shl ulong get wdsrc add o k mul k 8
+end
+ret x
+end
+
+fn wcsput o ulong v ulong to void
+for k ulong 8
+put wdsrc add o k uchar and shr v mul k 8 255
+end
+end
+
+fn wcbf i ulong to f64
+ret bitcast f64 wcbu add 120 mul i 8
+end
+
+fn wcsf i ulong to f64
+ret bitcast f64 wcsu add 120 mul i 8
+end
+
+note FNV-1a 64 of wdsrc[120 .. size)
+fn wcfnv to ulong
+x = ulong 14695981039346656037
+n = get wdsn 0
+i = ulong 120
+while lt i n bound 999999
+x = mul xor x ulong get wdsrc i 1099511628211
+i = add i 1
+end
+ret x
+end
+
+note load TMP/t into wdsrc; false unless it holds the header and 3 * P words
+fn wcload t view uchar * to bool
+wcpt t
+r = wdload
+if lt r 0
+ret false
+end
+if lt ulong r 120
+ret false
+end
+p = wcsu 96
+ret ge ulong r add 120 mul 24 p
+end
+
+fn wclayout to void
+v = wcbu 8
+t = wcbu 16
+d = wcbu 24
+h = wcbu 32
+f = wcbu 40
+ls = add add mul mul 4 d d mul mul 2 d f mul 2 d
+l0 = add mul v d mul t d
+wo1 = add add add l0 ls d mul mul 3 d d
+w20 = add add add add l0 d mul mul 4 d d d mul d f
+e = div d h
+put wclay 0 add wo1 mul e d
+put wclay 1 add wo1 mul mul 2 e d
+put wclay 2 add w20 mul 7 d
+put wclay 3 add w20 mul 8 d
+end
+
+fn wcwant i ulong a f64 s f64 to f64
+if and ge i get wclay 0 lt i get wclay 1
+ret mul a s
+end
+if and ge i get wclay 2 lt i get wclay 3
+ret mul a 0.25f64
+end
+ret a
+end
+
+note the edit case on e1 in wdsrc, expected head factor milli / 1000
+fn wcedit milli ulong to bool
+if ne get wdsn 0 get wcbn 0
+ret false
+end
+for i ulong 14
+if ne wcbu mul i 8 wcsu mul i 8
+ret false
+end
+end
+if ne wcsu 112 wcfnv
+ret false
+end
+s = div f64 milli 1000.0f64
+m = mul wcbu 96 3
+j = ulong 0
+while lt j m bound 999999
+if ne wcsf j wcwant j wcbf j s
+ret false
+end
+j = add j 1
+end
+ret true
+end
+
+fn wcf32 to bool
+n = wcbu 96
+d = ulong 0
+j = ulong 0
+while lt j n bound 999999
+a = wcbf j
+b = wcsf j
+if ne b f64 f32 a
+ret false
+end
+if ne b a
+d = add d 1
+end
+j = add j 1
+end
+ret gt d 0
+end
+
+note write wdsrc[0 .. size) to TMP/t
+fn wcwrite t view uchar * to void
+wcpt t
+fd = wdopen 577 420
+if lt fd 0
+exit 70
+end
+n = get wdsn 0
+k = ulong 0
+while lt k n bound 999999
+w = write fd wdsrc k sub n k
+if le w 0
+exit 70
+end
+k = add k ulong w
+end
+c = fclose fd
+end
+
+fn wcgone t view uchar * to bool
+wcpt t
+ret not wdexists
+end
+
+fn wcrm t view uchar * to void
+wcpt t
+u = unlink wdp 0 get wdpn 0
+end
+
+fn wcclean to void
+wcrm wcfbase
+wcrm wcftr
+wcrm wcfe1
+wcrm wcff32
+wcrm wcfa3
+wcrm wcfa4
+wcrm wcfbad
+wcrm wcfbig
+wcrm wcfbo
+wdpclr
+for j ulong get wctdn 0
+wdpc ulong get wctd j
+end
+r = rmdir wdp 0 get wdpn 0
+end
+
+note the small checkpoint: init, the training file, train; then base bytes into wcb
+fn wcmake to void
+wdkclr
+wcpb wcollm
+wdkp
+wdkt wcinit
+wckt wcfbase
+wckn 256
+wckn 8
+wckn 16
+wckn 2
+wckn 32
+wckn 2
+wckn 2
+wckn 1
+wckn 10
+wckn 3000
+wckn 1
+if ne wcrun 0
+wcsetupf wcinit
+end
+wcpt wcftr
+fd = wdopen 577 420
+if lt fd 0
+exit 70
+end
+wdoclr
+for i ulong 200
+wdot wctrrec
+wdoc 0
+end
+wdoflush fd
+c = fclose fd
+wdkclr
+wcpb wcollm
+wdkp
+wdkt wctrain
+wckt wcfbase
+wckt wcftr
+wckn 2
+wckn 1
+if ne wcrun 0
+wcsetupf wctrain
+end
+if not wcload wcfbase
+wcsetupf wcfbase
+end
+n = get wdsn 0
+if gt n 1048576
+wcsetupf wcfbase
+end
+for j ulong n
+put wcb j get wdsrc j
+end
+put wcbn 0 n
+wclayout
+end
+
+note the big-weight checkpoint from wcb
+fn wcmkbig to void
+n = get wcbn 0
+for j ulong n
+put wdsrc j get wcb j
+end
+put wdsn 0 n
+wcsput 160 bitcast ulong 2000000.0f64
+wcsput 112 wcfnv
+wcwrite wcfbig
+end
+
+fn wccases milli ulong to void
+wcsv wcfbase wcfe1
+wch4 1 1 1 1500
+wch4 2 0 7 250
+ok = eq wcrun 0
+if ok
+ok = wcload wcfe1
+end
+if ok
+ok = wcedit milli
+end
+wccase1 wcsedit ok
+wcsv wcfbase wcff32
+wch4 5 0 0 0
+ok2 = eq wcrun 0
+if ok2
+ok2 = wcload wcff32
+end
+if ok2
+ok2 = wcf32
+end
+wccase1 wcsf32 ok2
+wcsv wcfbase wcfe1
+wch4 1 1 1 1500
+wccase1 wcsex eq wcrun 63
+wcsv wcfbase wcfa3
+wch4 3 1 1 1500
+wccase1 wcsact eq wcrun 2
+wcsv wcfbase wcfa4
+wch4 4 0 46 1000
+wccase1 wcsdec eq wcrun 2
+wcsv wcfbase wcfbad
+wch4 1 2 0 1000
+wccase1 wcsbad eq wcrun 2
+wccase1 wcsnof and and wcgone wcfa3 wcgone wcfa4 wcgone wcfbad
+wcmkbig
+wcsv wcfbig wcfbo
+wch4 1 0 0 1000
+ok3 = eq wcrun 64
+wccase1 wcsbig and ok3 wcgone wcfbo
+end
+
+fn wcparse i ulong to ulong
+n = wdarg i
+if or eq n 0 gt n 9
+wcusage
+end
+v = ulong 0
+for j ulong n
+c = ulong get wdab j
+if or lt c 48 gt c 57
+wcusage
+end
+v = add mul v 10 sub c 48
+end
+ret v
+end
+
+fn main to int
+na = argcnt
+if or lt na 2 gt na 3
+wcusage
+end
+milli = ulong 1500
+if eq na 3
+milli = wcparse 2
+end
+n = wdarg 1
+if gt n 4000
+wcusage
+end
+for j ulong n
+put wcbd j get wdab j
+end
+put wcbdn 0 n
+wdpclr
+wdpt wctmp
+wdpd ulong realns
+for j2 ulong get wdpn 0
+put wctd j2 get wdp j2
+end
+put wctdn 0 get wdpn 0
+r = makedir wdp 0 get wdpn 0 448
+if ne r 0
+exit 70
+end
+wdpclr
+wdpt wcnull
+fd = wdopen 1 0
+if lt fd 0
+exit 70
+end
+put wcnul 0 fd
+wcmake
+wccases milli
+wcclean
+k = get wcok 0
+wdoclr
+if eq k 8
+wdot wcok8
+wdoflush 1
+ret 0
+end
+wdot wcbad8
+wdod k
+wdot wcof8
+wdoflush 1
+ret 1
+end

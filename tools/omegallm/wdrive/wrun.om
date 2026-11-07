@@ -1,0 +1,440 @@
+note SPDX-License-Identifier: AGPL-3.0-only
+note wrun.om (DRA-187, lane wsp): arm runner. Composed after wbuild.om (its main renamed wbmain):
+note   OMC=omc wbuild OUT/wrun tools/omegallm/wdrive/wbuild.om@wbmain tools/omegallm/wdrive/wrun.om
+note Usage: wrun ARMS OUTDIR
+note ARMS is plain text, one arm per line: NAME SPLIT MODE [ck=PATH] K L I A ...  (blank lines and
+note lines starting with # are skipped). MODE is gen or probe; hooks are groups of four decimals, at
+note most 64 groups, passed through to wprobe, which judges them. Every line is checked before any arm runs.
+note For each arm whose OUTDIR/NAME.out does not exist it takes the pool lock LOCK (flock(2) exclusive,
+note polled every 10 ms for at most 7200 s, as `flock -w 7200 -o` did; a timeout counts as exit status
+note 1 and prints LOCK_TIMEOUT LOCK on stderr) and runs, with an empty environment and without the
+note lock descriptor,
+note   /usr/bin/taskset -c POOL /usr/bin/nice -n 10 WPROBE gen CK MERGES 64 REC hooks
+note   (probe: WPROBE probe CK MERGES REC hooks)
+note An arm with more than 48 hook words (execprog's 64 records less the 13 above) has them written to
+note OUTDIR/NAME.hooks, one line, and passed as the single last argument @OUTDIR/NAME.hooks (wprobe
+note with @PATH hooks, wprobe.om after 72d3377).
+note with stdout to OUTDIR/NAME.out.tmp, renamed to NAME.out on exit status 0 and to NAME.out.failed
+note otherwise, then appends to OUTDIR/runs.log and prints
+note   RUN NAME SPLIT MODE RC WALL_MS START_UNIX_MS CK_SHA256 WPROBE_SHA256 OUT_SHA256 hooks...
+note (OUT_SHA256 is of NAME.out or NAME.out.failed). An existing NAME.out prints SKIP NAME.
+note Environment: HOME (required), POOL (default 19), LOCK (default HOME/handoffs/hive/queen/pool-POOL.lock),
+note WPROBE (default HOME/work/wsp/build/wprobe), CK (default HOME/.local/share/omega-tool-model/round40/
+note model.ck), MERGES (default beside it, merges.bin), SPLITS (default HOME/work/wsp/aien-train/evidence/
+note OMEGALLM/wsp-dra187-20261107/splits); REC is SPLITS/SPLIT.rec.
+note Exits: 0 every run arm exited 0, 1 some arm failed, 2 usage or a bad ARMS line (stderr names the
+note line), 70 I/O. Scoring is not part of wrun.
+
+note string slots (wdz, see wbuild.om): 0 HOME, 1 POOL, 2 LOCK, 3 WPROBE, 4 SPLITS, 5 CK, 6 MERGES,
+note 7 OUTDIR
+note wrtk: last token start, end. wrar: the parsed arm: 0 1 name, 2 3 split, 4 mode (1 gen, 2 probe),
+note 5 6 ck=PATH value (6 is 0 when absent), 7 position of the first hook, 8 hook count, 9 content end
+global wrtk ulong 2
+global wrar ulong 10
+global wrfail ulong 1
+text wrtwp "WPROBE"
+text wrtck "CK"
+text wrtmrg "MERGES"
+text wrtspl "SPLITS"
+text wrdwp "/work/wsp/build/wprobe"
+text wrdck "/.local/share/omega-tool-model/round40/model.ck"
+text wrdmrg "/.local/share/omega-tool-model/round40/merges.bin"
+text wrdspl "/work/wsp/aien-train/evidence/OMEGALLM/wsp-dra187-20261107/splits"
+text wrtgen "gen"
+text wrtprb "probe"
+text wrtcke "ck="
+text wrtout ".out"
+text wrttmp ".out.tmp"
+text wrtfld ".out.failed"
+text wrthk ".hooks"
+text wrtrec ".rec"
+text wrtlog "/runs.log"
+text wrt64 "64"
+text wrtrun "RUN "
+text wrtskip "SKIP "
+text wrtbad "BAD_ARM line "
+text wrtnl "\n"
+text wrtuse "usage: wrun ARMS OUTDIR (ARMS lines: NAME SPLIT gen|probe [ck=PATH] K L I A ...)\n"
+
+fn wrusage to void
+wdoclr
+wdot wrtuse
+wdoflush 2
+exit 2
+end
+
+fn wrsetup to void
+wdzpool
+wdzenv wrtwp 3 wrdwp
+wdzenv wrtspl 4 wrdspl
+wdzenv wrtck 5 wrdck
+wdzenv wrtmrg 6 wrdmrg
+wdpclr
+wdpa 2
+wdzsave 7
+end
+
+fn wrspace c ulong to bool
+ret or or eq c 32 eq c 9 eq c 13
+end
+
+note next token of wdsrc[p, e) into wrtk; false when none
+fn wrnext p ulong e ulong to bool
+i = p
+while lt i e bound 999999
+if not wrspace ulong get wdsrc i
+break
+end
+i = add i 1
+end
+if ge i e
+ret false
+end
+j = i
+while lt j e bound 999999
+if wrspace ulong get wdsrc j
+break
+end
+j = add j 1
+end
+put wrtk 0 i
+put wrtk 1 j
+ret true
+end
+
+note a name: 1..200 bytes of A-Z a-z 0-9 . _ - +, not starting with .
+fn wrisname s ulong e ulong to bool
+if or eq s e gt sub e s 200
+ret false
+end
+if eq get wdsrc s 46
+ret false
+end
+for i ulong sub e s
+c = ulong get wdsrc add s i
+a = or and ge c 65 le c 90 and ge c 97 le c 122
+d = and ge c 48 le c 57
+p = or or eq c 46 eq c 95 or eq c 45 eq c 43
+if not or or a d p
+ret false
+end
+end
+ret true
+end
+
+fn wrisnum s ulong e ulong to bool
+if or eq s e gt sub e s 20
+ret false
+end
+for i ulong sub e s
+c = ulong get wdsrc add s i
+if or lt c 48 gt c 57
+ret false
+end
+end
+ret true
+end
+
+note parse the line content wdsrc[s, e) into wrar: 0 blank or comment, 1 arm, 2 bad
+fn wrparse s ulong e ulong to ulong
+put wrar 9 e
+if not wrnext s e
+ret 0
+end
+if eq get wdsrc get wrtk 0 35
+ret 0
+end
+put wrar 0 get wrtk 0
+put wrar 1 get wrtk 1
+if not wrisname get wrtk 0 get wrtk 1
+ret 2
+end
+if not wrnext get wrtk 1 e
+ret 2
+end
+put wrar 2 get wrtk 0
+put wrar 3 get wrtk 1
+if not wrisname get wrtk 0 get wrtk 1
+ret 2
+end
+if not wrnext get wrtk 1 e
+ret 2
+end
+m = sub get wrtk 1 get wrtk 0
+put wrar 4 0
+if wbeq get wrtk 0 m wrtgen false
+put wrar 4 1
+end
+if wbeq get wrtk 0 m wrtprb false
+put wrar 4 2
+end
+if eq get wrar 4 0
+ret 2
+end
+ret wrhooks e
+end
+
+note the optional ck=PATH and the hooks after the mode token
+fn wrhooks e ulong to ulong
+p = get wrtk 1
+put wrar 6 0
+if wrnext p e
+m = sub get wrtk 1 get wrtk 0
+if and wbeq get wrtk 0 m wrtcke true gt m 3
+put wrar 5 add get wrtk 0 3
+put wrar 6 get wrtk 1
+p = get wrtk 1
+end
+end
+put wrar 7 p
+k = ulong 0
+while wrnext p e bound 999999
+if not wrisnum get wrtk 0 get wrtk 1
+ret 2
+end
+k = add k 1
+p = get wrtk 1
+end
+note at most 64 groups (wprobe's cap). execprog takes 64 records and gen uses 13 before the hooks,
+note so more than 48 words go through OUTDIR/NAME.hooks and wprobe's last argument @PATH
+if or ne rem k 4 0 gt k 256
+ret 2
+end
+put wrar 8 k
+ret 1
+end
+
+note OUTDIR/NAME followed by t
+fn wrpout t view uchar * to void
+wdpclr
+wdzp 7
+wdpc 47
+wdpb get wrar 0 sub get wrar 1 get wrar 0
+wdpt t
+end
+
+fn wrpck to void
+wdpclr
+if gt get wrar 6 0
+wdpb get wrar 5 sub get wrar 6 get wrar 5
+else
+wdzp 5
+end
+end
+
+fn wrcmd to void
+wdkpre
+wdpclr
+wdzp 3
+wdkp
+if eq get wrar 4 1
+wdkt wrtgen
+else
+wdkt wrtprb
+end
+wrpck
+wdkp
+wdpclr
+wdzp 6
+wdkp
+if eq get wrar 4 1
+wdkt wrt64
+end
+wdpclr
+wdzp 4
+wdpc 47
+wdpb get wrar 2 sub get wrar 3 get wrar 2
+wdpt wrtrec
+wdkp
+if gt get wrar 8 48
+wdpclr
+wdpc 64
+wdzp 7
+wdpc 47
+wdpb get wrar 0 sub get wrar 1 get wrar 0
+wdpt wrthk
+wdkp
+ret
+end
+p = get wrar 7
+e = get wrar 9
+while wrnext p e bound 999999
+wdpclr
+wdpb get wrtk 0 sub get wrtk 1 get wrtk 0
+wdkp
+p = get wrtk 1
+end
+end
+
+note OUTDIR/NAME.hooks: the arm's hook words, one line
+fn wrhookfile to void
+wrpout wrthk
+fd = wdopen 577 438
+if lt fd 0
+exit 70
+end
+wdoclr
+wrhookout
+wdot wrtnl
+wdowr fd
+c = fclose fd
+if ne c 0
+exit 70
+end
+wdoclr
+end
+
+note append wdsrc[s, e) to the output line
+fn wrob s ulong e ulong to void
+for j ulong sub e s
+wdoc ulong get wdsrc add s j
+end
+end
+
+fn wrshaline to void
+if not wdfsha
+exit 70
+end
+wdohex
+wdoc 32
+end
+
+note run the parsed arm
+fn wrarm to void
+wrpout wrtout
+if wdexists
+wdoclr
+wdot wrtskip
+wrob get wrar 0 get wrar 1
+wdot wrtnl
+wdoflush 1
+ret
+end
+if gt get wrar 8 48
+wrhookfile
+end
+wrpout wrttmp
+fo = wdopen 577 438
+if lt fo 0
+exit 70
+end
+wrcmd
+s0 = realns
+m0 = monons
+rc = wdpoolrun -1 fo -1
+c = fclose fo
+m1 = monons
+wdkclr
+wrpout wrttmp
+wdkp
+if eq rc 0
+wrpout wrtout
+else
+wrpout wrtfld
+put wrfail 0 1
+end
+wdkp
+wdrename
+wrline rc div ulong sub m1 m0 1000000 div ulong s0 1000000
+end
+
+note the RUN line, to stdout and to OUTDIR/runs.log
+fn wrline rc long wall ulong st ulong to void
+wdoclr
+wdot wrtrun
+wrob get wrar 0 get wrar 1
+wdoc 32
+wrob get wrar 2 get wrar 3
+wdoc 32
+if eq get wrar 4 1
+wdot wrtgen
+else
+wdot wrtprb
+end
+wdoc 32
+wdod ulong rc
+wdoc 32
+wdod wall
+wdoc 32
+wdod st
+wdoc 32
+wrpck
+wrshaline
+wdpclr
+wdzp 3
+wrshaline
+if eq rc 0
+wrpout wrtout
+else
+wrpout wrtfld
+end
+if not wdfsha
+exit 70
+end
+wdohex
+wrhookout
+wdot wrtnl
+wdpclr
+wdzp 7
+wdpt wrtlog
+fd = wdopen 1089 438
+if lt fd 0
+exit 70
+end
+wdowr fd
+c = fclose fd
+wdoflush 1
+end
+
+fn wrhookout to void
+p = get wrar 7
+e = get wrar 9
+while wrnext p e bound 999999
+wdoc 32
+wrob get wrtk 0 get wrtk 1
+p = get wrtk 1
+end
+end
+
+note pass 0 checks every line, pass 1 runs the arms
+fn wrpass pass ulong to void
+n = get wdsn 0
+s = ulong 0
+ln = ulong 1
+while lt s n bound 999999
+e = wbeol s n
+r = wrparse s add s wbcl s e
+if eq r 2
+wdoclr
+wdot wrtbad
+wdod ln
+wdot wrtnl
+wdoflush 2
+exit 2
+end
+if and eq r 1 eq pass 1
+wrarm
+end
+s = e
+ln = add ln 1
+end
+end
+
+fn main to int
+if ne argcnt 3
+wrusage
+end
+wrsetup
+wdpclr
+wdpa 1
+r = wdload
+if lt r 0
+exit 70
+end
+wdpclr
+wdzp 7
+m = makedir wdp 0 get wdpn 0 509
+wrpass 0
+wrpass 1
+ret int get wrfail 0
+end

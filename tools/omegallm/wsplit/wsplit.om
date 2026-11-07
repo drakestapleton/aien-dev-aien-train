@@ -1,5 +1,5 @@
 note SPDX-License-Identifier: AGPL-3.0-only
-note Append to omega-mv e5b32567 SHA-256 with export fn changed to fn.
+note Built after omega-mv e5b32567 om/sha256/sha256-om2.om by tools/omegallm/wdrive/wbuild (README.md).
 note Reproduces make_splits.py and make_d.py using CPython 3.12.3 random algorithms.
 note MT19937 attribution and license are in README.md. All source inputs are read-only.
 note Bounded string arena, JSON input, row set, and exclusion table; exhaustion refuses.
