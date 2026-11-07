@@ -1,0 +1,9 @@
+# 2026-11-07T04:55:19Z neg_live_same_files_other_dir want_rc=1
+$ sh /home/drakestapleton/work/hive/ownmodel/deploy/aien-train/tests/omegallm/deploy/deploy.sh live /home/drakestapleton/work/hive/ownmodel/deploy/w/neg/same 18296
+LIVE pid=2917567 exe=/home/drakestapleton/work/hive/ownmodel/deploy/w/stage/A/bin/ollm listen=127.0.0.1:18296 
+LIVE health {"status":"ok","in_flight":0,"queued":0,"capacity":32,"busy":false,"model":{"ck":"OLLMCK03","V":32768,"T":1024,"D":384,"H":6,"F":1536,"L":8,"B":16,"step":3000,"P":26745216,"ck_bytes":641885312,"ck_fnv":"df3d63290ce275c4","tok":"OLLMTOK1","tok_V":32768,"tok_fnv":"920b3046a17db9be"}}
+LIVE exe 8bfd6c1b0ea399cdc87880863fdb84e60a8bb4c5f3927a879ad7eacf44439757
+LIVE path /home/drakestapleton/work/hive/ownmodel/deploy/w/stage/A/bin/ollm
+LIVE argv /home/drakestapleton/work/hive/ownmodel/deploy/w/root/current/bin/ollm serve 18296 /home/drakestapleton/work/hive/ownmodel/deploy/w/root/current/checkpoint.ck /home/drakestapleton/work/hive/ownmodel/deploy/w/root/current/merges.tok
+MANCHECK FAIL the running executable is not DIR/bin/ollm
+rc 1

@@ -61,7 +61,7 @@ p91() { echo "ss :18091 at $(now): [$(ss -Hltnp 'sport = :18091' | tr '\n' ' ')]
 	echo "omc $(sha256sum "$OMC")"
 	echo "cores $CORES"
 	echo "aien-supervise: ~/.config/aien-supervise $( [ -d "$HOME/.config/aien-supervise" ] && echo present || echo absent); user processes: [$(pgrep -u "$(id -u)" -fa aien-supervise | tr '\n' ' ')]"
-	echo "host deps: $(command -v sha256sum curl ss taskset nice git python3 | tr '\n' ' ')"
+	echo "host deps: $(for c in sha256sum curl ss taskset nice git python3; do command -v "$c"; done | tr '\n' ' ')"
 	p91
 } >"$EV/env.txt"
 

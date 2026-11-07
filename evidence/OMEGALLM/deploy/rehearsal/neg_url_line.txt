@@ -1,0 +1,4 @@
+# 2026-11-07T04:55:04Z neg_url_line want_rc=1
+$ sh /home/drakestapleton/work/hive/ownmodel/deploy/aien-train/tests/omegallm/deploy/deploy.sh gate /home/drakestapleton/work/hive/ownmodel/deploy/w/neg/url
+MANCHECK FAIL a line that is not a key or a file line
+rc 1

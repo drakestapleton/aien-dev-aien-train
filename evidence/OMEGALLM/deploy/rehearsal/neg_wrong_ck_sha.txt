@@ -1,0 +1,4 @@
+# 2026-11-07T04:54:59Z neg_wrong_ck_sha want_rc=1
+$ sh /home/drakestapleton/work/hive/ownmodel/deploy/aien-train/tests/omegallm/deploy/deploy.sh gate /home/drakestapleton/work/hive/ownmodel/deploy/w/neg/sha
+MANCHECK FAIL a sha256 differs from SUMS (or SUMS lacks the file)
+rc 1

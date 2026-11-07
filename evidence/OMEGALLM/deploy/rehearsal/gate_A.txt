@@ -1,0 +1,4 @@
+# 2026-11-07T04:54:56Z gate_A want_rc=0
+$ sh /home/drakestapleton/work/hive/ownmodel/deploy/aien-train/tests/omegallm/deploy/deploy.sh gate /home/drakestapleton/work/hive/ownmodel/deploy/w/stage/A
+MANCHECK PASS name=ollm-s2-step3000 ck=OLLMCK03 step=3000 ck_fnv=df3d63290ce275c4 tok_fnv=920b3046a17db9be
+rc 0

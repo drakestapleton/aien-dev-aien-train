@@ -1,0 +1,4 @@
+# 2026-11-07T04:54:52Z rollback_ck_recorded_sha want_rc=0
+$ sh -c echo '8826e738c66109720970aab2715e9efe9da0059edc22e1bcfe7782a198a6f768  /home/drakestapleton/work/hive/ownmodel/run1/ck0.bin' | sha256sum -c
+/home/drakestapleton/work/hive/ownmodel/run1/ck0.bin: OK
+rc 0

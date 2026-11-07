@@ -1,0 +1,4 @@
+# 2026-11-07T04:55:13Z start_A want_rc=0
+$ sh /home/drakestapleton/work/hive/ownmodel/deploy/aien-train/tests/omegallm/deploy/deploy.sh start /home/drakestapleton/work/hive/ownmodel/deploy/w/root 18296
+STARTED osup=2917564 exe=/home/drakestapleton/work/hive/ownmodel/deploy/w/build/osup port=18296 at 2026-11-07T04:55:13Z
+rc 0

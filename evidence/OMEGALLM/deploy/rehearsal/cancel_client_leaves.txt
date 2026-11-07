@@ -1,0 +1,3 @@
+# 2026-11-07T04:55:20Z cancel_client_leaves want_rc=28
+$ curl -s -N -m 3 -o /home/drakestapleton/work/hive/ownmodel/deploy/aien-train/evidence/OMEGALLM/deploy/rehearsal/cancel_stream_head.txt -H Content-Type: application/json -d {"messages":[{"role":"user","content":"Write a long story about a lighthouse."}],"stream":true,"max_tokens":900,"temperature":0.8,"seed":3} http://127.0.0.1:18296/v1/chat/completions
+rc 28

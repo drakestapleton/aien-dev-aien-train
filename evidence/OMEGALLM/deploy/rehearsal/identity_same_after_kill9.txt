@@ -1,0 +1,4 @@
+# 2026-11-07T04:56:38Z identity_same_after_kill9 want_rc=0
+$ sh -c [ '{"ck":"OLLMCK03","V":32768,"T":1024,"D":384,"H":6,"F":1536,"L":8,"B":16,"step":3000,"P":26745216,"ck_bytes":641885312,"ck_fnv":"df3d63290ce275c4","tok":"OLLMTOK1","tok_V":32768,"tok_fnv":"920b3046a17db9be"}' = '{"ck":"OLLMCK03","V":32768,"T":1024,"D":384,"H":6,"F":1536,"L":8,"B":16,"step":3000,"P":26745216,"ck_bytes":641885312,"ck_fnv":"df3d63290ce275c4","tok":"OLLMTOK1","tok_V":32768,"tok_fnv":"920b3046a17db9be"}' ] && echo same: {"ck":"OLLMCK03","V":32768,"T":1024,"D":384,"H":6,"F":1536,"L":8,"B":16,"step":3000,"P":26745216,"ck_bytes":641885312,"ck_fnv":"df3d63290ce275c4","tok":"OLLMTOK1","tok_V":32768,"tok_fnv":"920b3046a17db9be"}
+same: {ck:OLLMCK03,V:32768,T:1024,D:384,H:6,F:1536,L:8,B:16,step:3000,P:26745216,ck_bytes:641885312,ck_fnv:df3d63290ce275c4,tok:OLLMTOK1,tok_V:32768,tok_fnv:920b3046a17db9be}
+rc 0

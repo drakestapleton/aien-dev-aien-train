@@ -1,0 +1,1 @@
+UNAVAILABLE port 18296: no ollm process, no listener, /health connection refused (curl rc 7); stopped cleanly at 2026-11-07T04:57:01Z by deploy.sh stop

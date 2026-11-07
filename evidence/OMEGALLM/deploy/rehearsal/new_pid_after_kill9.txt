@@ -1,0 +1,4 @@
+# 2026-11-07T04:56:37Z new_pid_after_kill9 want_rc=0
+$ chk_restart 2917567 2970914 2917564
+before 2917567 after 2970914 parent 2917564 osup 2917564
+rc 0

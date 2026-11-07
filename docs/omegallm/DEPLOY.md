@@ -75,7 +75,7 @@ sh tests/omegallm/deploy/rehearse.sh
 
 Steps (each a receipt in `evidence/OMEGALLM/deploy/rehearsal/NAME.txt`, summary in `summary.txt`):
 build (ollm, mancheck, osup, mutant id); the rollback checkpoint's recorded sha256; stage A
-(candidate) and R (rollback); `gate` A and R; 17 negative controls that must be refused (wrong
+(candidate) and R (rollback); `gate` A and R; 19 negative controls that must be refused (wrong
 checkpoint sha256, a checkpoint sha256 that is no file line, swapped checkpoint, swapped checkpoint
 with model.manifest rewritten to match it, wrong FNV in deploy.manifest, a forbidden name, a `url`
 line, SI's shipped PENDING manifest, a duplicate key, another serve binary, one changed payload byte
@@ -135,7 +135,7 @@ $D gate $R/stage/<NAME>  &&  $D gate $R/stage/<PREV>        # both MANCHECK PASS
 ```
 ln -sfn $R/stage/<NAME> $R/current
 $D start $R 18091            # osup: $R/current/bin/ollm serve 18091 $R/current/checkpoint.ck $R/current/merges.tok
-until curl -sf -m 2 http://127.0.0.1:18091/health >/dev/null; do sleep 1; done     # ~20 s load
+until curl -sf -m 2 http://127.0.0.1:18091/health >/dev/null; do sleep 1; done     # 3-23 s MEASURED (evidence README)
 $D live $R/stage/<NAME> 18091                 # MANCHECK PASS ... live=exe,path,argv,health
 ```
 
@@ -186,7 +186,7 @@ root: a queen / Drake decision.
 
 ### 5.7 Rollback
 
-- To the previous verified own checkpoint (seconds of 503/refused while it loads, ~20 s MEASURED):
+- To the previous verified own checkpoint (connection refused while it loads: 3-23 s MEASURED for S2):
   `$D switch $R $R/stage/<PREV> 18091` (gates `<PREV>` first; refuses a stage that fails), then
   `$D live $R/stage/<PREV> 18091`. Back: the same with `<NAME>`.
 - Clean shutdown with a truthful unavailable state: `$D stop $R 18091` -> `$R/STATE.18091`

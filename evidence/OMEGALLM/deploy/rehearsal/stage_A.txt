@@ -1,0 +1,4 @@
+# 2026-11-07T04:54:53Z stage_A want_rc=0
+$ sh /home/drakestapleton/work/hive/ownmodel/deploy/aien-train/tests/omegallm/deploy/deploy.sh stage /home/drakestapleton/work/hive/ownmodel/deploy/w/stage/A /home/drakestapleton/work/hive/ownmodel/run1/ck.bin /home/drakestapleton/work/hive/ownmodel/data/merges32k.bin /home/drakestapleton/work/hive/ownmodel/deploy/w/build/ollm ollm-s2-step3000 18296
+STAGED /home/drakestapleton/work/hive/ownmodel/deploy/w/stage/A model.manifest 9b38e68cf8dc93947789ee4c964676c27a7fe817e7fabe2f6c030c0e7ab61ba0 deploy.manifest fc371c97454b7a961c7f9c11cbbd18ee183476d8c474c9dc13fb11a302eb0c79
+rc 0
