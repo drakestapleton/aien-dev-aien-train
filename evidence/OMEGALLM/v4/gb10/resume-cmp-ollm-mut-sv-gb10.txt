@@ -1,0 +1,4 @@
+u 49e127dfdb7ab8166ed90e2da1736b8f7aa4171adde06800b05960439fb4a3cc  /home/drakestapleton/work/hive/ownmodel/gpu4/ref/r/u-ollm-mut-sv-gb10.ck
+s 847baa6e435fb69a6f6c2100aec05ff8704845c6461573960343f8c3cb8d9526  /home/drakestapleton/work/hive/ownmodel/gpu4/ref/r/s-ollm-mut-sv-gb10.ck
+/home/drakestapleton/work/hive/ownmodel/gpu4/ref/r/u-ollm-mut-sv-gb10.ck /home/drakestapleton/work/hive/ownmodel/gpu4/ref/r/s-ollm-mut-sv-gb10.ck differ: byte 121, line 1
+DIFFER

@@ -22,9 +22,13 @@ note Arena (gga byte offsets, v3's indices where v3's helpers read them): 0 W, 1
 note 5 CSR order, 6 first layer, 7 layer stride (layer fields 24 + f as gg.om), 8 HF, 9 SF, 10 Z,
 note 11 logits (RC V), 12 CE stats (R 3), 13 DH, 14 DA, 15 DQ DK DU, 16 DO, 17 DF, 18 DP, 19 WS, 20 CS,
 note 21 Adam m, 22 Adam v, 23 SQN, 37 split-K, 41 RoPE forward table (T D/2 pairs), 42 inverse
-note table, 43 zero rows (T D, the missing wpe).
+note table, 43 zero rows (T D, the missing wpe). Layer field 12 (P) is not in the arena: g4pa.
 note g4s: 0 RC, 1 arena bytes, 2 softmax forward id, 3 softmax backward id
 global g4s ulong 8
+note g4pa: device address of layer l's score buffer P (B H T T f32), one nvalloc per layer (context.om
+note nvalloc zero-fills with a while loop of 16 KiB writes and the default bound of 10^6 passes, so one
+note allocation holds at most 16 GiB; the per-layer P buffers are what outgrow it at T 4096)
+global g4pa ulong 64
 global g4tx uint 262144
 global g4ty uint 262144
 note g4tm: 0 steps, 1 step ns, 2 save ns, 3 forward ns, 4 head ns, 5 backward ns, 6 Adam ns
@@ -212,7 +216,7 @@ note ---- chip shape, plan and open ----
 note the shapes the kernels take: V a multiple of 256 (CE steps), D <= 1024 (RMS banks), E, F multiples
 note of 32 (GEMM tiles), T a multiple of 64 (CE row chunks) and, above 512, of 256 (SOFTFL/SOFTBL),
 note B H <= 65535 (GEMM batch), every score buffer B H T T 4 below 2^32 bytes (32-bit GEMM operand
-note offsets, gk.om gkopnd), R = B T <= 262144 (host token rows)
+note offsets, gk.om gkopnd), R = B T <= 262144 (host token rows), L <= 64 (one nvalloc per layer for P)
 fn g4ok to bool
 if or ne rem get xg 0 256 0 gt get xg 0 65536
 ret false
@@ -241,6 +245,9 @@ if gt bh 65535
 ret false
 end
 if ge mul mul bh mul tt tt 4 4294967296
+ret false
+end
+if gt get xg 5 64
 ret false
 end
 ret le mul get xg 6 tt 262144
@@ -282,7 +289,6 @@ ggput 32 r
 ggput 33 r
 ggput 34 mul r get og 4
 ggput 35 mul r get og 4
-ggput 36 pp
 put gga 7 get gga 47
 put gga 47 0
 ggput 0 get xg 8
@@ -323,19 +329,24 @@ ggput 43 td
 end
 
 note open the chip in v4 mode (gr.om grd 6 = 1) with the kernels for the dims, the RoPE tables and the
-note zero rows; exit 12 for a shape the kernels do not take
+note zero rows; exit 12 for a shape the kernels do not take or an arena above one nvalloc's 16.384e9
+note bytes (10^6 zeroing passes of 16 KiB)
 fn g4open to void
 if not g4ok
 exit 12
 end
 put g4s 0 g4rc
 asz = g4plan
+if gt asz 16384000000
+exit 12
+end
 put g4s 1 asz
 g4grs
 put grd 6 1
 g4gro asz
 put gga 40 gkbase
 ggstr
+g4pal
 put g4s 2 15
 put g4s 3 16
 if eq rem get og 1 256 0
@@ -373,6 +384,19 @@ oflush
 x = sleepns long 5000000000
 end
 g4die 3 get nverr 0 ulong get nvstage 0
+end
+
+note one nvalloc (cached, as the arena) per layer for its P buffer; adds the bytes to g4s 1
+fn g4pal to void
+n = mul g4pp 4
+for l ulong get og 5
+m = nvalloc n true
+if le m 0
+g4die 4 get nverr 0 l
+end
+put g4pa l mapaddr m
+put g4s 1 add get g4s 1 n
+end
 end
 
 note `GX c nverr stage` and exit 84 (gg.om ggdie without the mark reads: the buffers may not exist)
@@ -603,7 +627,7 @@ note P = softmax(q k^T / sqrt(E)), o = P u (gg.om ggatt with the T-dependent sof
 fn g4att l ulong to void
 tt = get og 1
 e = get og 7
-pp = ggl l 12
+pp = get g4pa l
 q = ggl l 2
 k = ggl l 3
 gghd 0 q false
@@ -849,7 +873,7 @@ end
 fn g4batt2 l ulong dn ulong dp ulong to void
 tt = get og 1
 e = get og 7
-pp = ggl l 12
+pp = get g4pa l
 dq = gga1 15
 dk = add dq ulong get ggs 6
 du = add dk ulong get ggs 6

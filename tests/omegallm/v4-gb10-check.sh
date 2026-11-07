@@ -7,10 +7,12 @@
 #           with rc 51, gcmp4b (BF16 bound) reported and gated
 #   speedck S1 checkpoints (ginit4, CPU) for speed
 #   speed   CHIP, --quiet exclusive: gtrain4 at S1 (V 32768 D 512 H 8 F 2048 L 8) for T 1024/2048/4096
+#   big     CHIP: smoke of the shapes beyond S1 (ginit4'd beforehand: s1t8192.ck, big.ck in WORK)
 #   resume  CHIP: save/reload/continue == uninterrupted (cmp), geval4 of the trained CK
 #   evalcpu CPU eval4 of the chip-trained CK (no chip), compared with the chip geval4 E line
 # Env: OMC (pinned omc), BUILD, WORK (large files), DATA (byte-token train file), DATA16 (the same as
-#      u16), EV (receipts dir, default evidence/OMEGALLM/v4/gb10), CORES (taskset list, default 5).
+#      u16), EV (receipts dir, default evidence/OMEGALLM/v4/gb10), G4CORES (taskset list, default 5; a
+#      lane-specific name so a CORES exported for another script cannot move these runs).
 # Each command writes EV/NAME.txt (command, binary sha256, output, rc, ms) and a line in EV/summary.tsv.
 here=$(cd "$(dirname "$0")/../.." && pwd)
 cd "$here" || exit 70
@@ -22,7 +24,7 @@ DATA16=${DATA16:-/dev/shm/hive/ownmodel/gpu4/tr8.u16}
 DATA32=${DATA32:-$HOME/work/hive/ownmodel/gpu4/tr40.u16}
 HELD=${HELD:-/dev/shm/hive/ownmodel/gpu4/he8.bin}
 E=${EV:-evidence/OMEGALLM/v4/gb10}
-CORES=${CORES:-5}
+CORES=${G4CORES:-5}
 RUN="taskset -c $CORES nice -n 10"
 mkdir -p "$E" "$WORK" "$BUILD"
 SUM=$E/summary.tsv
@@ -105,6 +107,15 @@ speed)
 	done
 	rm -f "$WORK/run.ck"
 	;;
+big)
+	# beyond S1 (non-quiet smoke, N steps): S1 at T 8192 B 1, and V 32768 T 1024 D 1024 H 16 F 4096 L 16 B 4
+	N=${N:-3}
+	for x in s1t8192 big; do
+		cp "$WORK/$x.ck" "$WORK/run.ck"
+		rec "big-$x" 0 900 ollm-gb10 gtrain4 "$WORK/run.ck" "$DATA32" "$N" "$N"
+	done
+	rm -f "$WORK/run.ck"
+	;;
 resume)
 	# r: V256 T256 D128 H4 F512 L2 B8 (byte data); uninterrupted 0 -> 200 against 0 -> 100, reload, 100 -> 200
 	R=$WORK/r
@@ -133,7 +144,7 @@ evalcpu)
 	grep -q SAME "$E/eval-cmp.txt" || fail=1
 	;;
 *)
-	echo "usage: v4-gb10-check.sh build|refs|parity|speedck|speed|resume|evalcpu" >&2
+	echo "usage: v4-gb10-check.sh build|refs|parity|speedck|speed|big|resume|evalcpu" >&2
 	exit 2
 	;;
 esac
