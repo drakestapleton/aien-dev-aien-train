@@ -33,7 +33,7 @@ src=$here/native/omegallm
 g=$src/gpu
 # gk.om calls gb.om's BF16 check hooks and gb.om calls gg.om, so the dump takes the whole gb10 source;
 # gg.om's main becomes ggmain (gpu-dump.om's main runs) and gg.om supplies model.om's ogmask hook.
-cat "$src/math.om" "$src/data.om" "$src/lpool.om" "$src/model.om" "$src/adam.om" "$src/ckpt.om" "$src/bpe.om" "$src/cli.om" "$src/v4.om" "$src/lio.om" "$src/noserve.om" |
+cat "$src/math.om" "$src/data.om" "$src/lpool.om" "$src/model.om" "$src/adam.om" "$src/ckpt.om" "$src/bpe.om" "$src/cli.om" "$src/tok/tkcore.om" "$src/otok.om" "$src/v4.om" "$src/lio.om" "$src/noserve.om" |
   sed 's/^fn main to int$/fn ocpumain to int/' > "$OUT/gpu-dump.om"
 sed "s/^grset 256 32 64 2 128 2\$/grset $SHAPE/" "$here/tests/omegallm/gpu-dump.om" > "$OUT/gpu-dump-main.om"
 grep -qx "grset $SHAPE" "$OUT/gpu-dump-main.om" || { echo "SHAPE_NOT_SET $SHAPE" >&2; exit 2; }
