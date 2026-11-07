@@ -764,6 +764,14 @@ owait
 ret 0
 end
 
+note ohold / ofree (lio.om, DRA-420): the firmware volume is read-only while the image runs, so no
+note file can be replaced during a load; one-file-per-call reads stay as they are.
+fn ohold ai ulong to void
+end
+
+fn ofree to void
+end
+
 note v1 positioned read (CONTRACT-V1 section 3), as lio.om: up to n bytes of the file named by
 note argument ai, from byte pos, into opw[off .. off + n); opened and closed on every call (efi 12
 note holds one open file). Returns n, fewer only when the file ends first, 0 at or after its end.

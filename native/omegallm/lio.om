@@ -109,19 +109,62 @@ exit 70
 end
 end
 
-note size in bytes of the file named by argv[ai] (seek to its end)
+note held load descriptor (DRA-420): ohold opens argv[ai] once; until ofree, every ofsz and oprd of
+note that argument goes through this one descriptor, so a file renamed over the path during a load
+note cannot mix two files' bytes into one loaded state. ohd[0] fd + 1 (0 none), ohd[1] the argument.
+note A second ohold before ofree exits 70 (one load at a time).
+global ohd ulong 2
+
+fn ohold ai ulong to void
+if ne get ohd 0 0
+exit 70
+end
+pl = oargp ai
+fd = int fopen oarg 0 pl 0 0
+if lt fd 0
+exit 70
+end
+put ohd 0 add ulong fd 1
+put ohd 1 ai
+end
+
+fn ofree to void
+if ne get ohd 0 0
+fd = int sub get ohd 0 1
+put ohd 0 0
+if ne fclose fd 0
+exit 70
+end
+end
+end
+
+note the held descriptor of argv[ai], or -1 when ai is not held
+fn ohfd ai ulong to int
+if and ne get ohd 0 0 eq get ohd 1 ai
+ret int sub get ohd 0 1
+end
+ret int -1
+end
+
+note size in bytes of the file named by argv[ai] (seek to its end; the held descriptor when ai is held)
 fn ofsz ai ulong to ulong
+fd = ohfd ai
+opn = lt fd 0
+if opn
 n = oargp ai
 fd = int fopen oarg 0 n 0 0
 if lt fd 0
 exit 70
 end
+end
 sz = fseek fd 0 2
 if lt sz 0
 exit 70
 end
+if opn
 if ne fclose fd 0
 exit 70
+end
 end
 ret ulong sz
 end
@@ -425,15 +468,20 @@ end
 
 
 note v1 positioned read (CONTRACT-V1 section 3): read up to n bytes of the file named by argv[ai],
-note from byte pos, into opw[off .. off + n). The file is opened and closed on every call. Returns
+note from byte pos, into opw[off .. off + n). The file is opened and closed on every call, except
+note while ai is held (ohold), when the held descriptor is used. Returns
 note the bytes read: n, fewer only when the file ends first, 0 at or after its end. Exit 70 on an
 note I/O error, 2 on a bad argument; off + n over len opw traps 3. Each pread pass adds at least one
 note byte or ends, so n + 1 <= 2097153 passes suffice: 3 outer passes of at most 999999 inner ones.
 fn oprd ai ulong pos ulong off ulong n ulong to ulong
+fd = ohfd ai
+opn = lt fd 0
+if opn
 pl = oargp ai
 fd = int fopen oarg 0 pl 0 0
 if lt fd 0
 exit 70
+end
 end
 p = ulong 0
 dn = false
@@ -450,8 +498,10 @@ p = add p ulong r
 end
 end
 end
+if opn
 if ne fclose fd 0
 exit 70
+end
 end
 ret p
 end

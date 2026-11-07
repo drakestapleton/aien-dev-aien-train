@@ -173,8 +173,23 @@ ocwput 0 112
 ocwend ai
 end
 
+note loaded identity (DRA-420): ockhd holds the header bytes the last ockload or xload (v4.om) read
+note and admitted; ockid 0 the file size it admitted, 1 the payload FNV-1a 64 it recomputed and
+note verified, 2 1 once a load completed. Taken from the one held descriptor (ohold), so a serving
+note process reports what it loaded, not what is on disk later.
+global ockhd uchar 128
+global ockid ulong 4
+
+fn ocksnap hl ulong n ulong to void
+for i ulong hl
+put ockhd i get opw i
+end
+put ockid 0 n
+end
+
 note load the checkpoint named by argv[ai] into og, ow (params) and omv (m, v)
 fn ockload ai ulong to void
+ohold ai
 n = ofsz ai
 if gt n OCKCAP
 exit 15
@@ -231,9 +246,13 @@ end
 if gt n add hl pb
 exit 15
 end
+ocksnap hl n
 if ne ocklp ai hl p hs 1
 exit 14
 end
+ofree
+put ockid 1 hs
+put ockid 2 1
 end
 
 note one pass over the payload at hl: read, hash and decode each chunk; exit 70 on a short read.

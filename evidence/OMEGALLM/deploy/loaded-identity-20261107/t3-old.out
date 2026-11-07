@@ -1,0 +1,4 @@
+stage rc=0
+0000112 00 00 00 00 00 88 90 40
+"ck_fnv":"e36a5ab14795bcc5","tok":"OLLMTOK1"
+live rc=0 MANCHECK PASS name=s2 ck=OLLMCK03 step=0 ck_fnv=e36a5ab14795bcc5 tok_fnv=920b3046a17db9be live=exe,path,argv,health

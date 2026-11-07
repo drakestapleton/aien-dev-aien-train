@@ -1872,8 +1872,10 @@ r = oprd ai 0 0 8
 ret opw8 0
 end
 
-note load a CK03 file: 10 short, 11 magic, 12 shapes, 13 P, 14 FNV, 15 long, 70 I/O
+note load a CK03 file: 10 short, 11 magic, 12 shapes, 13 P, 14 FNV, 15 long, 70 I/O. One held
+note descriptor (ohold) for the whole load; the admitted header and verified FNV go to ockhd / ockid.
 fn xload ai ulong to void
+ohold ai
 n = ofsz ai
 if lt n 8
 exit 10
@@ -1914,6 +1916,7 @@ if gt n wn
 exit 15
 end
 hf = opw8 120
+ocksnap 128 n
 xsetup
 h = ulong 14695981039346656037
 nv = mul 3 get xg 8
@@ -1923,6 +1926,9 @@ end
 if ne h hf
 exit 14
 end
+ofree
+put ockid 1 h
+put ockid 2 1
 xldw
 end
 

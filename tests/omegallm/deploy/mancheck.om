@@ -43,8 +43,9 @@ note ks/ke: value start/end of the M keys 0..9 and (at 16 + k) the D keys 0..5
 global ks ulong 32
 global ke ulong 32
 note cf: recomputed checkpoint 0 magic, 1..7 V T D H F L B, 8 step, 9 P, 10 bytes, 11 header FNV,
-note 12 payload FNV; 13 tokenizer V, 14 tokenizer header FNV, 15 tokenizer recomputed FNV
-global cf ulong 16
+note 12 payload FNV; 13 tokenizer V, 14 tokenizer header FNV, 15 tokenizer recomputed FNV; 16 rope
+note base f64 bits (OLLMCK03 header offset 112; 0 for CK01/CK02, reported by serve as "rope":null)
+global cf ulong 17
 note tp/tq: token starts/ends of the last tokens call
 global tp ulong 16
 global tq ulong 16
@@ -146,7 +147,10 @@ text jm8 ",\"step\":"
 text jm9 ",\"P\":"
 text jma ",\"ck_bytes\":"
 text jmb ",\"ck_fnv\":\""
+text jmr "\",\"rope\":\""
+text jmrn "\",\"rope\":null"
 text jmc "\",\"tok\":\"OLLMTOK1\",\"tok_V\":"
+text jmcn ",\"tok\":\"OLLMTOK1\",\"tok_V\":"
 text jmd ",\"tok_fnv\":\""
 text jme "\"}}"
 text jst "{\"status\":\"ok\","
@@ -507,6 +511,10 @@ put cf 9 rdle8 96
 put cf 10 sz
 hl = ckhl mg
 put cf 11 rdle8 sub hl 8
+put cf 16 0
+if eq hl 128
+put cf 16 rdle8 112
+end
 if ne sz add hl mul 24 get cf 9
 bad rcks
 end
@@ -1171,7 +1179,14 @@ q = xput q jma
 q = xdec q get cf 10
 q = xput q jmb
 q = xhex q get cf 12
+if eq get cf 16 0
+q = xput q jmrn
+q = xput q jmcn
+else
+q = xput q jmr
+q = xhex q get cf 16
 q = xput q jmc
+end
 q = xdec q get cf 13
 q = xput q jmd
 q = xhex q get cf 15

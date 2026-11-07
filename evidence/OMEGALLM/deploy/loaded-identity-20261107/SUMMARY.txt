@@ -1,0 +1,8 @@
+build old 92c4e8d6: 8bfd6c1b0ea399cdc87880863fdb84e60a8bb4c5f3927a879ad7eacf44439757
+build new 343acbce: c0e087e4e038b449caa8462a8d0d6aecbf0921fdc6feadd4ee8859329734e7f8
+omc 2c82480596bbdc50cda9626866209ef662d5834f278f839ff4ce0250c495029f
+s2.ck ae7559ea1cfc89269905191fb64ea31f185a0c0940965144e4f94d05f9abb452
+T1 restage after load: old live rc=1, new live rc=1 (/health already captured once at start on 92c4e8d6)
+T2 rename mid-load: old exit 14 (refused), new loads s2 whole, /health = s2
+T3 rope-only swap: old live rc=0 (false PASS, process runs rope 1058.0), new live rc=1
+v4-check.sh on new: 17/17 PASS; v3 ockload eval identical old/new, corrupt payload exit 14 both
