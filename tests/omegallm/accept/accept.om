@@ -48,7 +48,8 @@ const SW2L ulong 77
 const SFN ulong 78
 const BPBMU ulong 1500000
 note ACMUT: 0 the real checkers; build.sh --mutant sets 1 (line glob matches anything), 2 (exec ignores the
-note test's exit status and nonce), 3 (critical scan finds nothing). Mutants exist only to be caught.
+note test's exit status and nonce), 3 (critical scan finds nothing), 4 (the gate verdict skips the
+note context-window check, CHANGES.md C1). Mutants exist only to be caught.
 const ACMUT ulong 0
 note wk[WFS, WFS + 128) the item family, wk[WSP, WSP + 32) its split
 const WFS ulong 344576
@@ -105,6 +106,8 @@ const SSPL ulong 89
 const SREAS ulong 90
 const SHN ulong 92
 const SRN ulong 93
+note sv[SSTT]: the stub's declared context (GET /health model.T; 0: /health without a model member)
+const SSTT ulong 120
 
 note rs: the captured reply; content at [0, CTN), call k arguments at RCL + k CLAS, call k name at RCL + CLNM + k CLNS
 const RSN ulong 528384
@@ -4297,8 +4300,125 @@ end
 acloop f ulong r wk sv pa
 end
 
+note ======== the endpoint's served context (PREREG.md section 4, column context window; CHANGES.md C1)
+note Before its items each worker records OUTDIR/context-WORKER.tsv: a header line, then CTX TAB SOURCE.
+note SOURCE health: GET /health answered 200 with a numeric model.T (the served context of `ollm serve`,
+note whose CHAT1 server refuses prompts over T); else declared: the environment variable CTX (decimal
+note tokens, required for endpoints without model.T); else unknown (CTX -), which fails every gated role.
+text kxget "GET"
+text kxhlth "/health"
+text kxmdl "model"
+text kxT "T"
+text kctxenv "CTX"
+text kctx0 "/context-"
+text kctxhdr "context\tsource\n"
+text kchealth "health"
+text kcdecl "declared"
+text kcunk "unknown"
+
+note achlt: the numeric model.T of GET /health at sv[SIP]:sv[SPORT]; 0 when unreachable, not 200 or absent
+fn achlt sv view ulong SVN to ulong
+a = new uchar 16 0
+cs = new ulong 320 0
+io = new uchar 131072 0
+r = haddr4 a uint get sv SIP get sv SPORT
+fd = hdial a 30000000000
+if lt fd 0
+ret 0
+end
+r = hinit cs io int fd 0
+hsettmo cs 60000000000 60000000000
+hsetbdl cs 120000000000
+put cs HBCAP 65536
+r = hreqst cs io kxget
+r = hfe r hreqtg cs io kxhlth
+r = hfe r hhname cs io khost
+r = hfe r hhval cs io kloc
+r = hfe r hhend cs io 0 0
+r = hfe r hwfin cs io
+t = ulong 0
+if ge r 0
+st = hrsprd cs io
+if eq st 200
+t = achlt2 cs io
+end
+end
+x = hclose cs
+ret t
+end
+
+fn achlt2 cs edit ulong 320 io edit uchar 131072 to ulong
+rb = new uchar 65536 0
+tp = new uint TPN 0
+n = hbodyall cs io rb
+if le n 0
+ret 0
+end
+r = js_init tp 983040 64
+r = js_parse view part rb 0 ulong n tp ulong n
+if lt r 0
+ret 0
+end
+m = acmem view part rb 0 ulong n tp 0 kxmdl
+t = acmem view part rb 0 ulong n tp m kxT
+if ne actype tp t jsnum
+ret 0
+end
+ret acnum view part rb 0 ulong n tp t
+end
+
+note acctxv: environment variable CTX as decimal tokens; 0 when unset, empty, over 9 digits or not decimal
+fn acctxv to ulong
+e = new uchar 4096 0
+l = acenv kctxenv e
+if or lt l 1 gt l 9
+ret 0
+end
+ret acdecv view part e 0 ulong l
+end
+
+note acctxw: write OUTDIR/context-WORKER.tsv (exits 4 when it cannot)
+fn acctxw pa edit uchar PAN sv view ulong SVN to void
+t = achlt sv
+src = ulong 1
+if eq t 0
+t = acctxv
+src = 2
+end
+if eq t 0
+src = 0
+end
+o = new uchar 128 0
+q = acapp o 0 kctxhdr
+if eq src 0
+q = acapp o q kdash
+else
+q = acdec o q t
+end
+q = acapp o q ktab
+if eq src 1
+q = acapp o q kchealth
+end
+if eq src 2
+q = acapp o q kcdecl
+end
+if eq src 0
+q = acapp o q kcunk
+end
+q = acapp o q knl
+rd = new uchar 64 0
+k = acapp rd 0 kctx0
+k = acdec rd k get sv SWI
+k = acapp rd k ktsv
+m = acpth pa POD get sv SODL view part rd 0 k 0
+if not acwfile view part pa PB m view part o 0 q
+exit 4
+end
+end
+
 note run HOST PORT SUITEDIR OUTDIR OMC MODEL TEMPMILLI SEED WORKER NWORKERS [MUTANTOP]
-note Writes OUTDIR/results-WORKER.tsv; `accept sum` aggregates every worker's file.
+note Writes OUTDIR/context-WORKER.tsv (the endpoint's served context, above) and OUTDIR/results-WORKER.tsv;
+note `accept sum` aggregates every worker's files.
 fn cmdrun to void
 na = ulong argcnt
 if and ne na 12 ne na 13
@@ -4349,6 +4469,7 @@ exit 2
 end
 end
 x = makedir pa POD get sv SODL 493
+acctxw pa sv
 put sv ST0L acrdopt wk pa sv fth WT0
 put sv add ST0L 1 acrdopt wk pa sv fto WT1
 put sv add ST0L 2 acrdopt wk pa sv ftf WT2
@@ -4396,9 +4517,12 @@ global gft ulong 128
 global gfp ulong 128
 global gfc ulong 1
 global gth ulong 1
+note gcx: 0 the endpoint context (0 unknown), 1 context records read, 2 an unknown record seen,
+note 3 source bits (1 health, 2 declared, 4 sum's CTX fallback), 4 the reason of the last acgv verdict
+global gcx ulong 8
 text kstrain "train"
 text kstest "test"
-text ksumhdr "role\tsplit\tn\tpass\tnot_run\trate\twilson95_lo\twilson95_hi\tp50_ms\tp95_ms\tctx_max\tctx_p95\tcrit\treasons\tgate\tverdict\n"
+text ksumhdr "role\tsplit\tn\tpass\tnot_run\trate\twilson95_lo\twilson95_hi\tp50_ms\tp95_ms\tctx_max\tctx_p95\tcrit\treasons\tgate\tverdict\tverdict_reason\n"
 text kfamhdr "\nrole\tsplit\tfamily\tpass\tn\n"
 text kovr "overall\t"
 text keq "="
@@ -4729,27 +4853,171 @@ end
 
 note acgv: the verdict of gated group g against tv: 0 PASS, 1 FAIL, 2 NOT_RUN. PASS needs exactly the
 note registered n rows, no NOT_RUN, Wilson lower bound >= the minimum, p95 <= the limit, no crit, busy, ctx rows.
+note First, whatever the rows say (CHANGES.md C1): a line with ctx_min > 0 FAILS when the endpoint's context
+note is unknown (reason context_unknown) or below ctx_min (context_below_prereg). gcx[4] gets the reason.
 fn acgv g ulong tv view ulong 8 to ulong
+put gcx 4 0
+if and gt get tv 3 0 ne ACMUT 4
+if eq get gcx 0 0
+put gcx 4 1
+ret 1
+end
+if lt get gcx 0 get tv 3
+put gcx 4 2
+ret 1
+end
+end
 if or eq get gn g 0 gt get gnr g 0
+put gcx 4 3
 ret 2
 end
 if ne get gn g get tv 0
+put gcx 4 4
 ret 1
 end
 lo = acwil get gp g get gn g false
 if lt mul lo 1000.0 f64 get tv 1
+put gcx 4 5
 ret 1
 end
 if gt acnr g 950 true get tv 2
+put gcx 4 6
 ret 1
 end
 o = mul g 12
 c = add get grs add o 6 get grs add o 2
 c = add c get grs add o 3
 if gt c 0
+put gcx 4 7
 ret 1
 end
 ret 0
+end
+
+text kvr0 "ok"
+text kvr1 "context_unknown"
+text kvr2 "context_below_prereg"
+text kvr3 "rows_missing"
+text kvr4 "n_mismatch"
+text kvr5 "below_min"
+text kvr6 "p95_over"
+text kvr7 "crit_busy_ctx_rows"
+note acvrn: the name of verdict reason c at o[q..]
+fn acvrn o edit uchar * q ulong c ulong to ulong
+if eq c 1
+ret acapp o q kvr1
+end
+if eq c 2
+ret acapp o q kvr2
+end
+if eq c 3
+ret acapp o q kvr3
+end
+if eq c 4
+ret acapp o q kvr4
+end
+if eq c 5
+ret acapp o q kvr5
+end
+if eq c 6
+ret acapp o q kvr6
+end
+if eq c 7
+ret acapp o q kvr7
+end
+ret acapp o q kvr0
+end
+
+note acctxld: every OUTDIR/context-W.tsv (W 0..8) into gcx; the context is the smallest recorded, 0 (unknown)
+note when any record is unknown; with no record at all, the environment variable CTX (source sum_env)
+fn acctxld pa edit uchar PAN od ulong to void
+f = new uchar 4096 0
+rd = new uchar 64 0
+for w ulong 9
+q = acapp rd 0 kctx0
+q = acdec rd q w
+q = acapp rd q ktsv
+m = acpth pa POD od view part rd 0 q 0
+r = acreadf view part pa PB m f
+if gt r 0
+acctx1 view part f 0 ulong r
+end
+end
+if eq get gcx 1 0
+t = acctxv
+if gt t 0
+put gcx 0 t
+put gcx 3 4
+end
+ret
+end
+if ne get gcx 2 0
+put gcx 0 0
+end
+end
+
+note acctx1: one context record s (header line, then CTX TAB SOURCE)
+fn acctx1 s view uchar * to void
+put gcx 1 add get gcx 1 1
+e = acfind s knl 0 false
+if ge e len s
+put gcx 2 1
+ret
+end
+p = add e 1
+x = acfld view part s p sub len s p 0
+v = ulong 0
+if le sub acsb x acsa x 9
+v = acdecv view part s add p acsa x sub acsb x acsa x
+end
+if eq v 0
+put gcx 2 1
+ret
+end
+if or eq get gcx 1 1 lt v get gcx 0
+put gcx 0 v
+end
+y = acfld view part s p sub len s p 1
+if lt add p acsa y len s
+c = get s add p acsa y
+if eq c 104
+put gcx 3 or get gcx 3 1
+end
+if eq c 100
+put gcx 3 or get gcx 3 2
+end
+end
+end
+
+text kctxl "context\t"
+text kcmix "health+declared"
+text kcsenv "sum_env"
+note acctxl: the summary's context line: context TAB CTX (- when unknown) TAB SOURCE
+fn acctxl o edit uchar * q ulong to ulong
+r = acapp o q kctxl
+c = get gcx 0
+if eq c 0
+r = acapp o r kdash
+r = acapp o r ktab
+r = acapp o r kcunk
+ret acapp o r knl
+end
+r = acdec o r c
+r = acapp o r ktab
+b = get gcx 3
+if eq b 1
+r = acapp o r kchealth
+end
+if eq b 2
+r = acapp o r kcdecl
+end
+if eq b 3
+r = acapp o r kcmix
+end
+if eq b 4
+r = acapp o r kcsenv
+end
+ret acapp o r knl
 end
 
 note acsline: the summary line of group g at o[q..]; sets *v (tv[7]) to the group verdict when gated
@@ -4791,8 +5059,12 @@ end
 if eq v 2
 r = acapp o r knotrun
 end
+r = acapp o r ktab
+r = acvrn o r get gcx 4
 else
 r = acapp o r kreport
+r = acapp o r ktab
+r = acapp o r kdash
 r = acapp o r ktab
 r = acapp o r kdash
 end
@@ -4859,6 +5131,8 @@ text ksumtxt "/summary.tsv"
 
 note sum OUTDIR THRESHOLDS: prints and writes OUTDIR/summary.tsv; exits 0 when every gated line passes, 1 when one
 note fails, 3 when none fails but one is NOT_RUN. Groups with rows but no THRESHOLDS line are reported, never gated.
+note The endpoint's context comes from OUTDIR/context-W.tsv (the runner's records), else the environment
+note variable CTX; a gated line's verdict_reason says why it failed (CHANGES.md C1).
 fn cmdsum to void
 pa = new uchar PAN 0
 th = new uchar 65536 0
@@ -4872,6 +5146,7 @@ if lt t 1
 exit 4
 end
 acsumld pa od
+acctxld pa od
 exit int acsumo pa od th ulong t
 end
 
@@ -4923,6 +5198,7 @@ q = acsg1 o q th g tv
 end
 fl = ne get tv 5 0
 nr = ne get tv 6 0
+q = acctxl o q
 q = acapp o q kovr
 v = ulong 0
 if fl
@@ -5475,8 +5751,27 @@ r = hfe r hput cs io view part o 0 n
 ret hfe r hwfin cs io
 end
 
+text kshl1 "{\"status\":\"ok\""
+text kshl2 ",\"model\":{\"ck\":\"STUB\",\"T\":"
+note acshlt: GET /health: {"status":"ok"}, with "model":{"ck":"STUB","T":sv[SSTT]} when the stub declares a context
+fn acshlt cs edit ulong 320 io edit uchar 131072 sv edit ulong SVN to long
+o = new uchar FBN 0
+q = acapp o 0 kshl1
+if gt get sv SSTT 0
+q = acapp o q kshl2
+q = acdec o q get sv SSTT
+q = acapp o q kendm
+end
+q = acapp o q kendm
+put sv SSTRM 0
+ret acsout cs io o q sv
+end
+
 note acsreq: answer one read request on cs / io (body into d); sv[SOP] 1 garbage, 2 ref
 fn acsreq cs edit ulong 320 io edit uchar 131072 d edit uchar RQN pa edit uchar PAN sv edit ulong SVN to long
+if hispath cs io kxhlth
+ret acshlt cs io sv
+end
 o = new uchar FBN 0
 id = new uchar 256 0
 n = hbodyall cs io d
@@ -5558,10 +5853,11 @@ end
 x = fclose int lf
 end
 
-note stub PORT garbage|ref SUITEDIR [COUNT]: serve the control replies on 127.0.0.1:PORT, COUNT connections
+note stub PORT garbage|ref SUITEDIR [COUNT [T]]: serve the control replies on 127.0.0.1:PORT, COUNT connections;
+note GET /health declares context T (model.T) when T > 0, else answers without a model member
 fn cmdstub to void
 na = ulong argcnt
-if and ne na 5 ne na 6
+if or lt na 5 gt na 7
 exit 2
 end
 pa = new uchar PAN 0
@@ -5584,9 +5880,14 @@ exit 2
 end
 put sv SSDL acgeta 4 pa PSD
 put sv SMAX 1000000000
-if eq na 6
+if ge na 6
 n = acgeta 5 pa PB
 put sv SMAX acudec view part pa PB n
+end
+put sv SSTT 0
+if eq na 7
+n = acgeta 6 pa PB
+put sv SSTT acudec view part pa PB n
 end
 acsserve pa sv
 end
