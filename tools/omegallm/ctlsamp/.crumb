@@ -1,0 +1,5 @@
+{
+  "schema_version": "1.0.0",
+  "name": "ctlsamp",
+  "purpose": "Seeded Omega telemetry sampler for the wsp controller study (DRA-187); read-only instrument, not product"
+}

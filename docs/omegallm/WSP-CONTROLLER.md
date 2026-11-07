@@ -110,17 +110,27 @@ History span of the existing sensors log, from the first row of `2026-10-19.csv`
 `WolframLanguageEvaluator: DateDifference[DateObject[{2026,10,19,10,14,6},TimeZone->-5], DateObject[{2026,11,6,23,56,33},TimeZone->-6], {"Day","Hour","Minute","Second"}] -> 18 days 14 h 42 min 27 s`.
 
 That log lacks PSI, per-core and thermal fields, so it can train only the reduced feature set
-(section 6.3). The new sampler below adds those fields.
+(section 6.3). The sampler of section 5 adds those fields.
 
 ## 5. Trace recorded for this study
 
 Directory `evidence/OMEGALLM/wsp-ctl-traces-20261107/` in this branch. Both instruments ran on
 core 0 only, at `nice -n 19`, read only, with no GPU work and no setting changed.
 
+Instrument going forward: the seeded Omega sampler `tools/omegallm/ctlsamp/ctlsamp.om` (build,
+usage, row format and exit codes in its README). It writes the keys of both files below in one
+row, runs `nvidia-smi` and `upsc` through `execprog` with pipes, and timestamps with `monons` and
+`realns`. Its port gate (2 minute run, keys and types equal to these traces, 71 values per row
+equal to same-moment raw readings on 3 rows, a missing command recorded as a read error) is in
+`gate-om-20261107/` and the evidence README, all PASS (MEASURED).
+
+The two files below are data from the old Python and shell samplers, which are deleted from the
+tree; their source stays in commit `a64e8707ebd2693254f27285dee6d8bdd0391559`.
+
 | File | What | Rows | First / last ts_utc | sha256 |
 |---|---|---|---|---|
-| `trace-001.jsonl` | `sampler.py`, 5 s interval | 360 | 2026-11-07T05:53:53Z / 06:23:48Z | `531da5be7473ce80b4d98f736810365dd33339d3f0626ea7b99cb15bcb51a03e` |
-| `ups-001.jsonl` | `ups-sampler.sh` (`upsc spark`), 5 s interval | 340 | 2026-11-07T05:55:10Z / 06:23:45Z | `fd8a873d20491667d05f81462f2f7848676151addb6f2ced1a1ef3c9caab894c` |
+| `trace-001.jsonl` | old `sampler.py`, 5 s interval | 360 | 2026-11-07T05:53:53Z / 06:23:48Z | `531da5be7473ce80b4d98f736810365dd33339d3f0626ea7b99cb15bcb51a03e` |
+| `ups-001.jsonl` | old `ups-sampler.sh` (`upsc spark`), 5 s interval | 340 | 2026-11-07T05:55:10Z / 06:23:45Z | `fd8a873d20491667d05f81462f2f7848676151addb6f2ced1a1ef3c9caab894c` |
 
 Start command (recorded in `run-start.txt`, 2026-11-07T05:53:47Z):
 `taskset -c 0 nice -n 19 python3 sampler.py trace-001.jsonl 5 360`. Instrument hashes:

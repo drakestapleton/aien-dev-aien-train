@@ -1,0 +1,1298 @@
+om2
+note ctlsamp: wsp controller telemetry sampler. A measurement instrument, not product.
+note Reads world-readable kernel files and runs one-shot nvidia-smi and upsc. No root,
+note no GPU work. Appends one JSON object per line to OUT, keys sorted, in the row format
+note of evidence/OMEGALLM/wsp-ctl-traces-20261107/trace-001.jsonl plus the five UPS keys.
+note Usage: ctlsamp OUT [interval_s] [count] [nvsmi_path] [upsc_path] [raw_log]
+note Exit: 0 done, 2 usage or open error, 3 a kernel file could not be read.
+text dnv "/usr/bin/nvidia-smi"
+text dups "/usr/bin/upsc"
+text nvq "--query-gpu=utilization.gpu,utilization.memory,power.draw,temperature.gpu,clocks.sm,pstate"
+text nvf "--format=csv,noheader,nounits"
+text upsn "spark"
+text nul "/dev/null"
+text pst "/proc/stat"
+text pla "/proc/loadavg"
+text pme "/proc/meminfo"
+text ppc "/proc/pressure/cpu"
+text ppm "/proc/pressure/memory"
+text ppi "/proc/pressure/io"
+text tzpre "/sys/class/thermal/thermal_zone"
+text tzsuf "/temp"
+text usage "usage: ctlsamp OUT [interval_s>=5] [count] [nvsmi_path] [upsc_path] [raw_log]\n"
+text eopen "ctlsamp: cannot open output\n"
+text eread "ctlsamp: cannot read a kernel file\n"
+text sep ", "
+text knull "null"
+text ktz "tz"
+text kc "c"
+text kbatt "\"battery_runtime_s\": "
+text kcore "\"core_busy_pct\": {"
+text kgerr "\"gpu_error\": "
+text kvolt "\"input_voltage\": "
+text kload "\"loadavg\": ["
+text krun "\"runnable\": "
+text kmem "\"mem\": {"
+text kmav "\"MemAvailable_kb\": "
+text kmto "\"MemTotal_kb\": "
+text kmsf "\"SwapFree_kb\": "
+text kmst "\"SwapTotal_kb\": "
+text kpc "\"psi_cpu\": {"
+text kpi "\"psi_io\": {"
+text kpm "\"psi_mem\": {"
+text kcost "\"sample_cost_us\": "
+text kseq "\"seq\": "
+text kthm "\"thermal_c\": {"
+text kunix "\"ts_unix\": "
+text kutc "\"ts_utc\": "
+text kuerr "\"ups_error\": "
+text kuload "\"ups_load_pct\": "
+text kunom "\"ups_realpower_nominal_w\": "
+text kustat "\"ups_status\": "
+text kg0 "\"gpu_util_pct\": "
+text kg1 "\"gpu_mem_util_pct\": "
+text kg2 "\"gpu_power_w\": "
+text kg3 "\"gpu_temp_c\": "
+text kg4 "\"gpu_sm_mhz\": "
+text kg5 "\"gpu_pstate\": "
+text kfull "\"full_"
+text ksome "\"some_"
+text ka10 "avg10\": "
+text ka300 "avg300\": "
+text ka60 "avg60\": "
+text ktot "total\": "
+text wsome "some"
+text wa10 "avg10"
+text wa60 "avg60"
+text wa300 "avg300"
+text wtot "total"
+text wmto "MemTotal"
+text wmav "MemAvailable"
+text wmst "SwapTotal"
+text wmsf "SwapFree"
+text wuload "ups.load"
+text wunom "ups.realpower.nominal"
+text wustat "ups.status"
+text wvolt "input.voltage"
+text wbatt "battery.runtime"
+text rtimeo "timeout"
+text rrc "rc="
+text rhdr "== "
+text tgpu "gpu"
+text tups "ups"
+global ob uchar 65536
+global op ulong 1
+global fb uchar 65536
+global fl ulong 1
+global pb uchar 4096
+global cb uchar 16384
+global cl ulong 2
+global cs long 2
+global xp uchar 4096
+global xl ulong 1
+global fds uchar 8
+global wst uchar 4
+global db uchar 32
+global ab uchar 4096
+global gpth uchar 4096
+global gpl ulong 1
+global upth uchar 4096
+global upl ulong 1
+global ct ulong 64
+global ci ulong 64
+global pt ulong 64
+global pi ulong 64
+global pm long 24
+global pd ulong 24
+global pp uchar 24
+global tz long 64
+global ntz ulong 1
+global mv ulong 4
+global mp uchar 4
+global lb uchar 512
+global ll ulong 1
+global nm long 1
+global nd ulong 1
+global fs ulong 16
+global fe ulong 16
+global nf ulong 1
+global us ulong 8
+global ue ulong 8
+global uf uchar 8
+global ofd long 1
+global rfd long 1
+global rseq ulong 1
+
+note ---- output buffer ----
+fn oc c uchar to void
+i = get op 0
+put ob i c
+put op 0 add i 1
+end
+fn ot t view uchar * to void
+for i ulong len t
+oc get t i
+end
+end
+fn osep to void
+i = get op 0
+if gt i 0
+c = get ob sub i 1
+if and ne c 123 ne c 91
+ot sep
+end
+end
+end
+fn ou v ulong to void
+x = v
+n = ulong 0
+go = true
+while go bound 24
+put db n uchar add 48 rem x 10
+n = add n 1
+x = div x 10
+go = ne x 0
+end
+while gt n 0 bound 24
+n = sub n 1
+oc get db n
+end
+end
+note print exactly k decimal digits of f, zero padded
+fn ofix f ulong k ulong to void
+n = ulong 0
+x = f
+while lt n k bound 24
+put db n uchar add 48 rem x 10
+x = div x 10
+n = add n 1
+end
+while gt n 0 bound 24
+n = sub n 1
+oc get db n
+end
+end
+fn pw10 d ulong to ulong
+p = ulong 1
+for i ulong d
+p = mul p 10
+end
+ret p
+end
+note a JSON float equal to m / 10^d in Python repr form: trailing fraction zeros
+note dropped, at least one fraction digit (93 -> 93.0, 44.60 -> 44.6)
+fn odec m long d ulong to void
+x = ulong 0
+if lt m 0
+oc uchar 45
+x = ulong neg m
+else
+x = ulong m
+end
+p = pw10 d
+ou div x p
+oc uchar 46
+if eq d 0
+oc uchar 48
+ret
+end
+f = rem x p
+k = d
+while and gt k 1 eq rem f 10 0 bound 24
+f = div f 10
+k = sub k 1
+end
+ofix f k
+end
+note awk "%.6g"-style number of the shell UPS sampler: integer when the fraction is zero
+fn oawk m long d ulong to void
+p = long pw10 d
+if eq rem m p 0
+if lt m 0
+oc uchar 45
+ou ulong neg div m p
+else
+ou ulong div m p
+end
+ret
+end
+odec m d
+end
+note a JSON string from fb[s..e) (ostr) or cb[s..e) (ostrg), escaping quote and backslash
+fn ostr s ulong e ulong to void
+oc uchar 34
+i = s
+while lt i e bound 65536
+c = get fb i
+if or eq c 34 eq c 92
+oc uchar 92
+end
+oc c
+i = add i 1
+end
+oc uchar 34
+end
+fn ostrg base ulong e ulong to void
+oc uchar 34
+i = base
+while lt i e bound 16384
+c = get cb i
+if or eq c 34 eq c 92
+oc uchar 92
+end
+oc c
+i = add i 1
+end
+oc uchar 34
+end
+
+note ---- parsing ----
+fn isdig c uchar to bool
+ret and ge c 48 le c 57
+end
+note parse cb[s..e) as [-]digits[.digits] into nm (mantissa) and nd (fraction digits)
+fn pnumc s ulong e ulong to bool
+i = s
+neg_ = false
+if lt i e
+if eq get cb i 45
+neg_ = true
+i = add i 1
+end
+end
+m = long 0
+d = ulong 0
+dig = ulong 0
+dot = false
+ok = true
+while lt i e bound 16384
+c = get cb i
+if isdig c
+m = add mul m 10 long sub c 48
+dig = add dig 1
+if dot
+d = add d 1
+end
+else
+if and eq c 46 not dot
+dot = true
+else
+ok = false
+end
+end
+i = add i 1
+end
+if neg_
+m = neg m
+end
+put nm 0 m
+put nd 0 d
+ret and ok gt dig 0
+end
+note parse fb[s..e) the same way
+fn pnumf s ulong e ulong to bool
+i = s
+m = long 0
+d = ulong 0
+dig = ulong 0
+dot = false
+ok = true
+while lt i e bound 65536
+c = get fb i
+if isdig c
+m = add mul m 10 long sub c 48
+dig = add dig 1
+if dot
+d = add d 1
+end
+else
+if and eq c 46 not dot
+dot = true
+else
+ok = false
+end
+end
+i = add i 1
+end
+put nm 0 m
+put nd 0 d
+ret and ok gt dig 0
+end
+note does fb[s..e) equal t
+fn eqf s ulong e ulong t view uchar * to bool
+if ne sub e s len t
+ret false
+end
+for i ulong len t
+if ne get fb add s i get t i
+ret false
+end
+end
+ret true
+end
+fn eqc s ulong e ulong t view uchar * to bool
+if ne sub e s len t
+ret false
+end
+for i ulong len t
+if ne get cb add s i get t i
+ret false
+end
+end
+ret true
+end
+note end of the token in fb starting at s (space, tab, newline, '=' or ':' stop it)
+fn tokend s ulong n ulong to ulong
+i = s
+while lt i n bound 65536
+c = get fb i
+if or or eq c 32 eq c 10 or eq c 9 or eq c 61 eq c 58
+ret i
+end
+i = add i 1
+end
+ret i
+end
+fn skipsp s ulong n ulong to ulong
+i = s
+while lt i n bound 65536
+c = get fb i
+if and ne c 32 ne c 9
+ret i
+end
+i = add i 1
+end
+ret i
+end
+fn lineend s ulong n ulong to ulong
+i = s
+while lt i n bound 65536
+if eq get fb i 10
+ret i
+end
+i = add i 1
+end
+ret i
+end
+
+note ---- files ----
+fn setp t view uchar * to ulong
+for i ulong len t
+put pb i get t i
+end
+ret len t
+end
+fn rawlog tag view uchar * n ulong src ulong to void
+note src 0: fb[0..n), 1: cb[0..n), 2: cb[8192..8192+n)
+if lt get rfd 0 0
+ret
+end
+put op 0 0
+ot rhdr
+ou get rseq 0
+oc uchar 32
+ot tag
+rawend n src
+end
+note the same record, tagged with the path pb[0..pn) (thermal zones)
+fn rawlogp pn ulong n ulong to void
+if lt get rfd 0 0
+ret
+end
+put op 0 0
+ot rhdr
+ou get rseq 0
+oc uchar 32
+for i ulong pn
+oc get pb i
+end
+rawend n 0
+end
+fn rawend n ulong src ulong to void
+oc uchar 32
+ou n
+oc uchar 10
+fd = int get rfd 0
+r = write fd ob 0 get op 0
+if eq src 0
+r = write fd fb 0 n
+end
+if eq src 1
+r = write fd cb 0 n
+end
+if eq src 2
+r = write fd cb 8192 n
+end
+put op 0 0
+oc uchar 10
+r = write fd ob 0 1
+put op 0 0
+end
+note read the path pb[0..pn) into fb; return byte count or negative errno
+fn rdf pn ulong to long
+fd = fopen pb 0 pn 524288 0
+if lt fd 0
+ret fd
+end
+n = ulong 0
+go = true
+while go bound 70000
+k = read int fd fb n sub len fb n
+if lt k 0
+r = fclose int fd
+ret k
+end
+if eq k 0
+go = false
+else
+n = add n ulong k
+if eq n len fb
+go = false
+end
+end
+end
+r = fclose int fd
+put fl 0 n
+ret long n
+end
+fn mustrd t view uchar * to ulong
+pn = setp t
+r = rdf pn
+if lt r 0
+k = write 2 eread 0 len eread
+exit 3
+end
+rawlog t ulong r 0
+ret ulong r
+end
+
+note ---- /proc/stat per-core totals ----
+fn iscpu s ulong to bool
+if ne get fb s 99
+ret false
+end
+if ne get fb add s 1 112
+ret false
+end
+ret isdig get fb add s 3
+end
+fn readstat to void
+n = mustrd pst
+s = ulong 0
+while lt s n bound 4096
+e = lineend s n
+if gt sub e s 3
+if iscpu s
+statln s e
+end
+end
+s = add e 1
+end
+end
+fn statln s ulong e ulong to void
+i = add s 3
+core = ulong 0
+while isdig get fb i bound 8
+core = add mul core 10 ulong sub get fb i 48
+i = add i 1
+end
+tot = ulong 0
+idl = ulong 0
+for f ulong 8
+i = skipsp i e
+j = tokend i e
+ok = pnumf i j
+v = ulong get nm 0
+tot = add tot v
+if or eq f 3 eq f 4
+idl = add idl v
+end
+i = j
+end
+if lt core 64
+put ct core tot
+put ci core idl
+end
+end
+fn savestat to void
+for c ulong 64
+put pt c get ct c
+put pi c get ci c
+end
+end
+note round(100*(dt-di)/dt, 2) as hundredths, half up; -1 when dt is 0
+fn busy c ulong to long
+dt = sub get ct c get pt c
+di = sub get ci c get pi c
+if eq dt 0
+ret long -1
+end
+q = mul 10000 sub dt di
+ret long div add mul q 2 dt mul dt 2
+end
+fn ocore c ulong to void
+osep
+oc uchar 34
+ot kc
+ou c
+oc uchar 34
+oc uchar 58
+oc uchar 32
+b = busy c
+if lt b 0
+ot knull
+else
+odec b 2
+end
+end
+fn ocores to void
+osep
+ot kcore
+ocore 0
+ocore 1
+for i ulong 10
+ocore add 10 i
+end
+for i ulong 8
+ocore add 2 i
+end
+oc uchar 125
+end
+
+note ---- pressure ----
+fn readpsi k ulong t view uchar * to void
+for j ulong 8
+put pp add mul k 8 j 0
+end
+n = mustrd t
+s = ulong 0
+while lt s n bound 64
+e = lineend s n
+psiln k s e
+s = add e 1
+end
+end
+fn psiln k ulong s ulong e ulong to void
+j = tokend s e
+base = mul k 8
+if eqf s j wsome
+base = add base 4
+end
+i = j
+while lt i e bound 16
+i = skipsp i e
+w = tokend i e
+v = add w 1
+x = tokend v e
+ok = pnumf v x
+slot = ulong 99
+if eqf i w wa10
+slot = 0
+end
+if eqf i w wa300
+slot = 1
+end
+if eqf i w wa60
+slot = 2
+end
+if eqf i w wtot
+slot = 3
+end
+if and ok lt slot 4
+put pm add base slot get nm 0
+put pd add base slot get nd 0
+put pp add base slot 1
+end
+i = x
+end
+end
+fn opsi1 k ulong j ulong to void
+x = add mul k 8 j
+if eq get pp x 0
+ret
+end
+osep
+if lt j 4
+ot kfull
+else
+ot ksome
+end
+r = rem j 4
+if eq r 0
+ot ka10
+end
+if eq r 1
+ot ka300
+end
+if eq r 2
+ot ka60
+end
+if eq r 3
+ot ktot
+ou ulong get pm x
+else
+odec get pm x get pd x
+end
+end
+fn opsi k ulong t view uchar * to void
+osep
+ot t
+for j ulong 8
+opsi1 k j
+end
+oc uchar 125
+end
+
+note ---- thermal ----
+fn readtz to void
+put ntz 0 0
+i = ulong 0
+go = true
+while go bound 64
+pn = setp tzpre
+pn = tzpath pn i
+r = rdf pn
+if lt r 0
+go = false
+else
+rawlogp pn ulong r
+e = tokend 0 ulong r
+ok = pnumf 0 e
+put tz i get nm 0
+i = add i 1
+put ntz 0 i
+end
+end
+end
+fn tzpath pn ulong i ulong to ulong
+p = pn
+if ge i 10
+put pb p uchar add 48 div i 10
+p = add p 1
+end
+put pb p uchar add 48 rem i 10
+p = add p 1
+for j ulong len tzsuf
+put pb p get tzsuf j
+p = add p 1
+end
+ret p
+end
+fn othm to void
+osep
+ot kthm
+for i ulong get ntz 0
+osep
+oc uchar 34
+ot ktz
+ou i
+oc uchar 34
+oc uchar 58
+oc uchar 32
+odec get tz i 3
+end
+oc uchar 125
+end
+
+note ---- meminfo and loadavg ----
+fn readmem to void
+for j ulong 4
+put mp j 0
+end
+n = mustrd pme
+s = ulong 0
+while lt s n bound 4096
+e = lineend s n
+k = tokend s e
+v = skipsp add k 1 e
+w = tokend v e
+ok = pnumf v w
+slot = ulong 99
+if eqf s k wmav
+slot = 0
+end
+if eqf s k wmto
+slot = 1
+end
+if eqf s k wmsf
+slot = 2
+end
+if eqf s k wmst
+slot = 3
+end
+if and ok lt slot 4
+put mv slot ulong get nm 0
+put mp slot 1
+end
+s = add e 1
+end
+end
+fn omem1 j ulong t view uchar * to void
+if eq get mp j 0
+ret
+end
+osep
+ot t
+ou get mv j
+end
+fn omem to void
+osep
+ot kmem
+omem1 0 kmav
+omem1 1 kmto
+omem1 2 kmsf
+omem1 3 kmst
+oc uchar 125
+end
+fn readload to void
+n = mustrd pla
+if gt n len lb
+n = len lb
+end
+for i ulong n
+put lb i get fb i
+end
+put ll 0 n
+end
+fn oload to void
+n = get ll 0
+for i ulong n
+put fb i get lb i
+end
+osep
+ot kload
+s = ulong 0
+for f ulong 3
+s = skipsp s n
+e = tokend s n
+ok = pnumf s e
+osep
+odec get nm 0 get nd 0
+s = e
+end
+oc uchar 93
+end
+fn orun to void
+n = get ll 0
+for i ulong n
+put fb i get lb i
+end
+s = ulong 0
+for f ulong 3
+s = skipsp s n
+s = tokend s n
+end
+osep
+ot krun
+s = skipsp s n
+e = tokend s n
+ostr s e
+end
+
+note ---- commands ----
+fn pkb c uchar to void
+i = get xl 0
+put xp i c
+put xl 0 add i 1
+end
+fn pkhdr n ulong to void
+pkb uchar and n 255
+pkb uchar shr n 8
+end
+fn pkt t view uchar * to void
+pkhdr len t
+for i ulong len t
+pkb get t i
+end
+end
+fn pkgpu to void
+put xl 0 0
+pkhdr 3
+n = get gpl 0
+pkhdr n
+for i ulong n
+pkb get gpth i
+end
+pkt nvq
+pkt nvf
+end
+fn pkups to void
+put xl 0 0
+pkhdr 2
+n = get upl 0
+pkhdr n
+for i ulong n
+pkb get upth i
+end
+pkt upsn
+end
+fn fdword off ulong to int
+x = ulong 0
+for i ulong 4
+v = ulong get fds add off i
+x = or x shl v mul i 8
+end
+ret int x
+end
+note run the packet in xp with stdout into cb[base..base+8192), stderr to /dev/null,
+note 4 s deadline. Store length in cl[slot] and status in cs[slot]: exit code,
+note minus the signal, or -1000 for timeout, -1001 for a pipe or fork failure.
+fn runcmd slot ulong base ulong to void
+put cl slot 0
+put cs slot -1001
+r = pipefds fds 0 8 524288
+if ne r 0
+ret
+end
+rd = fdword 0
+wr = fdword 4
+pid = fork
+if lt pid 0
+r = fclose rd
+r = fclose wr
+ret
+end
+if eq pid 0
+childx wr
+end
+r = fclose wr
+n = drain rd base
+put cl slot n
+r = fclose rd
+reap slot pid
+end
+fn childx wr int to void
+r = dupfd wr 1 0
+fd = fopen nul 0 len nul 1 0
+if ge fd 0
+r = dupfd int fd 2 0
+end
+r = execprog xp 0 get xl 0
+exit 127
+end
+note read until end of file or the 4 s deadline; return bytes read, or
+note 16384 + bytes when the deadline passed
+fn drain rd int base ulong to ulong
+dl = add monons 4000000000
+n = ulong 0
+while true bound 100000
+left = sub dl monons
+if le left 0
+ret add n 16384
+end
+w = waitio rd 1 left
+if le w 0
+ret add n 16384
+end
+k = read rd cb add base n sub 8192 n
+if le k 0
+ret n
+end
+n = add n ulong k
+if ge n 8192
+ret n
+end
+end
+ret n
+end
+fn reap slot ulong pid long to void
+n = get cl slot
+if ge n 16384
+put cl slot sub n 16384
+r = killpid int pid 9
+r = waitpid int pid wst 0 4 0
+put cs slot -1000
+ret
+end
+r = waitpid int pid wst 0 4 0
+sig = and get wst 0 127
+if ne sig 0
+put cs slot neg long sig
+else
+put cs slot long get wst 1
+end
+end
+fn oerr slot ulong to void
+oc uchar 34
+s = get cs slot
+if eq s -1000
+ot rtimeo
+else
+ot rrc
+if lt s 0
+oc uchar 45
+ou ulong neg s
+else
+ou ulong s
+end
+end
+oc uchar 34
+end
+
+note ---- nvidia-smi fields ----
+fn cbfind s ulong e ulong c uchar to ulong
+i = s
+while lt i e bound 8192
+if eq get cb i c
+ret i
+end
+i = add i 1
+end
+ret i
+end
+fn triml a ulong j ulong to ulong
+i = a
+while lt i j bound 8192
+if ne get cb i 32
+ret i
+end
+i = add i 1
+end
+ret i
+end
+fn trimr a ulong b ulong to ulong
+i = b
+while gt i a bound 8192
+if ne get cb sub i 1 32
+ret i
+end
+i = sub i 1
+end
+ret i
+end
+fn splitgpu to void
+e = cbfind 0 get cl 0 10
+k = ulong 0
+s = ulong 0
+go = true
+while go bound 16
+j = cbfind s e 44
+a = triml s j
+put fs k a
+put fe k trimr a j
+k = add k 1
+s = add j 1
+go = and lt j e lt k 16
+end
+put nf 0 k
+end
+fn ogpu1 j ulong t view uchar * to void
+if ge j get nf 0
+ret
+end
+osep
+ot t
+a = get fs j
+b = get fe j
+if pnumc a b
+odec get nm 0 get nd 0
+else
+ostrg a b
+end
+end
+fn ogpu to void
+if ne get cs 0 0
+osep
+ot kgerr
+oerr 0
+ret
+end
+splitgpu
+ogpu1 1 kg1
+ogpu1 2 kg2
+ogpu1 5 kg5
+ogpu1 4 kg4
+ogpu1 3 kg3
+ogpu1 0 kg0
+end
+
+note ---- upsc fields: "key: value" lines, exact key match like the awk ----
+fn splitups to void
+for j ulong 5
+put uf j 0
+end
+n = add 8192 get cl 1
+s = ulong 8192
+while lt s n bound 8192
+e = s
+while lt e n bound 8192
+if eq get cb e 10
+break
+end
+e = add e 1
+end
+k = s
+while lt add k 1 e bound 8192
+if and eq get cb k 58 eq get cb add k 1 32
+break
+end
+k = add k 1
+end
+if lt add k 1 e
+upskey s k add k 2 e
+end
+s = add e 1
+end
+end
+fn upskey s ulong k ulong v ulong e ulong to void
+slot = ulong 99
+if eqc s k wuload
+slot = 0
+end
+if eqc s k wunom
+slot = 1
+end
+if eqc s k wustat
+slot = 2
+end
+if eqc s k wvolt
+slot = 3
+end
+if eqc s k wbatt
+slot = 4
+end
+if lt slot 5
+put us slot v
+put ue slot e
+put uf slot 1
+end
+end
+note awk "$2+0": a missing or non-numeric field is 0
+fn oupsn j ulong t view uchar * to void
+osep
+ot t
+if eq get uf j 0
+oc uchar 48
+ret
+end
+if pnumc get us j get ue j
+oawk get nm 0 get nd 0
+else
+oc uchar 48
+end
+end
+fn oupsst to void
+osep
+ot kustat
+if eq get uf 2 0
+oc uchar 34
+oc uchar 34
+ret
+end
+ostrg get us 2 get ue 2
+end
+fn upsok to bool
+ret eq get cs 1 0
+end
+
+note ---- time ----
+note civil date from days since 1970-01-01 (proleptic Gregorian), printed YYYY-MM-DD
+fn odate days ulong to void
+z = add days 719468
+era = div z 146097
+doe = sub z mul era 146097
+yoe = div sub add sub doe div doe 1460 div doe 36524 div doe 146096 365
+doy = sub doe sub add mul 365 yoe div yoe 4 div yoe 100
+mo = div add mul 5 doy 2 153
+d = add sub doy div add mul 153 mo 2 5 1
+m = ulong 0
+if lt mo 10
+m = add mo 3
+else
+m = sub mo 9
+end
+y = add yoe mul era 400
+if le m 2
+y = add y 1
+end
+ofix y 4
+oc uchar 45
+ofix m 2
+oc uchar 45
+ofix d 2
+end
+fn outc ns long to void
+s = div ulong ns 1000000000
+osep
+ot kutc
+oc uchar 34
+odate div s 86400
+oc uchar 84
+r = rem s 86400
+ofix div r 3600 2
+oc uchar 58
+ofix div rem r 3600 60 2
+oc uchar 58
+ofix rem r 60 2
+oc uchar 90
+oc uchar 34
+end
+
+note ---- one row ----
+fn row seq ulong t0 long ns long to void
+put op 0 0
+oc uchar 123
+if upsok
+oupsn 4 kbatt
+end
+ocores
+ogpu
+if upsok
+oupsn 3 kvolt
+end
+oload
+omem
+opsi 0 kpc
+opsi 2 kpi
+opsi 1 kpm
+orun
+osep
+ot kcost
+ou div ulong sub monons t0 1000
+osep
+ot kseq
+ou seq
+othm
+osep
+ot kunix
+odec div add ns 500000 1000000 3
+outc ns
+if upsok
+oupsn 0 kuload
+oupsn 1 kunom
+oupsst
+else
+osep
+ot kuerr
+oerr 1
+end
+oc uchar 125
+oc uchar 10
+end
+
+note ---- arguments and main loop ----
+fn argnum i long dflt long to long
+if ge i argcnt
+ret dflt
+end
+n = argread ulong i ab 0 len ab
+if le n 0
+ret long -1
+end
+v = long 0
+for j ulong ulong n
+c = get ab j
+if not isdig c
+ret long -1
+end
+v = add mul v 10 long sub c 48
+end
+ret v
+end
+fn argpath i long which ulong to void
+n = ulong 0
+if lt i argcnt
+k = argread ulong i ab 0 len ab
+if gt k 0
+n = ulong k
+end
+end
+if eq n 0
+if eq which 0
+for j ulong len dnv
+put ab j get dnv j
+end
+n = len dnv
+else
+for j ulong len dups
+put ab j get dups j
+end
+n = len dups
+end
+end
+for j ulong n
+if eq which 0
+put gpth j get ab j
+else
+put upth j get ab j
+end
+end
+if eq which 0
+put gpl 0 n
+else
+put upl 0 n
+end
+end
+fn openout i long flags int to long
+n = argread ulong i ab 0 len ab
+if le n 0
+ret long -1
+end
+ret fopen ab 0 ulong n flags 420
+end
+fn sample seq ulong to void
+t0 = monons
+put rseq 0 seq
+readstat
+ns = realns
+readload
+readpsi 0 ppc
+readpsi 1 ppm
+readpsi 2 ppi
+readtz
+readmem
+pkgpu
+runcmd 0 0
+rawlog tgpu get cl 0 1
+pkups
+runcmd 1 8192
+rawlog tups get cl 1 2
+splitups
+row seq t0 ns
+r = write int get ofd 0 ob 0 get op 0
+savestat
+end
+fn main to int
+na = argcnt
+ival = argnum 2 5
+cnt = argnum 3 360
+note interval 5..86400 s (nvidia-smi read rate rule), count 0..999999 (the largest
+note while bound this omc accepts; bound 1000000 is refused with error 8)
+if or or lt na 2 or lt ival 5 gt ival 86400 or lt cnt 0 gt cnt 999999
+k = write 2 usage 0 len usage
+ret 2
+end
+fd = openout 1 525377
+if lt fd 0
+k = write 2 eopen 0 len eopen
+ret 2
+end
+put ofd 0 fd
+put rfd 0 -1
+if gt na 6
+rf = openout 6 525377
+if lt rf 0
+k = write 2 eopen 0 len eopen
+ret 2
+end
+put rfd 0 rf
+end
+argpath 4 0
+argpath 5 1
+put rseq 0 0
+readstat
+savestat
+iv = mul ival 1000000000
+nx = add monons iv
+seq = ulong 0
+while lt seq ulong cnt bound 999999
+left = sub nx monons
+if gt left 0
+r = sleepns left
+end
+nx = add nx iv
+sample seq
+seq = add seq 1
+end
+ret 0
+end
