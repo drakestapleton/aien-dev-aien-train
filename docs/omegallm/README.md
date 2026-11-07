@@ -282,7 +282,7 @@ parts, Unicode and forged marker text, equal chatenc's ids + 259), `c1_chatenc_e
 prefill's in every bit), the layer-by-layer prefill against the position-by-position decode
 (`c1_prefill_layer_bitexact`, test member `ollm_test_serial`) and the queue checks (`t_queue_*`, shared with the v1 suite, where
 `t_busy_503` became `t_busy_queued`). Negative controls: mutant `c1` (chatenc's writer drops each
-conversation's first token) must fail `c1_serve_eq_chatenc`; mutant `j` (prefix invalidation
+conversation's first token) must fail `c1_serve_eq_chatenc`; mutant `pj` (prefix invalidation
 skipped) must fail `c1_reuse_diverge_bitexact`; mutant `pl` (the layer-by-layer prefill skips the
 last layer) must fail `c1_prefill_layer_bitexact`; `t_queue_full_503` is the queue's refusal control.
 Receipts: `evidence/OMEGALLM/serve/v4/`.

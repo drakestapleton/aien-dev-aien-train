@@ -408,7 +408,7 @@ if TOK1:
 
         # prefix reuse: an agent loop resends a growing history; the cache keeps the common positions
         # and the logits equal a cold prefill's in every bit (ollm_test_cold); a history that diverges
-        # inside the cached part reuses only the common prefix (mutant j keeps stale positions: fails)
+        # inside the cached part reuses only the common prefix (mutant pj keeps stale positions: fails)
         g = {"max_tokens": 3, "temperature": 0}
         m1 = [{"role": "system", "content": "You are a helpful assistant for the Omega project."}, {"role": "user", "content": "What is a token?"}]
         m2 = m1 + [{"role": "assistant", "content": "A unit of text."}, {"role": "user", "content": "And a merge?"}]

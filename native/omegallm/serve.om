@@ -1997,8 +1997,8 @@ note svmld: the prompt svpt[0, np) into the model's context. v3: the context is 
 note reuse): the cache keeps the positions [0, p) of the last sequence whose tokens equal the
 note prompt's, p <= np - 1 so the last prompt position is always decoded for its logits; the
 note positions from p on are invalidated and prefilled at the first step (sv44 reused, sv45
-note prefilled). Mutant j (OMUTJ 0) skips the invalidation: the stale positions stay cached.
-const OMUTJ ulong 1
+note prefilled). Mutant pj (OMUTPJ 0) skips the invalidation: the stale positions stay cached.
+const OMUTPJ ulong 1
 fn svmld sv edit ulong 64 to void
 np = get svpn 0
 if ne get sv 41 4
@@ -2025,7 +2025,7 @@ break
 end
 p = add p 1
 end
-if eq OMUTJ 1
+if eq OMUTPJ 1
 put xg 47 p
 else
 put xg 47 lim

@@ -19,3 +19,5 @@ built with the pinned omc `2c82480596bbdc50cda9626866209ef662d5834f278f839ff4ce0
 | `checkpoints.txt` | how the measurement checkpoints were made (init4, train4, the header T change) | |
 | `fork-decision.txt` | one vs two concurrent decodes on one core | 4.29 s vs 8.61 s each: no gain, not added |
 | `health-during-prefill.txt` | GET /health every 0.5 s during a 4,064-token cold prefill on CK-B (106.9 s) | 113 of 113 answered (busy), latency median 0.42 s, max 0.88 s |
+
+Rename note (ownmodel lead, integration): mutant `j` of this branch was renamed `pj` (const OMUTPJ) because the v4 window branch feat/ollm-v4-wide also defines mutant `j` (OMUTJ in v4.om). The receipts above named `ollm-mut-j` were produced by the same one-line mutant, then called j.
