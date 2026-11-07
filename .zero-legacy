@@ -384,3 +384,4 @@ data tests/omegese45/translator/cases.tsv
 data tests/omegese45/translator/heldout-errata.tsv
 data tests/omegese45/translator/heldout.tsv
 data evidence/ADTRAIN-REPLAY-20261107/
+data evidence/ADTRAIN-GOLDEN-20261107/
