@@ -1,0 +1,1 @@
+TMPDIR=/dev/shm/hive/ownmodel/fixes-tune4 OMC=<pinned omc> taskset -c 6 nice -n 10 sh tests/omegallm/tune4-check.sh

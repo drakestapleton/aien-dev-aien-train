@@ -1,0 +1,130 @@
+PASS build ollm rc: 0
+ollm_sha256=7137cef83bc553ecf698c874feb5183bf1a3835783480e53a2e634b2e290987b
+omc_sha256=2c82480596bbdc50cda9626866209ef662d5834f278f839ff4ce0250c495029f
+data_sha256=e85b9bfd62035f8769ce94a09f9182053d60de14fb5fa17279f7ec50507c6ac5
+PASS init4 V32768 T256 D32 H2 F64 L2 B4 G2: I 1065120
+PASS train4 1 step rc: 0
+PASS input P: 1065120
+PASS input step: 1
+PASS input size 128 + 24 P: 25563008
+PASS control: input Adam m, v nonzero
+PASS eval4 input rc: 0
+eval4 input: E 1 2 10386537 14984605
+PASS tune4 T512 B8 G4: U 1065120
+PASS T512 B8 G4 magic: 33304b434d4c4c4f
+PASS T512 B8 G4 V header bytes 8..15: 0
+PASS T512 B8 G4 D H F L header bytes 24..55: 0
+PASS T512 B8 G4 seed header bytes 64..71: 0
+PASS T512 B8 G4 P header bytes 96..103: 0
+PASS T512 B8 G4 rope base header bytes 112..119: 0
+PASS T512 B8 G4 T: 512
+PASS T512 B8 G4 B: 8
+PASS T512 B8 G4 G: 4
+PASS T512 B8 G4 step: 0
+PASS T512 B8 G4 TOTAL: 40
+PASS T512 B8 G4 lr bits: 3f40624dd2f1a9fc
+PASS T512 B8 G4 size 128 + 24 P: 25563008
+PASS T512 B8 G4 params bytes 128 .. 128+8P-1: 0
+PASS T512 B8 G4 Adam m, v bytes 128+8P .. 128+24P-1 zero: 0
+PASS eval4 at T 512 rc: 0
+PASS eval4 at T 512 step and W: E 0 2
+PASS self-control: flipped param byte 4260611 caught by the params cmp
+PASS self-control: nonzero Adam v byte caught by the zero cmp
+PASS self-control: corrupted CK refused on load (FNV): 14
+PASS train4 on T512 B8 G4 rc: 0
+PASS train4 on T512 B8 G4 step, T B G kept: 1 512 8 4
+PASS tune4 T256 B8 G8: U 1065120
+PASS T256 B8 G8 magic: 33304b434d4c4c4f
+PASS T256 B8 G8 V header bytes 8..15: 0
+PASS T256 B8 G8 D H F L header bytes 24..55: 0
+PASS T256 B8 G8 seed header bytes 64..71: 0
+PASS T256 B8 G8 P header bytes 96..103: 0
+PASS T256 B8 G8 rope base header bytes 112..119: 0
+PASS T256 B8 G8 T: 256
+PASS T256 B8 G8 B: 8
+PASS T256 B8 G8 G: 8
+PASS T256 B8 G8 step: 0
+PASS T256 B8 G8 TOTAL: 30
+PASS T256 B8 G8 lr bits: 3f30624dd2f1a9fc
+PASS T256 B8 G8 size 128 + 24 P: 25563008
+PASS T256 B8 G8 params bytes 128 .. 128+8P-1: 0
+PASS T256 B8 G8 Adam m, v bytes 128+8P .. 128+24P-1 zero: 0
+PASS eval4 T unchanged rc: 0
+PASS eval4 T unchanged: W loss bpt equal to input: 2 10386537 14984605
+PASS eval4 T unchanged: step field 0 (input 1): 0
+PASS tune4 6 args: U 1065120
+PASS 6 args magic: 33304b434d4c4c4f
+PASS 6 args V header bytes 8..15: 0
+PASS 6 args D H F L header bytes 24..55: 0
+PASS 6 args seed header bytes 64..71: 0
+PASS 6 args P header bytes 96..103: 0
+PASS 6 args rope base header bytes 112..119: 0
+PASS 6 args T: 256
+PASS 6 args B: 4
+PASS 6 args G: 2
+PASS 6 args step: 0
+PASS 6 args TOTAL: 20
+PASS 6 args lr bits: 3f40624dd2f1a9fc
+PASS 6 args size 128 + 24 P: 25563008
+PASS 6 args params bytes 128 .. 128+8P-1: 0
+PASS 6 args Adam m, v bytes 128+8P .. 128+24P-1 zero: 0
+PASS eval4 6 args: W loss bpt equal to input: 2 10386537 14984605
+PASS build tune4 at cfec44b^ rc: 0
+old_ollm_sha256=7cb31846a05f540683f2fac6e1161335634e5a7c9badda36965b8d7805e995bf rev=9348173feca55329ddaee07cdfbdc385285e2631
+PASS old tune4 6 args: U 1065120
+PASS 6 args byte-identical to the cfec44b^ tune4: 0
+PASS control: cfec44b^ tune4 refuses T B G: 2
+PASS tune4 T2 B1 G1 accepted: U 1065120
+PASS T2 B1 G1 header: 2 1 1
+PASS T2 B1 G1 output loads again: U 1065120
+PASS tune4 T16384 B4096 G4096 accepted: U 1065120
+PASS T16384 B4096 G4096 header: 16384 4096 4096
+PASS T16384 B4096 G4096 output loads again: U 1065120
+PASS tune4 T16384 B4096 G1 accepted: U 1065120
+PASS T16384 B4096 G1 header: 16384 4096 1
+PASS T16384 B4096 G1 output loads again: U 1065120
+PASS tune4 T1 B4 G2 refused: 12
+PASS tune4 T1 B4 G2 wrote no output
+PASS tune4 T16385 B4 G2 refused: 12
+PASS tune4 T16385 B4 G2 wrote no output
+PASS tune4 T0 B4 G2 refused: 12
+PASS tune4 T0 B4 G2 wrote no output
+PASS tune4 T256 B0 G1 refused: 12
+PASS tune4 T256 B0 G1 wrote no output
+PASS tune4 T256 B4097 G1 refused: 12
+PASS tune4 T256 B4097 G1 wrote no output
+PASS tune4 T256 B4 G0 refused: 12
+PASS tune4 T256 B4 G0 wrote no output
+PASS tune4 T256 B4 G8 refused: 12
+PASS tune4 T256 B4 G8 wrote no output
+PASS tune4 T256 B6 G4 refused: 12
+PASS tune4 T256 B6 G4 wrote no output
+PASS tune4 T256 B8 G3 refused: 12
+PASS tune4 T256 B8 G3 wrote no output
+PASS tune4 7 args refused: 2
+PASS tune4 8 args refused: 2
+PASS tune4 TOTAL 0 with T B G refused: 12
+PASS refused tune4 (args, TOTAL) wrote no output
+PASS init4 V256 T256 D512 H8 F64 L1: I 1246720
+PASS control: init4 at T 16384 of that shape refused: 12
+PASS tune4 to T 16384 of that shape refused: 12
+PASS tune4 to a non-fitting T wrote no output
+PASS tune4 T 8192 of that shape accepted: U 1246720
+PASS T 8192 output loads again: U 1246720
+PASS init v3 OLLMCK01: I 119104
+PASS v3 magic: OLLMCK01
+PASS OLLMCK01 CK with T B G refused: 2
+PASS OLLMCK01 refused tune4 wrote no output
+PASS OLLMCK01 CK 6 args (v3 tune): U 119104
+PASS OLLMCK01 tune output magic: OLLMCK01
+PASS init v3 OLLMCK02: I 119104
+PASS v3 magic: OLLMCK02
+PASS OLLMCK02 CK with T B G refused: 2
+PASS OLLMCK02 refused tune4 wrote no output
+PASS OLLMCK02 CK 6 args (v3 tune): U 119104
+PASS OLLMCK02 tune output magic: OLLMCK02
+PASS mutant: one 'put xg 6 b2' line: 1
+PASS mutant build rc: 0
+PASS mutant tune4 rc: 0
+PASS negative control caught: mutant B 4, want 8
+TUNE4_CHECK PASS n=124
