@@ -129,9 +129,19 @@ rec w-eval4-tok 0 ollm eval4 "$WORK/w.ck" "$WORK/held.u16" 2
 head -c 16 "$WORK/held.u16" > "$WORK/p.u16"
 rec w-sample4-tok 0 ollm sample4 "$WORK/w.ck" 3 8 0 "$WORK/p.u16"
 rm -f "$WORK/w.ck" "$WORK/w2.ck"
-# 4. limits: D 768 accepted at V 32768 (L 1); V D past the banks refused (12)
-rec d768-init4 0 ollm init4 "$WORK/d.ck" 32768 64 768 12 3072 1 1 1 10 1000 1
-rm -f "$WORK/d.ck"
+# 4. D 768 at V 32768 on the product build (R1 = 18440 of 32768 rows): seed 17 puts two of
+#    gcheck4's four wte coordinates in bank 1 and two in bank 2 (14906211 and 15863246 >= R1 D)
+rec d768-init4 0 ollm init4 "$WORK/d.ck" 32768 8 768 12 3072 1 2 17 100 1000 2
+rec d768-gcheck4 0 ollm gcheck4 "$WORK/d.ck" "$WORK/train.u16"
+cp "$WORK/d.ck" "$WORK/d2.ck"
+rec d768-train4-k1 0 ollm train4 "$WORK/d.ck" "$WORK/train.u16" 1 1 1
+rec d768-train4-k2 0 ollm train4 "$WORK/d2.ck" "$WORK/train.u16" 1 1 2
+same d768-k1-eq-k2 "$WORK/d.ck" "$WORK/d2.ck"
+rec d768-kvck 0 ollm kvck "$WORK/d.ck" "$WORK/held.u16"
+rec d768-sample4-tok 0 ollm sample4 "$WORK/d.ck" 3 4 0 "$WORK/p.u16"
+rec d768-tune4 0 ollm tune4 "$WORK/d.ck" "$WORK/dt.ck" 10 100
+rm -f "$WORK/d.ck" "$WORK/d2.ck" "$WORK/dt.ck"
+# 5. limits: V D past the banks refused (12)
 rec d1024-init4 12 ollm init4 "$WORK/e.ck" 32768 64 1024 16 4096 1 1 1 10 1000 1
 rec v65536-d512-init4 12 ollm init4 "$WORK/e.ck" 65536 64 512 8 2048 1 1 1 10 1000 1
 cat "$SUM"

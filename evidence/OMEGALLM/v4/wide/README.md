@@ -5,7 +5,7 @@ results in section 6.1. Spark core 6, pinned omc `2c824805…`.
 
 | Path | What |
 |---|---|
-| `summary.tsv`, `*.txt`, `same.txt`, `build.txt` | `sh tests/omegallm/v4-wide-check.sh` (CORES=6): 46 of 46 PASS; reference = build of 63353c9 (`old/ollm`, sha256 `beecf5fa…`) |
+| `summary.tsv`, `*.txt`, `same.txt`, `build.txt` | `sh tests/omegallm/v4-wide-check.sh` (CORES=6): 53 of 53 PASS; reference = build of 63353c9 (`old/ollm`, sha256 `beecf5fa…`) |
 | `v4-check/` | the pre-existing `tests/omegallm/v4-check.sh` run on the bank build from a snapshot of `ce3bb2d` (`SOURCE.txt`): 17 of 17 PASS |
 | `gcheck-textdep.txt` | `v4-check.sh`'s gcheck4 depends on the repository text: on one text both builds fail identically (rc 40) |
 | `v3-equiv.txt`, `v3-equiv-bx.txt` | `tests/omegallm/equiv.sh` reference vs bank build on a v3 CK02 (product and `--variant bx`): EQUAL |

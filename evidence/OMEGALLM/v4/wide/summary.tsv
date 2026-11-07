@@ -43,5 +43,12 @@ w-kvck	0	0	PASS
 w-eval4-tok	0	0	PASS
 w-sample4-tok	0	0	PASS
 d768-init4	0	0	PASS
+d768-gcheck4	0	0	PASS
+d768-train4-k1	0	0	PASS
+d768-train4-k2	0	0	PASS
+d768-k1-eq-k2	-	-	PASS
+d768-kvck	0	0	PASS
+d768-sample4-tok	0	0	PASS
+d768-tune4	0	0	PASS
 d1024-init4	12	12	PASS
 v65536-d512-init4	12	12	PASS

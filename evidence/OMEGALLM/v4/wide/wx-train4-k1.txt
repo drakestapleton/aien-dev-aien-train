@@ -2,6 +2,6 @@ receipt: wx-train4-k1
 binary: ollm-var-wx sha256 d4d1247fe2b35f955049d5b3fe3a2a90af45b782c853c4a63ae5ac8a874d622f
 $ taskset -c 6 nice -n 10 /dev/shm/hive/ownmodel/wide4/v4w-build/ollm-var-wx train4 /home/drakestapleton/work/hive/ownmodel/wide4/v4w-work/x1.ck /home/drakestapleton/work/hive/ownmodel/wide4/v4w-work/train.bin 6 3 1
 --- output
-T 3 5524798
-T 6 5518857
---- rc 0 ms 138
+T 3 5534639
+T 6 5518482
+--- rc 0 ms 280

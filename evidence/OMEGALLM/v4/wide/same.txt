@@ -9,3 +9,4 @@ wx-k1-eq-k2: cmp /home/drakestapleton/work/hive/ownmodel/wide4/v4w-work/x1.ck /h
 wx-train-eq-old: cmp /home/drakestapleton/work/hive/ownmodel/wide4/v4w-work/x1.ck /home/drakestapleton/work/hive/ownmodel/wide4/v4w-work/xo.ck -> PASS
 wx-eval4-eq-old: cmp /home/drakestapleton/work/hive/ownmodel/wide4/v4w-work/wx-eval4.out /home/drakestapleton/work/hive/ownmodel/wide4/v4w-work/old-eval4-x.out -> PASS
 w-k1-eq-k2: cmp /home/drakestapleton/work/hive/ownmodel/wide4/v4w-work/w.ck /home/drakestapleton/work/hive/ownmodel/wide4/v4w-work/w2.ck -> PASS
+d768-k1-eq-k2: cmp /home/drakestapleton/work/hive/ownmodel/wide4/v4w-work/d.ck /home/drakestapleton/work/hive/ownmodel/wide4/v4w-work/d2.ck -> PASS

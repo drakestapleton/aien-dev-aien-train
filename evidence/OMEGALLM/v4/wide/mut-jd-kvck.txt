@@ -2,5 +2,5 @@ receipt: mut-jd-kvck
 binary: ollm-mut-jd sha256 26352d6d2be5471a073e8c2e76c23264d8507148dd904d009f5ce7291e1d5ffe
 $ taskset -c 6 nice -n 10 /dev/shm/hive/ownmodel/wide4/v4w-build/ollm-mut-jd kvck /home/drakestapleton/work/hive/ownmodel/wide4/v4w-work/x2.ck /home/drakestapleton/work/hive/ownmodel/wide4/v4w-work/held.bin
 --- output
-K 32 30 5519331
---- rc 44 ms 9
+K 32 30 5520029
+--- rc 44 ms 10

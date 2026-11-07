@@ -2,5 +2,5 @@ receipt: old-kvck
 binary: old/ollm sha256 beecf5fa3463c36dc44c7e4aa823aa747b55e5d0871a726d52dad243971c7631
 $ taskset -c 6 nice -n 10 /dev/shm/hive/ownmodel/wide4/v4w-build/old/ollm kvck /home/drakestapleton/work/hive/ownmodel/wide4/v4w-work/o.ck /home/drakestapleton/work/hive/ownmodel/wide4/v4w-work/held.bin
 --- output
-K 64 0 5547193
---- rc 0 ms 14
+K 64 0 5547106
+--- rc 0 ms 9

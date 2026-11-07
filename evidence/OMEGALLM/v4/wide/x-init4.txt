@@ -3,4 +3,4 @@ binary: ollm sha256 aa6cceda5358a797e463bc309d5baeac86db9fe366c8c80a5648837b608d
 $ taskset -c 6 nice -n 10 /dev/shm/hive/ownmodel/wide4/v4w-build/ollm init4 /home/drakestapleton/work/hive/ownmodel/wide4/v4w-work/x.ck 256 32 18 3 32 4 4 3 100 1000 2
 --- output
 I 14562
---- rc 0 ms 14
+--- rc 0 ms 9

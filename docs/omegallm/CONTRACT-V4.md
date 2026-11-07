@@ -77,11 +77,10 @@ costs ~28 ns (`mapget`) / ~31 ns (`mapset`) per f64 against ~2.9 ns per multiply
 0.470 s per token at S1 against 0.146 s of head arithmetic (3·V·D multiply-adds; MODELED from the
 measured unit costs, Wolfram), and staging once per sequence needs T·V stored logits (T ≤ 458 even with all of
 `oa`, at V 32768). The banks cost nothing per step beyond the one-window layout: the per-step copies
-are the same V·D values as before (master to wte after Adam, dwte to the gradient region).
-
-Map access costs ~31 ns (`mapset`) and ~28 ns (`mapget`) per f64, against ~2.9 ns per dot-product
-multiply-add (MEASURED, core 4), so staged layers pay a copy per step but no per-element map call
-inside the kernels.
+are the same V·D values as before (master to wte after Adam, dwte to the gradient region), and
+with wte out of `ow` more layers stay resident: staged layers pay one copy per step but no
+per-element map call inside the kernels (V 32768 D 384 L 6: one step 11.0 % less CPU than the
+one-window layout, checkpoints byte-identical, section 6.1).
 
 `build.sh --variant wx` (bx's window sizes plus XWB1 2000) makes the small shape
 V 256 T 32 D 18 H 3 F 32 L 4 cross the bank boundary (R1 = 111 of 256 rows) with staged layers and
@@ -150,12 +149,13 @@ times are noisy and the per-step costs below are user + sys CPU seconds), aarch6
 
 | Check | Result |
 |---|---|
-| `v4-wide-check.sh` | 46 of 46 PASS |
+| `v4-wide-check.sh` | 53 of 53 PASS |
 | CK03 written by the reference build: `eval4`, `gcheck4`, `kvck`, `sample4` on the bank build | outputs byte-identical; 3 more `train4` steps (K = 2): checkpoints byte-identical |
 | crossing shape V 256 T 32 D 18 H 3 F 32 L 4 on `--variant wx` (R1 = 111, layers and activations staged) | `gcheck4` PASS rc 0, output byte-identical to the reference build's; `train4` K = 1, K = 2 and reference byte-identical; `kvck` 0 of 32 differ |
 | mutant j `gcheck4` / mutant jd `kvck` | rc 40 (max relative error 1.99, tolerance 1e-3) / rc 44 (30 of 32 positions differ), as required |
 | V 32768 D 512 H 8 F 2048 L 2 (R1 = 27,660, product build) | K = 1 vs K = 2 byte-identical; `kvck` 0 of 32 differ; token-mode `eval4`, `sample4` rc 0 |
-| `init4` V 32768 D 768 (L 1 and L 8, P 81,801,984) / D 1024 / V 65536 D 512 | rc 0 / 12 / 12 |
+| V 32768 T 8 D 768 H 12 F 3072 L 1 seed 17 (R1 = 18,440, product build; 2 of gcheck4's 4 wte coordinates in bank 2) | `gcheck4` PASS (max relative error 1.71e-4, at bank-2 index 15,863,246); K = 1 vs K = 2 byte-identical; `kvck` 0 of 8 differ; token-mode `sample4`, `tune4` rc 0 |
+| `init4` V 32768 D 1024 / V 65536 D 512 (bank 2 would need 19,392,512 > XWB2) | rc 12 / 12 |
 | old `v4-check.sh` on the bank build (tree snapshot `ce3bb2d`) | 17 of 17 PASS |
 | v3 `equiv.sh` reference vs bank build, product and `--variant bx` | EQUAL (eval lines, checkpoints after 5 steps) |
 | V 32768 D 384 H 6 F 1536 L 6 B 4, one `train4` step | checkpoints byte-identical; 115.5 s CPU vs 129.8 s on the reference (−11.0 %: every layer is now resident) |
