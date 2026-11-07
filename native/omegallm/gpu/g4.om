@@ -42,10 +42,30 @@ note Mutant ri (OMUTRI 0): the backward skips the R^T rotation of dQ and dK; gcm
 const OMUTRI ulong 1
 note Mutant cc (OMUTCC 0): the head skips its last CE row chunk (logits, CE, dZ, dwte); gcmp4 must fail.
 const OMUTCC ulong 1
+note Mutant sv (OMUTSV 0): a save point downloads the parameters and Adam m but not Adam v, so mapping
+note 0 keeps the v it was loaded with; the resume check (reload and continue == uninterrupted) must fail.
+const OMUTSV ulong 1
 note logits buffer budget in floats (RC V <= G4LB)
 const G4LB ulong 67108864
 note "OLLMGR04", the ggrad4 file magic
 const G4GM ulong 3760596155047365711
+
+note v times sc as a long for printing, clamped to +-10^15 and -1 for NaN (rmic of a huge or NaN value
+note would trap 1)
+fn g4pl v f64 sc f64 to void
+x = mul v sc
+if ne x x
+oputl -1
+ret
+end
+if gt x 1000000000000000.0f64
+x = 1000000000000000.0f64
+end
+if lt x -1000000000000000.0f64
+x = -1000000000000000.0f64
+end
+oputl rmic div x 1000000.0f64
+end
 
 fn g4cmd w ulong to bool
 if eq w 57674589694311
@@ -313,9 +333,7 @@ asz = g4plan
 put g4s 1 asz
 g4grs
 put grd 6 1
-if not gropen asz
-ggdie 2
-end
+g4gro asz
 put gga 40 gkbase
 ggstr
 put g4s 2 15
@@ -325,6 +343,51 @@ put g4s 2 17
 put g4s 3 18
 end
 g4tab
+end
+
+note gropen; when the raw driver's channel setup reports nverr 81 (context.om nvchan's compute object
+note still in use after its own 50 retries), tear down (nvstop), print `G4R try nverr stage`, wait 5 s
+note and retry, at most 12 tries; any other failure is g4die 2
+fn g4gro asz ulong to void
+for i ulong 12
+if gropen asz
+ret
+end
+e = get nverr 0
+st = ulong get nvstage 0
+r = nvstop
+if ne e 81
+g4die 2 e st
+end
+oputc 71
+oputc 52
+oputc 82
+oputc 32
+oputu i
+oputc 32
+oputl e
+oputc 32
+oputu st
+oputc 10
+oflush
+x = sleepns long 5000000000
+end
+g4die 3 get nverr 0 ulong get nvstage 0
+end
+
+note `GX c nverr stage` and exit 84 (gg.om ggdie without the mark reads: the buffers may not exist)
+fn g4die c ulong e long st ulong to void
+oputc 71
+oputc 88
+oputc 32
+oputu c
+oputc 32
+oputl e
+oputc 32
+oputu st
+oputc 10
+oflush
+exit 84
 end
 
 fn g4grs to void
@@ -414,7 +477,11 @@ end
 
 fn g4dn to void
 p = get xg 8
-for k ulong 3
+na = ulong 3
+if eq OMUTSV 0
+na = 2
+end
+for k ulong na
 o = g4ak k
 b = mul k p
 for q ulong ocn p
@@ -632,12 +699,18 @@ ggmm m n k 1 1 false
 end
 
 note split count for a weight gradient of depth r (gg.om ggks with the depth as an argument)
-fn g4ks m ulong n ulong r ulong to ulong
-b = mul div m 32 div n 32
+note split count for a weight gradient of depth r over nz batches (gg.om ggks with the depth as an
+note argument); each slice must hold whole K tiles: 16 rows f32, 32 rows BF16 (gkbfok)
+fn g4ks m ulong n ulong nz ulong r ulong to ulong
+b = mul mul div m 32 div n 32 nz
+kt = ulong 16
+if eq get gkbf 0 1
+kt = 32
+end
 s = ulong 1
 while lt mul b s 1024 bound 8
 s2 = mul s 2
-if or gt s2 16 ne rem r mul s2 16 0
+if or gt s2 16 ne rem r mul s2 kt 0
 ret s
 end
 s = s2
@@ -649,7 +722,7 @@ note G[kk][n] += X[m][kk]^T DY[m][n] (gg.om ggwg with depth m)
 fn g4wg x ulong dy ulong g ulong kk ulong n ulong m ulong to void
 k4 = uint mul kk 4
 n4 = uint mul n 4
-s = g4ks kk n m
+s = g4ks kk n 1 m
 if eq s 1
 gkopa 0 x 4 k4 0 0
 gkopa 1 dy 4 n4 0 0
@@ -740,10 +813,10 @@ gkope 2 x
 ggxwt dh w df f d false
 x = ggl l 11
 w = g4g l 7
-ggwg x dh w f d
+g4wg x dh w f d ggr
 x = ggl l 7
 w = g4g l 6
-ggwg x df w d f
+g4wg x df w d f ggr
 w = g4w l 6
 ggxwt df w da d f false
 x = ggl l 6
@@ -763,7 +836,7 @@ w = g4w l 4
 ggxwt dh w dn d d false
 x = ggl l 5
 w = g4g l 4
-ggwg x dh w d d
+g4wg x dh w d d ggr
 dp = gga1 18
 x = ggl l 4
 gghd 0 dn false
@@ -825,7 +898,7 @@ w = g4g l 1
 s0 = get ggs 0
 s6 = get ggs 6
 s7 = get ggs 7
-k = ggks d d 3
+k = g4ks d d 3 ggr
 if eq k 1
 gkopa 0 a 4 s0 0 0
 gkopa 1 dq 4 s0 0 s6
@@ -1007,7 +1080,7 @@ oputc 84
 oputc 32
 oputu s1
 oputc 32
-oputl rmic ls
+g4pl ls 1000000.0f64
 oputc 10
 oflush
 put g4tm 2 add get g4tm 2 sub monons t
@@ -1046,7 +1119,7 @@ oputc 84
 oputc 32
 oputu get xg 13
 oputc 32
-oputl rmic ls
+g4pl ls 1000000.0f64
 oputc 10
 for q ulong get gkpc 0
 o = mul q 8
@@ -1361,11 +1434,11 @@ oputc 71
 oputc 76
 oputc 52
 oputc 32
-oputl rmic lc
+g4pl lc 1000000.0f64
 oputc 32
-oputl rmic lg
+g4pl lg 1000000.0f64
 oputc 32
-oputl long mul dl 1000000000.0
+g4pl dl 1000000000.0f64
 oputc 10
 oputc 71
 oputc 78
@@ -1377,9 +1450,12 @@ oputc 71
 oputc 84
 oputc 52
 oputc 32
-oputl long mul tol 1000000000.0
+g4pl tol 1000000000.0f64
 oputc 10
 if or not le dl tol ne get g4cn 10 0
+ok = false
+end
+if ne lg lg
 ok = false
 end
 g4verd ok
@@ -1397,11 +1473,11 @@ oputu k
 oputc 32
 oputu get g4cn k
 oputc 32
-oputl long mul rel 1000000000.0
+g4pl rel 1000000000.0f64
 oputc 32
-oputl long mul get g4c add o 2 1000000000000.0
+g4pl get g4c add o 2 1000000000000.0f64
 oputc 32
-oputl long mul get g4c add o 3 1000000000000.0
+g4pl get g4c add o 3 1000000000000.0f64
 oputc 10
 ret le rel tol
 end
