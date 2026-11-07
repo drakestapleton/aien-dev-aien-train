@@ -1,0 +1,962 @@
+[
+ {
+  "split": "S",
+  "length": 4,
+  "role": "control",
+  "pattern": "random",
+  "path": "jobs/item1733.om",
+  "prompt": "Task: Inspect this program and fix the error.\nFile: jobs/item1733.om\nGoal: calc returns x times 6. main calls calc with 58.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item1733.om\"}",
+  "idx": 0
+ },
+ {
+  "split": "S",
+  "length": 6,
+  "role": "target",
+  "pattern": "random",
+  "path": "jobs/item809867.om",
+  "prompt": "Task: Make this Omega program meet the goal, then test it.\nFile: jobs/item809867.om\nGoal: calc returns x times 6. main calls calc with 33.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item809867.om\"}",
+  "idx": 1
+ },
+ {
+  "split": "S",
+  "length": 6,
+  "role": "target",
+  "pattern": "pair",
+  "path": "jobs/item224422.om",
+  "prompt": "Task: Inspect this file, fix its calculation, and verify it.\nFile: jobs/item224422.om\nGoal: calc returns x plus 7. main calls calc with 60.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item224422.om\"}",
+  "idx": 2
+ },
+ {
+  "split": "S",
+  "length": 8,
+  "role": "target",
+  "pattern": "run",
+  "path": "jobs/item54321098.om",
+  "prompt": "Task: Check the Omega program and correct its calculation.\nFile: jobs/item54321098.om\nGoal: calc returns x plus 2. main calls calc with 8.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item54321098.om\"}",
+  "idx": 3
+ },
+ {
+  "split": "S",
+  "length": 8,
+  "role": "target",
+  "pattern": "random",
+  "path": "jobs/item26508642.om",
+  "prompt": "Task: Find the wrong calculation, fix it, and test it.\nFile: jobs/item26508642.om\nGoal: calc returns x plus 3. main calls calc with 77.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item26508642.om\"}",
+  "idx": 4
+ },
+ {
+  "split": "S",
+  "length": 6,
+  "role": "target",
+  "pattern": "random",
+  "path": "jobs/item490661.om",
+  "prompt": "Task: Fix the calculation and test the corrected program.\nFile: jobs/item490661.om\nGoal: calc returns x plus 7. main calls calc with 71.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item490661.om\"}",
+  "idx": 5
+ },
+ {
+  "split": "S",
+  "length": 8,
+  "role": "target",
+  "pattern": "pair",
+  "path": "jobs/item33443344.om",
+  "prompt": "Task: Make this Omega file satisfy its stated goal and verify the repaired result.\nFile: jobs/item33443344.om\nGoal: calc returns x plus 3. main calls calc with 27.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item33443344.om\"}",
+  "idx": 6
+ },
+ {
+  "split": "S",
+  "length": 7,
+  "role": "target",
+  "pattern": "random",
+  "path": "jobs/item1734224.om",
+  "prompt": "Task: Make the program match its goal and test it.\nFile: jobs/item1734224.om\nGoal: calc returns x plus 5. main calls calc with 82.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item1734224.om\"}",
+  "idx": 7
+ },
+ {
+  "split": "S",
+  "length": 6,
+  "role": "target",
+  "pattern": "random",
+  "path": "jobs/item487774.om",
+  "prompt": "Task: Please correct this program and check your work.\nFile: jobs/item487774.om\nGoal: calc returns x times 4. main calls calc with 98.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item487774.om\"}",
+  "idx": 8
+ },
+ {
+  "split": "S",
+  "length": 4,
+  "role": "control",
+  "pattern": "pair",
+  "path": "jobs/item2299.om",
+  "prompt": "Task: Use tools to fix this Omega program, then test it.\nFile: jobs/item2299.om\nGoal: calc starts with x and adds 3 exactly 3 times in a for loop. main calls calc with 63.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item2299.om\"}",
+  "idx": 9
+ },
+ {
+  "split": "S",
+  "length": 8,
+  "role": "target",
+  "pattern": "pair",
+  "path": "jobs/item22332233.om",
+  "prompt": "Task: Please correct this program and check your work.\nFile: jobs/item22332233.om\nGoal: calc returns x times 2. main calls calc with 63.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item22332233.om\"}",
+  "idx": 10
+ },
+ {
+  "split": "S",
+  "length": 7,
+  "role": "target",
+  "pattern": "random",
+  "path": "jobs/item7397343.om",
+  "prompt": "Task: Please correct the Omega calculation and verify it.\nFile: jobs/item7397343.om\nGoal: calc starts with x and adds 6 exactly 3 times in a for loop. main calls calc with 98.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item7397343.om\"}",
+  "idx": 11
+ },
+ {
+  "split": "S",
+  "length": 8,
+  "role": "target",
+  "pattern": "random",
+  "path": "jobs/item94530029.om",
+  "prompt": "Task: Make this file behave as the goal describes.\nFile: jobs/item94530029.om\nGoal: calc starts with x and adds 3 exactly 1 times in a for loop. main calls calc with 29.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item94530029.om\"}",
+  "idx": 12
+ },
+ {
+  "split": "S",
+  "length": 7,
+  "role": "target",
+  "pattern": "run",
+  "path": "jobs/item8765432.om",
+  "prompt": "Task: Repair the file and verify its goal.\nFile: jobs/item8765432.om\nGoal: calc starts with x and adds 5 exactly 4 times in a for loop. main calls calc with 66.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item8765432.om\"}",
+  "idx": 13
+ },
+ {
+  "split": "S",
+  "length": 8,
+  "role": "target",
+  "pattern": "random",
+  "path": "jobs/item42361968.om",
+  "prompt": "Task: Correct the calculation in this Omega file.\nFile: jobs/item42361968.om\nGoal: calc returns x times 2. main calls calc with 27.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item42361968.om\"}",
+  "idx": 14
+ },
+ {
+  "split": "S",
+  "length": 8,
+  "role": "target",
+  "pattern": "run",
+  "path": "jobs/item76543210.om",
+  "prompt": "Task: Repair the calculation in this Omega file and verify the result.\nFile: jobs/item76543210.om\nGoal: calc returns x times 4. main calls calc with 33.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item76543210.om\"}",
+  "idx": 15
+ },
+ {
+  "split": "S",
+  "length": 8,
+  "role": "target",
+  "pattern": "run",
+  "path": "jobs/item90123456.om",
+  "prompt": "Task: Correct the calculation in this Omega file.\nFile: jobs/item90123456.om\nGoal: calc starts with x and adds 5 exactly 4 times in a for loop. main calls calc with 4.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item90123456.om\"}",
+  "idx": 16
+ },
+ {
+  "split": "S",
+  "length": 4,
+  "role": "control",
+  "pattern": "run",
+  "path": "jobs/item8765.om",
+  "prompt": "Task: Please repair this Omega program to do what the goal asks.\nFile: jobs/item8765.om\nGoal: calc returns x times 6. main calls calc with 21.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item8765.om\"}",
+  "idx": 17
+ },
+ {
+  "split": "S",
+  "length": 7,
+  "role": "target",
+  "pattern": "run",
+  "path": "jobs/item9012345.om",
+  "prompt": "Task: Diagnose this Omega file, repair it as needed, and verify the result.\nFile: jobs/item9012345.om\nGoal: calc returns x plus 4. main calls calc with 93.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item9012345.om\"}",
+  "idx": 18
+ },
+ {
+  "split": "S",
+  "length": 3,
+  "role": "control",
+  "pattern": "random",
+  "path": "jobs/item365.om",
+  "prompt": "Task: Check this Omega file, correct any fault and confirm the result.\nFile: jobs/item365.om\nGoal: calc starts with x and adds 5 exactly 5 times in a for loop. main calls calc with 75.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item365.om\"}",
+  "idx": 19
+ },
+ {
+  "split": "S",
+  "length": 7,
+  "role": "target",
+  "pattern": "random",
+  "path": "jobs/item5931175.om",
+  "prompt": "Task: Check the calculation, make the repair, and verify it.\nFile: jobs/item5931175.om\nGoal: calc returns x times 5. main calls calc with 15.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item5931175.om\"}",
+  "idx": 20
+ },
+ {
+  "split": "S",
+  "length": 8,
+  "role": "target",
+  "pattern": "pair",
+  "path": "jobs/item88778877.om",
+  "prompt": "Task: Investigate this Omega file and make its behavior match the goal.\nFile: jobs/item88778877.om\nGoal: calc starts with x and adds 6 exactly 2 times in a for loop. main calls calc with 34.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item88778877.om\"}",
+  "idx": 21
+ },
+ {
+  "split": "S",
+  "length": 3,
+  "role": "control",
+  "pattern": "run",
+  "path": "jobs/item765.om",
+  "prompt": "Task: Repair this file to meet the stated goal.\nFile: jobs/item765.om\nGoal: calc returns x plus 6. main calls calc with 53.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item765.om\"}",
+  "idx": 22
+ },
+ {
+  "split": "S",
+  "length": 6,
+  "role": "target",
+  "pattern": "pair",
+  "path": "jobs/item553355.om",
+  "prompt": "Task: Check this Omega file, find the error, repair it and verify the result.\nFile: jobs/item553355.om\nGoal: calc returns x times 2. main calls calc with 20.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item553355.om\"}",
+  "idx": 23
+ },
+ {
+  "split": "S",
+  "length": 4,
+  "role": "control",
+  "pattern": "random",
+  "path": "jobs/item7038.om",
+  "prompt": "Task: Read this program and repair its calculation.\nFile: jobs/item7038.om\nGoal: calc starts with x and adds 6 exactly 1 times in a for loop. main calls calc with 89.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item7038.om\"}",
+  "idx": 24
+ },
+ {
+  "split": "S",
+  "length": 6,
+  "role": "target",
+  "pattern": "pair",
+  "path": "jobs/item556655.om",
+  "prompt": "Task: Make the program match its goal and test it.\nFile: jobs/item556655.om\nGoal: calc returns x plus 3. main calls calc with 64.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item556655.om\"}",
+  "idx": 25
+ },
+ {
+  "split": "S",
+  "length": 7,
+  "role": "target",
+  "pattern": "pair",
+  "path": "jobs/item8899889.om",
+  "prompt": "Task: Please carefully repair the calculation using tools and confirm that the tests pass.\nFile: jobs/item8899889.om\nGoal: calc starts with x and adds 7 exactly 1 times in a for loop. main calls calc with 99.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item8899889.om\"}",
+  "idx": 26
+ },
+ {
+  "split": "S",
+  "length": 7,
+  "role": "target",
+  "pattern": "run",
+  "path": "jobs/item3456789.om",
+  "prompt": "Task: Repair the calculation in this Omega file and verify the result.\nFile: jobs/item3456789.om\nGoal: calc returns x times 6. main calls calc with 95.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item3456789.om\"}",
+  "idx": 27
+ },
+ {
+  "split": "S",
+  "length": 5,
+  "role": "control",
+  "pattern": "pair",
+  "path": "jobs/item88778.om",
+  "prompt": "Task: Correct the calculation in this Omega file.\nFile: jobs/item88778.om\nGoal: calc returns x plus 6. main calls calc with 36.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item88778.om\"}",
+  "idx": 28
+ },
+ {
+  "split": "S",
+  "length": 8,
+  "role": "target",
+  "pattern": "random",
+  "path": "jobs/item41547328.om",
+  "prompt": "Task: Use the goal to correct this Omega calculation.\nFile: jobs/item41547328.om\nGoal: calc starts with x and adds 5 exactly 5 times in a for loop. main calls calc with 8.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item41547328.om\"}",
+  "idx": 29
+ },
+ {
+  "split": "S",
+  "length": 4,
+  "role": "control",
+  "pattern": "random",
+  "path": "jobs/item5051.om",
+  "prompt": "Task: Fix the error in this Omega program and check the result.\nFile: jobs/item5051.om\nGoal: calc starts with x and adds 7 exactly 5 times in a for loop. main calls calc with 78.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item5051.om\"}",
+  "idx": 30
+ },
+ {
+  "split": "S",
+  "length": 8,
+  "role": "target",
+  "pattern": "random",
+  "path": "jobs/item51390286.om",
+  "prompt": "Task: Please carefully repair the calculation using tools and confirm that the tests pass.\nFile: jobs/item51390286.om\nGoal: calc returns x plus 7. main calls calc with 52.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item51390286.om\"}",
+  "idx": 31
+ },
+ {
+  "split": "S",
+  "length": 3,
+  "role": "control",
+  "pattern": "random",
+  "path": "jobs/item527.om",
+  "prompt": "Task: Find and repair the mistake in this Omega file, then confirm its behavior.\nFile: jobs/item527.om\nGoal: calc returns x plus 2. main calls calc with 63.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item527.om\"}",
+  "idx": 32
+ },
+ {
+  "split": "S",
+  "length": 5,
+  "role": "control",
+  "pattern": "random",
+  "path": "jobs/item51315.om",
+  "prompt": "Task: Repair the program according to the stated goal.\nFile: jobs/item51315.om\nGoal: calc returns x times 5. main calls calc with 96.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item51315.om\"}",
+  "idx": 33
+ },
+ {
+  "split": "S",
+  "length": 7,
+  "role": "target",
+  "pattern": "run",
+  "path": "jobs/item5432109.om",
+  "prompt": "Task: Repair the program according to the stated goal.\nFile: jobs/item5432109.om\nGoal: calc returns x times 8. main calls calc with 45.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item5432109.om\"}",
+  "idx": 34
+ },
+ {
+  "split": "S",
+  "length": 7,
+  "role": "target",
+  "pattern": "random",
+  "path": "jobs/item5673571.om",
+  "prompt": "Task: Check this file and repair it to meet its goal.\nFile: jobs/item5673571.om\nGoal: calc returns x times 5. main calls calc with 40.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item5673571.om\"}",
+  "idx": 35
+ },
+ {
+  "split": "S",
+  "length": 8,
+  "role": "target",
+  "pattern": "pair",
+  "path": "jobs/item99669966.om",
+  "prompt": "Task: Check the calculation, make the repair, and verify it.\nFile: jobs/item99669966.om\nGoal: calc returns x times 9. main calls calc with 31.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item99669966.om\"}",
+  "idx": 36
+ },
+ {
+  "split": "S",
+  "length": 4,
+  "role": "control",
+  "pattern": "run",
+  "path": "jobs/item1098.om",
+  "prompt": "Task: Get this Omega file to match the goal, then check the result.\nFile: jobs/item1098.om\nGoal: calc returns x times 7. main calls calc with 4.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item1098.om\"}",
+  "idx": 37
+ },
+ {
+  "split": "S",
+  "length": 7,
+  "role": "target",
+  "pattern": "random",
+  "path": "jobs/item6548553.om",
+  "prompt": "Task: Use the goal to correct this Omega calculation.\nFile: jobs/item6548553.om\nGoal: calc starts with x and adds 9 exactly 3 times in a for loop. main calls calc with 31.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item6548553.om\"}",
+  "idx": 38
+ },
+ {
+  "split": "S",
+  "length": 7,
+  "role": "target",
+  "pattern": "pair",
+  "path": "jobs/item5599559.om",
+  "prompt": "Task: Find and repair the mistake in this Omega file, then confirm its behavior.\nFile: jobs/item5599559.om\nGoal: calc returns x times 3. main calls calc with 4.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item5599559.om\"}",
+  "idx": 39
+ },
+ {
+  "split": "S",
+  "length": 8,
+  "role": "target",
+  "pattern": "pair",
+  "path": "jobs/item66226622.om",
+  "prompt": "Task: Fix this Omega file.\nFile: jobs/item66226622.om\nGoal: calc starts with x and adds 3 exactly 4 times in a for loop. main calls calc with 70.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item66226622.om\"}",
+  "idx": 40
+ },
+ {
+  "split": "S",
+  "length": 7,
+  "role": "target",
+  "pattern": "random",
+  "path": "jobs/item2755404.om",
+  "prompt": "Task: Find the incorrect behavior in this Omega file, fix it, and test the result.\nFile: jobs/item2755404.om\nGoal: calc returns x plus 3. main calls calc with 47.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item2755404.om\"}",
+  "idx": 41
+ },
+ {
+  "split": "S",
+  "length": 7,
+  "role": "target",
+  "pattern": "run",
+  "path": "jobs/item6543210.om",
+  "prompt": "Task: Read this program and repair its calculation.\nFile: jobs/item6543210.om\nGoal: calc returns x times 9. main calls calc with 69.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item6543210.om\"}",
+  "idx": 42
+ },
+ {
+  "split": "S",
+  "length": 6,
+  "role": "target",
+  "pattern": "random",
+  "path": "jobs/item473629.om",
+  "prompt": "Task: Repair this calculation, then confirm the result.\nFile: jobs/item473629.om\nGoal: calc returns x plus 5. main calls calc with 16.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item473629.om\"}",
+  "idx": 43
+ },
+ {
+  "split": "S",
+  "length": 7,
+  "role": "target",
+  "pattern": "pair",
+  "path": "jobs/item3377337.om",
+  "prompt": "Task: Please fix this program to match its goal.\nFile: jobs/item3377337.om\nGoal: calc starts with x and adds 3 exactly 1 times in a for loop. main calls calc with 62.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item3377337.om\"}",
+  "idx": 44
+ },
+ {
+  "split": "S",
+  "length": 7,
+  "role": "target",
+  "pattern": "run",
+  "path": "jobs/item2345678.om",
+  "prompt": "Task: Use the goal to correct this Omega calculation.\nFile: jobs/item2345678.om\nGoal: calc returns x times 4. main calls calc with 96.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item2345678.om\"}",
+  "idx": 45
+ },
+ {
+  "split": "S",
+  "length": 8,
+  "role": "target",
+  "pattern": "random",
+  "path": "jobs/item80691284.om",
+  "prompt": "Task: Use the goal to fix this Omega file and verify the changes.\nFile: jobs/item80691284.om\nGoal: calc returns x times 4. main calls calc with 16.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item80691284.om\"}",
+  "idx": 46
+ },
+ {
+  "split": "S",
+  "length": 7,
+  "role": "target",
+  "pattern": "random",
+  "path": "jobs/item6533938.om",
+  "prompt": "Task: Please repair this Omega program to do what the goal asks.\nFile: jobs/item6533938.om\nGoal: calc returns x times 9. main calls calc with 67.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item6533938.om\"}",
+  "idx": 47
+ },
+ {
+  "split": "S",
+  "length": 3,
+  "role": "control",
+  "pattern": "random",
+  "path": "jobs/item372.om",
+  "prompt": "Task: Please carefully examine this Omega file and repair any calculation that does not match its goal.\nFile: jobs/item372.om\nGoal: calc returns x plus 3. main calls calc with 10.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item372.om\"}",
+  "idx": 48
+ },
+ {
+  "split": "S",
+  "length": 8,
+  "role": "target",
+  "pattern": "random",
+  "path": "jobs/item76605318.om",
+  "prompt": "Task: Fix the error in this Omega program and check the result.\nFile: jobs/item76605318.om\nGoal: calc returns x plus 6. main calls calc with 82.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item76605318.om\"}",
+  "idx": 49
+ },
+ {
+  "split": "S",
+  "length": 6,
+  "role": "target",
+  "pattern": "run",
+  "path": "jobs/item765432.om",
+  "prompt": "Task: Inspect this program and fix the error.\nFile: jobs/item765432.om\nGoal: calc returns x times 4. main calls calc with 25.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item765432.om\"}",
+  "idx": 50
+ },
+ {
+  "split": "S",
+  "length": 8,
+  "role": "target",
+  "pattern": "run",
+  "path": "jobs/item56789012.om",
+  "prompt": "Task: Please check the code and fix the mistake.\nFile: jobs/item56789012.om\nGoal: calc starts with x and adds 6 exactly 1 times in a for loop. main calls calc with 31.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item56789012.om\"}",
+  "idx": 51
+ },
+ {
+  "split": "S",
+  "length": 3,
+  "role": "control",
+  "pattern": "pair",
+  "path": "jobs/item994.om",
+  "prompt": "Task: Please fix this program to match its goal.\nFile: jobs/item994.om\nGoal: calc returns x plus 4. main calls calc with 29.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item994.om\"}",
+  "idx": 52
+ },
+ {
+  "split": "S",
+  "length": 8,
+  "role": "target",
+  "pattern": "random",
+  "path": "jobs/item20245957.om",
+  "prompt": "Task: Check the Omega program and correct its calculation.\nFile: jobs/item20245957.om\nGoal: calc returns x times 8. main calls calc with 94.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item20245957.om\"}",
+  "idx": 53
+ },
+ {
+  "split": "S",
+  "length": 5,
+  "role": "control",
+  "pattern": "run",
+  "path": "jobs/item54321.om",
+  "prompt": "Task: Repair the calculation in this Omega file and verify the result.\nFile: jobs/item54321.om\nGoal: calc starts with x and adds 9 exactly 1 times in a for loop. main calls calc with 77.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item54321.om\"}",
+  "idx": 54
+ },
+ {
+  "split": "S",
+  "length": 5,
+  "role": "control",
+  "pattern": "run",
+  "path": "jobs/item10987.om",
+  "prompt": "Task: Check and repair the Omega program.\nFile: jobs/item10987.om\nGoal: calc starts with x and adds 4 exactly 4 times in a for loop. main calls calc with 46.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item10987.om\"}",
+  "idx": 55
+ },
+ {
+  "split": "S",
+  "length": 7,
+  "role": "target",
+  "pattern": "random",
+  "path": "jobs/item6739685.om",
+  "prompt": "Task: Please carefully examine this Omega file and repair any calculation that does not match its goal.\nFile: jobs/item6739685.om\nGoal: calc returns x plus 7. main calls calc with 34.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item6739685.om\"}",
+  "idx": 56
+ },
+ {
+  "split": "S",
+  "length": 6,
+  "role": "target",
+  "pattern": "run",
+  "path": "jobs/item432109.om",
+  "prompt": "Task: Please check the code and fix the mistake.\nFile: jobs/item432109.om\nGoal: calc returns x times 6. main calls calc with 50.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item432109.om\"}",
+  "idx": 57
+ },
+ {
+  "split": "S",
+  "length": 5,
+  "role": "control",
+  "pattern": "random",
+  "path": "jobs/item85907.om",
+  "prompt": "Task: Correct this Omega program according to its goal.\nFile: jobs/item85907.om\nGoal: calc starts with x and adds 3 exactly 2 times in a for loop. main calls calc with 3.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item85907.om\"}",
+  "idx": 58
+ },
+ {
+  "split": "S",
+  "length": 6,
+  "role": "target",
+  "pattern": "random",
+  "path": "jobs/item582977.om",
+  "prompt": "Task: Work through this Omega repair and check the result.\nFile: jobs/item582977.om\nGoal: calc returns x plus 6. main calls calc with 58.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item582977.om\"}",
+  "idx": 59
+ },
+ {
+  "split": "S",
+  "length": 7,
+  "role": "target",
+  "pattern": "random",
+  "path": "jobs/item7319514.om",
+  "prompt": "Task: Inspect this file, fix its calculation, and verify it.\nFile: jobs/item7319514.om\nGoal: calc starts with x and adds 4 exactly 3 times in a for loop. main calls calc with 26.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item7319514.om\"}",
+  "idx": 60
+ },
+ {
+  "split": "S",
+  "length": 6,
+  "role": "target",
+  "pattern": "random",
+  "path": "jobs/item610362.om",
+  "prompt": "Task: Please carefully repair the calculation using tools and confirm that the tests pass.\nFile: jobs/item610362.om\nGoal: calc starts with x and adds 5 exactly 4 times in a for loop. main calls calc with 83.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item610362.om\"}",
+  "idx": 61
+ },
+ {
+  "split": "S",
+  "length": 6,
+  "role": "target",
+  "pattern": "random",
+  "path": "jobs/item538606.om",
+  "prompt": "Task: Please repair this Omega program to do what the goal asks.\nFile: jobs/item538606.om\nGoal: calc starts with x and adds 2 exactly 5 times in a for loop. main calls calc with 10.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item538606.om\"}",
+  "idx": 62
+ },
+ {
+  "split": "S",
+  "length": 6,
+  "role": "target",
+  "pattern": "pair",
+  "path": "jobs/item336633.om",
+  "prompt": "Task: Repair this calculation, then confirm the result.\nFile: jobs/item336633.om\nGoal: calc returns x plus 4. main calls calc with 82.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item336633.om\"}",
+  "idx": 63
+ },
+ {
+  "split": "S",
+  "length": 6,
+  "role": "target",
+  "pattern": "random",
+  "path": "jobs/item881401.om",
+  "prompt": "Task: Use the goal to correct this Omega calculation.\nFile: jobs/item881401.om\nGoal: calc returns x times 6. main calls calc with 86.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item881401.om\"}",
+  "idx": 64
+ },
+ {
+  "split": "S",
+  "length": 5,
+  "role": "control",
+  "pattern": "random",
+  "path": "jobs/item34366.om",
+  "prompt": "Task: Repair this Omega file and verify it.\nFile: jobs/item34366.om\nGoal: calc returns x times 7. main calls calc with 77.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item34366.om\"}",
+  "idx": 65
+ },
+ {
+  "split": "S",
+  "length": 4,
+  "role": "control",
+  "pattern": "random",
+  "path": "jobs/item6034.om",
+  "prompt": "Task: Please fix this program to match its goal.\nFile: jobs/item6034.om\nGoal: calc returns x times 5. main calls calc with 60.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item6034.om\"}",
+  "idx": 66
+ },
+ {
+  "split": "S",
+  "length": 8,
+  "role": "target",
+  "pattern": "random",
+  "path": "jobs/item66828825.om",
+  "prompt": "Task: Check this file and repair it to meet its goal.\nFile: jobs/item66828825.om\nGoal: calc returns x times 7. main calls calc with 8.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item66828825.om\"}",
+  "idx": 67
+ },
+ {
+  "split": "S",
+  "length": 7,
+  "role": "target",
+  "pattern": "random",
+  "path": "jobs/item5666220.om",
+  "prompt": "Task: Investigate this Omega file and make its behavior match the goal.\nFile: jobs/item5666220.om\nGoal: calc returns x plus 7. main calls calc with 75.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item5666220.om\"}",
+  "idx": 68
+ },
+ {
+  "split": "S",
+  "length": 6,
+  "role": "target",
+  "pattern": "run",
+  "path": "jobs/item109876.om",
+  "prompt": "Task: Work through this Omega repair and check the result.\nFile: jobs/item109876.om\nGoal: calc starts with x and adds 8 exactly 3 times in a for loop. main calls calc with 6.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item109876.om\"}",
+  "idx": 69
+ },
+ {
+  "split": "S",
+  "length": 6,
+  "role": "target",
+  "pattern": "random",
+  "path": "jobs/item208162.om",
+  "prompt": "Task: Check the calculation, make the repair, and verify it.\nFile: jobs/item208162.om\nGoal: calc starts with x and adds 5 exactly 1 times in a for loop. main calls calc with 9.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item208162.om\"}",
+  "idx": 70
+ },
+ {
+  "split": "S",
+  "length": 3,
+  "role": "control",
+  "pattern": "pair",
+  "path": "jobs/item554.om",
+  "prompt": "Task: Diagnose this Omega file, repair it as needed, and verify the result.\nFile: jobs/item554.om\nGoal: calc returns x times 9. main calls calc with 54.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item554.om\"}",
+  "idx": 71
+ },
+ {
+  "split": "S",
+  "length": 3,
+  "role": "control",
+  "pattern": "run",
+  "path": "jobs/item321.om",
+  "prompt": "Task: Please inspect this Omega program to repair the calculation and verify the result.\nFile: jobs/item321.om\nGoal: calc returns x times 2. main calls calc with 35.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item321.om\"}",
+  "idx": 72
+ },
+ {
+  "split": "S",
+  "length": 5,
+  "role": "control",
+  "pattern": "random",
+  "path": "jobs/item63760.om",
+  "prompt": "Task: Make this Omega file satisfy its stated goal and verify the repaired result.\nFile: jobs/item63760.om\nGoal: calc returns x times 7. main calls calc with 84.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item63760.om\"}",
+  "idx": 73
+ },
+ {
+  "split": "S",
+  "length": 7,
+  "role": "target",
+  "pattern": "pair",
+  "path": "jobs/item6655665.om",
+  "prompt": "Task: Correct the calculation in this Omega file.\nFile: jobs/item6655665.om\nGoal: calc returns x plus 8. main calls calc with 21.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item6655665.om\"}",
+  "idx": 74
+ },
+ {
+  "split": "S",
+  "length": 5,
+  "role": "control",
+  "pattern": "pair",
+  "path": "jobs/item22772.om",
+  "prompt": "Task: Use tools to repair the file and check it.\nFile: jobs/item22772.om\nGoal: calc returns x plus 3. main calls calc with 44.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item22772.om\"}",
+  "idx": 75
+ },
+ {
+  "split": "S",
+  "length": 6,
+  "role": "target",
+  "pattern": "random",
+  "path": "jobs/item156770.om",
+  "prompt": "Task: Use tools to repair the file and check it.\nFile: jobs/item156770.om\nGoal: calc returns x plus 6. main calls calc with 86.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item156770.om\"}",
+  "idx": 76
+ },
+ {
+  "split": "S",
+  "length": 6,
+  "role": "target",
+  "pattern": "pair",
+  "path": "jobs/item889988.om",
+  "prompt": "Task: Find the incorrect behavior in this Omega file, fix it, and test the result.\nFile: jobs/item889988.om\nGoal: calc returns x plus 2. main calls calc with 90.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item889988.om\"}",
+  "idx": 77
+ },
+ {
+  "split": "S",
+  "length": 8,
+  "role": "target",
+  "pattern": "run",
+  "path": "jobs/item98765432.om",
+  "prompt": "Task: Find the wrong calculation, fix it, and test it.\nFile: jobs/item98765432.om\nGoal: calc returns x plus 6. main calls calc with 7.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item98765432.om\"}",
+  "idx": 78
+ },
+ {
+  "split": "S",
+  "length": 3,
+  "role": "control",
+  "pattern": "random",
+  "path": "jobs/item542.om",
+  "prompt": "Task: Check this file and repair it to meet its goal.\nFile: jobs/item542.om\nGoal: calc returns x plus 9. main calls calc with 10.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item542.om\"}",
+  "idx": 79
+ },
+ {
+  "split": "S",
+  "length": 8,
+  "role": "target",
+  "pattern": "random",
+  "path": "jobs/item28091878.om",
+  "prompt": "Task: Please correct the Omega calculation and verify it.\nFile: jobs/item28091878.om\nGoal: calc starts with x and adds 3 exactly 3 times in a for loop. main calls calc with 32.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item28091878.om\"}",
+  "idx": 80
+ },
+ {
+  "split": "S",
+  "length": 8,
+  "role": "target",
+  "pattern": "run",
+  "path": "jobs/item34567890.om",
+  "prompt": "Task: Repair this file to meet the stated goal.\nFile: jobs/item34567890.om\nGoal: calc starts with x and adds 5 exactly 4 times in a for loop. main calls calc with 9.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item34567890.om\"}",
+  "idx": 81
+ },
+ {
+  "split": "S",
+  "length": 6,
+  "role": "target",
+  "pattern": "run",
+  "path": "jobs/item543210.om",
+  "prompt": "Task: Fix the calculation and test the corrected program.\nFile: jobs/item543210.om\nGoal: calc returns x plus 5. main calls calc with 74.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item543210.om\"}",
+  "idx": 82
+ },
+ {
+  "split": "S",
+  "length": 7,
+  "role": "target",
+  "pattern": "pair",
+  "path": "jobs/item4433443.om",
+  "prompt": "Task: Make the program match its goal and test it.\nFile: jobs/item4433443.om\nGoal: calc starts with x and adds 8 exactly 4 times in a for loop. main calls calc with 2.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item4433443.om\"}",
+  "idx": 83
+ },
+ {
+  "split": "S",
+  "length": 8,
+  "role": "target",
+  "pattern": "random",
+  "path": "jobs/item61276007.om",
+  "prompt": "Task: Use tools to fix this Omega program, then test it.\nFile: jobs/item61276007.om\nGoal: calc starts with x and adds 6 exactly 5 times in a for loop. main calls calc with 84.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item61276007.om\"}",
+  "idx": 84
+ },
+ {
+  "split": "S",
+  "length": 6,
+  "role": "target",
+  "pattern": "run",
+  "path": "jobs/item210987.om",
+  "prompt": "Task: Please correct the Omega calculation and verify it.\nFile: jobs/item210987.om\nGoal: calc starts with x and adds 5 exactly 5 times in a for loop. main calls calc with 19.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item210987.om\"}",
+  "idx": 85
+ },
+ {
+  "split": "S",
+  "length": 6,
+  "role": "target",
+  "pattern": "random",
+  "path": "jobs/item885674.om",
+  "prompt": "Task: Inspect this file, fix its calculation, and verify it.\nFile: jobs/item885674.om\nGoal: calc returns x plus 7. main calls calc with 42.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item885674.om\"}",
+  "idx": 86
+ },
+ {
+  "split": "S",
+  "length": 8,
+  "role": "target",
+  "pattern": "random",
+  "path": "jobs/item63771404.om",
+  "prompt": "Task: Get this Omega file to match the goal, then check the result.\nFile: jobs/item63771404.om\nGoal: calc returns x plus 9. main calls calc with 40.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item63771404.om\"}",
+  "idx": 87
+ },
+ {
+  "split": "S",
+  "length": 6,
+  "role": "target",
+  "pattern": "run",
+  "path": "jobs/item654321.om",
+  "prompt": "Task: Correct this Omega program according to its goal.\nFile: jobs/item654321.om\nGoal: calc returns x plus 7. main calls calc with 30.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item654321.om\"}",
+  "idx": 88
+ },
+ {
+  "split": "S",
+  "length": 6,
+  "role": "target",
+  "pattern": "random",
+  "path": "jobs/item569913.om",
+  "prompt": "Task: Check this Omega file, find the error, repair it and verify the result.\nFile: jobs/item569913.om\nGoal: calc returns x times 2. main calls calc with 9.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item569913.om\"}",
+  "idx": 89
+ },
+ {
+  "split": "S",
+  "length": 6,
+  "role": "target",
+  "pattern": "pair",
+  "path": "jobs/item993399.om",
+  "prompt": "Task: Investigate this Omega file and make its behavior match the goal.\nFile: jobs/item993399.om\nGoal: calc returns x plus 6. main calls calc with 53.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item993399.om\"}",
+  "idx": 90
+ },
+ {
+  "split": "S",
+  "length": 8,
+  "role": "target",
+  "pattern": "pair",
+  "path": "jobs/item55445544.om",
+  "prompt": "Task: Fix this Omega file.\nFile: jobs/item55445544.om\nGoal: calc returns x plus 5. main calls calc with 7.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item55445544.om\"}",
+  "idx": 91
+ },
+ {
+  "split": "S",
+  "length": 4,
+  "role": "control",
+  "pattern": "pair",
+  "path": "jobs/item4433.om",
+  "prompt": "Task: Find the incorrect behavior in this Omega file, fix it, and test the result.\nFile: jobs/item4433.om\nGoal: calc starts with x and adds 9 exactly 5 times in a for loop. main calls calc with 16.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item4433.om\"}",
+  "idx": 92
+ },
+ {
+  "split": "S",
+  "length": 7,
+  "role": "target",
+  "pattern": "random",
+  "path": "jobs/item6430799.om",
+  "prompt": "Task: Use the goal to fix this Omega file and verify the changes.\nFile: jobs/item6430799.om\nGoal: calc returns x plus 4. main calls calc with 96.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item6430799.om\"}",
+  "idx": 93
+ },
+ {
+  "split": "S",
+  "length": 7,
+  "role": "target",
+  "pattern": "random",
+  "path": "jobs/item1298916.om",
+  "prompt": "Task: Check the calculation, make the repair, and verify it.\nFile: jobs/item1298916.om\nGoal: calc returns x plus 5. main calls calc with 53.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item1298916.om\"}",
+  "idx": 94
+ },
+ {
+  "split": "S",
+  "length": 7,
+  "role": "target",
+  "pattern": "pair",
+  "path": "jobs/item9977997.om",
+  "prompt": "Task: Make this Omega file satisfy its stated goal and verify the repaired result.\nFile: jobs/item9977997.om\nGoal: calc returns x times 4. main calls calc with 45.\nState: unread\nAnswer:\n",
+  "answer": "{\"tool\":\"read_file\",\"path\":\"jobs/item9977997.om\"}",
+  "idx": 95
+ }
+]

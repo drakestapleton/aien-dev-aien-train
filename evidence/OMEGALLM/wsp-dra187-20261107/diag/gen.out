@@ -1,0 +1,4 @@
+G 0	{\"tool\":\"read_file\",\"path\":\"jobs/item123.om\"}
+G 1	{\"tool\":\"read_file\",\"path\":\"jobs/item123.om\"}
+G 2	{\"tool\":\"read_file\",\"path\":\"jobs/item123456.om\"}
+G 3	{\"tool\":\"read_file\",\"path\":\"jobs/item23456.om\"}

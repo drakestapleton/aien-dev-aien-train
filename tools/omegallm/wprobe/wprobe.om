@@ -1,0 +1,751 @@
+note SPDX-License-Identifier: AGPL-3.0-only
+note wprobe.om (DRA-187): CPU probes and greedy decoding with a reused prefix for the OLLM
+note checkpoint. tools/omegallm/wprobe/build.sh appends it to ollm.om with that unit's main renamed.
+note Commands (argument 1):
+note  gen CK MERGES NN FILE [K L I A]...  greedy decode (TEMPMILLI 0 of `ollm sample`) of every record
+note  probe CK MERGES FILE [K L I A]...   teacher-forced answer; readout at the first divergence
+note FILE: records, each ended by byte 0; a record is PROMPT, optionally byte 31 and the expected
+note ANSWER (probe needs it). The context is token 0, the prompt's encoding, then (probe) the
+note answer's encoding, as cmdsamp builds it; the answer starts a pre-tokenizer chunk, so the two
+note encodings join exactly where generation would.
+note Hook groups K L I A, at most 16 groups, L < layers; A in thousandths, at most 4000 for kinds
+note 1 .. 3 and 100000 for kinds 4 and 5. Weight hooks (1, 2, 5) apply in their order before any record:
+note  K 1 scales the wo rows of head I of layer L (a weight edit in memory);
+note  K 2 scales w2 row I of layer L (neuron I's output, a weight edit in memory);
+note  K 3 scales head I of layer L's output O at answer rows only (the rows that predict answer
+note  tokens: the last prompt row and later), an activation intervention;
+note  K 4 (gen) subtracts A/1000 from logit I when the last context token is a digit byte (48 .. 57),
+note  a decoding adjustment;
+note  K 5 (L 0, I 0) rounds every parameter to the nearest f32: the GPU runtime's representation.
+note The forward computes rows t0 .. CT-1 of every layer with the model.om row kernels (olayf1,
+note fatts, fatto, olayf2), so each row gets the bits ofwd gives it; rows below t0 are reused. It
+note needs every layer and activation in bank A (og[35] = og[38] = L), else exit 60.
+note gen prints `G idx<TAB>text` per record (bytes 9, 10, 13, 34, 92 and below 32 escaped as \t \n
+note \r \" \\ \xHH). probe prints `R idx np na div exp pred` and, on a divergence at answer token
+note div, the readout of the row that predicts it with a = expected and b = predicted token:
+note  T  the top 8 logits; LD logit[a] - logit[b] and the sum of the parts below (equal up to rounding);
+note  E  the embedding part; H l n the part of head n of layer l; M l the part of layer l's MLP;
+note  N l f the 4 largest neuron parts of each MLP; A l n j p tok the 4 most attended positions of
+note  the 6 heads with the largest |part|. A part of a residual stream term x is
+note  sum_c x[c] gf[c] (wte[a][c] - wte[b][c]) / s with s the final rms of the row, so the parts sum
+note  to LD. Values print with 4 decimals.
+note Exits: 2 usage, 60 layout, 61 file or record too long, 62 context full (T tokens).
+
+global wzh ulong 64
+global wzhn ulong 1
+global wzs ulong 4
+global wzat ulong 4096
+global wzw f64 4096
+global wzu f64 4096
+global wzc f64 256
+global wzm f64 64
+global wzk ulong 16
+global wzr f64 16
+
+note argument 1: 1 gen, 2 probe, else 0
+fn wzcmd to ulong
+n = oargp 1
+if and eq n 3 eq get oarg 0 103
+ret 1
+end
+if and eq n 5 eq get oarg 0 112
+ret 2
+end
+ret 0
+end
+
+fn main to int
+if lt oargc 2
+exit 2
+end
+c = wzcmd
+if eq c 1
+wzgenc
+ret 0
+end
+if eq c 2
+wzprbc
+ret 0
+end
+exit 2
+end
+
+note checkpoint argument 2, merges argument 3
+fn wzload to void
+ockload 2
+obload 3 get og 0
+l = get og 5
+if or ne get og 35 l ne get og 38 l
+exit 60
+end
+end
+
+note hook groups from argument b on
+fn wzhooks b ulong to void
+na = oargc
+if lt na b
+exit 2
+end
+n = sub na b
+if ne rem n 4 0
+exit 2
+end
+k = div n 4
+if gt k 16
+exit 2
+end
+put wzhn 0 k
+for i ulong k
+for j ulong 4
+put wzh add mul i 4 j oargu add b add mul i 4 j
+end
+wzhchk i
+end
+for i2 ulong k
+wzhw i2
+end
+end
+
+fn wzhchk i ulong to void
+q = mul i 4
+kd = get wzh q
+x = get wzh add q 2
+a = get wzh add q 3
+if or lt kd 1 gt kd 5
+exit 2
+end
+if ge get wzh add q 1 get og 5
+exit 2
+end
+if lt kd 4
+if gt a 4000
+exit 2
+end
+end
+if gt a 100000
+exit 2
+end
+if ge x wzhlim kd
+exit 2
+end
+end
+
+note the bound on a hook's index I: F neurons (kind 2), V tokens (4), 1 (5), else H heads
+fn wzhlim kd ulong to ulong
+if eq kd 2
+ret get og 4
+end
+if eq kd 4
+ret get og 0
+end
+if eq kd 5
+ret 1
+end
+ret get og 3
+end
+
+note apply weight hook i (kinds 1 and 2)
+fn wzhw i ulong to void
+q = mul i 4
+kd = get wzh q
+l = get wzh add q 1
+x = get wzh add q 2
+a = div f64 get wzh add q 3 1000.0
+d = get og 2
+if eq kd 1
+e = get og 7
+wzscl add opwo l mul mul x e d mul e d a
+end
+if eq kd 2
+wzscl add opw2 l mul x d d a
+end
+if eq kd 5
+wzf32
+end
+end
+
+note every parameter rounded to the nearest f32 and back: the values the GPU runtime uploads
+fn wzf32 to void
+n = get og 8
+for q ulong ocn n
+i = mul q OCH
+ie = oce q n
+while lt i ie bound 999999
+owp i f64 f32 owg i
+i = add i 1
+end
+end
+end
+
+note decoding adjustment: every kind-4 hook subtracts A/1000 from logit[I] of TMP when the last
+note context token is a digit (byte tokens 48 .. 57)
+fn wzbias to void
+b = get obx sub get og 9 1
+if or lt b 48 gt b 57
+ret
+end
+tm = get og 27
+for i ulong get wzhn 0
+q = mul i 4
+if eq get wzh q 4
+o = add tm get wzh add q 2
+v = div f64 get wzh add q 3 1000.0
+put oa o sub get oa o v
+end
+end
+end
+
+note ow[i] *= a for virtual i in [o, o + n)
+fn wzscl o ulong n ulong a f64 to void
+for i ulong n
+owp add o i mul owg add o i a
+end
+end
+
+note activation hook: O[t] of head n of layer l scaled by kind-3 hooks when t >= wzs[0]
+fn wzhook l ulong n ulong t ulong to void
+if lt t get wzs 0
+ret
+end
+for i ulong get wzhn 0
+if wzhmat i 3 l n
+wzsclo l n t div f64 get wzh add mul i 4 3 1000.0
+end
+end
+end
+
+note hook i has kind kd, layer l and index x
+fn wzhmat i ulong kd ulong l ulong x ulong to bool
+q = mul i 4
+if ne get wzh q kd
+ret false
+end
+if ne get wzh add q 1 l
+ret false
+end
+ret eq get wzh add q 2 x
+end
+
+fn wzsclo l ulong n ulong t ulong a f64 to void
+e = get og 7
+o = add add oao l mul t get og 2 mul n e
+for i ulong e
+put oa add o i mul get oa add o i a
+end
+end
+
+note h[t] = wte[x[t]] + wpe[t] for t0 <= t < CT (oemb's rows)
+fn wzemb t0 ulong to void
+d = get og 2
+t = t0
+while lt t get og 9 bound 4096
+wr = mul get obx t d
+pr = add get og 30 mul t d
+kadd3w add oahin 0 mul t d wr pr d
+t = add t 1
+end
+end
+
+note olayf for rows t0 .. CT-1 only
+fn wzlay l ulong t0 ulong to void
+ct = get og 9
+t = t0
+while lt t ct bound 4096
+olayf1 l t
+t = add t 1
+end
+for n ulong get og 3
+t2 = t0
+while lt t2 ct bound 4096
+fatts l n t2
+fatto l n t2
+wzhook l n t2
+t2 = add t2 1
+end
+end
+t3 = t0
+while lt t3 ct bound 4096
+olayf2 l t3
+t3 = add t3 1
+end
+end
+
+fn wzfwd t0 ulong to void
+wzemb t0
+for l ulong get og 5
+wzlay l t0
+end
+end
+
+note z = rms(HF[r], gf) and the logits of row r into TMP (olast's values for r = CT-1)
+fn wzhead r ulong to void
+d = get og 2
+o = mul r d
+z = add get og 17 o
+frms add get og 15 o get og 33 z add get og 16 r
+klogit z get og 27 get og 0 d
+end
+
+note record [p, e) of opw; s the first byte 31 in it or e
+fn wzsep p ulong e ulong to ulong
+s = p
+while lt s e bound 999999
+if eq get opw s 31
+ret s
+end
+s = add s 1
+end
+ret e
+end
+
+fn wzend p ulong n ulong to ulong
+e = p
+while lt e n bound 999999
+if eq get opw e 0
+ret e
+end
+e = add e 1
+end
+ret n
+end
+
+note encode opw[p, q) into obtk; returns the token count
+fn wzenc p ulong q ulong to ulong
+n = sub q p
+if gt n 4000
+exit 61
+end
+for i ulong n
+put oarg i get opw add p i
+end
+if eq n 0
+ret 0
+end
+ret obpenc n
+end
+
+note push obtk[0 .. n) onto the context, refusing a full window
+fn wzpush n ulong to void
+for i ulong n
+if ge get og 9 get og 1
+exit 62
+end
+ocpush get obtk i
+end
+end
+
+note the file named by argument ai into opw; returns its length
+fn wzfile ai ulong to ulong
+n = oprd ai 0 0 999999
+if ge n 999999
+exit 61
+end
+ret n
+end
+
+fn wzgenc to void
+if lt oargc 6
+exit 2
+end
+wzload
+nn = oargu 4
+if gt nn 4096
+exit 2
+end
+wzhooks 6
+n = wzfile 5
+p = ulong 0
+k = ulong 0
+while lt p n bound 999999
+e = wzend p n
+s = wzsep p e
+put og 9 0
+ocpush 0
+wzpush wzenc p s
+put wzs 0 sub get og 9 1
+oputc 71
+oputc 32
+oputu k
+oputc 9
+wzgen nn
+oputc 10
+oflush
+k = add k 1
+p = add e 1
+end
+end
+
+fn wzgen nn ulong to void
+t0 = ulong 0
+for g ulong nn
+wzfwd t0
+wzhead sub get og 9 1
+wzbias
+c = oargmax
+if eq c 0
+break
+end
+wzputt c
+if ge get og 9 get og 1
+exit 62
+end
+t0 = get og 9
+ocpush c
+end
+end
+
+note decoded bytes of token c, escaped
+fn wzputt c ulong to void
+obtcap c
+for i ulong get obon 0
+wzesc ulong get obo i
+end
+end
+
+fn wzesc b ulong to void
+if eq b 9
+oputc 92
+oputc 116
+ret
+end
+if eq b 10
+oputc 92
+oputc 110
+ret
+end
+if eq b 13
+oputc 92
+oputc 114
+ret
+end
+if or eq b 34 eq b 92
+oputc 92
+oputc b
+ret
+end
+if or lt b 32 eq b 127
+oputc 92
+oputc 120
+wzhex1 shr b 4
+wzhex1 and b 15
+ret
+end
+oputc b
+end
+
+fn wzhex1 h ulong to void
+if lt h 10
+oputc add h 48
+else
+oputc add h 87
+end
+end
+
+note x with 4 decimals
+fn wzpf x f64 to void
+y = x
+if lt y 0.0
+oputc 45
+y = neg y
+end
+if gt y 1.0e12
+y = 1.0e12f64
+end
+q = ulong add mul y 10000.0 0.5
+oputu div q 10000
+oputc 46
+f = rem q 10000
+oputc add 48 div f 1000
+oputc add 48 rem div f 100 10
+oputc add 48 rem div f 10 10
+oputc add 48 rem f 10
+end
+
+fn wzsp to void
+oputc 32
+end
+
+fn wzprbc to void
+if lt oargc 5
+exit 2
+end
+wzload
+wzhooks 5
+n = wzfile 4
+p = ulong 0
+k = ulong 0
+while lt p n bound 999999
+e = wzend p n
+s = wzsep p e
+wzprb1 k p s e
+oflush
+k = add k 1
+p = add e 1
+end
+end
+
+note one probe record: prompt opw[p, s), answer opw[s + 1, e)
+fn wzprb1 k ulong p ulong s ulong e ulong to void
+if ge s e
+exit 2
+end
+put og 9 0
+ocpush 0
+wzpush wzenc p s
+npc = get og 9
+na = wzenc add s 1 e
+for i ulong na
+put wzat i get obtk i
+end
+wzpush na
+put wzs 0 sub npc 1
+wzfwd 0
+dv = wzdiv npc na
+oputc 82
+wzsp
+oputu k
+wzsp
+oputu npc
+wzsp
+oputu na
+wzsp
+if ge dv na
+oputc 45
+oputc 49
+oputc 10
+ret
+end
+oputu dv
+wzsp
+oputu get wzat dv
+wzsp
+r = add sub npc 1 dv
+wzhead r
+b = oargmax
+oputu b
+oputc 10
+wzread r get wzat dv b
+end
+
+note the first answer index whose row argmax differs from the expected token, else na
+fn wzdiv npc ulong na ulong to ulong
+for k ulong na
+wzhead add sub npc 1 k
+if ne oargmax get wzat k
+ret k
+end
+end
+ret na
+end
+
+note readout of row r for expected a, predicted b (wzhead r already ran)
+fn wzread r ulong a ulong b ulong to void
+wztop8
+d = get og 2
+s = get oa add get og 16 r
+g = get og 33
+for c ulong d
+x = sub owg add mul a d c owg add mul b d c
+put wzw c div mul x owg add g c s
+end
+tm = get og 27
+oputc 76
+oputc 68
+wzsp
+wzpf sub get oa add tm a get oa add tm b
+wzsp
+wzpf wzdot add get og 15 mul r d
+oputc 10
+oputc 69
+wzsp
+wzpf wzdot add oahin 0 mul r d
+oputc 10
+for l ulong get og 5
+wzattr l r
+wzmlpr l r
+end
+wzattn r
+end
+
+note sum_c oa[o + c] wzw[c]
+fn wzdot o ulong to f64
+v = 0.0f64
+for c ulong get og 2
+v = add v mul get oa add o c get wzw c
+end
+ret v
+end
+
+note sum_c ow[virtual o + c] wzw[c]
+fn wzrdot o ulong to f64
+v = 0.0f64
+for c ulong get og 2
+v = add v mul owg add o c get wzw c
+end
+ret v
+end
+
+note head parts of layer l at row r: wzu[k] = wo[k] . wzw, part n = O[r][nE ..] . wzu[nE ..]
+fn wzattr l ulong r ulong to void
+d = get og 2
+e = get og 7
+w = opwo l
+for k ulong d
+put wzu k wzrdot add w mul k d
+end
+o = add oao l mul r d
+for n ulong get og 3
+v2 = wzhpart add o mul n e mul n e
+put wzc add mul l get og 3 n v2
+oputc 72
+wzsp
+oputu l
+wzsp
+oputu n
+wzsp
+wzpf v2
+oputc 10
+end
+end
+
+note sum_i oa[o + i] wzu[u + i] for i < E
+fn wzhpart o ulong u ulong to f64
+v = 0.0f64
+for i ulong get og 7
+v = add v mul get oa add o i get wzu add u i
+end
+ret v
+end
+
+note MLP part of layer l at row r and its 4 largest neuron parts
+fn wzmlpr l ulong r ulong to void
+d = get og 2
+f = get og 4
+w = opw2 l
+o = add oarl l mul r f
+t = 0.0f64
+for i ulong f
+v = mul wzrdot add w mul i d get oa add o i
+put wzu i v
+t = add t v
+end
+put wzm l t
+oputc 77
+wzsp
+oputu l
+wzsp
+wzpf t
+oputc 10
+wztopu f 4
+for q ulong 4
+oputc 78
+wzsp
+oputu l
+wzsp
+oputu get wzk q
+wzsp
+wzpf get wzr q
+oputc 10
+end
+end
+
+note the m (<= 16) entries of wzu[0 .. n) with the largest |value| into wzk/wzr, largest first
+fn wztopu n ulong m ulong to void
+for q ulong m
+bi = ulong 0
+bv = neg 1.0f64
+for i ulong n
+v = get wzu i
+if lt v 0.0
+v = neg v
+end
+if and gt v bv not wztaken i q
+bv = v
+bi = i
+end
+end
+put wzk q bi
+put wzr q get wzu bi
+end
+end
+
+fn wztaken i ulong q ulong to bool
+for j ulong q
+if eq get wzk j i
+ret true
+end
+end
+ret false
+end
+
+note the top 8 logits of TMP
+fn wztop8 to void
+v = get og 0
+tm = get og 27
+for i ulong v
+put wzu i get oa add tm i
+end
+oputc 84
+for q ulong 8
+bi = ulong 0
+bv = neg 1.0e300f64
+for i2 ulong v
+if and gt get wzu i2 bv not wztaken i2 q
+bv = get wzu i2
+bi = i2
+end
+end
+put wzk q bi
+wzsp
+oputu bi
+oputc 58
+oputc 34
+wzputt bi
+oputc 34
+oputc 58
+wzpf bv
+end
+oputc 10
+end
+
+note attention rows of the 6 heads with the largest |part| at row r
+fn wzattn r ulong to void
+nh = mul get og 5 get og 3
+for i ulong nh
+put wzu i get wzc i
+end
+wztopu nh 6
+for q ulong 6
+put wzk add 8 q get wzk q
+end
+for q2 ulong 6
+x = get wzk add 8 q2
+wzatt1 div x get og 3 rem x get og 3 r
+end
+end
+
+note the 4 most attended positions of head n of layer l from row r
+fn wzatt1 l ulong n ulong r ulong to void
+pa = opar l n r
+for j ulong add r 1
+put wzu j get opa add pa j
+end
+wztopu add r 1 4
+for q ulong 4
+j2 = get wzk q
+oputc 65
+wzsp
+oputu l
+wzsp
+oputu n
+wzsp
+oputu j2
+wzsp
+wzpf get wzr q
+wzsp
+oputc 34
+wzputt get obx j2
+oputc 34
+oputc 10
+end
+end

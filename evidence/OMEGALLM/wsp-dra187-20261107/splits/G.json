@@ -1,0 +1,962 @@
+[
+ {
+  "split": "G",
+  "length": 5,
+  "role": "control",
+  "pattern": "random",
+  "word": "hello68234",
+  "prompt": "Task: Write Omega that prints hello68234 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello68234\\n\"",
+  "idx": 0
+ },
+ {
+  "split": "G",
+  "length": 7,
+  "role": "target",
+  "pattern": "random",
+  "word": "hello9161753",
+  "prompt": "Task: Write Omega that prints hello9161753 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello9161753\\n\"",
+  "idx": 1
+ },
+ {
+  "split": "G",
+  "length": 4,
+  "role": "control",
+  "pattern": "pair",
+  "word": "hello1155",
+  "prompt": "Task: Write Omega that prints hello1155 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello1155\\n\"",
+  "idx": 2
+ },
+ {
+  "split": "G",
+  "length": 7,
+  "role": "target",
+  "pattern": "random",
+  "word": "hello3918909",
+  "prompt": "Task: Write Omega that prints hello3918909 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello3918909\\n\"",
+  "idx": 3
+ },
+ {
+  "split": "G",
+  "length": 8,
+  "role": "target",
+  "pattern": "pair",
+  "word": "hello44774477",
+  "prompt": "Task: Write Omega that prints hello44774477 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello44774477\\n\"",
+  "idx": 4
+ },
+ {
+  "split": "G",
+  "length": 4,
+  "role": "control",
+  "pattern": "random",
+  "word": "hello7151",
+  "prompt": "Task: Write Omega that prints hello7151 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello7151\\n\"",
+  "idx": 5
+ },
+ {
+  "split": "G",
+  "length": 6,
+  "role": "target",
+  "pattern": "random",
+  "word": "hello359105",
+  "prompt": "Task: Write Omega that prints hello359105 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello359105\\n\"",
+  "idx": 6
+ },
+ {
+  "split": "G",
+  "length": 6,
+  "role": "target",
+  "pattern": "random",
+  "word": "hello909776",
+  "prompt": "Task: Write Omega that prints hello909776 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello909776\\n\"",
+  "idx": 7
+ },
+ {
+  "split": "G",
+  "length": 7,
+  "role": "target",
+  "pattern": "random",
+  "word": "hello1153090",
+  "prompt": "Task: Write Omega that prints hello1153090 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello1153090\\n\"",
+  "idx": 8
+ },
+ {
+  "split": "G",
+  "length": 4,
+  "role": "control",
+  "pattern": "random",
+  "word": "hello5613",
+  "prompt": "Task: Write Omega that prints hello5613 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello5613\\n\"",
+  "idx": 9
+ },
+ {
+  "split": "G",
+  "length": 7,
+  "role": "target",
+  "pattern": "random",
+  "word": "hello5621365",
+  "prompt": "Task: Write Omega that prints hello5621365 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello5621365\\n\"",
+  "idx": 10
+ },
+ {
+  "split": "G",
+  "length": 7,
+  "role": "target",
+  "pattern": "random",
+  "word": "hello9381330",
+  "prompt": "Task: Write Omega that prints hello9381330 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello9381330\\n\"",
+  "idx": 11
+ },
+ {
+  "split": "G",
+  "length": 8,
+  "role": "target",
+  "pattern": "pair",
+  "word": "hello22882288",
+  "prompt": "Task: Write Omega that prints hello22882288 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello22882288\\n\"",
+  "idx": 12
+ },
+ {
+  "split": "G",
+  "length": 4,
+  "role": "control",
+  "pattern": "random",
+  "word": "hello8109",
+  "prompt": "Task: Write Omega that prints hello8109 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello8109\\n\"",
+  "idx": 13
+ },
+ {
+  "split": "G",
+  "length": 8,
+  "role": "target",
+  "pattern": "pair",
+  "word": "hello77997799",
+  "prompt": "Task: Write Omega that prints hello77997799 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello77997799\\n\"",
+  "idx": 14
+ },
+ {
+  "split": "G",
+  "length": 5,
+  "role": "control",
+  "pattern": "random",
+  "word": "hello57716",
+  "prompt": "Task: Write Omega that prints hello57716 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello57716\\n\"",
+  "idx": 15
+ },
+ {
+  "split": "G",
+  "length": 8,
+  "role": "target",
+  "pattern": "random",
+  "word": "hello31078972",
+  "prompt": "Task: Write Omega that prints hello31078972 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello31078972\\n\"",
+  "idx": 16
+ },
+ {
+  "split": "G",
+  "length": 8,
+  "role": "target",
+  "pattern": "random",
+  "word": "hello55633776",
+  "prompt": "Task: Write Omega that prints hello55633776 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello55633776\\n\"",
+  "idx": 17
+ },
+ {
+  "split": "G",
+  "length": 8,
+  "role": "target",
+  "pattern": "random",
+  "word": "hello82613499",
+  "prompt": "Task: Write Omega that prints hello82613499 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello82613499\\n\"",
+  "idx": 18
+ },
+ {
+  "split": "G",
+  "length": 5,
+  "role": "control",
+  "pattern": "pair",
+  "word": "hello22662",
+  "prompt": "Task: Write Omega that prints hello22662 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello22662\\n\"",
+  "idx": 19
+ },
+ {
+  "split": "G",
+  "length": 7,
+  "role": "target",
+  "pattern": "random",
+  "word": "hello3005315",
+  "prompt": "Task: Write Omega that prints hello3005315 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello3005315\\n\"",
+  "idx": 20
+ },
+ {
+  "split": "G",
+  "length": 6,
+  "role": "target",
+  "pattern": "random",
+  "word": "hello518111",
+  "prompt": "Task: Write Omega that prints hello518111 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello518111\\n\"",
+  "idx": 21
+ },
+ {
+  "split": "G",
+  "length": 8,
+  "role": "target",
+  "pattern": "random",
+  "word": "hello62248719",
+  "prompt": "Task: Write Omega that prints hello62248719 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello62248719\\n\"",
+  "idx": 22
+ },
+ {
+  "split": "G",
+  "length": 8,
+  "role": "target",
+  "pattern": "random",
+  "word": "hello84495910",
+  "prompt": "Task: Write Omega that prints hello84495910 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello84495910\\n\"",
+  "idx": 23
+ },
+ {
+  "split": "G",
+  "length": 5,
+  "role": "control",
+  "pattern": "random",
+  "word": "hello23871",
+  "prompt": "Task: Write Omega that prints hello23871 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello23871\\n\"",
+  "idx": 24
+ },
+ {
+  "split": "G",
+  "length": 7,
+  "role": "target",
+  "pattern": "random",
+  "word": "hello4588025",
+  "prompt": "Task: Write Omega that prints hello4588025 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello4588025\\n\"",
+  "idx": 25
+ },
+ {
+  "split": "G",
+  "length": 4,
+  "role": "control",
+  "pattern": "random",
+  "word": "hello6368",
+  "prompt": "Task: Write Omega that prints hello6368 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello6368\\n\"",
+  "idx": 26
+ },
+ {
+  "split": "G",
+  "length": 8,
+  "role": "target",
+  "pattern": "random",
+  "word": "hello21315246",
+  "prompt": "Task: Write Omega that prints hello21315246 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello21315246\\n\"",
+  "idx": 27
+ },
+ {
+  "split": "G",
+  "length": 5,
+  "role": "control",
+  "pattern": "random",
+  "word": "hello38765",
+  "prompt": "Task: Write Omega that prints hello38765 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello38765\\n\"",
+  "idx": 28
+ },
+ {
+  "split": "G",
+  "length": 8,
+  "role": "target",
+  "pattern": "random",
+  "word": "hello23815516",
+  "prompt": "Task: Write Omega that prints hello23815516 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello23815516\\n\"",
+  "idx": 29
+ },
+ {
+  "split": "G",
+  "length": 6,
+  "role": "target",
+  "pattern": "pair",
+  "word": "hello881188",
+  "prompt": "Task: Write Omega that prints hello881188 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello881188\\n\"",
+  "idx": 30
+ },
+ {
+  "split": "G",
+  "length": 4,
+  "role": "control",
+  "pattern": "random",
+  "word": "hello1394",
+  "prompt": "Task: Write Omega that prints hello1394 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello1394\\n\"",
+  "idx": 31
+ },
+ {
+  "split": "G",
+  "length": 5,
+  "role": "control",
+  "pattern": "random",
+  "word": "hello80867",
+  "prompt": "Task: Write Omega that prints hello80867 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello80867\\n\"",
+  "idx": 32
+ },
+ {
+  "split": "G",
+  "length": 8,
+  "role": "target",
+  "pattern": "random",
+  "word": "hello65143588",
+  "prompt": "Task: Write Omega that prints hello65143588 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello65143588\\n\"",
+  "idx": 33
+ },
+ {
+  "split": "G",
+  "length": 6,
+  "role": "target",
+  "pattern": "random",
+  "word": "hello199069",
+  "prompt": "Task: Write Omega that prints hello199069 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello199069\\n\"",
+  "idx": 34
+ },
+ {
+  "split": "G",
+  "length": 8,
+  "role": "target",
+  "pattern": "random",
+  "word": "hello22931749",
+  "prompt": "Task: Write Omega that prints hello22931749 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello22931749\\n\"",
+  "idx": 35
+ },
+ {
+  "split": "G",
+  "length": 8,
+  "role": "target",
+  "pattern": "random",
+  "word": "hello88861162",
+  "prompt": "Task: Write Omega that prints hello88861162 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello88861162\\n\"",
+  "idx": 36
+ },
+ {
+  "split": "G",
+  "length": 7,
+  "role": "target",
+  "pattern": "pair",
+  "word": "hello6622662",
+  "prompt": "Task: Write Omega that prints hello6622662 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello6622662\\n\"",
+  "idx": 37
+ },
+ {
+  "split": "G",
+  "length": 8,
+  "role": "target",
+  "pattern": "random",
+  "word": "hello39098317",
+  "prompt": "Task: Write Omega that prints hello39098317 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello39098317\\n\"",
+  "idx": 38
+ },
+ {
+  "split": "G",
+  "length": 4,
+  "role": "control",
+  "pattern": "random",
+  "word": "hello2412",
+  "prompt": "Task: Write Omega that prints hello2412 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello2412\\n\"",
+  "idx": 39
+ },
+ {
+  "split": "G",
+  "length": 4,
+  "role": "control",
+  "pattern": "random",
+  "word": "hello9525",
+  "prompt": "Task: Write Omega that prints hello9525 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello9525\\n\"",
+  "idx": 40
+ },
+ {
+  "split": "G",
+  "length": 8,
+  "role": "target",
+  "pattern": "pair",
+  "word": "hello33223322",
+  "prompt": "Task: Write Omega that prints hello33223322 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello33223322\\n\"",
+  "idx": 41
+ },
+ {
+  "split": "G",
+  "length": 8,
+  "role": "target",
+  "pattern": "random",
+  "word": "hello22542177",
+  "prompt": "Task: Write Omega that prints hello22542177 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello22542177\\n\"",
+  "idx": 42
+ },
+ {
+  "split": "G",
+  "length": 6,
+  "role": "target",
+  "pattern": "pair",
+  "word": "hello776677",
+  "prompt": "Task: Write Omega that prints hello776677 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello776677\\n\"",
+  "idx": 43
+ },
+ {
+  "split": "G",
+  "length": 7,
+  "role": "target",
+  "pattern": "random",
+  "word": "hello1507335",
+  "prompt": "Task: Write Omega that prints hello1507335 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello1507335\\n\"",
+  "idx": 44
+ },
+ {
+  "split": "G",
+  "length": 5,
+  "role": "control",
+  "pattern": "random",
+  "word": "hello88122",
+  "prompt": "Task: Write Omega that prints hello88122 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello88122\\n\"",
+  "idx": 45
+ },
+ {
+  "split": "G",
+  "length": 6,
+  "role": "target",
+  "pattern": "random",
+  "word": "hello666437",
+  "prompt": "Task: Write Omega that prints hello666437 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello666437\\n\"",
+  "idx": 46
+ },
+ {
+  "split": "G",
+  "length": 4,
+  "role": "control",
+  "pattern": "random",
+  "word": "hello4602",
+  "prompt": "Task: Write Omega that prints hello4602 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello4602\\n\"",
+  "idx": 47
+ },
+ {
+  "split": "G",
+  "length": 8,
+  "role": "target",
+  "pattern": "pair",
+  "word": "hello66776677",
+  "prompt": "Task: Write Omega that prints hello66776677 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello66776677\\n\"",
+  "idx": 48
+ },
+ {
+  "split": "G",
+  "length": 6,
+  "role": "target",
+  "pattern": "pair",
+  "word": "hello335533",
+  "prompt": "Task: Write Omega that prints hello335533 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello335533\\n\"",
+  "idx": 49
+ },
+ {
+  "split": "G",
+  "length": 7,
+  "role": "target",
+  "pattern": "random",
+  "word": "hello6373406",
+  "prompt": "Task: Write Omega that prints hello6373406 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello6373406\\n\"",
+  "idx": 50
+ },
+ {
+  "split": "G",
+  "length": 6,
+  "role": "target",
+  "pattern": "random",
+  "word": "hello969884",
+  "prompt": "Task: Write Omega that prints hello969884 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello969884\\n\"",
+  "idx": 51
+ },
+ {
+  "split": "G",
+  "length": 5,
+  "role": "control",
+  "pattern": "pair",
+  "word": "hello99339",
+  "prompt": "Task: Write Omega that prints hello99339 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello99339\\n\"",
+  "idx": 52
+ },
+ {
+  "split": "G",
+  "length": 7,
+  "role": "target",
+  "pattern": "random",
+  "word": "hello9178164",
+  "prompt": "Task: Write Omega that prints hello9178164 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello9178164\\n\"",
+  "idx": 53
+ },
+ {
+  "split": "G",
+  "length": 6,
+  "role": "target",
+  "pattern": "random",
+  "word": "hello647937",
+  "prompt": "Task: Write Omega that prints hello647937 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello647937\\n\"",
+  "idx": 54
+ },
+ {
+  "split": "G",
+  "length": 8,
+  "role": "target",
+  "pattern": "random",
+  "word": "hello76204604",
+  "prompt": "Task: Write Omega that prints hello76204604 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello76204604\\n\"",
+  "idx": 55
+ },
+ {
+  "split": "G",
+  "length": 7,
+  "role": "target",
+  "pattern": "random",
+  "word": "hello5926823",
+  "prompt": "Task: Write Omega that prints hello5926823 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello5926823\\n\"",
+  "idx": 56
+ },
+ {
+  "split": "G",
+  "length": 7,
+  "role": "target",
+  "pattern": "pair",
+  "word": "hello5522552",
+  "prompt": "Task: Write Omega that prints hello5522552 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello5522552\\n\"",
+  "idx": 57
+ },
+ {
+  "split": "G",
+  "length": 6,
+  "role": "target",
+  "pattern": "random",
+  "word": "hello970825",
+  "prompt": "Task: Write Omega that prints hello970825 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello970825\\n\"",
+  "idx": 58
+ },
+ {
+  "split": "G",
+  "length": 8,
+  "role": "target",
+  "pattern": "random",
+  "word": "hello38598439",
+  "prompt": "Task: Write Omega that prints hello38598439 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello38598439\\n\"",
+  "idx": 59
+ },
+ {
+  "split": "G",
+  "length": 6,
+  "role": "target",
+  "pattern": "random",
+  "word": "hello503495",
+  "prompt": "Task: Write Omega that prints hello503495 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello503495\\n\"",
+  "idx": 60
+ },
+ {
+  "split": "G",
+  "length": 8,
+  "role": "target",
+  "pattern": "random",
+  "word": "hello58388647",
+  "prompt": "Task: Write Omega that prints hello58388647 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello58388647\\n\"",
+  "idx": 61
+ },
+ {
+  "split": "G",
+  "length": 6,
+  "role": "target",
+  "pattern": "pair",
+  "word": "hello667766",
+  "prompt": "Task: Write Omega that prints hello667766 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello667766\\n\"",
+  "idx": 62
+ },
+ {
+  "split": "G",
+  "length": 7,
+  "role": "target",
+  "pattern": "pair",
+  "word": "hello7799779",
+  "prompt": "Task: Write Omega that prints hello7799779 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello7799779\\n\"",
+  "idx": 63
+ },
+ {
+  "split": "G",
+  "length": 8,
+  "role": "target",
+  "pattern": "random",
+  "word": "hello65712912",
+  "prompt": "Task: Write Omega that prints hello65712912 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello65712912\\n\"",
+  "idx": 64
+ },
+ {
+  "split": "G",
+  "length": 7,
+  "role": "target",
+  "pattern": "random",
+  "word": "hello2015326",
+  "prompt": "Task: Write Omega that prints hello2015326 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello2015326\\n\"",
+  "idx": 65
+ },
+ {
+  "split": "G",
+  "length": 6,
+  "role": "target",
+  "pattern": "pair",
+  "word": "hello551155",
+  "prompt": "Task: Write Omega that prints hello551155 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello551155\\n\"",
+  "idx": 66
+ },
+ {
+  "split": "G",
+  "length": 6,
+  "role": "target",
+  "pattern": "random",
+  "word": "hello915194",
+  "prompt": "Task: Write Omega that prints hello915194 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello915194\\n\"",
+  "idx": 67
+ },
+ {
+  "split": "G",
+  "length": 6,
+  "role": "target",
+  "pattern": "random",
+  "word": "hello104920",
+  "prompt": "Task: Write Omega that prints hello104920 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello104920\\n\"",
+  "idx": 68
+ },
+ {
+  "split": "G",
+  "length": 4,
+  "role": "control",
+  "pattern": "pair",
+  "word": "hello4477",
+  "prompt": "Task: Write Omega that prints hello4477 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello4477\\n\"",
+  "idx": 69
+ },
+ {
+  "split": "G",
+  "length": 5,
+  "role": "control",
+  "pattern": "pair",
+  "word": "hello55885",
+  "prompt": "Task: Write Omega that prints hello55885 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello55885\\n\"",
+  "idx": 70
+ },
+ {
+  "split": "G",
+  "length": 8,
+  "role": "target",
+  "pattern": "pair",
+  "word": "hello55885588",
+  "prompt": "Task: Write Omega that prints hello55885588 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello55885588\\n\"",
+  "idx": 71
+ },
+ {
+  "split": "G",
+  "length": 7,
+  "role": "target",
+  "pattern": "pair",
+  "word": "hello4455445",
+  "prompt": "Task: Write Omega that prints hello4455445 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello4455445\\n\"",
+  "idx": 72
+ },
+ {
+  "split": "G",
+  "length": 5,
+  "role": "control",
+  "pattern": "random",
+  "word": "hello88508",
+  "prompt": "Task: Write Omega that prints hello88508 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello88508\\n\"",
+  "idx": 73
+ },
+ {
+  "split": "G",
+  "length": 4,
+  "role": "control",
+  "pattern": "random",
+  "word": "hello6938",
+  "prompt": "Task: Write Omega that prints hello6938 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello6938\\n\"",
+  "idx": 74
+ },
+ {
+  "split": "G",
+  "length": 6,
+  "role": "target",
+  "pattern": "random",
+  "word": "hello921189",
+  "prompt": "Task: Write Omega that prints hello921189 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello921189\\n\"",
+  "idx": 75
+ },
+ {
+  "split": "G",
+  "length": 6,
+  "role": "target",
+  "pattern": "random",
+  "word": "hello612749",
+  "prompt": "Task: Write Omega that prints hello612749 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello612749\\n\"",
+  "idx": 76
+ },
+ {
+  "split": "G",
+  "length": 7,
+  "role": "target",
+  "pattern": "random",
+  "word": "hello8008721",
+  "prompt": "Task: Write Omega that prints hello8008721 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello8008721\\n\"",
+  "idx": 77
+ },
+ {
+  "split": "G",
+  "length": 6,
+  "role": "target",
+  "pattern": "pair",
+  "word": "hello886688",
+  "prompt": "Task: Write Omega that prints hello886688 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello886688\\n\"",
+  "idx": 78
+ },
+ {
+  "split": "G",
+  "length": 6,
+  "role": "target",
+  "pattern": "random",
+  "word": "hello279507",
+  "prompt": "Task: Write Omega that prints hello279507 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello279507\\n\"",
+  "idx": 79
+ },
+ {
+  "split": "G",
+  "length": 6,
+  "role": "target",
+  "pattern": "random",
+  "word": "hello531860",
+  "prompt": "Task: Write Omega that prints hello531860 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello531860\\n\"",
+  "idx": 80
+ },
+ {
+  "split": "G",
+  "length": 7,
+  "role": "target",
+  "pattern": "pair",
+  "word": "hello2277227",
+  "prompt": "Task: Write Omega that prints hello2277227 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello2277227\\n\"",
+  "idx": 81
+ },
+ {
+  "split": "G",
+  "length": 7,
+  "role": "target",
+  "pattern": "random",
+  "word": "hello2101062",
+  "prompt": "Task: Write Omega that prints hello2101062 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello2101062\\n\"",
+  "idx": 82
+ },
+ {
+  "split": "G",
+  "length": 6,
+  "role": "target",
+  "pattern": "random",
+  "word": "hello566477",
+  "prompt": "Task: Write Omega that prints hello566477 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello566477\\n\"",
+  "idx": 83
+ },
+ {
+  "split": "G",
+  "length": 4,
+  "role": "control",
+  "pattern": "pair",
+  "word": "hello2255",
+  "prompt": "Task: Write Omega that prints hello2255 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello2255\\n\"",
+  "idx": 84
+ },
+ {
+  "split": "G",
+  "length": 8,
+  "role": "target",
+  "pattern": "random",
+  "word": "hello16494570",
+  "prompt": "Task: Write Omega that prints hello16494570 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello16494570\\n\"",
+  "idx": 85
+ },
+ {
+  "split": "G",
+  "length": 6,
+  "role": "target",
+  "pattern": "random",
+  "word": "hello607375",
+  "prompt": "Task: Write Omega that prints hello607375 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello607375\\n\"",
+  "idx": 86
+ },
+ {
+  "split": "G",
+  "length": 6,
+  "role": "target",
+  "pattern": "random",
+  "word": "hello663425",
+  "prompt": "Task: Write Omega that prints hello663425 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello663425\\n\"",
+  "idx": 87
+ },
+ {
+  "split": "G",
+  "length": 7,
+  "role": "target",
+  "pattern": "pair",
+  "word": "hello4422442",
+  "prompt": "Task: Write Omega that prints hello4422442 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello4422442\\n\"",
+  "idx": 88
+ },
+ {
+  "split": "G",
+  "length": 7,
+  "role": "target",
+  "pattern": "random",
+  "word": "hello5260237",
+  "prompt": "Task: Write Omega that prints hello5260237 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello5260237\\n\"",
+  "idx": 89
+ },
+ {
+  "split": "G",
+  "length": 7,
+  "role": "target",
+  "pattern": "random",
+  "word": "hello1234263",
+  "prompt": "Task: Write Omega that prints hello1234263 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello1234263\\n\"",
+  "idx": 90
+ },
+ {
+  "split": "G",
+  "length": 7,
+  "role": "target",
+  "pattern": "random",
+  "word": "hello2343509",
+  "prompt": "Task: Write Omega that prints hello2343509 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello2343509\\n\"",
+  "idx": 91
+ },
+ {
+  "split": "G",
+  "length": 8,
+  "role": "target",
+  "pattern": "random",
+  "word": "hello80700984",
+  "prompt": "Task: Write Omega that prints hello80700984 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello80700984\\n\"",
+  "idx": 92
+ },
+ {
+  "split": "G",
+  "length": 7,
+  "role": "target",
+  "pattern": "random",
+  "word": "hello4271920",
+  "prompt": "Task: Write Omega that prints hello4271920 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello4271920\\n\"",
+  "idx": 93
+ },
+ {
+  "split": "G",
+  "length": 5,
+  "role": "control",
+  "pattern": "random",
+  "word": "hello84705",
+  "prompt": "Task: Write Omega that prints hello84705 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello84705\\n\"",
+  "idx": 94
+ },
+ {
+  "split": "G",
+  "length": 5,
+  "role": "control",
+  "pattern": "random",
+  "word": "hello43790",
+  "prompt": "Task: Write Omega that prints hello43790 followed by a newline.\nAnswer:\n",
+  "answer": "text msg \"hello43790\\n\"",
+  "idx": 95
+ }
+]
