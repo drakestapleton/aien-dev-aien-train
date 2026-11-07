@@ -1,0 +1,29 @@
+# exercise: the runner against a real integ3 ollm serve (ollm 7137cef83bc553ecf698c874feb5183bf1a3835783480e53a2e634b2e290987b, tune4-check branch 6089f13 build), accept dfe061ffac26cda85367e117bcfba1fcabb3a9478245a75be00cff4a7f7422ac
+## init4 V32768 T256 D32 H2 F64 L2 B4 seed 7; serve 18297; /health:
+{"status":"ok","in_flight":0,"queued":0,"capacity":32,"busy":false,"model":{"ck":"OLLMCK03","V":32768,"T":256,"D":32,"H":2,"F":64,"L":2,"B":4,"step":0,"P":1065120,"ck_bytes":25563008,"ck_fnv":"1f9dc180c5758831","rope":"40c3880000000000","tok":"OLLMTOK1","tok_V":32768,"tok_fnv":"920b3046a17db9be"}}
+## CTX=8192 accept run (3 dev items) rc 0 0s; context-0.tsv:
+context	source
+256	health
+## accept sum o256 thresholds.tsv:
+role	split	n	pass	not_run	rate	wilson95_lo	wilson95_hi	p50_ms	p95_ms	ctx_max	ctx_p95	crit	reasons	gate	verdict	verdict_reason
+assistant	test	0	0	0	0.0000	0.0000	0.0000	0	0	0	0	0	none	gated	FAIL	context_below_prereg
+coding	dev	3	0	0	0.0000	0.0000	0.5615	0	0	0	0	0	ctx=3	report	-	-
+coding	test	0	0	0	0.0000	0.0000	0.0000	0	0	0	0	0	none	gated	FAIL	context_below_prereg
+hive	test	0	0	0	0.0000	0.0000	0.0000	0	0	0	0	0	none	gated	FAIL	context_below_prereg
+harness	test	0	0	0	0.0000	0.0000	0.0000	0	0	0	0	0	none	gated	FAIL	context_below_prereg
+context	256	health
+overall	FAIL
+## tune4 s.ck s8k.ck 100 1000 8192 4 2 (rc 0); serve 18297; /health:
+{"status":"ok","in_flight":0,"queued":0,"capacity":32,"busy":false,"model":{"ck":"OLLMCK03","V":32768,"T":8192,"D":32,"H":2,"F":64,"L":2,"B":4,"step":0,"P":1065120,"ck_bytes":25563008,"ck_fnv":"1f9dc180c5758831","rope":"40c3880000000000","tok":"OLLMTOK1","tok_V":32768,"tok_fnv":"920b3046a17db9be"}}
+## accept run (no CTX, 3 dev items) rc 0 1s; context-0.tsv:
+context	source
+8192	health
+## accept sum o8k thresholds.tsv:
+role	split	n	pass	not_run	rate	wilson95_lo	wilson95_hi	p50_ms	p95_ms	ctx_max	ctx_p95	crit	reasons	gate	verdict	verdict_reason
+assistant	test	0	0	0	0.0000	0.0000	0.0000	0	0	0	0	0	none	gated	NOT_RUN	rows_missing
+coding	dev	3	0	0	0.0000	0.0000	0.5615	207	268	538	538	0	exec=3	report	-	-
+coding	test	0	0	0	0.0000	0.0000	0.0000	0	0	0	0	0	none	gated	NOT_RUN	rows_missing
+hive	test	0	0	0	0.0000	0.0000	0.0000	0	0	0	0	0	none	gated	NOT_RUN	rows_missing
+harness	test	0	0	0	0.0000	0.0000	0.0000	0	0	0	0	0	none	gated	NOT_RUN	rows_missing
+context	8192	health
+overall	NOT_RUN

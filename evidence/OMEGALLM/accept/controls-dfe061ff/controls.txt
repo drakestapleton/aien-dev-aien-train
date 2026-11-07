@@ -1,0 +1,72 @@
+ref sum rc 3
+PASS C1 ref context 8192 health
+PASS C1 ref assistant verdict_reason ok
+PASS C1 ref coding verdict_reason ok
+PASS C1 ref hive verdict_reason ok
+PASS C1 ref assistant test PASS
+PASS C1 ref coding test PASS
+PASS C1 ref hive test PASS
+PASS C1 ref harness NOT_RUN (no harness results)
+PASS C1 ref assistant dev 379/379
+PASS C1 ref coding dev 176/176
+PASS C1 ref hive dev 16/16
+PASS C3 control-crit-expect-fail 0/5 PASS
+PASS C3 control-glob-expect-fail 0/3 PASS
+PASS C3 control-crit-expect-pass 2/2 PASS
+PASS C3 control-glob-expect-pass 2/2 PASS
+m4 sum rc 1
+PASS M4 MUTANTOP exact caught (hive test FAIL)
+m3 sum rc 3
+PASS M3 mutant crit caught (5/5 crit-expect-fail rows PASS)
+ref4096 sum rc 1
+PASS C5 ref4096 context 4096 health
+PASS C5 ref4096 assistant test FAIL context_below_prereg
+PASS C5 ref4096 coding test FAIL context_below_prereg
+PASS C5 ref4096 hive test FAIL context_below_prereg
+PASS C5 ref4096 harness test FAIL context_below_prereg
+PASS C5 ref4096 assistant test rows 44/44 PASS (the context alone fails it)
+PASS C5 ref4096 coding test rows 28/28 PASS (the context alone fails it)
+PASS C5 ref4096 hive test rows 46/46 PASS (the context alone fails it)
+m5 sum rc 3
+PASS M5 mutant ctx caught (3 gated roles PASS at context 4096)
+refunk sum rc 1
+PASS C6 refunk context unknown
+PASS C6 refunk assistant test FAIL context_unknown
+PASS C6 refunk coding test FAIL context_unknown
+PASS C6 refunk hive test FAIL context_unknown
+PASS C6 refunk harness test FAIL context_unknown
+refdecl sum rc 3
+PASS C7 refdecl context 8192 declared
+PASS C7 refdecl assistant test PASS
+PASS C7 refdecl coding test PASS
+PASS C7 refdecl hive test PASS
+nctx-none sum rc 1
+nctx-8191 sum rc 1
+nctx-8192 sum rc 3
+PASS C8 sum no record no CTX assistant FAIL context_unknown
+PASS C8 sum no record no CTX coding FAIL context_unknown
+PASS C8 sum no record no CTX hive FAIL context_unknown
+PASS C8 sum no record no CTX harness FAIL context_unknown
+PASS C8 sum CTX=8191 assistant FAIL context_below_prereg
+PASS C8 sum CTX=8191 coding FAIL context_below_prereg
+PASS C8 sum CTX=8191 hive FAIL context_below_prereg
+PASS C8 sum CTX=8191 harness FAIL context_below_prereg
+PASS C8 sum CTX=8192 context 8192 sum_env
+PASS C8 sum CTX=8192 assistant PASS
+PASS C8 sum CTX=8192 coding PASS
+PASS C8 sum CTX=8192 hive PASS
+garbage sum rc 1
+PASS C2 garbage ifeval-public 50/369 PASS = the upstream-oracle floor 50 for reply zq
+PASS C2 garbage 0 PASS rows in every other family (own items, HumanEval, controls)
+PASS C2 garbage assistant test FAIL
+PASS C2 garbage coding test FAIL
+PASS C2 garbage hive test FAIL
+m1 sum rc 1
+PASS M1 mutant line caught (18 hive rows PASS on garbage)
+m2 sum rc 1
+PASS M2 mutant exec caught (40 coding rows PASS on garbage)
+accept dfe061ffac26cda85367e117bcfba1fcabb3a9478245a75be00cff4a7f7422ac
+accept-mut-line 7af8ea6e1ac1954f43ee4f073371c49293b78ca587f7b610866e89643306ed00
+accept-mut-exec 4e8ea462221866fb7505a4062c7239f42cdff3b9e620c64979dfaf3962f81583
+accept-mut-crit 233365775f5e61c0238a7a885d82c1250459034cf0cedd8a68dc83a973e1ce91
+accept-mut-ctx 57a24cfdd1b5064aa3e666ed755dd220e95af29d8b675efec9eeef343e1a7f5c

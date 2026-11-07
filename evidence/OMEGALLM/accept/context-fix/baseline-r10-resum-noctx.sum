@@ -1,0 +1,32 @@
+role	split	n	pass	not_run	rate	wilson95_lo	wilson95_hi	p50_ms	p95_ms	ctx_max	ctx_p95	crit	reasons	gate	verdict	verdict_reason
+assistant	dev	10	0	0	0.0000	0.0000	0.2775	1026804	1116616	246	246	0	busy=5 rule=5	report	-	-
+assistant	test	44	0	0	0.0000	0.0000	0.0803	371844	674603	256	256	0	conn=2 busy=20 rule=22	gated	FAIL	context_unknown
+coding	dev	12	0	0	0.0000	0.0000	0.2425	0	0	0	0	0	ctx=12	report	-	-
+coding	test	28	0	0	0.0000	0.0000	0.1206	0	0	0	0	0	busy=14 ctx=14	gated	FAIL	context_unknown
+hive	dev	16	0	0	0.0000	0.0000	0.1936	0	0	0	0	0	busy=1 ctx=15	report	-	-
+hive	test	46	0	0	0.0000	0.0000	0.0771	0	0	0	0	0	busy=23 ctx=23	gated	FAIL	context_unknown
+harness	test	18	0	0	0.0000	0.0000	0.1759	0	0	0	0	0	http=18	gated	FAIL	context_unknown
+context	-	unknown
+overall	FAIL
+
+role	split	family	pass	n
+coding	dev	repo-write	0	6
+hive	dev	board-done	0	8
+hive	dev	claim-line	0	8
+assistant	dev	mem-recall	0	10
+coding	test	repo-write	0	12
+coding	test	repo-fix	0	16
+hive	test	window-open	0	12
+hive	test	board-append	0	10
+hive	test	ledger-cmd	0	12
+hive	test	refuse-forbidden	0	12
+assistant	test	mem-update	0	14
+assistant	test	mem-multi	0	14
+assistant	test	fmt-constraint	0	16
+harness	test	sha256	0	3
+harness	test	replace_word	0	3
+harness	test	sort_lines	0	3
+harness	test	uppercase	0	3
+harness	test	concat	0	3
+harness	test	arith	0	3
+coding	dev	repo-fix	0	6

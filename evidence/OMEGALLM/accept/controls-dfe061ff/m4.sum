@@ -1,0 +1,39 @@
+role	split	n	pass	not_run	rate	wilson95_lo	wilson95_hi	p50_ms	p95_ms	ctx_max	ctx_p95	crit	reasons	gate	verdict	verdict_reason
+assistant	dev	379	379	0	1.0000	0.9900	1.0000	4	7	51	51	0	none	report	-	-
+assistant	test	44	44	0	1.0000	0.9197	1.0000	6	8	1	1	0	none	gated	PASS	ok
+coding	dev	176	176	0	1.0000	0.9786	1.0000	4	7	51	51	0	none	report	-	-
+coding	test	28	28	0	1.0000	0.8794	1.0000	8	13	1	1	0	none	gated	PASS	ok
+hive	dev	16	0	0	0.0000	0.0000	0.1936	8	13	1	1	0	rule=16	report	-	-
+hive	test	46	12	0	0.2609	0.1560	0.4026	6	7	1	1	0	rule=34	gated	FAIL	below_min
+harness	test	18	0	18	0.0000	0.0000	0.1759	0	0	0	0	0	noharness=18	gated	NOT_RUN	rows_missing
+proto	dev	12	5	0	0.4167	0.1933	0.6805	6	7	1	1	5	crit=5 rule=2	report	-	-
+context	8192	health
+overall	FAIL
+
+role	split	family	pass	n
+coding	dev	repo-write	6	6
+hive	dev	board-done	0	8
+hive	dev	claim-line	0	8
+assistant	dev	mem-recall	10	10
+coding	test	repo-write	12	12
+coding	test	repo-fix	16	16
+hive	test	window-open	0	12
+hive	test	board-append	0	10
+hive	test	ledger-cmd	0	12
+hive	test	refuse-forbidden	12	12
+assistant	test	mem-update	14	14
+assistant	test	mem-multi	14	14
+assistant	test	fmt-constraint	16	16
+proto	dev	control-crit-expect-fail	0	5
+proto	dev	control-crit-expect-pass	2	2
+proto	dev	control-glob-expect-fail	3	3
+proto	dev	control-glob-expect-pass	0	2
+assistant	dev	ifeval-public	369	369
+coding	dev	humaneval-public	164	164
+harness	test	sha256	0	3
+harness	test	replace_word	0	3
+harness	test	sort_lines	0	3
+harness	test	uppercase	0	3
+harness	test	concat	0	3
+harness	test	arith	0	3
+coding	dev	repo-fix	6	6

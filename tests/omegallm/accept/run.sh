@@ -8,6 +8,12 @@
 #   thousandths, default 700), HARNESS (the harness lane's tests/omegallm/harness dir on feat/ollm-harness;
 #   with VERIFY, its verify binary, the private held-out harness tasks HOLDOUT/harness-test.txt run through its
 #   run.sh against http://HOST:PORT/v1 with proxy port HPPORT, default 18298; else harness rows are NOT_RUN).
+# Context window (PREREG section 4, >= 8192 tokens per gated role; CHANGES.md C1): every runner records the
+#   endpoint's served context in OUTDIR/ARM/context-W.tsv from GET /health "model":{"T":..} (ollm serve);
+#   for an endpoint whose /health has no model.T, CTX (decimal tokens) is REQUIRED and recorded as declared.
+#   /health model.T wins over CTX. Unknown (neither) or below the gate's ctx_min FAILS every gated role
+#   (verdict_reason context_unknown / context_below_prereg), whatever its rows say. `accept sum` on an
+#   outdir without context records (runs before this fix) uses CTX from its environment (source sum_env).
 # Arms: t0 (temperature 0, seed 1: the gated arm) and s1..sREPEATS (temperature STEMP, seed k).
 # Every number is printed by the .om runner (`accept sum`, `accept pair`); this driver only assembles the
 # suite, checks its frozen hashes and starts the workers.
@@ -41,6 +47,7 @@ chmod -R go-rwx "$OUT"
 { echo "accept $(sha256sum "$ACCEPT" | cut -c1-64)"; echo "omc $(sha256sum "$OMC" | cut -c1-64)"
   echo "prereg $(sha256sum "$D/PREREG.md" | cut -c1-64)"; echo "thresholds $(sha256sum "$D/suite/thresholds.tsv" | cut -c1-64)"
   echo "endpoint $HOST:$PORT model $MODEL splits $SPLITS public ${PUBLIC:-1} workers $NW repeats $REPEATS stemp $STEMP"
+  echo "ctx-declared ${CTX:--}"
   echo "start $(date -u +%Y-%m-%dT%H:%M:%SZ)"; } > "$OUT/receipt.txt"
 comb() { # verdict codes: FAIL 1 beats NOT_RUN 3 beats PASS 0
   if [ "$1" = 1 ] || [ "$2" = 1 ]; then echo 1; elif [ "$1" = 3 ] || [ "$2" = 3 ]; then echo 3; else echo "$2"; fi; }
@@ -67,6 +74,7 @@ set +e
 "$ACCEPT" sum "$OUT/t0" "$D/suite/thresholds.tsv" > "$OUT/t0.summary"; v=$?
 set -e
 echo "sum t0 rc $v" >> "$OUT/receipt.txt"
+grep '^context' "$OUT/t0.summary" >> "$OUT/receipt.txt" || true
 k=1
 while [ $k -le "$REPEATS" ]; do
   arm s$k "$STEMP" $k

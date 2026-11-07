@@ -1,8 +1,9 @@
 #!/bin/sh
 # Build the DRA-124 acceptance runner: om2 + net/http.om + net/json.om + accept.om -> $OUT/accept.
-# Usage: OMC=<pinned omc> OUT=<dir> CORE=<core> sh tests/omegallm/accept/build.sh [--mutant line|exec|crit]
+# Usage: OMC=<pinned omc> OUT=<dir> CORE=<core> sh tests/omegallm/accept/build.sh [--mutant line|exec|crit|ctx]
 # A mutant build sets const ACMUT in accept.om (1 line glob matches anything, 2 exec ignores the test
-# exit status, 3 the critical-command scan finds nothing); controls.sh requires each mutant to be caught.
+# exit status, 3 the critical-command scan finds nothing, 4 the gate verdict skips the context-window check);
+# controls.sh requires each mutant to be caught.
 set -eu
 R=$(cd "$(dirname "$0")/../../.." && pwd)
 : "${OMC:?set OMC to the pinned omc}"
@@ -12,7 +13,7 @@ M=0
 NAME=accept
 if [ "${1:-}" = "--mutant" ]; then
   case "${2:-}" in
-    line) M=1 ;; exec) M=2 ;; crit) M=3 ;;
+    line) M=1 ;; exec) M=2 ;; crit) M=3 ;; ctx) M=4 ;;
     *) echo "unknown mutant ${2:-}" >&2; exit 2 ;;
   esac
   NAME=accept-mut-$2
