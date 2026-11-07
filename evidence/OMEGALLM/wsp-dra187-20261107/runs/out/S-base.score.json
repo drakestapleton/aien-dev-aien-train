@@ -1,0 +1,770 @@
+[
+ {
+  "idx": 0,
+  "length": 4,
+  "role": "control",
+  "pattern": "random",
+  "pass_": true,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item1733.om\"}"
+ },
+ {
+  "idx": 1,
+  "length": 6,
+  "role": "target",
+  "pattern": "random",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item80986.om\"}"
+ },
+ {
+  "idx": 2,
+  "length": 6,
+  "role": "target",
+  "pattern": "pair",
+  "pass_": true,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item224422.om\"}"
+ },
+ {
+  "idx": 3,
+  "length": 8,
+  "role": "target",
+  "pattern": "run",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item54321.om\"}"
+ },
+ {
+  "idx": 4,
+  "length": 8,
+  "role": "target",
+  "pattern": "random",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item26508.om\"}"
+ },
+ {
+  "idx": 5,
+  "length": 6,
+  "role": "target",
+  "pattern": "random",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item49061.om\"}"
+ },
+ {
+  "idx": 6,
+  "length": 8,
+  "role": "target",
+  "pattern": "pair",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item334434.om\"}"
+ },
+ {
+  "idx": 7,
+  "length": 7,
+  "role": "target",
+  "pattern": "random",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item173422.om\"}"
+ },
+ {
+  "idx": 8,
+  "length": 6,
+  "role": "target",
+  "pattern": "random",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item48777.om\"}"
+ },
+ {
+  "idx": 9,
+  "length": 4,
+  "role": "control",
+  "pattern": "pair",
+  "pass_": true,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item2299.om\"}"
+ },
+ {
+  "idx": 10,
+  "length": 8,
+  "role": "target",
+  "pattern": "pair",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item223322.om\"}"
+ },
+ {
+  "idx": 11,
+  "length": 7,
+  "role": "target",
+  "pattern": "random",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item739734.om\"}"
+ },
+ {
+  "idx": 12,
+  "length": 8,
+  "role": "target",
+  "pattern": "random",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item94530.om\"}"
+ },
+ {
+  "idx": 13,
+  "length": 7,
+  "role": "target",
+  "pattern": "run",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item87654.om\"}"
+ },
+ {
+  "idx": 14,
+  "length": 8,
+  "role": "target",
+  "pattern": "random",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item423619.om\"}"
+ },
+ {
+  "idx": 15,
+  "length": 8,
+  "role": "target",
+  "pattern": "run",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item76541.om\"}"
+ },
+ {
+  "idx": 16,
+  "length": 8,
+  "role": "target",
+  "pattern": "run",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item90126.om\"}"
+ },
+ {
+  "idx": 17,
+  "length": 4,
+  "role": "control",
+  "pattern": "run",
+  "pass_": true,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item8765.om\"}"
+ },
+ {
+  "idx": 18,
+  "length": 7,
+  "role": "target",
+  "pattern": "run",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item90123.om\"}"
+ },
+ {
+  "idx": 19,
+  "length": 3,
+  "role": "control",
+  "pattern": "random",
+  "pass_": true,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item365.om\"}"
+ },
+ {
+  "idx": 20,
+  "length": 7,
+  "role": "target",
+  "pattern": "random",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item59317.om\"}"
+ },
+ {
+  "idx": 21,
+  "length": 8,
+  "role": "target",
+  "pattern": "pair",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item887788.om\"}"
+ },
+ {
+  "idx": 22,
+  "length": 3,
+  "role": "control",
+  "pattern": "run",
+  "pass_": true,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item765.om\"}"
+ },
+ {
+  "idx": 23,
+  "length": 6,
+  "role": "target",
+  "pattern": "pair",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item55335.om\"}"
+ },
+ {
+  "idx": 24,
+  "length": 4,
+  "role": "control",
+  "pattern": "random",
+  "pass_": true,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item7038.om\"}"
+ },
+ {
+  "idx": 25,
+  "length": 6,
+  "role": "target",
+  "pattern": "pair",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item55665.om\"}"
+ },
+ {
+  "idx": 26,
+  "length": 7,
+  "role": "target",
+  "pattern": "pair",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item88998.om\"}"
+ },
+ {
+  "idx": 27,
+  "length": 7,
+  "role": "target",
+  "pattern": "run",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item34568.om\"}"
+ },
+ {
+  "idx": 28,
+  "length": 5,
+  "role": "control",
+  "pattern": "pair",
+  "pass_": true,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item88778.om\"}"
+ },
+ {
+  "idx": 29,
+  "length": 8,
+  "role": "target",
+  "pattern": "random",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item415488.om\"}"
+ },
+ {
+  "idx": 30,
+  "length": 4,
+  "role": "control",
+  "pattern": "random",
+  "pass_": true,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item5051.om\"}"
+ },
+ {
+  "idx": 31,
+  "length": 8,
+  "role": "target",
+  "pattern": "random",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item51398.om\"}"
+ },
+ {
+  "idx": 32,
+  "length": 3,
+  "role": "control",
+  "pattern": "random",
+  "pass_": true,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item527.om\"}"
+ },
+ {
+  "idx": 33,
+  "length": 5,
+  "role": "control",
+  "pattern": "random",
+  "pass_": true,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item51315.om\"}"
+ },
+ {
+  "idx": 34,
+  "length": 7,
+  "role": "target",
+  "pattern": "run",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item54321.om\"}"
+ },
+ {
+  "idx": 35,
+  "length": 7,
+  "role": "target",
+  "pattern": "random",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item56731.om\"}"
+ },
+ {
+  "idx": 36,
+  "length": 8,
+  "role": "target",
+  "pattern": "pair",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item99669.om\"}"
+ },
+ {
+  "idx": 37,
+  "length": 4,
+  "role": "control",
+  "pattern": "run",
+  "pass_": true,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item1098.om\"}"
+ },
+ {
+  "idx": 38,
+  "length": 7,
+  "role": "target",
+  "pattern": "random",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item654855.om\"}"
+ },
+ {
+  "idx": 39,
+  "length": 7,
+  "role": "target",
+  "pattern": "pair",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item55995.om\"}"
+ },
+ {
+  "idx": 40,
+  "length": 8,
+  "role": "target",
+  "pattern": "pair",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item66226.om\"}"
+ },
+ {
+  "idx": 41,
+  "length": 7,
+  "role": "target",
+  "pattern": "random",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item27554.om\"}"
+ },
+ {
+  "idx": 42,
+  "length": 7,
+  "role": "target",
+  "pattern": "run",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item65431.om\"}"
+ },
+ {
+  "idx": 43,
+  "length": 6,
+  "role": "target",
+  "pattern": "random",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item47362.om\"}"
+ },
+ {
+  "idx": 44,
+  "length": 7,
+  "role": "target",
+  "pattern": "pair",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item337737.om\"}"
+ },
+ {
+  "idx": 45,
+  "length": 7,
+  "role": "target",
+  "pattern": "run",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item234568.om\"}"
+ },
+ {
+  "idx": 46,
+  "length": 8,
+  "role": "target",
+  "pattern": "random",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item806912.om\"}"
+ },
+ {
+  "idx": 47,
+  "length": 7,
+  "role": "target",
+  "pattern": "random",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item653398.om\"}"
+ },
+ {
+  "idx": 48,
+  "length": 3,
+  "role": "control",
+  "pattern": "random",
+  "pass_": true,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item372.om\"}"
+ },
+ {
+  "idx": 49,
+  "length": 8,
+  "role": "target",
+  "pattern": "random",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item76605.om\"}"
+ },
+ {
+  "idx": 50,
+  "length": 6,
+  "role": "target",
+  "pattern": "run",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item76542.om\"}"
+ },
+ {
+  "idx": 51,
+  "length": 8,
+  "role": "target",
+  "pattern": "run",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item56781.om\"}"
+ },
+ {
+  "idx": 52,
+  "length": 3,
+  "role": "control",
+  "pattern": "pair",
+  "pass_": true,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item994.om\"}"
+ },
+ {
+  "idx": 53,
+  "length": 8,
+  "role": "target",
+  "pattern": "random",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item202459.om\"}"
+ },
+ {
+  "idx": 54,
+  "length": 5,
+  "role": "control",
+  "pattern": "run",
+  "pass_": true,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item54321.om\"}"
+ },
+ {
+  "idx": 55,
+  "length": 5,
+  "role": "control",
+  "pattern": "run",
+  "pass_": true,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item10987.om\"}"
+ },
+ {
+  "idx": 56,
+  "length": 7,
+  "role": "target",
+  "pattern": "random",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item67395.om\"}"
+ },
+ {
+  "idx": 57,
+  "length": 6,
+  "role": "target",
+  "pattern": "run",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item43219.om\"}"
+ },
+ {
+  "idx": 58,
+  "length": 5,
+  "role": "control",
+  "pattern": "random",
+  "pass_": true,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item85907.om\"}"
+ },
+ {
+  "idx": 59,
+  "length": 6,
+  "role": "target",
+  "pattern": "random",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item58297.om\"}"
+ },
+ {
+  "idx": 60,
+  "length": 7,
+  "role": "target",
+  "pattern": "random",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item73195.om\"}"
+ },
+ {
+  "idx": 61,
+  "length": 6,
+  "role": "target",
+  "pattern": "random",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item61036.om\"}"
+ },
+ {
+  "idx": 62,
+  "length": 6,
+  "role": "target",
+  "pattern": "random",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item53860.om\"}"
+ },
+ {
+  "idx": 63,
+  "length": 6,
+  "role": "target",
+  "pattern": "pair",
+  "pass_": true,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item336633.om\"}"
+ },
+ {
+  "idx": 64,
+  "length": 6,
+  "role": "target",
+  "pattern": "random",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item88141.om\"}"
+ },
+ {
+  "idx": 65,
+  "length": 5,
+  "role": "control",
+  "pattern": "random",
+  "pass_": true,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item34366.om\"}"
+ },
+ {
+  "idx": 66,
+  "length": 4,
+  "role": "control",
+  "pattern": "random",
+  "pass_": true,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item6034.om\"}"
+ },
+ {
+  "idx": 67,
+  "length": 8,
+  "role": "target",
+  "pattern": "random",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item66828.om\"}"
+ },
+ {
+  "idx": 68,
+  "length": 7,
+  "role": "target",
+  "pattern": "random",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item56662.om\"}"
+ },
+ {
+  "idx": 69,
+  "length": 6,
+  "role": "target",
+  "pattern": "run",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item10986.om\"}"
+ },
+ {
+  "idx": 70,
+  "length": 6,
+  "role": "target",
+  "pattern": "random",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item20816.om\"}"
+ },
+ {
+  "idx": 71,
+  "length": 3,
+  "role": "control",
+  "pattern": "pair",
+  "pass_": true,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item554.om\"}"
+ },
+ {
+  "idx": 72,
+  "length": 3,
+  "role": "control",
+  "pattern": "run",
+  "pass_": true,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item321.om\"}"
+ },
+ {
+  "idx": 73,
+  "length": 5,
+  "role": "control",
+  "pattern": "random",
+  "pass_": true,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item63760.om\"}"
+ },
+ {
+  "idx": 74,
+  "length": 7,
+  "role": "target",
+  "pattern": "pair",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item66556.om\"}"
+ },
+ {
+  "idx": 75,
+  "length": 5,
+  "role": "control",
+  "pattern": "pair",
+  "pass_": true,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item22772.om\"}"
+ },
+ {
+  "idx": 76,
+  "length": 6,
+  "role": "target",
+  "pattern": "random",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item15677.om\"}"
+ },
+ {
+  "idx": 77,
+  "length": 6,
+  "role": "target",
+  "pattern": "pair",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item88998.om\"}"
+ },
+ {
+  "idx": 78,
+  "length": 8,
+  "role": "target",
+  "pattern": "run",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item98765.om\"}"
+ },
+ {
+  "idx": 79,
+  "length": 3,
+  "role": "control",
+  "pattern": "random",
+  "pass_": true,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item542.om\"}"
+ },
+ {
+  "idx": 80,
+  "length": 8,
+  "role": "target",
+  "pattern": "random",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item280918.om\"}"
+ },
+ {
+  "idx": 81,
+  "length": 8,
+  "role": "target",
+  "pattern": "run",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item34568.om\"}"
+ },
+ {
+  "idx": 82,
+  "length": 6,
+  "role": "target",
+  "pattern": "run",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item54321.om\"}"
+ },
+ {
+  "idx": 83,
+  "length": 7,
+  "role": "target",
+  "pattern": "pair",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item44334.om\"}"
+ },
+ {
+  "idx": 84,
+  "length": 8,
+  "role": "target",
+  "pattern": "random",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item61278.om\"}"
+ },
+ {
+  "idx": 85,
+  "length": 6,
+  "role": "target",
+  "pattern": "run",
+  "pass_": true,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item210987.om\"}"
+ },
+ {
+  "idx": 86,
+  "length": 6,
+  "role": "target",
+  "pattern": "random",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item88564.om\"}"
+ },
+ {
+  "idx": 87,
+  "length": 8,
+  "role": "target",
+  "pattern": "random",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item637714.om\"}"
+ },
+ {
+  "idx": 88,
+  "length": 6,
+  "role": "target",
+  "pattern": "run",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item65431.om\"}"
+ },
+ {
+  "idx": 89,
+  "length": 6,
+  "role": "target",
+  "pattern": "random",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item56993.om\"}"
+ },
+ {
+  "idx": 90,
+  "length": 6,
+  "role": "target",
+  "pattern": "pair",
+  "pass_": true,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item993399.om\"}"
+ },
+ {
+  "idx": 91,
+  "length": 8,
+  "role": "target",
+  "pattern": "pair",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item55445.om\"}"
+ },
+ {
+  "idx": 92,
+  "length": 4,
+  "role": "control",
+  "pattern": "pair",
+  "pass_": true,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item4433.om\"}"
+ },
+ {
+  "idx": 93,
+  "length": 7,
+  "role": "target",
+  "pattern": "random",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item643099.om\"}"
+ },
+ {
+  "idx": 94,
+  "length": 7,
+  "role": "target",
+  "pattern": "random",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item12989.om\"}"
+ },
+ {
+  "idx": 95,
+  "length": 7,
+  "role": "target",
+  "pattern": "pair",
+  "pass_": false,
+  "raw": "{\"tool\":\"read_file\",\"path\":\"jobs/item99779.om\"}"
+ }
+]
