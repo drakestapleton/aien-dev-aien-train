@@ -1,0 +1,25 @@
+window 20261107T001921Z-313de2 (exclusive chip, quiet none) opened 2026-11-07T00:19:21Z, run 00:19:25Z-00:20:03Z, closed 00:20:05Z
+driver: spark-window run env GB=... taskset -c 2 nice -n 10 sh tests/personal/mask-gpu.sh (feat/dra146-eval 738e016 builds: ollm-gb10 1ca516d0, mut-j 7afb5b87; origin/main ollm-gb10 c35798fd)
+--- output
+sha256 1ca516d060168b735c6b35c14620077bb6b52f0cdd720402994e5289131c4be5 ollm-gb10
+sha256 7afb5b87d625461e2707fe1f5c4668b277fd97459cef962b1085614d553d580d ollm-mut-j-gb10
+sha256 c35798fdeb5818f07aaf0979676469be366655dfcf77d3baa8092c3ee539a257 ollm-gb10
+sha256 26965a1624a70b2198a8b035490aac154e5fae57fdf1f42cddd819bf3c0ce4db mpack
+PASS mpack: MP 4000 2000 2000 80
+PASS init rc: 0
+PASS gcmp masked S=0 (CPU f64 mask vs chip mask): GC 102720 40795 210594651394 194 6231421 6231421 11881824 15259: 0 GCMP PASS
+PASS gcmp masked S=1 (CPU f64 mask vs chip mask): GC 102720 68866 301249274910 229 6199108 6199108 11857616 15259: 0 GCMP PASS
+PASS gcmp masked S=2 (CPU f64 mask vs chip mask): GC 102720 47205 319000856599 148 6197867 6197867 11851856 15259: 0 GCMP PASS
+PASS negative control caught: mutant j (chip ignores the mask) gcmp rc 45: GC 102720 294114234752 210594651394 1396589290 6231421 6231421 11851552 15259
+PASS gcmp no mask, this build and origin/main (rc): 0 0
+PASS gcmp no mask: GC numbers equal to origin/main (fields 2-7): 102720 23490 226724704552 104 6224868 6224868
+PASS gtrainb no mask 0..20: checkpoint bit-identical to the origin/main build
+FAIL gtrainb masked 0..40 rc: got [84] want [0]
+FAIL gtrainb masked saves: got [] want [T 20,T 40,]
+FAIL masked loss 6165487 to 6165487
+base_sha256 7c7b5b5260f2d9453b6076b64e7f23e88341d96498584f2dfaa229c31ad2e346
+PASS full-shape smoke mask bytes = tokens: 1048576
+PASS tune BASE (fresh optimizer, 20 steps, lr 300e-6): U
+PASS full-shape masked gtrainb 0..20 rc (T 10 1175611,T 20 1021379, wall_ns 24872440678): 0
+PASS BASE unchanged: 7c7b5b5260f2d9453b6076b64e7f23e88341d96498584f2dfaa229c31ad2e346
+MASKGPU_FAIL

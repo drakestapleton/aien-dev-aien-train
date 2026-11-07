@@ -1,0 +1,4 @@
+[mem 3 active]
+- tool for arithmetic checks: use calcbox (2026-10-01, rec syn-1)
+- demo server port: 18555 (2026-10-02, supersedes 18554)
+- indent config files: never use tabs, use 4 spaces (2026-10-05, supersedes "use tabs" 2026-09-01)

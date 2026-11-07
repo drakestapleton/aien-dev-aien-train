@@ -40,7 +40,9 @@ else
   [ $? -eq 0 ] && no "gtrainb no mask differs from origin/main while main is deterministic" || echo "INFO gtrainb not deterministic run to run; compare T lines: $(cut -d' ' -f1-3 "$W/u1.txt" | tr '\n' ,) vs $(cut -d' ' -f1-3 "$W/u2.txt" | tr '\n' ,)"
 fi
 cp "$W/c.ck" "$W/m1.ck"
-"$GB" gtrainb "$W/m1.ck" "$W/t.tok" 40 20 "$W/t.mask" > "$W/m1.txt"; want "gtrainb masked 0..40 rc" $? 0
+"$GB" gtrainb "$W/m1.ck" "$W/t.tok" 40 20 "$W/t.mask" > "$W/m1.txt" 2>&1; r=$?
+want "gtrainb masked 0..40 rc" $r 0
+[ $r -eq 0 ] || sed 's/^/  out: /' "$W/m1.txt"
 want "gtrainb masked saves" "$(grep '^T ' "$W/m1.txt" | cut -d' ' -f1-2 | tr '\n' ,)" "T 20,T 40,"
 u64le() { v=$1; i=0; while [ $i -lt 8 ]; do printf "\\$(printf %o $((v % 256)))"; v=$((v / 256)); i=$((i + 1)); done; }
 { u64le 300; u64le 1500; u64le 2500; u64le 3500; } > "$W/oe"

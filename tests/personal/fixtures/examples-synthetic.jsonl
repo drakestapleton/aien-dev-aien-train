@@ -1,0 +1,4 @@
+{"id": "ex_1", "split": "train", "type": "correction", "target_allowed": true, "compact": {"cond": "Request: use calcbox\nCorrection: not the calculator", "target": "Using calcbox now."}}
+{"id": "ex_2", "split": "train", "type": "correction", "target_allowed": false, "compact": {"cond": "Request: rejected one", "target": "never trained"}}
+{"id": "ex_3", "split": "dev", "type": "plain", "target_allowed": true, "compact": {"cond": "Request: dev one", "target": "dev target"}}
+{"id": "ex_4", "split": "train", "type": "plain", "target_allowed": true, "compact": {"cond": "Request: quote \"x\" and tab\t", "target": "Done with \u00e9."}}

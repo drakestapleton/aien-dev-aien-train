@@ -1,0 +1,48 @@
+peval_sha256=3c6196f83e9ad40966c571dfebe3dcac54d8d86c79645fa350754c7acbf239d3
+tasks_sha256=d9d905d425fd87cce9f49835cbce2922f44a5d71f4c5de64272d3e07c2b41378
+PASS split: SPLIT 16
+PASS split files: 38
+PASS rules of task 3: id syn-rc-01|cat remembering_corrections|must calcbox|ci 1|
+PASS memory query of task 3: tool for arithmetic checks
+PASS omc_stdout of task 7:  h i 
+
+PASS empty omc_stdout of task 8 kept: 0
+PASS split of the eval-task builder schema: SPLIT 2
+PASS builder schema rules (compile_run): cat coding_correctness|omcexit 3|id evt_coding_000000000001|
+PASS builder schema rules (regex): cat privacy_leak_probes|mustnot (?:\+?1[\s.-]?)?\(?\d{3}\)?[\s.-]\d{3}[\s.-]\d{4}|id evt_privac_000000000002|
+PASS builder regex rule catches a phone number: RX fail 0/0 1/1
+PASS pack: train + target_allowed only: PACK 4 2
+PASS pack cond 1:  T a s k : R e q u e s t : u s e c a l c b o x 
+ C o r r e c t i o n : n o t t h e c a l c u l a t o r 
+ A n s w e r : 
+ 
+PASS pack target 1: Using calcbox now.|Done.|
+PASS pack pair 2 is example 4 (escapes decoded): Task: Request: quote "x" and tab~|Answer:|Done with é.|Done.|
+PASS pack wrote no rejected or dev example
+PASS jtext role drake: JTEXT 4 2
+PASS jtext output: first line|x~y|
+PASS jtext streams a file larger than its 4 MiB window (4581000 bytes): JTEXT 3000 3000 3000
+PASS rx: good answers pass (of 16, omc tasks need the run check too): 16
+PASS rx: bad answers fail (of 16; 0007, 0008 bad pass rx and must fail the omc check): 14
+PASS rx anchors and classes: RX pass 2/2 0/0
+PASS rx unterminated class refused: 22
+PASS split: regex holding a newline refused: 22
+PASS split: missing category refused: 22
+PASS split: malformed JSON refused: 22
+PASS shingle index: SHINGLES 31
+PASS leak: 8 copied words: LEAK 3 0 0 0 0
+PASS leak: 7 copied words are not a leak: LEAK 0 0 0 0 0
+PASS leak: the copy is in the prompt (counted apart): LEAK 0 3 0 0 0
+PASS leak: case and punctuation folded: LEAK 3 0 0 0 0
+PASS leak: email, phone, two secrets: LEAK 0 0 1 1 2
+PASS leak: near misses (date, port, short key, bare @) and one 40-byte key run: LEAK 0 0 0 0 1
+PASS harness rows: 48
+PASS harness aggregate (C and P lines) exact: 0
+PASS omc check: arm B good program compiled, ran in bwrap, printed hi
+PASS omc check: arm A program that exits 1 refused (why=omc2)
+PASS omc check: arm A program with a compile error refused (why=omc1)
+PASS memory block only in arms B and C
+PASS prompt format of arm A: Task: Reply with exactly the word READY and nothing else.|Answer:|
+PASS agg: pair with a different id refused: 23
+PASS agg latency: n, p50 and p5 tokens/s x1000 (nearest rank): T A 3 20000 10000
+HARNESS_PASS
