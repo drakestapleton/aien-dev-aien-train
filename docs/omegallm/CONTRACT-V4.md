@@ -96,7 +96,7 @@ OMUTJD 0) embeds a bank-2 token from row c xor 1 in decode only. Receipts:
 | `train4` | `CK TRAIN UNTIL EVERY [K]` | `T step loss_micro`; K worker processes (29 when K∤G); 12 when the training layout does not fit |
 | `eval4` | `CK HELD W [MERGES]` | as `eval`; at V > 256 without MERGES (token mode) the last field is bits per token |
 | `sample4` | `CK SEED N TEMPMILLI PROMPT [MERGES]` | KV-cache decode; at V > 256 without MERGES (token mode) PROMPT is a file of u16 LE tokens (≤ T; 21 odd length, 25 a token ≥ V) and the output is u16 LE tokens, which `ollm-tok tokdec` decodes |
-| `tune4` | `CK OUT TOTAL LRMICRO` | `U P` |
+| `tune4` | `CK OUT TOTAL LRMICRO [T B G]` | `U P`; params kept, m = v = 0, step 0; T B G (CK03 only, else 2) as given: 12 for T outside 2..16384, B outside 1..4096, G = 0, G > B, B mod G ≠ 0, or a shape init4 would refuse |
 | `gcheck4` | `CK TRAIN` | central differences at 4 indices of every tensor; 40 over tolerance |
 | `ropeck` | `REF` | sin/cos vs Wolfram + shift identity; 43 |
 | `kvck` | `CK DATA` | training forward vs KV decode, bit-exact logits; 44 |

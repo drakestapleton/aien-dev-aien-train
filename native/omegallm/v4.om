@@ -2149,7 +2149,8 @@ end
 note tune4 CK OUT TOTAL LRMICRO [T B G]: as tune (cli.om) on a CK03 file; prints `U P`. With T B G
 note (CK03 only) the new file also takes context T (2 .. 16384), batch B (1 .. 4096) and G gradient
 note blocks (G divides B); the parameters are unchanged (RoPE has no T-sized table in the payload), so
-note a model trained at one context continues at another. Exit 12 for a value outside those ranges.
+note a model trained at one context continues at another. Exit 12 for a value outside those ranges
+note or when the new shape fails xgeom (the layouts init4 checks, e.g. the decode layout at a large T D).
 fn xctune to void
 na = oargc
 if and ne na 6 ne na 9
@@ -2204,6 +2205,9 @@ end
 put xg 1 t2
 put xg 6 b2
 put xg 10 g2
+if not xgeom
+exit 12
+end
 end
 
 note ---- decode with the KV cache ----
