@@ -2139,12 +2139,19 @@ end
 ret s
 end
 
-note tune4 CK OUT TOTAL LRMICRO: as tune (cli.om) on a CK03 file; prints `U P`
+note tune4 CK OUT TOTAL LRMICRO [T B G]: as tune (cli.om) on a CK03 file; prints `U P`. With T B G
+note (CK03 only) the new file also takes context T (2 .. 16384), batch B (1 .. 4096) and G gradient
+note blocks (G divides B); the parameters are unchanged (RoPE has no T-sized table in the payload), so
+note a model trained at one context continues at another. Exit 12 for a value outside those ranges.
 fn xctune to void
-if ne oargc 6
+na = oargc
+if and ne na 6 ne na 9
 exit 2
 end
 if xisv3 2
+if ne na 6
+exit 2
+end
 cmdtune
 ret
 end
@@ -2152,6 +2159,9 @@ xload 2
 tt = oargu 4
 if or eq tt 0 gt tt 999999
 exit 12
+end
+if eq na 9
+xtunes
 end
 put xg 13 0
 put xg 14 tt
@@ -2165,6 +2175,28 @@ oputc 32
 oputu p
 oputc 10
 oflush
+end
+
+note tune4's T B G (arguments 6, 7, 8) into xg 1, 6 and 10
+fn xtunes to void
+t2 = oargu 6
+b2 = oargu 7
+g2 = oargu 8
+if or lt t2 2 gt t2 16384
+exit 12
+end
+if or eq b2 0 gt b2 4096
+exit 12
+end
+if or eq g2 0 gt g2 b2
+exit 12
+end
+if ne rem b2 g2 0
+exit 12
+end
+put xg 1 t2
+put xg 6 b2
+put xg 10 g2
 end
 
 note ---- decode with the KV cache ----
