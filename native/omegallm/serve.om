@@ -1,7 +1,12 @@
 note SPDX-License-Identifier: AGPL-3.0-only
 note omegallm serve.om (aien-train DRA-119): `ollm serve PORT CK MERGES [MAXCONN] [tplmax=N]
-note [test=1]`, an OpenAI-compatible HTTP/1.1 server for a v1 BPE checkpoint (V > 256) on
-note 127.0.0.1:PORT only. aarch64 only: build.sh composes it under one `om2` line after the
+note [test=1]`, an OpenAI-compatible HTTP/1.1 server on 127.0.0.1:PORT only for a checkpoint with
+note V > 256: OLLMCK03 (v4.om, decoded with its KV cache, prefix reuse) or OLLMCK01/02 (v3, a full
+note forward per token), with MERGES either our own OLLMTOK1 (tok/tkcore.om via otok.om; the CHAT1
+note template, section CHAT1; V must equal the checkpoint's, else exit 31) or v1 OLLMBPE1 (bpe.om;
+note the interim template below). DRA-121 (serve v4) added CHAT1, chatenc, the CK03 path, the
+note queue (section request queue) and prefix reuse; where this header and those sections differ,
+note the sections hold. aarch64 only: build.sh composes it under one `om2` line after the
 note omega-mv e5b32567 units net/http.om, net/json.om and net/jsonw.om (vendored unmodified); the
 note other targets take noserve.om. It prints `PORT n`, then serves one request at a time, one
 note request per connection (Connection: close), until MAXCONN connections (default 1000000) have
@@ -9,12 +14,14 @@ note been served. A connection is served once its first bytes arrive; a silent o
 note of 8 pending slots and is closed unanswered 10 s after its accept (svwait). tplmax=N
 note (256 .. 983040, default 65536) caps the chat template in bytes; test=1 enables the test-only
 note members ollm_test_output and ollm_test_delay_ms (refused otherwise).
-note Routes: GET /health {"status":"ok","in_flight":0,"busy":false}; GET /v1/models;
+note Routes: GET /health {"status":"ok","in_flight":0,"queued":0,"capacity":32,"busy":false}; GET /v1/models;
 note POST /v1/chat/completions with JSON or SSE (stream true) responses; other paths 404, other
 note methods 405. in_flight counts the generating chat completions (0 or 1, one slot); busy is
 note in_flight 1. While a completion generates, the listener and pending connections are served
-note between tokens: GET /health answers {"status":"ok","in_flight":1,"busy":true}, GET
-note /v1/models the list, and every other request 503 server_busy with Retry-After: 1. A client
+note between tokens (and every 32 prefill positions): GET /health answers with in_flight 1 and the
+note queue's count, GET /v1/models the list, a chat completion waits in the FIFO queue (503
+note queue_full with Retry-After: 1 only when its 32 slots are taken), and every other request 503
+note server_busy with Retry-After: 1. A client
 note that leaves (svgone) stops its generation: nothing more is sent, logged as status 499.
 note Request: messages (non-empty array of objects with a string role of at most 32 bytes and a
 note content that is a string, null, or an array of {"type":"text","text":string} parts joined
@@ -51,7 +58,8 @@ note Decoded bytes are sent as UTF-8: a sequence cut by a token boundary waits f
 note an ill-formed one (or one cut by the end) becomes U+FFFD. One line per routed response (and
 note per 413 at the head, and per request answered during a generation) goes to stdout: `C status
 note prompt_tokens completion_tokens finish(0 none, 1 stop, 2 length, 3 tool_calls, 4 client left)
-note ms`. A body over 65532 JSON tokens is 413 request_too_large.
+note ms reused prefilled queue_ms` (ms from arrival; reused/prefilled the prompt positions kept from
+note the cache and decoded; queue_ms the wait in the queue). A body over 65532 JSON tokens is 413 request_too_large.
 note Exit codes: 2 usage; 27 merges (bpe.om); 71 the port cannot be bound.
 note wb layout: raw token bytes [0, 8192), content [8192, 73728), stop strings [73728, 74752) (8 x
 note 128), markers [74752, 74784), message [81920, 82176), response id [82176, 82240), call id
@@ -62,7 +70,10 @@ note finish, 9 request count, 10 created, 11 start ns, 12 raw bytes, 13 content 
 note sent, 15 id length, 16 error code, 17 chunk end, 19 T, 21 last status, 22 test mode, 23
 note tplmax, 24 forced tokens, 25 forced on, 26 test output bytes, 27 delay ms, 28 top_k, 29 top_p
 note millionths, 30 tools, 31 tool detection, 32 tool calls, 33 marker position, 34 bd fill,
-note 35 stop strings, 36 listen fd.
+note 35 stop strings, 36 listen fd, 40 OLLMTOK1/CHAT1 on, 41 model (3 v3, 4 v4), 44 reused, 45
+note prefilled, 48 CHAT1 tools token + 1, 49 first-step logits FNV, 50 generated <|tool_call|>
+note count, 51 ollm_test_info, 52 ollm_test_cold, 53 tplmax given, 54 queue ms, 55
+note ollm_test_serial. With CHAT1, tplmax caps each raw segment (default 983040).
 
 text svtjson "application/json"
 text svtctyp "Content-Type"

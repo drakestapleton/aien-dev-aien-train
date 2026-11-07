@@ -163,7 +163,9 @@ connections before each token); without it they are 400.
   `in_flight == 1`; connections waiting in pending slots or the backlog are not counted.
 - One generation slot. Between tokens the listener and the pending connections are served:
   `GET /health` answers `{"status":"ok","in_flight":1,"busy":true}`, `GET /v1/models` the list,
-  and every other request 503 `server_busy` with `Retry-After: 1`. These side requests get a
+  and every other request 503 `server_busy` with `Retry-After: 1` (since DRA-121 a chat
+  completion waits in a FIFO queue instead and health also reports `queued` and `capacity`: see
+  Serve v4 below). These side requests get a
   250 ms head and 1 s body deadline, so one that starts and stalls costs the generation at most
   about 1.3 s; a silent connection costs it 20 ms once.
 - Between tokens the generating request's socket is peeked (`MSG_PEEK | MSG_DONTWAIT`). End of
@@ -214,6 +216,73 @@ DRA-119's first 27 come with control checks (`*_control`, `*_is_sample`,
 `sample_differs_from_greedy`, `t_ctl_*`, `t_forced_plain`): the same request with one input
 changed, expecting the other outcome. A refusal (`refuse_*`) is controlled by the accepted
 request it varies. Receipts: `evidence/OMEGALLM/serve/`.
+
+## Serve v4: own checkpoints, own tokenizer, CHAT1, queue, prefix reuse (DRA-121)
+
+`ollm serve PORT CK MERGES ...` now takes:
+
+- **Checkpoints**: OLLMCK03 (v4.om) is loaded with `xload` and decoded with v4's KV cache (`xdpos`,
+  RoPE): a generated token costs one decode position, O(context), not a full re-forward. OLLMCK01
+  and OLLMCK02 keep the v3 path (a full forward per token, as before).
+- **Tokenizer by magic**: a merges file starting `OLLMTOK1` (our own BPE, `tests/omegallm/tok/FORMAT.md`)
+  is loaded through `tok/tkcore.om` + `otok.om`; anything else through the v1 `bpe.om` as before.
+  The same detection serves `sample4` and `eval4`. OLLMTOK1 merges whose V is not the checkpoint's V
+  are refused at startup with exit 31 (the output layer and the tokenizer must agree exactly).
+  `build.sh` concatenates `tok/tkcore.om otok.om` after `cli.om` on aarch64, gb10 and x86linux.
+- **CHAT1** (with OLLMTOK1 merges; v1 merges keep the interim text template). A conversation is
+  token ids built in `serve.om` (`c1conv`): `263 <|doc|>`, then per message `257` (system or
+  developer) / `258` user / `259` assistant / `261` tool, `raw(content)`, and `256 <|end|>`. The
+  first system message also gets `raw("\n\n# Tools\n" + tools JSON as sent)` when `tools` is
+  non-empty (no system message: a system turn holding only that section follows `263`). An
+  assistant message adds per tool call `260` then `raw({"name":NAME,"arguments":ARGS})` (NAME the
+  JSON string as sent, ARGS the decoded string, the object's JSON text as sent, or `{}`); one `256`
+  ends the turn. The generation prompt is `259`. `raw()` is OLLMTOK1 raw mode, so content can never
+  forge a special (FORMAT.md section 6). Other roles are 400. Output ends at `<|end|>` (and at any
+  other special or reserved id 257 – 271 except `260`: a turn start ends the turn) with
+  `finish_reason` `stop`, at `max_tokens` or T with `length`. With tools declared, text before the
+  first generated `<|tool_call|>` is `content`; each `260` starts one call whose text (to the next
+  `260` or the end, whitespace around dropped) must be a JSON object naming a declared tool, else
+  the whole output is plain content. `tool_calls` and `finish_reason` `tool_calls` as in #72's
+  protocol, JSON and SSE.
+- **`ollm chatenc MERGES IN.jsonl OUT.u16 [MASK.u8]`** runs the same request parser and `c1conv`
+  per JSONL line (`{"messages":[...],"tools":[...]}`), so training data and serving produce the same
+  tokens; MASK has 1 for the assistant tokens after each `259` (content, calls, the closing `256`).
+  It prints `H lines tokens masked`; a refused line is `F line code`, exit 22.
+- **Context**: the prompt is counted in tokens; prompt + 1 > T is 400 `context_length_exceeded`
+  stating both counts; output is at most min(max_tokens, T − prompt) tokens (the window never
+  slides).
+- **Prefix reuse** (CK03): the KV cache of the last sequence stays; a request whose token prefix
+  matches keeps those positions and prefills only the rest (at least the last prompt position is
+  always decoded for its logits). Positions after the first difference are invalidated. The log
+  line reports both counts: `C status prompt completion finish ms reused prefilled queue_ms`.
+- **Queue**: one generation slot and a FIFO of 32 waiting chat completions. A completion that
+  arrives while another generates is read whole (the pending-slot and head/body deadline
+  protections stay), queued with its connection, and served in arrival order when the slot frees.
+  Only a full queue answers 503 `queue_full` with `Retry-After: 1`. A waiting client that
+  disconnects frees its slot at the next token (logged 499, finish 4). During a long prefill the
+  side connections are served every 32 positions. `GET /health` →
+  `{"status":"ok","in_flight":N,"queued":Q,"capacity":32,"busy":B}`. Why 32: an agent fleet with
+  one request in flight per client stays far below it, and each slot holds a full-size body
+  (32 × (2,560 + 131,072 + 983,040) bytes = 35.7 MB of globals, inside the 1 GiB globals limit).
+  Parallel generation slots by `fork` were measured and not added (see below).
+- **Test-only members** (`test=1`): `ollm_test_info: true` adds `"ollm_test":{"logits_fnv",
+  "reused","prefilled","prompt"}` to a JSON answer (the word-wise FNV-1a of the first sampled
+  step's logits and the prompt ids); `ollm_test_cold: true` drops the cache first (a cold prefill).
+
+Checks (`serve-check.py`, `SERVE_CHECK PASS` required): with OLLMTOK1 merges the referee runs the
+CHAT1 suite: content against `sample4` (same binary, chat-mode prompt), `c1_serve_eq_chatenc`
+(DRA-123: serve's prompt ids for five conversations, including tool calls, tool results, content
+parts, Unicode and forged marker text, equal chatenc's ids + 259), `c1_chatenc_eq_reference` and
+`c1_mask_eq_reference` (an independent Python reading of CHAT1 on `tok/oracle.py`'s raw encoder),
+`c1_injection_raw`, context and clamp checks, CHAT1 tool calls with controls, prefix reuse
+(`c1_reuse_two_turn`, `c1_reuse_bitexact`, `c1_reuse_diverge_bitexact`: warm logits equal a cold
+prefill's in every bit) and the queue checks (`t_queue_*`, shared with the v1 suite, where
+`t_busy_503` became `t_busy_queued`). Negative controls: mutant `c1` (chatenc's writer drops each
+conversation's first token) must fail `c1_serve_eq_chatenc`; mutant `j` (prefix invalidation
+skipped) must fail `c1_reuse_diverge_bitexact`; `t_queue_full_503` is the queue's refusal control.
+Receipts: `evidence/OMEGALLM/serve/v4/`.
+
+<!-- MEASURED -->
 
 ## iMac
 

@@ -10,6 +10,12 @@ The content oracle is the same binary's `sample` command (the CLI's sampler, cmd
 interim template, decoded with Python's UTF-8 decoder (errors="replace", the maximal-subpart
 U+FFFD practice that serve.om follows). Tool-call checks script the model's output with the
 test-only member ollm_test_output, so they test the protocol, not the model.
+With OLLMTOK1 merges (magic) the referee runs the CHAT1 suite instead (DRA-121, checks c1_*):
+content oracle `sample4` on the chat-mode prompt, serve's prompt ids (ollm_test_info) against
+`ollm chatenc` and against an independent Python reading of CHAT1 on tok/oracle.py's raw encoder,
+prefix reuse and the layer-by-layer prefill bit for bit against cold and serial decodes
+(ollm_test_cold, ollm_test_serial). Both suites end with the queue checks (t_queue_*): the 32-slot
+FIFO that replaced 503 server_busy for chat completions.
 """
 import http.client
 import json
