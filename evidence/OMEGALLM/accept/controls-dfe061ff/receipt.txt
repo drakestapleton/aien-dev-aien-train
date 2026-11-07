@@ -1,0 +1,8 @@
+command: OMC=<pinned omc> CORE=6 taskset -c 6 nice -n 10 sh tests/omegallm/accept/controls.sh /dev/shm/hive/ownmodel/fixes/ctl 18297
+omc 2c82480596bbdc50cda9626866209ef662d5834f278f839ff4ce0250c495029f
+prereg 7133f654c23b087c4b1df7531f0b67c9bf9fe349d0ebc5325a73b2f3814a04c9 (unchanged from 29f3e7f)
+start 2026-11-07T06:56:04Z end 2026-11-07T06:57:31Z
+stdout last line: CONTROLS PASS
+rc=0
+C4 (harness fixtures): NOT_RUN (HARNESS unset; 18298 was held by another lane's proxy)
+selftest: `accept selftest suite/selftest.jsonl` -> selftest rows=1124 mismatches=0, rc 0

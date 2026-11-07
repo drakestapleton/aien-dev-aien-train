@@ -14,3 +14,10 @@ Each `controls.txt` lists every check and ends `CONTROLS PASS`; the `*.sum` file
 ## baseline-r10/
 
 The first scored candidate (PREREG section 7, amendment A1): see `baseline-r10/README.md`.
+
+## controls-dfe061ff/ and context-fix/ (CHANGES.md C1, 2026-11-07)
+
+The context-window gate fix. `controls-dfe061ff/`: runner dfe061ffac26cda85367e117bcfba1fcabb3a9478245a75be00cff4a7f7422ac,
+C1-C3, C5-C8, M1-M5 (`controls.txt` ends CONTROLS PASS; `receipt.txt` has the command, hashes, rc 0, selftest 1124/0;
+C4 NOT_RUN). `context-fix/`: the runner against a real integ3 `ollm serve` (/health model.T 256 and 8192) and the
+baseline r10 rows re-summed (verdicts unchanged: FAIL).
