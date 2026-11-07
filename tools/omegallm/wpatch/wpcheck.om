@@ -1,0 +1,2144 @@
+note SPDX-License-Identifier: AGPL-3.0-only
+note wpcheck: the Omega test driver for wpatch (replaces check.py). CPU only. Built by wpbuild as
+note wpcheck-all.om = om2, the vendored SHA-256 layout and functions, this file.
+note Usage: wpcheck small BUILD WORK ORACLE      own-model fixtures made here with BUILD/ollm
+note        wpcheck real BUILD WORK ORACLE CK    the read-only round40 checkpoint CK
+note BUILD holds wpatch and ollm. WORK must not exist; it is created 0700 and holds every fixture.
+note ORACLE is wporacle.py, run as /usr/bin/python3 ORACLE REQUEST. It only computes hashlib
+note SHA-256 and IEEE f32 cast digests of files named in REQUEST; every comparison, exit code, fixture,
+note refusal and the PASS/FAIL verdict is decided here. Fixture rehashes (FNV, manifest and binding
+note digests) use the vendored Omega SHA-256, not the oracle.
+note Output is plain text: RUN argv, the child's stdout as `| ` lines (its stderr passes through),
+note EXIT got want elapsed_ns, then PASS or FAIL lines. The last line is
+note `WPCHECK PASS checks=N commands=M` (exit 0) or `WPCHECK FAIL ...` (exit 1); 2 is usage.
+
+global sb uchar 131072
+global sl ulong 256
+global pb uchar 4096
+global pn ulong 1
+global av uchar 8192
+global ap ulong 2
+global stb uchar 4
+global ob uchar 4194304
+global obn ulong 1
+global oo uchar 65536
+global ol ulong 1024
+global oln ulong 1
+global rq uchar 65536
+global rqn ulong 2
+global dig uchar 32
+global dg uchar 32
+global cnt ulong 4
+global tt ulong 1536
+global tn ulong 2
+global rix ulong 64
+global rbt ulong 64
+global rcn ulong 1
+global hh ulong 8
+global mf ulong 16
+global ca uchar 65536
+global cb uchar 65536
+const SWP ulong 0
+const SOLLM ulong 1
+const SWORK ulong 2
+const SORC ulong 3
+const SBASE ulong 4
+const SEDIT ulong 5
+const SPF ulong 6
+const SRF ulong 7
+const STRAIN ulong 8
+const SP0 ulong 9
+const SREQ ulong 12
+const SMEX ulong 13
+const SOUT ulong 14
+const SREV ulong 15
+const SBIND ulong 16
+const SRT ulong 17
+const SBADB ulong 18
+const SOD ulong 19
+const SX0 ulong 20
+const SX1 ulong 21
+const SX2 ulong 22
+const SX3 ulong 23
+const SX4 ulong 24
+const SX5 ulong 25
+const SSNAP ulong 30
+const SBUILD ulong 31
+const SRQ ulong 32
+const SMODE ulong 33
+const ALL ulong 18446744073709551615
+const DLT f64 0.001
+const QTR f64 0.25
+const BIGM f64 1000001.0
+const OVER ulong 16777217
+const BASEOFF ulong 8162304
+text PY "/usr/bin/python3"
+text SUMT "/usr/bin/sha256sum"
+text BSHA "7c7b5b5260f2d9453b6076b64e7f23e88341d96498584f2dfaa229c31ad2e346"
+text HEXD "0123456789abcdef"
+text CK02 "OLLMCK02"
+text WP01 "OLLMWP01"
+text WB01 "OLLMWB01"
+text PARS "{\"delta\":0.001,\"name\":\"Ω patch\"}\n"
+text RATS "Own-model fixture. Preserve exact rollback.\n"
+text PARR "{\"kind\":\"w2\",\"layer\":3,\"entries\":10,\"delta\":0.001}\n"
+text RATR "Read-only round40 baseline. Checked patch integration fixture, not a quality claim.\n"
+text SHOWA "{\"patch_sha256\":\""
+text SHOWZ "\"params\":\"{\\\"delta\\\":0.001,\\\"name\\\":\\\"Ω patch\\\"}\\u000a\",\"rationale\":\"Own-model fixture. Preserve exact rollback.\\u000a\"}\n"
+text TRAINW "abc abcd abcde"
+text INITA "256 8 16 2 32 2 2 1 10 3000 1"
+text MUTN "wrong-base-sha geometry shape oob nan inf magnitude unsorted duplicate old-bits old-moment entries-hash tensor-count tensor-base-sha tensor-out-sha output-sha output-f32-sha "
+text CINSP "inspect"
+text CDIFF "diff"
+text CSHOW "show"
+text CVAL "validate"
+text CAPP "apply"
+text CVER "verify"
+text CREV "revert"
+text CBIND "bind"
+text CCB "checkbind"
+text CINIT "init"
+text CTRAIN "train"
+text WTE "wte"
+text SLICEA "0 0 1 0 2"
+text OOBA "0 0 99999 0 1"
+text MSMALL "small"
+text MREAL "real"
+text FTRAIN "train.bin"
+text FBASE "base.ck"
+text FSNAP "base-snapshot.ck"
+text FEDIT "edited.ck"
+text FPF "params.txt"
+text FRF "rationale.txt"
+text FPAT "patches-"
+text FPATS "patches"
+text FEXP "expected-"
+text FMEX "manifest-expected-"
+text FAPP "applied-"
+text FREV "reverted-"
+text FBND "binding-"
+text FRT "runtime-"
+text FBADB "wrong-f32-binding-"
+text FCK ".ck"
+text FWP ".wp"
+text FREQ ".req"
+text FORQ "oracle-"
+text FMUTE "oracle-mutant-edited.ck"
+text FMUTD "oracle-mutant-patches"
+text FMUTO "oracle-mutant.ck"
+text FMUTR "oracle-mutant-requested.ck"
+text FOVP "oversized-params"
+text FOVR "oversized-rationale"
+text FUTF "invalid-utf8.wp"
+text FFLIP "flipped"
+text FBAPP "bad-apply.ck"
+text FBREV "bad-revert.ck"
+text FBBND "bad-bind"
+text FTRUNC "truncated.wp"
+text FWRM "wrong-m.ck"
+text FEXO "exotic.ck"
+text FEXE "exotic-edited.ck"
+text FEXD "exotic-patches"
+text FR40E "round40-edited.ck"
+text FR40X "round40-expected.ck"
+text FR40A "round40-applied.ck"
+text FR40R "round40-reverted.ck"
+text SLWP "/wpatch"
+text SLOLLM "/ollm"
+text QSHA "sha "
+text QF32 "f32 "
+text QNE "f32ne "
+text SURV "f32_surviving="
+text CHGD " changed="
+text RMSK "rms="
+text NONF3 "nonfinite=3"
+text WTEL "wte "
+text PASST "PASS "
+text FAILT "FAIL "
+text RUNT "RUN"
+text BART "| "
+text EXITT "EXIT got="
+text WANTT " want="
+text ELAPT " elapsed_ns="
+text HEADT "WPCHECK "
+text WPSHT " wpatch_sha256="
+text WPPT "WPCHECK PASS checks="
+text WPFT "WPCHECK FAIL checks="
+text CMDT " commands="
+text USAGE "usage: wpcheck small BUILD WORK ORACLE | wpcheck real BUILD WORK ORACLE CK\n"
+text SP " "
+text NL "\n"
+text LIO ": I/O failure"
+text LCAP "driver capacity"
+text LCHILD "could not start a child process"
+text LEXIT "exit"
+text LORL "oracle answered every request"
+text LMAG "oracle CK02 magic"
+text LCKL "oracle checkpoint length"
+text LFNV "oracle checkpoint FNV"
+text LGEOP "oracle checkpoint geometry P"
+text LWMAG "oracle manifest magic"
+text LNAME "oracle canonical manifest name"
+text LMLEN "oracle manifest length"
+text LPOL "oracle policy"
+text LEID "oracle edit identity"
+text LMETA "oracle metadata lengths"
+text LPROV "oracle UTF8 provenance"
+text LORD "oracle strict order"
+text LBND "oracle indices in bounds"
+text LHDR "oracle preserved base header"
+text LMGEO "oracle manifest geometry"
+text LMP "oracle manifest P"
+text LBSHA "oracle base SHA"
+text LEBIT "oracle entry bits"
+text LEFIN "oracle entry changed finite"
+text LEMAG "oracle entry magnitude"
+text LEMOM "oracle saved moments"
+text LOSHA "oracle expected output SHA"
+text LOF32 "oracle expected f32 SHA"
+text LTALL "oracle all tensors present"
+text LTGEO "oracle tensor record geometry"
+text LTCNT "oracle tensor changed count"
+text LTBS "oracle tensor base SHA"
+text LTOS "oracle tensor output SHA"
+text LAGREE "manifest oracle agrees with independent request"
+text LSHOW "show UTF8 provenance"
+text LAPPX "apply exact oracle bytes"
+text LAPPR "apply equals independent requested bytes"
+text LSURV "verify f32 survival count"
+text LREVB "revert byte-identical base"
+text LBFMT "oracle binding format"
+text LBCK "oracle binding CK and f32"
+text LBRT "oracle binding runtime and patch"
+text LBSELF "oracle binding self digest"
+text LOUTP "OUT exists preserved"
+text LSLICE "inspect exact slice bits"
+text LBASEW "BASE never written"
+text LMUTP "mutant patch policy"
+text LMUTS "mutant apply equals its own independent request"
+text LMUTR "independent oracle rejects rehashed finite-value mutant accepted by verify"
+text LOVER "oversized metadata creates no output"
+text LREF ": refusal creates no output"
+text LEXO "f32 cast boundary vectors"
+text LRMS "scaled RMS survives maximum finite f64, counts nonfinite separately"
+text LFBASE "final base identity"
+text LRPIN "real base pinned SHA"
+text LROFF "Wolfram layer3 w2 offset"
+text LRTEN "real ten entry identity"
+text LRAPP "real apply equals independently requested bytes"
+text LRREV "real byte-identical revert SHA"
+text LRBASE "real base unchanged"
+text LROUT "real output SHA matches independent expected bytes"
+text LRMOUT "real manifest output SHA matches independent expected bytes"
+text LRF32 "real f32 SHA matches independent expected bytes"
+text LRMF32 "real manifest f32 SHA matches independent expected bytes"
+
+note ---- output and verdicts ----------------------------------------------------------------------
+fn say s view uchar * to void
+r = write 1 s 0 len s
+end
+fn saynum v ulong to void
+x = v
+n = ulong 0
+while ge x 10
+put dig n uchar add 48 rem x 10
+x = div x 10
+n = add n 1
+end
+put dig n uchar add 48 x
+for i ulong add n 1
+r = write 1 dig sub n i 1
+end
+end
+fn saypb to void
+r = write 1 pb 0 get pn 0
+end
+fn tally to void
+saynum get cnt 0
+say CMDT
+saynum get cnt 1
+say NL
+end
+note FAIL with label pb + m (pb may be empty), then the summary; exit 1.
+fn failpm m view uchar * to void
+say FAILT
+saypb
+say m
+say NL
+say WPFT
+tally
+exit 1
+end
+fn pclear to void
+put pn 0 0
+end
+fn fail m view uchar * to void
+pclear
+failpm m
+end
+fn need c bool m view uchar * to void
+if not c
+fail m
+end
+put cnt 0 add get cnt 0 1
+say PASST
+say m
+say NL
+end
+note need with label pb + m
+fn needpm c bool m view uchar * to void
+if not c
+failpm m
+end
+put cnt 0 add get cnt 0 1
+say PASST
+saypb
+say m
+say NL
+end
+
+note ---- path builder, slots, argument packets ---------------------------------------------------
+fn pbyte b uchar to void
+n = get pn 0
+if ge n 4095
+fail LCAP
+end
+put pb n b
+put pn 0 add n 1
+end
+fn ptext s view uchar * to void
+for i ulong len s
+pbyte get s i
+end
+end
+fn pnum v ulong to void
+x = v
+n = ulong 0
+while ge x 10
+put dig n uchar add 48 rem x 10
+x = div x 10
+n = add n 1
+end
+put dig n uchar add 48 x
+for i ulong add n 1
+pbyte get dig sub n i
+end
+end
+fn phex v ulong to void
+for i ulong 16
+pbyte get HEXD and shr v mul sub 15 i 4 15
+end
+end
+note append word k (0-based, space separated) of s
+fn pword s view uchar * k ulong to void
+w = ulong 0
+for i ulong len s
+c = get s i
+if eq c 32
+w = add w 1
+else
+if eq w k
+pbyte c
+end
+end
+end
+end
+note Slot k is 512 bytes of sb at k * 512, its length in sl.
+fn pslot k ulong to void
+o = mul k 512
+for i ulong get sl k
+pbyte get sb add o i
+end
+end
+fn keepat k ulong to void
+n = get pn 0
+if gt n 512
+fail LCAP
+end
+o = mul k 512
+for i ulong n
+put sb add o i get pb i
+end
+put sl k n
+end
+fn under k ulong base ulong s view uchar * to void
+pclear
+pslot base
+ptext s
+keepat k
+end
+note slot k = WORK/s
+fn wname k ulong s view uchar * to void
+pclear
+pslot SWORK
+pbyte 47
+ptext s
+keepat k
+end
+note slot k = WORK/a N
+fn wnamep k ulong a view uchar * v ulong to void
+pclear
+pslot SWORK
+pbyte 47
+ptext a
+pnum v
+keepat k
+end
+note slot k = WORK/a N b
+fn wnamen k ulong a view uchar * v ulong b view uchar * to void
+pclear
+pslot SWORK
+pbyte 47
+ptext a
+pnum v
+ptext b
+keepat k
+end
+fn slotis k ulong s view uchar * to bool
+if ne get sl k len s
+ret false
+end
+o = mul k 512
+for i ulong len s
+if ne get sb add o i get s i
+ret false
+end
+end
+ret true
+end
+fn argslot i ulong k ulong to void
+r = argread i pb 0 512
+if le r 0
+say USAGE
+exit 2
+end
+put pn 0 ulong r
+keepat k
+end
+fn aclear to void
+put ap 0 2
+put ap 1 0
+end
+fn apb to void
+p = get ap 0
+n = get pn 0
+if or gt add add p n 2 len av ge get ap 1 64
+fail LCAP
+end
+put av p uchar and n 255
+put av add p 1 uchar shr n 8
+for i ulong n
+put av add add p 2 i get pb i
+end
+put ap 0 add add p 2 n
+put ap 1 add get ap 1 1
+end
+fn atext s view uchar * to void
+pclear
+ptext s
+apb
+end
+fn aslot k ulong to void
+pclear
+pslot k
+apb
+end
+fn anum v ulong to void
+pclear
+pnum v
+apb
+end
+note one argument per space-separated word of s
+fn awords s view uchar * to void
+pclear
+for i ulong len s
+if eq get s i 32
+apb
+pclear
+else
+pbyte get s i
+end
+end
+apb
+end
+note packet: wpatch CMD
+fn acmd s view uchar * to void
+aclear
+aslot SWP
+atext s
+end
+
+note ---- child processes ---------------------------------------------------------------------------
+fn showcmd to void
+say RUNT
+p = ulong 2
+for i ulong get ap 1
+n = or ulong get av p shl ulong get av add p 1 8
+say SP
+r = write 1 av add p 2 n
+p = add add p 2 n
+end
+say NL
+end
+fn redir s int d int to void
+if ne s d
+if ne dupfd s d 0 long d
+exit 127
+end
+end
+end
+fn drain rd int to void
+n = ulong 0
+k = long 1
+while gt k 0 bound 999999
+if eq n len ob
+fail LCAP
+end
+k = read rd ob n sub len ob n
+if gt k 0
+n = add n ulong k
+end
+end
+r = fclose rd
+put obn 0 n
+end
+fn reap pid long to ulong
+w = waitpid int pid stb 0 4 0
+if ne w pid
+fail LCHILD
+end
+if ne get stb 0 0
+ret add 256 ulong and get stb 0 127
+end
+ret ulong get stb 1
+end
+fn echoob to void
+n = get obn 0
+s = ulong 0
+for i ulong n
+if eq get ob i 10
+say BART
+r = write 1 ob s add sub i s 1
+s = add i 1
+end
+end
+if lt s n
+say BART
+r = write 1 ob s sub n s
+say NL
+end
+end
+note Run the packet in av: stdout is captured into ob, stderr passes through. Checks the exit.
+fn go want ulong to void
+put av 0 uchar and get ap 1 255
+put av 1 uchar shr get ap 1 8
+showcmd
+pf = new uchar 8 0
+if ne pipefds pf 0 8 0 0
+fail LCHILD
+end
+rd = int or ulong get pf 0 shl ulong get pf 1 8
+wr = int or ulong get pf 4 shl ulong get pf 5 8
+t0 = monons
+pid = fork
+if lt pid 0
+fail LCHILD
+end
+if eq pid 0
+r = fclose rd
+redir wr 1
+r = execprog av 0 get ap 0
+exit 127
+end
+r = fclose wr
+drain rd
+x = reap pid
+t = sub monons t0
+put cnt 1 add get cnt 1 1
+echoob
+say EXITT
+saynum x
+say WANTT
+saynum want
+say ELAPT
+saynum ulong t
+say NL
+need eq x want LEXIT
+end
+note Slot k = child stdout without trailing white space.
+fn keepout k ulong to void
+n = get obn 0
+going = true
+while going
+if eq n 0
+going = false
+else
+if le get ob sub n 1 32
+n = sub n 1
+else
+going = false
+end
+end
+end
+pclear
+for i ulong n
+pbyte get ob i
+end
+keepat k
+end
+note true when the bytes now in pb occur in ob
+fn obhaspb to bool
+n = get obn 0
+m = get pn 0
+if gt m n
+ret false
+end
+for i ulong add sub n m 1
+hit = true
+for j ulong m
+if ne get ob add i j get pb j
+hit = false
+end
+end
+if hit
+ret true
+end
+end
+ret false
+end
+
+note ---- files and maps -----------------------------------------------------------------------------
+fn failio k ulong to void
+pclear
+pslot k
+failpm LIO
+end
+fn fsize k ulong to ulong
+pclear
+pslot k
+fd = int fopen pb 0 get pn 0 0 0
+if lt fd 0
+failio k
+end
+sz = fseek fd 0 2
+r = fclose fd
+if lt sz 0
+failio k
+end
+ret ulong sz
+end
+fn mopen k ulong to long
+pclear
+pslot k
+fd = int fopen pb 0 get pn 0 0 0
+if lt fd 0
+failio k
+end
+sz = fseek fd 0 2
+h = mapnew fd 0 ulong sz 1 2
+r = fclose fd
+if lt h 0
+failio k
+end
+ret h
+end
+note Create slot k (must not exist) with n zero bytes; return a shared read/write map.
+fn mcreate k ulong n ulong to long
+pclear
+pslot k
+fd = int fopen pb 0 get pn 0 194 420
+if lt fd 0
+failio k
+end
+if ne ftrunc fd long n 0
+failio k
+end
+h = mapnew fd 0 n 3 1
+r = fclose fd
+if lt h 0
+failio k
+end
+ret h
+end
+fn mdrop h long to void
+r = mapdrop h
+end
+fn cpy src long so ulong dst long doff ulong n ulong to void
+b = new uchar 65536 0
+p = ulong 0
+while lt p n bound 999999
+k = sub n p
+if gt k 65536
+k = 65536
+end
+r = mapread src add so p b 0 k
+r = mapwrite dst add doff p b 0 k
+p = add p k
+end
+end
+fn mcopy src long n ulong k ulong to long
+h = mcreate k n
+cpy src 0 h 0 n
+ret h
+end
+fn exists k ulong to bool
+pclear
+pslot k
+ret eq faccess pb 0 get pn 0 0 0
+end
+fn mkd k ulong to void
+pclear
+pslot k
+if ne makedir pb 0 get pn 0 493 0
+failio k
+end
+end
+fn wtext k ulong s view uchar * to void
+pclear
+pslot k
+fd = int fopen pb 0 get pn 0 193 420
+if lt fd 0
+failio k
+end
+r = write fd s 0 len s
+c = fclose fd
+if or ne r long len s ne c 0
+failio k
+end
+end
+fn g8 h long o ulong to ulong
+ret mapget h o 8
+end
+fn s8 h long o ulong v ulong to void
+r = mapset h o 8 v
+end
+fn gb h long o ulong to ulong
+b = new uchar 1 0
+r = mapread h o b 0 1
+ret ulong get b 0
+end
+fn sbt h long o ulong v ulong to void
+b = new uchar 1 0
+put b 0 uchar v
+r = mapwrite h o b 0 1
+end
+fn flip h long o ulong to void
+sbt h o xor gb h o 1
+end
+fn fnvh h long n ulong to ulong
+b = new uchar 65536 0
+v = ulong 14695981039346656037
+p = ulong 120
+while lt p n bound 999999
+k = sub n p
+if gt k 65536
+k = 65536
+end
+r = mapread h p b 0 k
+for i ulong k
+v = mul xor v ulong get b i 1099511628211
+end
+p = add p k
+end
+ret v
+end
+fn reseal h long n ulong to void
+s8 h 112 fnvh h n
+end
+fn mreq h1 long o1 ulong h2 long n ulong to bool
+p = ulong 0
+while lt p n bound 999999
+k = sub n p
+if gt k 65536
+k = 65536
+end
+r = mapread h1 add o1 p ca 0 k
+r = mapread h2 p cb 0 k
+for i ulong k
+if ne get ca i get cb i
+ret false
+end
+end
+p = add p k
+end
+ret true
+end
+fn fsame k1 ulong k2 ulong to bool
+n = fsize k1
+if ne n fsize k2
+ret false
+end
+if eq n 0
+ret true
+end
+h1 = mopen k1
+h2 = mopen k2
+same = mreq h1 0 h2 n
+mdrop h1
+mdrop h2
+ret same
+end
+fn mtext h long o ulong s view uchar * to bool
+b = new uchar 4096 0
+if gt len s 4096
+fail LCAP
+end
+r = mapread h o b 0 len s
+if ne r long len s
+ret false
+end
+for i ulong len s
+if ne get b i get s i
+ret false
+end
+end
+ret true
+end
+note Omega SHA-256 of n bytes at o into dg.
+fn shah h long o ulong n ulong to void
+b = new uchar 65536 0
+c = new uchar 104 0
+d = new uchar 32 0
+sha256_init c
+p = ulong 0
+while lt p n bound 999999
+k = sub n p
+if gt k 65536
+k = 65536
+end
+r = mapread h add o p b 0 k
+sha256_update c part b 0 k
+p = add p k
+end
+sha256_final c d
+for i ulong 32
+put dg i get d i
+end
+end
+fn hb to long
+ret long get hh 0
+end
+fn he to long
+ret long get hh 1
+end
+fn hm to long
+ret long get hh 2
+end
+fn mfg i ulong to ulong
+ret get mf i
+end
+
+note ---- oracle requests --------------------------------------------------------------------------
+fn rqb b uchar to void
+n = get rqn 0
+if ge n len rq
+fail LCAP
+end
+put rq n b
+put rqn 0 add n 1
+end
+fn rqt s view uchar * to void
+for i ulong len s
+rqb get s i
+end
+end
+fn rqnum v ulong to void
+pclear
+pnum v
+for i ulong get pn 0
+rqb get pb i
+end
+end
+fn rqslot k ulong to void
+o = mul k 512
+for i ulong get sl k
+rqb get sb add o i
+end
+end
+fn rqnl to void
+rqb 10
+put rqn 1 add get rqn 1 1
+end
+fn qsha k ulong o ulong n ulong to void
+rqt QSHA
+rqnum o
+rqb 32
+if eq n ALL
+rqb 45
+else
+rqnum n
+end
+rqb 32
+rqslot k
+rqnl
+end
+fn qf32 k ulong to void
+rqt QF32
+rqslot k
+rqnl
+end
+fn qne a ulong b ulong s ulong c ulong k ulong to void
+rqt QNE
+rqnum a
+rqb 32
+rqnum b
+rqb 32
+rqnum s
+rqb 32
+rqnum c
+rqb 32
+rqslot k
+rqnl
+end
+note Run the oracle on the pending request; its answer lines go to oo, starts in ol.
+fn orun to void
+put cnt 2 add get cnt 2 1
+wnamen SRQ FORQ get cnt 2 FREQ
+pclear
+pslot SRQ
+fd = int fopen pb 0 get pn 0 193 420
+if lt fd 0
+failio SRQ
+end
+r = write fd rq 0 get rqn 0
+c = fclose fd
+if or ne r long get rqn 0 ne c 0
+failio SRQ
+end
+aclear
+atext PY
+aslot SORC
+aslot SRQ
+go 0
+n = get obn 0
+if gt n len oo
+fail LCAP
+end
+k = ulong 0
+put ol 0 0
+for i ulong n
+put oo i get ob i
+if eq get ob i 10
+k = add k 1
+if ge k len ol
+fail LCAP
+end
+put ol k add i 1
+end
+end
+put oln 0 k
+need and eq k get rqn 1 eq get ol k n LORL
+put rqn 0 0
+put rqn 1 0
+end
+note line i holds exactly 64 lower-case hex digits equal to the 32 bytes b
+fn hexis i ulong b view uchar 32 to bool
+s = get ol i
+if ne sub get ol add i 1 s 65
+ret false
+end
+for j ulong 32
+x = get b j
+o = add s mul j 2
+if ne get oo o get HEXD shr x 4
+ret false
+end
+if ne get oo add o 1 get HEXD and x 15
+ret false
+end
+end
+ret true
+end
+fn ohexm i ulong h long o ulong to bool
+b = new uchar 32 0
+r = mapread h o b 0 32
+ret hexis i b
+end
+fn ohexd i ulong to bool
+b = new uchar 32 0
+for j ulong 32
+put b j get dg j
+end
+ret hexis i b
+end
+fn ohext i ulong s view uchar * to bool
+o = get ol i
+if ne sub get ol add i 1 o add len s 1
+ret false
+end
+for j ulong len s
+if ne get oo add o j get s j
+ret false
+end
+end
+ret true
+end
+fn oeq i ulong j ulong to bool
+a = get ol i
+b = get ol j
+n = sub get ol add i 1 a
+if ne n sub get ol add j 1 b
+ret false
+end
+for k ulong n
+if ne get oo add a k get oo add b k
+ret false
+end
+end
+ret true
+end
+fn onum i ulong to ulong
+v = ulong 0
+s = get ol i
+n = sub sub get ol add i 1 s 1
+for k ulong n
+d = sub ulong get oo add s k 48
+v = add mul v 10 d
+end
+ret v
+end
+note slot k ends in / + the 64 hex digits of line i + .wp
+fn namechk k ulong i ulong to bool
+n = get sl k
+if lt n 68
+ret false
+end
+o = add mul k 512 sub n 68
+if ne get sb o 47
+ret false
+end
+s = get ol i
+for j ulong 64
+if ne get sb add add o 1 j get oo add s j
+ret false
+end
+end
+a = eq get sb add o 65 46
+b = eq get sb add o 66 119
+c = eq get sb add o 67 112
+ret and and a b c
+end
+
+note ---- checkpoint geometry -----------------------------------------------------------------------
+fn tadd kd ulong ly ulong r ulong c ulong to void
+n = get tn 0
+if ge n 256
+fail LCAP
+end
+o = mul n 6
+put tt o kd
+put tt add o 1 ly
+put tt add o 2 r
+put tt add o 3 c
+put tt add o 4 get tn 1
+put tt add o 5 mul r c
+put tn 0 add n 1
+put tn 1 add get tn 1 mul r c
+end
+fn tlayer y ulong d ulong f ulong to void
+tadd 2 y 1 d
+tadd 3 y d d
+tadd 4 y d d
+tadd 5 y d d
+tadd 6 y d d
+tadd 7 y 1 d
+tadd 8 y d f
+tadd 9 y f d
+end
+fn tensors h long to void
+put tn 0 0
+put tn 1 0
+d = g8 h 24
+f = g8 h 40
+tadd 0 0 g8 h 8 d
+tadd 1 0 g8 h 16 d
+for y ulong g8 h 48
+tlayer y d f
+end
+tadd 10 0 1 d
+end
+fn tget i ulong j ulong to ulong
+ret get tt add mul i 6 j
+end
+fn ckcheck h long n ulong to void
+need mtext h 0 CK02 LMAG
+pp = g8 h 96
+need eq n add 120 mul 24 pp LCKL
+need eq fnvh h n g8 h 112 LFNV
+tensors h
+k = sub get tn 0 1
+need eq add tget k 4 tget k 5 pp LGEOP
+end
+
+note ---- manifest ---------------------------------------------------------------------------------
+note mf: 0 size, 1 policy, 2 tensors, 3 entries, 4 P, 5 entry offset, 6 entry size, 7 end of
+note entries, 8 params length, 9 rationale length. The map handle is hh 2.
+fn manfields k ulong to void
+h = mopen k
+put hh 2 ulong h
+put mf 0 fsize k
+put mf 1 g8 h 16
+put mf 2 g8 h 24
+put mf 3 g8 h 32
+put mf 4 g8 h 40
+es = ulong 40
+if eq g8 h 16 0
+es = 24
+end
+eo = add 376 mul 128 g8 h 24
+put mf 5 eo
+put mf 6 es
+put mf 7 add eo mul es g8 h 32
+put mf 8 g8 h 224
+put mf 9 g8 h 232
+end
+fn entix i ulong to ulong
+ret g8 hm add mfg 5 mul mfg 6 i
+end
+fn provok to bool
+h = hm
+e = mfg 7
+if eq get cnt 3 0
+a = and eq mfg 8 len PARS mtext h e PARS
+b = and eq mfg 9 len RATS mtext h add e mfg 8 RATS
+ret and a b
+end
+a = and eq mfg 8 len PARR mtext h e PARR
+b = and eq mfg 9 len RATR mtext h add e mfg 8 RATR
+ret and a b
+end
+fn ordered to bool
+m = mfg 3
+if eq m 0
+ret true
+end
+for i ulong sub m 1
+if ge entix i entix add i 1
+ret false
+end
+end
+ret true
+end
+fn inbounds to bool
+for i ulong mfg 3
+if ge entix i mfg 4
+ret false
+end
+end
+ret true
+end
+note Manifest structure. Oracle lines 0 and 1 are the manifest SHA and the entry-range SHA.
+fn mancheck k ulong to void
+h = hm
+need mtext h 0 WP01 LWMAG
+need namechk k 0 LNAME
+need eq g8 h 8 mfg 0 LMLEN
+need le mfg 1 2 LPOL
+need ohexm 1 h 192 LEID
+need eq add add mfg 7 mfg 8 mfg 9 mfg 0 LMETA
+need provok LPROV
+need ordered LORD
+need inbounds LBND
+end
+note Queue the manifest SHA and entry-range SHA requests (lines 0 and 1).
+fn qman k ulong to void
+qsha k 0 ALL
+qsha k mfg 5 mul mfg 6 mfg 3
+end
+fn entchk i ulong to void
+h = hm
+o = add mfg 5 mul mfg 6 i
+old = g8 h add o 8
+nw = g8 h add o 16
+wo = add 120 mul 8 g8 h o
+need and eq g8 hb wo old eq g8 he wo nw LEBIT
+need and ne old nw ne and shr nw 52 2047 2047 LEFIN
+need le bitcast f64 and nw 0x7fffffffffffffff 1000000.0 LEMAG
+if gt mfg 1 0
+pp = mfg 4
+a = eq g8 h add o 24 g8 hb add wo mul 8 pp
+b = eq g8 h add o 32 g8 hb add wo mul 16 pp
+need and a b LEMOM
+end
+end
+note Expected output derived from the manifest: edited, saved moments zeroed, resealed.
+fn mexpect k ulong to void
+n = fsize SEDIT
+x = mcopy he n k
+pp = mfg 4
+for i ulong mfg 3
+wo = add 120 mul 8 entix i
+if ge mfg 1 1
+s8 x add wo mul 8 pp 0
+end
+if eq mfg 1 2
+s8 x add wo mul 16 pp 0
+end
+end
+reseal x n
+mdrop x
+end
+fn tchanged i ulong to ulong
+lo = tget i 4
+hi = add lo tget i 5
+c = ulong 0
+for j ulong mfg 3
+x = entix j
+if and ge x lo lt x hi
+c = add c 1
+end
+end
+ret c
+end
+fn trec i ulong to bool
+h = hm
+r = add 376 mul 128 i
+a = and eq g8 h r tget i 0 eq g8 h add r 8 tget i 1
+b = and eq g8 h add r 16 tget i 2 eq g8 h add r 24 tget i 3
+c = and eq g8 h add r 32 64 eq g8 h add r 40 tget i 4
+ret and and a b c
+end
+note Per-tensor checks; oracle lines from first: nt base-range SHAs, then nt output-range SHAs.
+fn tchk first ulong to void
+nt = mfg 2
+need eq nt get tn 0 LTALL
+for i ulong nt
+r = add 376 mul 128 i
+need trec i LTGEO
+need eq g8 hm add r 48 tchanged i LTCNT
+need ohexm add first i hm add r 64 LTBS
+need ohexm add add first nt i hm add r 96 LTOS
+end
+end
+note Zero the saved moments of word offset wo as policy p clears them.
+fn zmom x long wo ulong p ulong to void
+pp = g8 x 96
+if ge p 1
+s8 x add wo mul 8 pp 0
+end
+if eq p 2
+s8 x add wo mul 16 pp 0
+end
+end
+fn rqword x long i ulong p ulong to void
+wo = add 120 mul 8 get rix i
+s8 x wo get rbt i
+zmom x wo p
+end
+note Requested output from intent: copy of slot src with rix/rbt bits, moments zeroed per policy.
+fn reqout src ulong k ulong p ulong to void
+hs = mopen src
+n = fsize src
+x = mcopy hs n k
+mdrop hs
+for i ulong get rcn 0
+rqword x i p
+end
+reseal x n
+mdrop x
+end
+
+note ---- small: one policy --------------------------------------------------------------------------
+fn pdiff p ulong to void
+wnamep SOD FPAT p
+mkd SOD
+acmd CDIFF
+aslot SBASE
+aslot SEDIT
+anum p
+aslot SPF
+aslot SRF
+aslot SOD
+go 0
+keepout add SP0 p
+end
+fn porc p ulong to void
+k = add SP0 p
+manfields k
+wnamen SMEX FMEX p FCK
+mexpect SMEX
+nt = mfg 2
+qman k
+qsha SBASE 0 ALL
+qsha SMEX 0 ALL
+qf32 SMEX
+qne add mfg 5 8 add mfg 5 16 mfg 6 mfg 3 k
+for i ulong nt
+qsha SBASE add 120 mul 8 tget i 4 mul 8 tget i 5
+end
+for i ulong nt
+qsha SMEX add 120 mul 8 tget i 4 mul 8 tget i 5
+end
+orun
+mancheck k
+need eq mfg 1 p LPOL
+ckcheck hb fsize SBASE
+need mreq hm 256 hb 120 LHDR
+geo = true
+for i ulong 6
+if ne g8 hm add 48 mul 8 i g8 hb add 8 mul 8 i
+geo = false
+end
+end
+need geo LMGEO
+need eq mfg 4 g8 hb 96 LMP
+need ohexm 2 hm 96 LBSHA
+for i ulong mfg 3
+entchk i
+end
+need ohexm 3 hm 128 LOSHA
+need ohexm 4 hm 160 LOF32
+tchk 6
+end
+fn pshow p ulong to void
+acmd CSHOW
+aslot add SP0 p
+go 0
+n = get obn 0
+a = len SHOWA
+z = len SHOWZ
+ok = gt n add add a z 64
+if ok
+for i ulong a
+if ne get ob i get SHOWA i
+ok = false
+end
+end
+s = get ol 0
+for j ulong 64
+if ne get ob add a j get oo add s j
+ok = false
+end
+end
+for i ulong z
+if ne get ob add sub n z i get SHOWZ i
+ok = false
+end
+end
+end
+need ok LSHOW
+end
+fn papply p ulong to void
+acmd CVAL
+aslot add SP0 p
+aslot SBASE
+go 0
+wnamen SOUT FAPP p FCK
+wnamen SREV FREV p FCK
+acmd CAPP
+aslot add SP0 p
+aslot SBASE
+aslot SOUT
+go 0
+need fsame SOUT SMEX LAPPX
+need fsame SREQ SOUT LAPPR
+acmd CVER
+aslot add SP0 p
+aslot SOUT
+go 0
+pclear
+ptext SURV
+pnum onum 5
+ptext CHGD
+pnum mfg 3
+need obhaspb LSURV
+acmd CREV
+aslot add SP0 p
+aslot SOUT
+aslot SREV
+go 0
+need fsame SREV SSNAP LREVB
+end
+fn pbind p ulong to void
+k = add SP0 p
+wnamep SBIND FBND p
+acmd CBIND
+aslot k
+aslot SOUT
+aslot SWP
+aslot SBIND
+go 0
+qsha SMEX 0 ALL
+qf32 SMEX
+qsha SWP 0 ALL
+qsha k 0 ALL
+qsha SBIND 0 136
+orun
+h = mopen SBIND
+need and eq fsize SBIND 168 mtext h 0 WB01 LBFMT
+need and ohexm 0 h 8 ohexm 1 h 40 LBCK
+need and ohexm 2 h 72 ohexm 3 h 104 LBRT
+need ohexm 4 h 136 LBSELF
+mdrop h
+end
+fn pcheckb p ulong to void
+acmd CCB
+aslot SBIND
+aslot SOUT
+aslot SWP
+go 0
+acmd CCB
+aslot SBIND
+aslot SBASE
+aslot SWP
+go 60
+wnamep SRT FRT p
+n = fsize SWP
+h = mopen SWP
+x = mcreate SRT add n 1
+cpy h 0 x 0 n
+mdrop x
+mdrop h
+acmd CCB
+aslot SBIND
+aslot SOUT
+aslot SRT
+go 62
+wnamep SBADB FBADB p
+h = mopen SBIND
+x = mcopy h 168 SBADB
+mdrop h
+flip x 40
+shah x 0 136
+r = mapwrite x 136 dg 0 32
+acmd CCB
+aslot SBADB
+aslot SOUT
+aslot SWP
+go 61
+flip x 104
+acmd CCB
+aslot SBADB
+aslot SOUT
+aslot SWP
+go 59
+mdrop x
+end
+fn prefuse p ulong to void
+acmd CAPP
+aslot add SP0 p
+aslot SBASE
+aslot SOUT
+go 52
+need fsame SOUT SMEX LOUTP
+acmd CAPP
+aslot add SP0 p
+aslot SBASE
+aslot SBASE
+go 52
+acmd CREV
+aslot add SP0 p
+aslot SOUT
+aslot SBASE
+go 52
+acmd CDIFF
+aslot SBASE
+aslot SEDIT
+anum p
+aslot SPF
+aslot SRF
+aslot SOD
+go 52
+end
+fn policy p ulong to void
+pdiff p
+porc p
+wnamen SREQ FEXP p FCK
+reqout SBASE SREQ p
+need fsame SREQ SMEX LAGREE
+pshow p
+papply p
+pbind p
+pcheckb p
+prefuse p
+mdrop hm
+end
+
+note ---- small: fixtures and adversarial manifests --------------------------------------------------
+fn train to void
+wname STRAIN FTRAIN
+h = mcreate STRAIN 3000
+b = new uchar 15 0
+for i ulong len TRAINW
+put b i get TRAINW i
+end
+for i ulong 200
+r = mapwrite h mul i 15 b 0 15
+end
+mdrop h
+wname SBASE FBASE
+aclear
+aslot SOLLM
+atext CINIT
+aslot SBASE
+awords INITA
+go 0
+aclear
+aslot SOLLM
+atext CTRAIN
+aslot SBASE
+aslot STRAIN
+anum 2
+anum 1
+go 0
+end
+note edited = base + 0.001 at every tensor start, index 1 low bit flipped; requested = those bits.
+fn mkedit to void
+n = fsize SBASE
+h = mopen SBASE
+put hh 0 ulong h
+ckcheck h n
+wname SSNAP FSNAP
+x = mcopy h n SSNAP
+mdrop x
+wname SEDIT FEDIT
+x = mcopy h n SEDIT
+put hh 1 ulong x
+k = get tn 0
+for i ulong k
+wo = add 120 mul 8 tget i 4
+s8 x wo bitcast ulong add bitcast f64 g8 x wo DLT
+put rix i tget i 4
+put rbt i g8 x wo
+end
+s8 x 128 xor g8 x 128 1
+put rix k 1
+put rbt k g8 x 128
+put rcn 0 add k 1
+reseal x n
+wname SPF FPF
+wtext SPF PARS
+wname SRF FRF
+wtext SRF RATS
+end
+fn inspect to void
+acmd CINSP
+aslot SBASE
+go 0
+acmd CINSP
+aslot SBASE
+atext WTE
+awords SLICEA
+go 0
+pclear
+phex g8 hb 120
+a = obhaspb
+pclear
+phex g8 hb 128
+need and a obhaspb LSLICE
+acmd CINSP
+aslot SBASE
+atext WTE
+awords OOBA
+go 27
+end
+note Policy-2 patch for an edit whose index-0 value is 0.25: verify accepts it, yet its applied
+note bytes must differ from expected-2.ck (the in-run negative control of the byte oracle).
+fn mutant to void
+n = fsize SEDIT
+wname SX0 FMUTE
+x = mcopy he n SX0
+s8 x 120 bitcast ulong QTR
+reseal x n
+mdrop x
+wname SX1 FMUTD
+mkd SX1
+acmd CDIFF
+aslot SBASE
+aslot SX0
+anum 2
+aslot SPF
+aslot SRF
+aslot SX1
+go 0
+keepout SX2
+wname SX3 FMUTO
+acmd CAPP
+aslot SX2
+aslot SBASE
+aslot SX3
+go 0
+acmd CVER
+aslot SX2
+aslot SX3
+go 0
+old = get rbt 0
+put rbt 0 bitcast ulong QTR
+wname SX4 FMUTR
+reqout SBASE SX4 2
+put rbt 0 old
+need fsame SX4 SX3 LMUTS
+wnamen SREQ FEXP 2 FCK
+need not fsame SREQ SX3 LMUTR
+end
+fn fill h long o ulong n ulong to void
+b = new uchar 65536 97
+p = ulong 0
+while lt p n bound 999999
+k = sub n p
+if gt k 65536
+k = 65536
+end
+r = mapwrite h add o p b 0 k
+p = add p k
+end
+end
+note Oversized params (f 0) or rationale (f 1): 16777217 bytes of a, length fields updated.
+fn oversize f ulong to void
+manfields add SP0 2
+n0 = mfg 0
+e = add mfg 7 mfg 8
+if eq f 0
+e = mfg 7
+end
+dropn = mfg 9
+if eq f 0
+dropn = mfg 8
+end
+nn = sub add n0 OVER dropn
+if eq f 0
+pclear
+pslot SWORK
+pbyte 47
+ptext FOVP
+else
+pclear
+pslot SWORK
+pbyte 47
+ptext FOVR
+end
+ptext FWP
+keepat SX0
+pn0 = get pn 0
+put pn 0 sub pn0 3
+ptext FCK
+keepat SX1
+x = mcreate SX0 nn
+cpy hm 0 x 0 e
+fill x e OVER
+if eq f 0
+cpy hm add e mfg 8 x add e OVER mfg 9
+s8 x 224 OVER
+else
+s8 x 232 OVER
+end
+s8 x 8 nn
+mdrop x
+mdrop hm
+acmd CVAL
+aslot SX0
+aslot SBASE
+go 57
+acmd CSHOW
+aslot SX0
+go 57
+acmd CAPP
+aslot SX0
+aslot SBASE
+aslot SX1
+go 57
+need not exists SX1 LOVER
+end
+fn badutf to void
+manfields add SP0 2
+n = mfg 0
+wname SX0 FUTF
+x = mcopy hm n SX0
+sbt x sub n 1 255
+mdrop x
+mdrop hm
+acmd CVAL
+aslot SX0
+aslot SBASE
+go 31
+end
+note Apply mutation c (0..16, named by word c of MUTN) to x; return the expected refusal code.
+fn mutate x long c ulong to ulong
+eo = mfg 5
+if eq c 0
+flip x 96
+ret 50
+end
+if eq c 1
+s8 x 48 add g8 x 48 1
+ret 36
+end
+if eq c 2
+s8 x 392 add g8 x 392 1
+ret 37
+end
+if eq c 3
+s8 x eo mfg 4
+ret 38
+end
+if eq c 4
+s8 x add eo 16 0x7ff8000000000000
+ret 40
+end
+if eq c 5
+s8 x add eo 16 0x7ff0000000000000
+ret 41
+end
+if eq c 6
+s8 x add eo 16 bitcast ulong BIGM
+ret 42
+end
+if eq c 7
+for j ulong 5
+a = g8 x add eo mul 8 j
+s8 x add eo mul 8 j g8 x add add eo 40 mul 8 j
+s8 x add add eo 40 mul 8 j a
+end
+ret 39
+end
+if eq c 8
+s8 x add eo 40 g8 x eo
+ret 43
+end
+ret mutate2 x c
+end
+fn mutate2 x long c ulong to ulong
+eo = mfg 5
+if eq c 9
+s8 x add eo 8 xor g8 x add eo 8 1
+ret 47
+end
+if eq c 10
+s8 x add eo 24 xor g8 x add eo 24 1
+ret 48
+end
+if eq c 11
+flip x 192
+ret 46
+end
+if eq c 12
+s8 x 424 add g8 x 424 1
+ret 45
+end
+if eq c 13
+flip x 440
+ret 49
+end
+if eq c 14
+flip x 472
+ret 49
+end
+if eq c 15
+flip x 128
+ret 53
+end
+flip x 160
+ret 54
+end
+fn mutcase c ulong to void
+n = mfg 0
+pclear
+pslot SWORK
+pbyte 47
+pword MUTN c
+ptext FWP
+keepat SX0
+put pn 0 sub get pn 0 3
+ptext FCK
+keepat SX1
+x = mcopy hm n SX0
+code = mutate x c
+if ne c 11
+shah x mfg 5 mul mfg 6 mfg 3
+r = mapwrite x 192 dg 0 32
+end
+mdrop x
+acmd CVAL
+aslot SX0
+aslot SBASE
+go code
+acmd CAPP
+aslot SX0
+aslot SBASE
+aslot SX1
+go code
+gone = not exists SX1
+pclear
+pword MUTN c
+needpm gone LREF
+end
+fn flipped to void
+n = mfg 0
+wname SX0 FFLIP
+mkd SX0
+k = add SP0 1
+pclear
+pslot SX0
+o = add mul k 512 sub get sl k 68
+for i ulong 68
+pbyte get sb add o i
+end
+keepat SX0
+x = mcopy hm n SX0
+flip x sub n 1
+mdrop x
+wnamen SX1 FAPP 1 FCK
+acmd CSHOW
+aslot SX0
+go 30
+acmd CVAL
+aslot SX0
+aslot SBASE
+go 30
+acmd CVER
+aslot SX0
+aslot SX1
+go 30
+wname SX2 FBAPP
+acmd CAPP
+aslot SX0
+aslot SBASE
+aslot SX2
+go 30
+wname SX2 FBREV
+acmd CREV
+aslot SX0
+aslot SX1
+aslot SX2
+go 30
+wname SX2 FBBND
+acmd CBIND
+aslot SX0
+aslot SX1
+aslot SWP
+aslot SX2
+go 30
+end
+fn truncs to void
+n = mfg 0
+wname SX0 FTRUNC
+x = mcopy hm sub n 1 SX0
+mdrop x
+acmd CVAL
+aslot SX0
+aslot SBASE
+go 32
+pclear
+pslot SX0
+r = unlink pb 0 get pn 0
+x = mcopy hm 100 SX0
+mdrop x
+acmd CSHOW
+aslot SX0
+go 32
+end
+fn diffbad to void
+acmd CDIFF
+aslot SBASE
+aslot SBASE
+anum 0
+aslot SPF
+aslot SRF
+aslot SWORK
+go 55
+n = fsize SEDIT
+wname SX0 FWRM
+x = mcopy he n SX0
+o = add 120 mul 8 g8 x 96
+s8 x o xor g8 x o 1
+reseal x n
+mdrop x
+acmd CDIFF
+aslot SBASE
+aslot SX0
+anum 0
+aslot SPF
+aslot SRF
+aslot SWORK
+go 56
+end
+fn exval i ulong to ulong
+if eq i 0
+ret 0
+end
+if eq i 1
+ret 0x8000000000000000
+end
+if eq i 2
+ret 1
+end
+if eq i 3
+ret 0x3690000000000000
+end
+if eq i 4
+ret 0x3ff0000010000000
+end
+if eq i 5
+ret 0x3ff0000030000000
+end
+if eq i 6
+ret 0x47f0000000000000
+end
+if eq i 7
+ret 0x7ff0000000000000
+end
+if eq i 8
+ret 0xfff0000000000000
+end
+if eq i 9
+ret 0x7ff8000000000000
+end
+ret 0x7fefffffffffffff
+end
+note true when the bytes of s occur in ob at o, before e
+fn obat o ulong e ulong s view uchar * to bool
+if gt add o len s e
+ret false
+end
+for j ulong len s
+if ne get ob add o j get s j
+ret false
+end
+end
+ret true
+end
+note true when the inspect line starting `wte ` has rms= with a leading digit 1-9 and nonfinite=3
+fn rmsok to bool
+n = get obn 0
+s = ulong 0
+for i ulong n
+if eq get ob i 10
+if obat s i WTEL
+ret lineok s i
+end
+s = add i 1
+end
+end
+ret false
+end
+fn lineok s ulong e ulong to bool
+r = false
+f = false
+for i ulong sub e s
+o = add s i
+if obat o e RMSK
+if lt add o 4 e
+c = get ob add o 4
+r = and ge c 49 le c 57
+end
+end
+if obat o e NONF3
+f = true
+end
+end
+ret and r f
+end
+fn exotic to void
+n = fsize SBASE
+wname SX0 FEXO
+x = mcopy hb n SX0
+for i ulong 11
+s8 x add 120 mul 8 i exval i
+end
+reseal x n
+wname SX1 FEXE
+y = mcopy x n SX1
+mdrop x
+s8 y 216 bitcast ulong QTR
+reseal y n
+mdrop y
+wname SX2 FEXD
+mkd SX2
+acmd CDIFF
+aslot SX0
+aslot SX1
+anum 0
+aslot SPF
+aslot SRF
+aslot SX2
+go 0
+keepout SX3
+qf32 SX1
+orun
+h = mopen SX3
+need ohexm 0 h 160 LEXO
+mdrop h
+acmd CVAL
+aslot SX3
+aslot SX0
+go 0
+acmd CINSP
+aslot SX0
+go 0
+need rmsok LRMS
+end
+fn small to void
+train
+mkedit
+inspect
+for p ulong 3
+policy p
+end
+need fsame SBASE SSNAP LBASEW
+mutant
+oversize 0
+oversize 1
+badutf
+manfields add SP0 1
+for c ulong 17
+mutcase c
+end
+flipped
+truncs
+mdrop hm
+diffbad
+exotic
+need fsame SBASE SSNAP LFBASE
+end
+
+note ---- real ---------------------------------------------------------------------------------------
+fn redit to void
+n = fsize SBASE
+h = mopen SBASE
+put hh 0 ulong h
+wname SEDIT FR40E
+x = mcopy h n SEDIT
+put hh 1 ulong x
+tensors x
+off = ulong 0
+for i ulong get tn 0
+if and eq tget i 0 9 eq tget i 1 3
+off = tget i 4
+end
+end
+need eq off BASEOFF LROFF
+for i ulong 10
+wo = add 120 mul 8 add off i
+s8 x wo bitcast ulong add bitcast f64 g8 x wo DLT
+put rix i add off i
+put rbt i g8 x wo
+end
+put rcn 0 10
+reseal x n
+end
+fn rten to bool
+if ne mfg 3 10
+ret false
+end
+for i ulong 10
+if ne entix i add get rix 0 i
+ret false
+end
+end
+ret true
+end
+fn real to void
+qsha SBASE 0 ALL
+orun
+need ohext 0 BSHA LRPIN
+redit
+wname SREQ FR40X
+reqout SBASE SREQ 2
+wname SPF FPF
+wtext SPF PARR
+wname SRF FRF
+wtext SRF RATR
+wname SOD FPATS
+mkd SOD
+acmd CDIFF
+aslot SBASE
+aslot SEDIT
+anum 2
+aslot SPF
+aslot SRF
+aslot SOD
+go 0
+keepout SP0
+manfields SP0
+qman SP0
+orun
+mancheck SP0
+need rten LRTEN
+acmd CVAL
+aslot SP0
+aslot SBASE
+go 0
+wname SOUT FR40A
+wname SREV FR40R
+acmd CAPP
+aslot SP0
+aslot SBASE
+aslot SOUT
+go 0
+need fsame SREQ SOUT LRAPP
+acmd CVER
+aslot SP0
+aslot SOUT
+go 0
+acmd CREV
+aslot SP0
+aslot SOUT
+aslot SREV
+go 0
+aclear
+atext SUMT
+aslot SBASE
+aslot SREV
+aslot SOUT
+go 0
+qsha SREV 0 ALL
+qsha SBASE 0 ALL
+qsha SOUT 0 ALL
+qsha SREQ 0 ALL
+qf32 SREQ
+qf32 SOUT
+orun
+need ohext 0 BSHA LRREV
+need ohext 1 BSHA LRBASE
+need oeq 2 3 LROUT
+need ohexm 3 hm 128 LRMOUT
+need oeq 5 4 LRF32
+need ohexm 4 hm 160 LRMF32
+end
+
+fn main to int
+c = argcnt
+if and ne c 5 ne c 6
+say USAGE
+ret 2
+end
+argslot 1 SMODE
+ok = or and eq c 5 slotis SMODE MSMALL and eq c 6 slotis SMODE MREAL
+if not ok
+say USAGE
+ret 2
+end
+argslot 2 SBUILD
+argslot 3 SWORK
+argslot 4 SORC
+if eq c 6
+argslot 5 SBASE
+put cnt 3 1
+end
+under SWP SBUILD SLWP
+under SOLLM SBUILD SLOLLM
+mkd SWORK
+h = mopen SWP
+shah h 0 fsize SWP
+mdrop h
+say HEADT
+pclear
+pslot SMODE
+saypb
+say WPSHT
+pclear
+for i ulong 32
+pbyte get HEXD shr get dg i 4
+pbyte get HEXD and get dg i 15
+end
+saypb
+say NL
+if eq c 5
+small
+else
+real
+end
+say WPPT
+tally
+ret 0
+end

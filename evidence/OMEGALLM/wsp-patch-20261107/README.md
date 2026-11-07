@@ -1,5 +1,10 @@
 # wpatch host-CPU receipt, 2026-11-07
 
+Note added with the pure-Omega port: `tools/omegallm/wpatch/build.sh` and
+`check.py`, named in the commands below and in REVIEW.md, were deleted and
+replaced by the Omega drivers `wpbuild.om` and `wpcheck.om`. The records below
+are kept unchanged as history. Current commands and receipts: `pure-omega/`.
+
 Status: IMPLEMENTED and EXERCISED, PASS on the recorded host CPU paths.
 GPU qualification, inference-quality improvement, merge and deployment: NOT_RUN.
 No GPU was opened and no live service was changed. Round40 was read-only.

@@ -1,0 +1,68 @@
+WPCHECK real wpatch_sha256=bf993a780c7421cc2cd23d42fef5692135e9bd339f19a90059d4ef7f17be0847
+RUN /usr/bin/python3 tools/omegallm/wpatch/wporacle.py /home/drakestapleton/work/wsp/ck/wpatch-pure-real-20261107/oracle-1.req
+| 7c7b5b5260f2d9453b6076b64e7f23e88341d96498584f2dfaa229c31ad2e346
+EXIT got=0 want=0 elapsed_ns=210637659
+PASS exit
+PASS oracle answered every request
+PASS real base pinned SHA
+PASS Wolfram layer3 w2 offset
+RUN /tmp/wpp/out2/wpatch diff /home/drakestapleton/.local/share/omega-tool-model/round40/model.ck /home/drakestapleton/work/wsp/ck/wpatch-pure-real-20261107/round40-edited.ck 2 /home/drakestapleton/work/wsp/ck/wpatch-pure-real-20261107/params.txt /home/drakestapleton/work/wsp/ck/wpatch-pure-real-20261107/rationale.txt /home/drakestapleton/work/wsp/ck/wpatch-pure-real-20261107/patches
+| /home/drakestapleton/work/wsp/ck/wpatch-pure-real-20261107/patches/e0b262208c29d55f11a8dd53a82d8dd43ceac9cc5064b1c90e942fed34dd8658.wp
+EXIT got=0 want=0 elapsed_ns=7323278341
+PASS exit
+RUN /usr/bin/python3 tools/omegallm/wpatch/wporacle.py /home/drakestapleton/work/wsp/ck/wpatch-pure-real-20261107/oracle-2.req
+| e0b262208c29d55f11a8dd53a82d8dd43ceac9cc5064b1c90e942fed34dd8658
+| d49cd7bcd2516e67ab7e59b853fa1e685b821969e368231a1e7f89237771d27c
+EXIT got=0 want=0 elapsed_ns=12346095
+PASS exit
+PASS oracle answered every request
+PASS oracle manifest magic
+PASS oracle canonical manifest name
+PASS oracle manifest length
+PASS oracle policy
+PASS oracle edit identity
+PASS oracle metadata lengths
+PASS oracle UTF8 provenance
+PASS oracle strict order
+PASS oracle indices in bounds
+PASS real ten entry identity
+RUN /tmp/wpp/out2/wpatch validate /home/drakestapleton/work/wsp/ck/wpatch-pure-real-20261107/patches/e0b262208c29d55f11a8dd53a82d8dd43ceac9cc5064b1c90e942fed34dd8658.wp /home/drakestapleton/.local/share/omega-tool-model/round40/model.ck
+| PASS
+EXIT got=0 want=0 elapsed_ns=4915802469
+PASS exit
+RUN /tmp/wpp/out2/wpatch apply /home/drakestapleton/work/wsp/ck/wpatch-pure-real-20261107/patches/e0b262208c29d55f11a8dd53a82d8dd43ceac9cc5064b1c90e942fed34dd8658.wp /home/drakestapleton/.local/share/omega-tool-model/round40/model.ck /home/drakestapleton/work/wsp/ck/wpatch-pure-real-20261107/round40-applied.ck
+| PASS
+EXIT got=0 want=0 elapsed_ns=6938263456
+PASS exit
+PASS real apply equals independently requested bytes
+RUN /tmp/wpp/out2/wpatch verify /home/drakestapleton/work/wsp/ck/wpatch-pure-real-20261107/patches/e0b262208c29d55f11a8dd53a82d8dd43ceac9cc5064b1c90e942fed34dd8658.wp /home/drakestapleton/work/wsp/ck/wpatch-pure-real-20261107/round40-applied.ck
+| PASS f32_surviving=10 changed=10
+EXIT got=0 want=0 elapsed_ns=2495703203
+PASS exit
+RUN /tmp/wpp/out2/wpatch revert /home/drakestapleton/work/wsp/ck/wpatch-pure-real-20261107/patches/e0b262208c29d55f11a8dd53a82d8dd43ceac9cc5064b1c90e942fed34dd8658.wp /home/drakestapleton/work/wsp/ck/wpatch-pure-real-20261107/round40-applied.ck /home/drakestapleton/work/wsp/ck/wpatch-pure-real-20261107/round40-reverted.ck
+| PASS
+EXIT got=0 want=0 elapsed_ns=6301221048
+PASS exit
+RUN /usr/bin/sha256sum /home/drakestapleton/.local/share/omega-tool-model/round40/model.ck /home/drakestapleton/work/wsp/ck/wpatch-pure-real-20261107/round40-reverted.ck /home/drakestapleton/work/wsp/ck/wpatch-pure-real-20261107/round40-applied.ck
+| 7c7b5b5260f2d9453b6076b64e7f23e88341d96498584f2dfaa229c31ad2e346  /home/drakestapleton/.local/share/omega-tool-model/round40/model.ck
+| 7c7b5b5260f2d9453b6076b64e7f23e88341d96498584f2dfaa229c31ad2e346  /home/drakestapleton/work/wsp/ck/wpatch-pure-real-20261107/round40-reverted.ck
+| 95c8676227161d5fd425082462333a9180fe0c870478b69446bbf92678f47eac  /home/drakestapleton/work/wsp/ck/wpatch-pure-real-20261107/round40-applied.ck
+EXIT got=0 want=0 elapsed_ns=544295835
+PASS exit
+RUN /usr/bin/python3 tools/omegallm/wpatch/wporacle.py /home/drakestapleton/work/wsp/ck/wpatch-pure-real-20261107/oracle-3.req
+| 7c7b5b5260f2d9453b6076b64e7f23e88341d96498584f2dfaa229c31ad2e346
+| 7c7b5b5260f2d9453b6076b64e7f23e88341d96498584f2dfaa229c31ad2e346
+| 95c8676227161d5fd425082462333a9180fe0c870478b69446bbf92678f47eac
+| 95c8676227161d5fd425082462333a9180fe0c870478b69446bbf92678f47eac
+| 168f305d64d3d4192ae8fb8d854fa4c9b9a28ec12e7d399d30ec62153f5e831e
+| 168f305d64d3d4192ae8fb8d854fa4c9b9a28ec12e7d399d30ec62153f5e831e
+EXIT got=0 want=0 elapsed_ns=6456965576
+PASS exit
+PASS oracle answered every request
+PASS real byte-identical revert SHA
+PASS real base unchanged
+PASS real output SHA matches independent expected bytes
+PASS real manifest output SHA matches independent expected bytes
+PASS real f32 SHA matches independent expected bytes
+PASS real manifest f32 SHA matches independent expected bytes
+WPCHECK PASS checks=31 commands=9

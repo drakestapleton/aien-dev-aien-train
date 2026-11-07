@@ -1,0 +1,11 @@
+--- ../out/wpatch-all.om	2026-11-07 01:47:23.752906111 -0600
++++ wpatch-mutant.om	2026-11-07 01:57:00.809840808 -0600
+@@ -11424,7 +11424,7 @@
+ fn wpsurvive e ulong to bool
+ a = bitcast uint f32 bitcast f64 wpefield e 8
+ b = bitcast uint f32 bitcast f64 wpefield e 16
+-ret ne a b
++ret eq a b
+ end
+ fn wpverify to void
+ if ne oargc 4

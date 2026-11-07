@@ -1,0 +1,23 @@
+	Command being timed: "taskset -c 19 nice -n 10 /tmp/wpp/out2/wpcheck real /tmp/wpp/out2 /home/drakestapleton/work/wsp/ck/wpatch-pure-real-20261107 tools/omegallm/wpatch/wporacle.py /home/drakestapleton/.local/share/omega-tool-model/round40/model.ck"
+	User time (seconds): 35.72
+	System time (seconds): 1.24
+	Percent of CPU this job got: 99%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:37.21
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 1484688
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 2
+	Minor (reclaiming a frame) page faults: 371834
+	Voluntary context switches: 498
+	Involuntary context switches: 351
+	Swaps: 0
+	File system inputs: 56
+	File system outputs: 2968912
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0

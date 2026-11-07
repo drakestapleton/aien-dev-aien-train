@@ -179,21 +179,26 @@ Exit 0 means command success. There is no automatic fallback.
 
 When an input violates multiple rules, the first check determines the code. For
 example, a truncated canonical-name patch can fail filename identity before a
-later field check. Noncanonical corruption fixtures in check.py isolate the
+later field check. Noncanonical corruption fixtures in wpcheck isolate the
 individual refusal paths. Omega runtime traps remain nonzero compiler/runtime
 errors, not successful refusals; no trap is counted as an expected test result.
 
 ## Evidence and dependency boundary
 
 `evidence/OMEGALLM/wsp-patch-20261107/` records host CPU execution, the source
-composition diff, exact identities, small acceptance and round40 rollback.
-All product transformations and hashing are Omega. Build orchestration currently
-uses dash 0.5.12-6ubuntu5, GNU sed 4.9, git 2.43.0, GNU sha256sum 9.4,
-GNU diffutils 3.10, taskset util-linux 2.39.3 and GNU nice 9.4. The shell composition
-role is the existing build path; its Omega replacement would be a bounded source
-composer, not a hidden host implementation of checkpoint editing. The compiler
-is a pinned verification/build tool. Python 3.12.3 and hashlib/struct/mmap are
-external acceptance oracles only. No new host library enters the product runtime.
+composition diff, exact identities, small acceptance and round40 rollback; its
+`pure-omega/` directory holds the receipts for the Omega build and test drivers.
+All product transformations and hashing are Omega, and so are the build driver
+`wpbuild.om` and the test driver `wpcheck.om` (see the wpatch README for how to
+run them). The build driver runs these pinned host build tools: the compiler,
+dash 0.5.12-6ubuntu5 as `/bin/sh` for the repository's existing ollm build script
+`tests/omegallm/build.sh`, `/usr/bin/env`, git 2.43.0, GNU sha256sum 9.4, GNU
+diffutils 3.10, taskset util-linux 2.39.3 and GNU nice 9.4. None of them edits
+checkpoints or composes wpatch source; source composition and SHA vendoring are
+done in Omega. The Omega replacement for the ollm build script belongs to the
+ollm lane. Python 3.12.3 with hashlib/struct/mmap appears only as the ORACLE
+`wporacle.py`, a digest calculator called by wpcheck; it never decides a result.
+No new host library enters the product runtime.
 
 WolframLanguageEvaluator checks used during implementation:
 

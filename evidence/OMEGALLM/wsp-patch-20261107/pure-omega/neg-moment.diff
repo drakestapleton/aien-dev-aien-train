@@ -1,0 +1,11 @@
+--- ../out/wpatch-all.om	2026-11-07 01:47:23.752906111 -0600
++++ wpatch-mutant.om	2026-11-07 01:56:40.375661324 -0600
+@@ -11293,7 +11293,7 @@
+ end
+ wpput 2 add o mul get og 8 8 want
+ if eq get wpol 0 2
+-want = 0
++want = 1
+ if rev
+ want = wpefield e 32
+ end

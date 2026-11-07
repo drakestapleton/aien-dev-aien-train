@@ -1,0 +1,731 @@
+note SPDX-License-Identifier: AGPL-3.0-only
+note wpbuild: the Omega build driver for wpatch and its test driver wpcheck. CPU only.
+note Usage: wpbuild REPO OUT OMC OMEGA_MV CORE (all five required; CORE is a taskset core number).
+note Steps, in order (any failure prints one WPBUILD FAIL line and exits nonzero):
+note 1. ollm: runs the repository's tests/omegallm/build.sh (TARGET=aarch64) through /usr/bin/env, which
+note    checks the omc pin and writes OUT/ollm.om and OUT/ollm. execprog passes an empty environment, so
+note    PATH, TARGET, OUT, OMC and CORE are given to env explicitly.
+note 2. SHA-256: git show of om/sha256/sha256-om2.om at omega-mv pin e5b32567 into OUT/sha256-source.om;
+note    its sha256 (read from sha256sum) must equal SHASRC.
+note 3. Vendoring, done here in Omega: the layout block (from the line `layout shactx 104` through the
+note    next line `end`) goes to OUT/sha256-layout.om. Every other line except `om2` goes to
+note    OUT/sha256-functions.om, with a leading `export fn ` made `fn `, and on lines that do not start
+note    with `note` each whole word ([A-Za-z0-9_] run) in OLDW renamed to the word at the same position
+note    in NEWW. OUT/sha256-vendored.om is `om2`, layout, functions; OUT/sha256.diff is diff -u of the
+note    source against it (a review record, not an input).
+note 4. Composition: OUT/wpatch-all.om is `om2`, layout, OUT/ollm.om without its `om2` line and with
+note    `fn main to int` (exactly one such line) renamed `fn wpollm to int`, functions, wpatch.om.
+note    OUT/wpcheck-all.om is `om2`, layout, functions, wpcheck.om.
+note 5. Each is compiled with taskset -c CORE nice -n 19 OMC into a .new file, made executable and
+note    renamed over OUT/wpatch and OUT/wpcheck. A compile error removes the .new file and exits with
+note    omc's status. Finally sha256sum prints OMC, the SHA source, both compositions and both binaries.
+note This file replaces build.sh; its output bytes are the same (README, byte-identical gate).
+note Exit codes: 2 usage, 3 SHA source digest mismatch, 4 main count, 5 I/O or capacity, 6 a tool
+note failed (its status is printed), otherwise omc's own status.
+om2
+
+global sb uchar 65536
+global sl ulong 128
+global pb uchar 4096
+global pn ulong 1
+global av uchar 4096
+global ap ulong 2
+global stb uchar 4
+global inb uchar 8388608
+global bn ulong 1
+global ob uchar 8388608
+global obn ulong 1
+global lay uchar 4096
+global lan ulong 1
+global fns uchar 65536
+global fnn ulong 1
+global cap uchar 4096
+global capn ulong 1
+global dig uchar 32
+text PIN "e5b32567a7aff3ce594e3254a622a846a6cd190b:om/sha256/sha256-om2.om"
+text SHASRC "dbf002dd6aa36585632b9d01d98ac3f0bd2fa0f0475082940de53638847994bb"
+text OLDW "kinit iv sched rounds compress run blocks finish tobuf absorb "
+text NEWW "wskinit wsiv wssched wsround wscomp wsrun wsblks wsfin wstobuf wsabsb "
+text ENV "/usr/bin/env"
+text EPATH "PATH=/usr/bin:/bin"
+text ETGT "TARGET=aarch64"
+text EOUT "OUT="
+text EOMC "OMC="
+text ECORE "CORE="
+text SH "/bin/sh"
+text OBUILD "/tests/omegallm/build.sh"
+text GIT "/usr/bin/git"
+text GC "-C"
+text GSHOW "show"
+text SUM "/usr/bin/sha256sum"
+text DIFF "/usr/bin/diff"
+text DU "-u"
+text TSET "/usr/bin/taskset"
+text TC "-c"
+text NICE "/usr/bin/nice"
+text NN "-n"
+text N19 "19"
+text OM2 "om2"
+text LSTART "layout shactx 104"
+text LEND "end"
+text EXPFN "export fn "
+text NOTE "note"
+text MAINL "fn main to int"
+text WPOLLM "fn wpollm to int\n"
+text OM2NL "om2\n"
+text FSRC "/sha256-source.om"
+text FLAY "/sha256-layout.om"
+text FFNS "/sha256-functions.om"
+text FVEN "/sha256-vendored.om"
+text FDIF "/sha256.diff"
+text FOLLM "/ollm.om"
+text FWPS "/tools/omegallm/wpatch/wpatch.om"
+text FCKS "/tools/omegallm/wpatch/wpcheck.om"
+text FWALL "/wpatch-all.om"
+text FCALL "/wpcheck-all.om"
+text FWNEW "/wpatch.new"
+text FCNEW "/wpcheck.new"
+text FWP "/wpatch"
+text FCK "/wpcheck"
+text MUSAGE "WPBUILD FAIL usage: wpbuild REPO OUT OMC OMEGA_MV CORE\n"
+text MIO "WPBUILD FAIL I/O or capacity: "
+text MTOOL "WPBUILD FAIL tool exit "
+text MSHA "WPBUILD FAIL SHA-256 source digest differs from the pin\n"
+text MMAIN "WPBUILD FAIL ollm.om must hold exactly one line `fn main to int`, found "
+text MOMC "WPBUILD FAIL omc exit "
+text MOK "WPBUILD PASS\n"
+text NL "\n"
+
+note ---- output, slots and argument packets --------------------------------------------------
+fn say s view uchar * to void
+r = write 1 s 0 len s
+end
+fn saynum v ulong to void
+x = v
+n = ulong 0
+while ge x 10
+put dig n uchar add 48 rem x 10
+x = div x 10
+n = add n 1
+end
+put dig n uchar add 48 x
+for i ulong add n 1
+r = write 1 dig sub n i 1
+end
+end
+fn saypb to void
+r = write 1 pb 0 get pn 0
+end
+fn die c ulong m view uchar * to void
+say m
+exit int c
+end
+fn dieio to void
+say MIO
+saypb
+say NL
+exit 5
+end
+fn pclear to void
+put pn 0 0
+end
+fn pbyte b uchar to void
+n = get pn 0
+if ge n 4095
+dieio
+end
+put pb n b
+put pn 0 add n 1
+end
+fn ptext s view uchar * to void
+for i ulong len s
+pbyte get s i
+end
+end
+note Slot k is 512 bytes of sb at k * 512, its length in sl.
+fn pslot k ulong to void
+o = mul k 512
+for i ulong get sl k
+pbyte get sb add o i
+end
+end
+fn keepat k ulong to void
+n = get pn 0
+if gt n 512
+dieio
+end
+o = mul k 512
+for i ulong n
+put sb add o i get pb i
+end
+put sl k n
+end
+fn argslot i ulong k ulong to void
+r = argread i pb 0 512
+if le r 0
+die 2 MUSAGE
+end
+put pn 0 ulong r
+keepat k
+end
+note slot k = slot base followed by text s
+fn under k ulong base ulong s view uchar * to void
+pclear
+pslot base
+ptext s
+keepat k
+end
+fn aclear to void
+put ap 0 2
+put ap 1 0
+end
+fn apb to void
+p = get ap 0
+n = get pn 0
+if or gt add add p n 2 len av ge get ap 1 64
+dieio
+end
+put av p uchar and n 255
+put av add p 1 uchar shr n 8
+for i ulong n
+put av add add p 2 i get pb i
+end
+put ap 0 add add p 2 n
+put ap 1 add get ap 1 1
+end
+fn atext s view uchar * to void
+pclear
+ptext s
+apb
+end
+fn aslot k ulong to void
+pclear
+pslot k
+apb
+end
+note text s followed by slot k, one argument
+fn atslot s view uchar * k ulong to void
+pclear
+ptext s
+pslot k
+apb
+end
+fn popen k ulong fl int to int
+pclear
+pslot k
+r = fopen pb 0 get pn 0 fl 420
+if lt r 0
+dieio
+end
+ret int r
+end
+fn redir s int d int to void
+if ne s d
+if ne dupfd s d 0 long d
+exit 127
+end
+end
+end
+note Run the packet in av with stdin fi and stdout fo (-1 inherits); return the exit status, or
+note 256 + the signal number when the child was killed.
+fn spawn fi int fo int to ulong
+put av 0 uchar and get ap 1 255
+put av 1 uchar shr get ap 1 8
+pid = fork
+if lt pid 0
+dieio
+end
+if eq pid 0
+if ge fi 0
+redir fi 0
+end
+if ge fo 0
+redir fo 1
+end
+r = execprog av 0 get ap 0
+exit 127
+end
+if ge fi 0
+r = fclose fi
+end
+if ge fo 0
+r = fclose fo
+end
+w = waitpid int pid stb 0 4 0
+if ne w long pid
+dieio
+end
+if ne get stb 0 0
+ret add 256 ulong and get stb 0 127
+end
+ret ulong get stb 1
+end
+fn tool fi int fo int to void
+x = spawn fi fo
+if ne x 0
+say MTOOL
+saynum x
+say NL
+exit 6
+end
+end
+fn waitok pid long to void
+w = waitpid int pid stb 0 4 0
+bad = or ne get stb 0 0 ne get stb 1 0
+if or ne w pid bad
+say MTOOL
+saynum ulong get stb 1
+say NL
+exit 6
+end
+end
+note Run the packet with stdout read back through a pipe into cap (at most 4096 bytes).
+fn capture to void
+put av 0 uchar and get ap 1 255
+put av 1 uchar shr get ap 1 8
+pf = new uchar 8 0
+if ne pipefds pf 0 8 0 0
+dieio
+end
+rd = int or ulong get pf 0 shl ulong get pf 1 8
+wr = int or ulong get pf 4 shl ulong get pf 5 8
+pid = fork
+if lt pid 0
+dieio
+end
+if eq pid 0
+r = fclose rd
+redir wr 1
+r = execprog av 0 get ap 0
+exit 127
+end
+r = fclose wr
+n = ulong 0
+k = long 1
+while gt k 0
+k = read rd cap n sub len cap n
+if gt k 0
+n = add n ulong k
+end
+end
+r = fclose rd
+put capn 0 n
+waitok pid
+end
+
+note ---- whole files ---------------------------------------------------------------------------
+fn slurp k ulong to void
+fd = popen k 0
+n = ulong 0
+k2 = long 1
+while gt k2 0
+if eq n len inb
+dieio
+end
+k2 = read fd inb n sub len inb n
+if lt k2 0
+dieio
+end
+n = add n ulong k2
+end
+r = fclose fd
+put bn 0 n
+end
+fn obyte b uchar to void
+n = get obn 0
+if ge n len ob
+dieio
+end
+put ob n b
+put obn 0 add n 1
+end
+fn otext s view uchar * to void
+for i ulong len s
+obyte get s i
+end
+end
+fn obig o ulong n ulong to void
+for i ulong n
+obyte get inb add o i
+end
+end
+fn olay to void
+for i ulong get lan 0
+obyte get lay i
+end
+end
+fn ofns to void
+for i ulong get fnn 0
+obyte get fns i
+end
+end
+note Write ob to slot k, created or truncated.
+fn spill k ulong to void
+fd = popen k 577
+n = get obn 0
+p = ulong 0
+while lt p n
+r = write fd ob p sub n p
+if le r 0
+dieio
+end
+p = add p ulong r
+end
+if ne fclose fd 0
+dieio
+end
+put obn 0 0
+end
+
+note ---- line tests on inb -----------------------------------------------------------------------
+note end of the line starting at o (index of its LF, or bn)
+fn eol o ulong to ulong
+n = get bn 0
+e = o
+while lt e n
+if eq get inb e 10
+ret e
+end
+e = add e 1
+end
+ret n
+end
+fn lineis o ulong e ulong s view uchar * to bool
+if ne sub e o len s
+ret false
+end
+for i ulong len s
+if ne get inb add o i get s i
+ret false
+end
+end
+ret true
+end
+fn starts o ulong e ulong s view uchar * to bool
+if lt sub e o len s
+ret false
+end
+for i ulong len s
+if ne get inb add o i get s i
+ret false
+end
+end
+ret true
+end
+fn wordch c ulong to bool
+a = and ge c 48 le c 57
+b = and ge c 65 le c 90
+d = and ge c 97 le c 122
+ret or or a b or d eq c 95
+end
+note position (0..9) of inb[o..e) among the words of OLDW, or 10
+fn oldword o ulong e ulong to ulong
+w = ulong 0
+s = ulong 0
+for i ulong len OLDW
+if eq get OLDW i 32
+if eq sub i s sub e o
+same = true
+for j ulong sub i s
+if ne get OLDW add s j get inb add o j
+same = false
+end
+end
+if same
+ret w
+end
+end
+w = add w 1
+s = add i 1
+end
+end
+ret 10
+end
+fn fbyte b uchar to void
+n = get fnn 0
+if ge n len fns
+dieio
+end
+put fns n b
+put fnn 0 add n 1
+end
+fn newword w ulong to void
+k = ulong 0
+for i ulong len NEWW
+c = get NEWW i
+if eq c 32
+k = add k 1
+else
+if eq k w
+fbyte c
+end
+end
+end
+end
+note one functions line inb[o..e) plus its LF (when e < bn)
+fn fnline o ulong e ulong to void
+p = o
+if starts o e EXPFN
+p = add o 7
+end
+if starts o e NOTE
+for i ulong sub e p
+fbyte get inb add p i
+end
+else
+while lt p e
+if wordch ulong get inb p
+q = p
+while and lt q e wordch ulong get inb q
+q = add q 1
+end
+w = oldword p q
+if lt w 10
+newword w
+else
+for i ulong sub q p
+fbyte get inb add p i
+end
+end
+p = q
+else
+fbyte get inb p
+p = add p 1
+end
+end
+end
+if lt e get bn 0
+fbyte 10
+end
+end
+fn lbyte b uchar to void
+n = get lan 0
+if ge n len lay
+dieio
+end
+put lay n b
+put lan 0 add n 1
+end
+note Split the SHA source in inb into lay and fns (step 3).
+fn split to void
+n = get bn 0
+put lan 0 0
+put fnn 0 0
+o = ulong 0
+inl = false
+while lt o n
+e = eol o
+if inl
+for i ulong sub e o
+lbyte get inb add o i
+end
+lbyte 10
+if lineis o e LEND
+inl = false
+end
+else
+if lineis o e LSTART
+inl = true
+for i ulong sub e o
+lbyte get inb add o i
+end
+lbyte 10
+else
+if not lineis o e OM2
+fnline o e
+end
+end
+end
+o = add e 1
+end
+end
+note Append ollm.om (in inb) to ob without `om2` and with main renamed; return the main count.
+fn oollm to ulong
+n = get bn 0
+c = ulong 0
+o = ulong 0
+while lt o n
+e = eol o
+if lineis o e MAINL
+otext WPOLLM
+c = add c 1
+else
+if not lineis o e OM2
+obig o sub e o
+if lt e n
+obyte 10
+end
+end
+end
+o = add e 1
+end
+ret c
+end
+
+note ---- steps -----------------------------------------------------------------------------------
+note slots: 0 REPO, 1 OUT, 2 OMC, 3 OMEGA_MV, 4 CORE, 5 scratch, 6 source, 7 vendored, 8 all, 9 new
+fn stepollm to void
+aclear
+atext ENV
+atext EPATH
+atext ETGT
+atslot EOUT 1
+atslot EOMC 2
+atslot ECORE 4
+atext SH
+under 5 0 OBUILD
+aslot 5
+tool -1 -1
+end
+fn stepsrc to void
+under 6 1 FSRC
+aclear
+atext GIT
+atext GC
+aslot 3
+atext GSHOW
+atext PIN
+tool -1 popen 6 577
+aclear
+atext SUM
+aslot 6
+capture
+if lt get capn 0 64
+die 3 MSHA
+end
+for i ulong 64
+if ne get cap i get SHASRC i
+die 3 MSHA
+end
+end
+end
+fn stepvend to void
+slurp 6
+split
+under 5 1 FLAY
+olay
+spill 5
+under 5 1 FFNS
+ofns
+spill 5
+under 7 1 FVEN
+otext OM2NL
+olay
+ofns
+spill 7
+under 5 1 FDIF
+aclear
+atext DIFF
+atext DU
+aslot 6
+aslot 7
+x = spawn -1 popen 5 577
+if ne x 1
+say MTOOL
+saynum x
+say NL
+exit 6
+end
+end
+fn compose to void
+under 5 1 FOLLM
+slurp 5
+otext OM2NL
+olay
+c = oollm
+if ne c 1
+say MMAIN
+saynum c
+say NL
+exit 4
+end
+ofns
+under 5 0 FWPS
+slurp 5
+obig 0 get bn 0
+under 8 1 FWALL
+spill 8
+end
+fn composeck to void
+otext OM2NL
+olay
+ofns
+under 5 0 FCKS
+slurp 5
+obig 0 get bn 0
+under 8 1 FCALL
+spill 8
+end
+note Compile slot 8 into slot 9 (the .new file), then rename it to dst (a text under OUT).
+fn compile dst view uchar * to void
+aclear
+atext TSET
+atext TC
+aslot 4
+atext NICE
+atext NN
+atext N19
+aslot 2
+x = spawn popen 8 0 popen 9 577
+if ne x 0
+pclear
+pslot 9
+r = unlink pb 0 get pn 0
+say MOMC
+saynum x
+say NL
+exit int x
+end
+pclear
+pslot 9
+if ne chmod pb 0 get pn 0 493 0
+dieio
+end
+under 5 1 dst
+aclear
+aslot 9
+aslot 5
+put av 0 2
+put av 1 0
+if ne renames av 0 get ap 0 0 0
+dieio
+end
+end
+fn main to int
+if ne argcnt 6
+die 2 MUSAGE
+end
+for i ulong 5
+argslot add i 1 i
+end
+pclear
+pslot 1
+r = makedir pb 0 get pn 0 493
+if and lt r 0 ne r -17
+dieio
+end
+stepollm
+stepsrc
+stepvend
+compose
+under 9 1 FWNEW
+compile FWP
+composeck
+under 9 1 FCNEW
+compile FCK
+aclear
+atext SUM
+aslot 2
+aslot 6
+under 5 1 FWALL
+aslot 5
+under 5 1 FWP
+aslot 5
+under 5 1 FCALL
+aslot 5
+under 5 1 FCK
+aslot 5
+tool -1 -1
+say MOK
+ret 0
+end

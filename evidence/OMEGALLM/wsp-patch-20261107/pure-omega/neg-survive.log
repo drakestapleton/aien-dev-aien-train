@@ -1,0 +1,280 @@
+WPCHECK small wpatch_sha256=9c00dd6dae3af708858062a353907f64f1ced5f1d2e9411f832d46203031282f
+RUN /tmp/wpp/neg2/ollm init /tmp/wpp/wneg2/base.ck 256 8 16 2 32 2 2 1 10 3000 1
+| I 8400
+EXIT got=0 want=0 elapsed_ns=5962965
+PASS exit
+RUN /tmp/wpp/neg2/ollm train /tmp/wpp/wneg2/base.ck /tmp/wpp/wneg2/train.bin 2 1
+| T 1 5541842
+| T 2 5520363
+EXIT got=0 want=0 elapsed_ns=20985674
+PASS exit
+PASS oracle CK02 magic
+PASS oracle checkpoint length
+PASS oracle checkpoint FNV
+PASS oracle checkpoint geometry P
+RUN /tmp/wpp/neg2/wpatch inspect /tmp/wpp/wneg2/base.ck
+| OLLMCK02 V T D H F L B P: 256 8 16 2 32 2 2 8400
+| seed step total lr G fnv: 1 2 10 4569063951553953530 1 12929047925843260235
+| wte 0 256x16 dtype=f64 offset=0 sha256=8cff8d99b6ae9164f7732cf6801ae974d3a2a7944f33ccc0505a481eefc64cc6 rms=2.0150972434014620e-2 maxabs=3.4694049902618817e-2 nonfinite=0
+| wpe 0 8x16 dtype=f64 offset=4096 sha256=8466ddee307934f1d085b7fc3f2f222b33f320a47b8f72c0782cd099f53c3a56 rms=2.0597512474142969e-2 maxabs=3.4688363182317480e-2 nonfinite=0
+| g1 0 1x16 dtype=f64 offset=4224 sha256=8e55ebc45ecdca0459276d85bdcc502985681ca91936c7d388f36141657e7724 rms=9.9998560202156934e-1 maxabs=1.0000898116642267e0 nonfinite=0
+| wq 0 16x16 dtype=f64 offset=4240 sha256=adfe7504881e98ae49edbd9bd2a8c6259a190472f5f2a301aabf76d433a26668 rms=1.9387060051204409e-2 maxabs=3.4602970449885450e-2 nonfinite=0
+| wk 0 16x16 dtype=f64 offset=4496 sha256=accdb602abdaf839de2b6e98f98e399bcb00eea03cdc1e14ffe760c6012bffa8 rms=2.0086632119378893e-2 maxabs=3.4488179470423929e-2 nonfinite=0
+| wv 0 16x16 dtype=f64 offset=4752 sha256=fa6b0727cb263311c2c3b75e6fea1f7902613c5051548b6cff87fecb0556f9d0 rms=2.0442612683966512e-2 maxabs=3.4608463868511711e-2 nonfinite=0
+| wo 0 16x16 dtype=f64 offset=5008 sha256=b43e998b213e289c9464b79a54a04243a629061e9351882c0af8ba717ab1f27c rms=9.3607584314112308e-3 maxabs=1.7186119006150049e-2 nonfinite=0
+| g2 0 1x16 dtype=f64 offset=5264 sha256=02d1cd2862c618fa82ecbe721cef53d3f0064a85c37dc3c81b60256496a551e8 rms=1.0000317542785344e0 maxabs=1.0000900660818634e0 nonfinite=0
+| w1 0 16x32 dtype=f64 offset=5280 sha256=0d43f123403113f54dc36bf858225654da6ca9b2fa6dd13d34ea03df0300162d rms=1.9707409527231671e-2 maxabs=3.4604831137893370e-2 nonfinite=0
+| w2 0 32x16 dtype=f64 offset=5792 sha256=ff25c2a9843e2cb7febd7173d1310c5c38d4c3b84f80d41fe477671df90958a4 rms=9.9353752213784609e-3 maxabs=1.7383742580227750e-2 nonfinite=0
+| g1 1 1x16 dtype=f64 offset=6304 sha256=d5ef48d1f1f83bea39dbec4469a83b73134a957a6f7ee5c7f55d489a085e2fc2 rms=1.0000055077295755e0 maxabs=1.0000896598909829e0 nonfinite=0
+| wq 1 16x16 dtype=f64 offset=6320 sha256=cd5d9460b4f8b03c13493204e04f3499387caa9332da929e17aa53b5bf93f1b9 rms=1.9395643851273927e-2 maxabs=3.4713570183186637e-2 nonfinite=0
+| wk 1 16x16 dtype=f64 offset=6576 sha256=77e6c5613a0fba859e0559bee3beb70fb9e4ac007b87134dfc1e2fe482194b44 rms=2.0451505765922823e-2 maxabs=3.4557907877036364e-2 nonfinite=0
+| wv 1 16x16 dtype=f64 offset=6832 sha256=a49caf53f5f318fe312bef6bc78842f4f194d97965a34d4d1903a20c325e3af6 rms=2.0283640674707430e-2 maxabs=3.4634749954325338e-2 nonfinite=0
+| wo 1 16x16 dtype=f64 offset=7088 sha256=4a99000fa39bce104d6cd39bd7e6e8f108b0a120d700c1372a14614b7d2a3cf9 rms=9.5378278603200783e-3 maxabs=1.7408843619714149e-2 nonfinite=0
+| g2 1 1x16 dtype=f64 offset=7344 sha256=975a6761e290c4c1493058ce603d78cf98fe638c88792c88a13d422d00044af5 rms=1.0000051625444570e0 maxabs=1.0000900629791575e0 nonfinite=0
+| w1 1 16x32 dtype=f64 offset=7360 sha256=6744256441b31f1e97fe7739e0af3edbeeabb2960c9030bde44a0940f673b254 rms=1.9646243437713831e-2 maxabs=3.4519835058524788e-2 nonfinite=0
+| w2 1 32x16 dtype=f64 offset=7872 sha256=f01f41002a7e3c6afa8dbfe6c69ab753d4361cf25faae3e3ea4738e7aa1f0232 rms=9.9239498616909447e-3 maxabs=1.7320015361641458e-2 nonfinite=0
+| gf 0 1x16 dtype=f64 offset=8384 sha256=65aa5211ba1921da7b4c26e7667f49bf0d2a7219f2fef32dcc828fb4cf181a9a rms=1.0000070876612532e0 maxabs=1.0000900576992735e0 nonfinite=0
+EXIT got=0 want=0 elapsed_ns=2167411
+PASS exit
+RUN /tmp/wpp/neg2/wpatch inspect /tmp/wpp/wneg2/base.ck wte 0 0 1 0 2
+| OLLMCK02 V T D H F L B P: 256 8 16 2 32 2 2 8400
+| seed step total lr G fnv: 1 2 10 4569063951553953530 1 12929047925843260235
+| 0 0 4.6933608192067630e-3 3f73395873a10edd
+| 0 1 6.2277422802250175e-3 3f798242d6be64df
+EXIT got=0 want=0 elapsed_ns=820663
+PASS exit
+PASS inspect exact slice bits
+RUN /tmp/wpp/neg2/wpatch inspect /tmp/wpp/wneg2/base.ck wte 0 0 99999 0 1
+EXIT got=27 want=27 elapsed_ns=819399
+PASS exit
+RUN /tmp/wpp/neg2/wpatch diff /tmp/wpp/wneg2/base.ck /tmp/wpp/wneg2/edited.ck 0 /tmp/wpp/wneg2/params.txt /tmp/wpp/wneg2/rationale.txt /tmp/wpp/wneg2/patches-0
+| /tmp/wpp/wneg2/patches-0/6be8d19f4cc5d3e37e742eabec80d62827cd59a71fdf5024e4998f8f06c03115.wp
+EXIT got=0 want=0 elapsed_ns=11863737
+PASS exit
+RUN /usr/bin/python3 tools/omegallm/wpatch/wporacle.py /tmp/wpp/wneg2/oracle-1.req
+| 6be8d19f4cc5d3e37e742eabec80d62827cd59a71fdf5024e4998f8f06c03115
+| 1f2e4172184215f85733f111b30a46cdd694b2d887c0280698f2ea7c7f2f1d04
+| 0f7c5cce37a019be53786dfc27fd01146f7606343ccbe7f632d19661dc6f7004
+| df9ba29d0123bf5852c13765b758998bd1e5a49f63b983dcf934e0b63f261eb3
+| b61cbd26710589e5e352794c1b05e08a1fe954e982d135c3bcfa88f95b077068
+| 19
+| 8cff8d99b6ae9164f7732cf6801ae974d3a2a7944f33ccc0505a481eefc64cc6
+| 8466ddee307934f1d085b7fc3f2f222b33f320a47b8f72c0782cd099f53c3a56
+| 8e55ebc45ecdca0459276d85bdcc502985681ca91936c7d388f36141657e7724
+| adfe7504881e98ae49edbd9bd2a8c6259a190472f5f2a301aabf76d433a26668
+| accdb602abdaf839de2b6e98f98e399bcb00eea03cdc1e14ffe760c6012bffa8
+| fa6b0727cb263311c2c3b75e6fea1f7902613c5051548b6cff87fecb0556f9d0
+| b43e998b213e289c9464b79a54a04243a629061e9351882c0af8ba717ab1f27c
+| 02d1cd2862c618fa82ecbe721cef53d3f0064a85c37dc3c81b60256496a551e8
+| 0d43f123403113f54dc36bf858225654da6ca9b2fa6dd13d34ea03df0300162d
+| ff25c2a9843e2cb7febd7173d1310c5c38d4c3b84f80d41fe477671df90958a4
+| d5ef48d1f1f83bea39dbec4469a83b73134a957a6f7ee5c7f55d489a085e2fc2
+| cd5d9460b4f8b03c13493204e04f3499387caa9332da929e17aa53b5bf93f1b9
+| 77e6c5613a0fba859e0559bee3beb70fb9e4ac007b87134dfc1e2fe482194b44
+| a49caf53f5f318fe312bef6bc78842f4f194d97965a34d4d1903a20c325e3af6
+| 4a99000fa39bce104d6cd39bd7e6e8f108b0a120d700c1372a14614b7d2a3cf9
+| 975a6761e290c4c1493058ce603d78cf98fe638c88792c88a13d422d00044af5
+| 6744256441b31f1e97fe7739e0af3edbeeabb2960c9030bde44a0940f673b254
+| f01f41002a7e3c6afa8dbfe6c69ab753d4361cf25faae3e3ea4738e7aa1f0232
+| 65aa5211ba1921da7b4c26e7667f49bf0d2a7219f2fef32dcc828fb4cf181a9a
+| da6c1acbed6d1e964e53096c19d5b3315179e0c8086bed42b46610b8559a08c4
+| 87ac5499240575162ba65d8ae7797632e2f21867f92a267f7d27e51fd5ba6681
+| bde2ade244794a03dbab19eb8842c4beaf3142d29d9187cab4f591abc01fe628
+| 78f67e940451c70fdbd40addfcb72751849966d7b148ad594a3a739ed31e0d00
+| d808561f3eb09d5ab82ea88166b8e5f0167c008122404a7bd3ea872a7d7e9bf0
+| c352ab4f020ea5e19c4d02b17bedf866e744ae5d1edb61d1dbfda5df5703acd3
+| 2e8be3b6c97d9ff568dc99313ca7755b14dfe0b92ba7ad902ed2734a5c3b3143
+| f4652233a1d793d2978d9ad90e2210aee041f7f8cfc91ef472c967426b88c860
+| 870e8b55814715d2f0fc9a8d2d911aa926250e461a85a1646b28d5e70e4c92be
+| 475ce7b4b11c6b1d2a5310803d72acf1d10e775de74bcaf61c5641c3e7dbaca1
+| 1ce3012f244ce93fd4661cb2007ca6e07d598234743904fd1283c71c504288d0
+| 4643b63785013e0368364f6264d4a058b8f58b0691eee2aa7e826ca2abc70188
+| f6b3f58c3b9941af1a6e757a7980063270bd0c0b5cd6ef05d2c3dda75d8dccca
+| eeb65469cf27f4909bb8bd2dc92d59c3351e05ea875aae8e57a62c2587a8959f
+| 7cb4f65377af2656eca78a285413c186d2d71b877c8a41c0f3ef3022c3a4e979
+| ea6bc3116d9daff1e54ce077e1f55fd4847c481c8ebddcd72722b25c499624aa
+| 23a70f58de7dccd0b1d4e757113fbd6d67ea8700ee8d8b265fe8290243ab0579
+| 7b418488fe3c94afab4cee946277736fbe8511da660706daf1cd03e65cd13c3e
+| 9e1c519bc1decea509ce838c7d5f66098f7dd1dc10ec4fc4e911f6dbdf69ffdd
+EXIT got=0 want=0 elapsed_ns=26859421
+PASS exit
+PASS oracle answered every request
+PASS oracle manifest magic
+PASS oracle canonical manifest name
+PASS oracle manifest length
+PASS oracle policy
+PASS oracle edit identity
+PASS oracle metadata lengths
+PASS oracle UTF8 provenance
+PASS oracle strict order
+PASS oracle indices in bounds
+PASS oracle policy
+PASS oracle CK02 magic
+PASS oracle checkpoint length
+PASS oracle checkpoint FNV
+PASS oracle checkpoint geometry P
+PASS oracle preserved base header
+PASS oracle manifest geometry
+PASS oracle manifest P
+PASS oracle base SHA
+PASS oracle entry bits
+PASS oracle entry changed finite
+PASS oracle entry magnitude
+PASS oracle entry bits
+PASS oracle entry changed finite
+PASS oracle entry magnitude
+PASS oracle entry bits
+PASS oracle entry changed finite
+PASS oracle entry magnitude
+PASS oracle entry bits
+PASS oracle entry changed finite
+PASS oracle entry magnitude
+PASS oracle entry bits
+PASS oracle entry changed finite
+PASS oracle entry magnitude
+PASS oracle entry bits
+PASS oracle entry changed finite
+PASS oracle entry magnitude
+PASS oracle entry bits
+PASS oracle entry changed finite
+PASS oracle entry magnitude
+PASS oracle entry bits
+PASS oracle entry changed finite
+PASS oracle entry magnitude
+PASS oracle entry bits
+PASS oracle entry changed finite
+PASS oracle entry magnitude
+PASS oracle entry bits
+PASS oracle entry changed finite
+PASS oracle entry magnitude
+PASS oracle entry bits
+PASS oracle entry changed finite
+PASS oracle entry magnitude
+PASS oracle entry bits
+PASS oracle entry changed finite
+PASS oracle entry magnitude
+PASS oracle entry bits
+PASS oracle entry changed finite
+PASS oracle entry magnitude
+PASS oracle entry bits
+PASS oracle entry changed finite
+PASS oracle entry magnitude
+PASS oracle entry bits
+PASS oracle entry changed finite
+PASS oracle entry magnitude
+PASS oracle entry bits
+PASS oracle entry changed finite
+PASS oracle entry magnitude
+PASS oracle entry bits
+PASS oracle entry changed finite
+PASS oracle entry magnitude
+PASS oracle entry bits
+PASS oracle entry changed finite
+PASS oracle entry magnitude
+PASS oracle entry bits
+PASS oracle entry changed finite
+PASS oracle entry magnitude
+PASS oracle entry bits
+PASS oracle entry changed finite
+PASS oracle entry magnitude
+PASS oracle expected output SHA
+PASS oracle expected f32 SHA
+PASS oracle all tensors present
+PASS oracle tensor record geometry
+PASS oracle tensor changed count
+PASS oracle tensor base SHA
+PASS oracle tensor output SHA
+PASS oracle tensor record geometry
+PASS oracle tensor changed count
+PASS oracle tensor base SHA
+PASS oracle tensor output SHA
+PASS oracle tensor record geometry
+PASS oracle tensor changed count
+PASS oracle tensor base SHA
+PASS oracle tensor output SHA
+PASS oracle tensor record geometry
+PASS oracle tensor changed count
+PASS oracle tensor base SHA
+PASS oracle tensor output SHA
+PASS oracle tensor record geometry
+PASS oracle tensor changed count
+PASS oracle tensor base SHA
+PASS oracle tensor output SHA
+PASS oracle tensor record geometry
+PASS oracle tensor changed count
+PASS oracle tensor base SHA
+PASS oracle tensor output SHA
+PASS oracle tensor record geometry
+PASS oracle tensor changed count
+PASS oracle tensor base SHA
+PASS oracle tensor output SHA
+PASS oracle tensor record geometry
+PASS oracle tensor changed count
+PASS oracle tensor base SHA
+PASS oracle tensor output SHA
+PASS oracle tensor record geometry
+PASS oracle tensor changed count
+PASS oracle tensor base SHA
+PASS oracle tensor output SHA
+PASS oracle tensor record geometry
+PASS oracle tensor changed count
+PASS oracle tensor base SHA
+PASS oracle tensor output SHA
+PASS oracle tensor record geometry
+PASS oracle tensor changed count
+PASS oracle tensor base SHA
+PASS oracle tensor output SHA
+PASS oracle tensor record geometry
+PASS oracle tensor changed count
+PASS oracle tensor base SHA
+PASS oracle tensor output SHA
+PASS oracle tensor record geometry
+PASS oracle tensor changed count
+PASS oracle tensor base SHA
+PASS oracle tensor output SHA
+PASS oracle tensor record geometry
+PASS oracle tensor changed count
+PASS oracle tensor base SHA
+PASS oracle tensor output SHA
+PASS oracle tensor record geometry
+PASS oracle tensor changed count
+PASS oracle tensor base SHA
+PASS oracle tensor output SHA
+PASS oracle tensor record geometry
+PASS oracle tensor changed count
+PASS oracle tensor base SHA
+PASS oracle tensor output SHA
+PASS oracle tensor record geometry
+PASS oracle tensor changed count
+PASS oracle tensor base SHA
+PASS oracle tensor output SHA
+PASS oracle tensor record geometry
+PASS oracle tensor changed count
+PASS oracle tensor base SHA
+PASS oracle tensor output SHA
+PASS oracle tensor record geometry
+PASS oracle tensor changed count
+PASS oracle tensor base SHA
+PASS oracle tensor output SHA
+PASS manifest oracle agrees with independent request
+RUN /tmp/wpp/neg2/wpatch show /tmp/wpp/wneg2/patches-0/6be8d19f4cc5d3e37e742eabec80d62827cd59a71fdf5024e4998f8f06c03115.wp
+| {"patch_sha256":"6be8d19f4cc5d3e37e742eabec80d62827cd59a71fdf5024e4998f8f06c03115","base_sha256":"0f7c5cce37a019be53786dfc27fd01146f7606343ccbe7f632d19661dc6f7004","output_sha256":"df9ba29d0123bf5852c13765b758998bd1e5a49f63b983dcf934e0b63f261eb3","f32_sha256":"b61cbd26710589e5e352794c1b05e08a1fe954e982d135c3bcfa88f95b077068","entries_sha256":"1f2e4172184215f85733f111b30a46cdd694b2d887c0280698f2ea7c7f2f1d04","policy":0,"changed":20,"entries_first_20":[[0,"3f73395873a10edd","3f7751ebe85d795c"],[1,"3f798242d6be64df","3f798242d6be64de"],[4096,"3f9d71eaecf958fb","3f9e780fca28739b"],[4224,"3fefff43cec7fbde","3ff003ba7ad8ba59"],[4240,"3f91335e055b2e52","3f923982e28a48f2"],[4496,"3f7e376430d30470","3f8127fbd2c7b778"],[4752,"bf8127b4d0942b41","bf7e36d62c6bec03"],[5008,"bf642a283fb3a03a","bf57f202ac759678"],[5264,"3ff0005e70ee046f","3ff004770462c0d9"],[5280,"3f937e8c81983fca","3f9484b15ec75a6a"],[5792,"bf8d0a85a19f1a66","bf8afe3be740e526"],[6304,"3ff0005d56c1676d","3ff00475ea3623d7"],[6320,"3f478f6a628528cb","3f5c2a0304343e62"],[6576,"3f96ddb9cf3d8cbd","3f97e3deac6ca75d"],[6832,"bf85cdb8b6e68c3d","bf83c16efc8856fe"],[7088,"3f66903abb2fa5f3","3f6ec161a4a87af1"],[7344,"3fefff43cf3b0247","3ff003ba7b123d8e"],[7360,"bfa157e08134d98b","bfa0d4ce129d4c3b"],[7872,"bf908b27ddd68b5c","bf8f0a06014ee178"],[8384,"3fefffe8aac28f0e","3ff0040ce8d603f1"]],"params":"{\"delta\":0.001,\"name\":\"Ω patch\"}\u000a","rationale":"Own-model fixture. Preserve exact rollback.\u000a"}
+EXIT got=0 want=0 elapsed_ns=643429
+PASS exit
+PASS show UTF8 provenance
+RUN /tmp/wpp/neg2/wpatch validate /tmp/wpp/wneg2/patches-0/6be8d19f4cc5d3e37e742eabec80d62827cd59a71fdf5024e4998f8f06c03115.wp /tmp/wpp/wneg2/base.ck
+| PASS
+EXIT got=0 want=0 elapsed_ns=5795619
+PASS exit
+RUN /tmp/wpp/neg2/wpatch apply /tmp/wpp/wneg2/patches-0/6be8d19f4cc5d3e37e742eabec80d62827cd59a71fdf5024e4998f8f06c03115.wp /tmp/wpp/wneg2/base.ck /tmp/wpp/wneg2/applied-0.ck
+| PASS
+EXIT got=0 want=0 elapsed_ns=10587246
+PASS exit
+PASS apply exact oracle bytes
+PASS apply equals independent requested bytes
+RUN /tmp/wpp/neg2/wpatch verify /tmp/wpp/wneg2/patches-0/6be8d19f4cc5d3e37e742eabec80d62827cd59a71fdf5024e4998f8f06c03115.wp /tmp/wpp/wneg2/applied-0.ck
+| PASS f32_surviving=1 changed=20
+EXIT got=0 want=0 elapsed_ns=3239693
+PASS exit
+FAIL verify f32 survival count
+WPCHECK FAIL checks=178 commands=11
