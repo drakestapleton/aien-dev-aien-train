@@ -1,8 +1,9 @@
 #!/bin/sh
 # serve-check.sh: run `ollm serve` on loopback and referee it with serve-check.py (DRA-119).
-# Env: OLLM (an aarch64 build with serve), CK (checkpoint), MERGES (V > 256 merges), PORT (default
-# 18291), TPORT (default 18292: a second server with `tplmax=4000 test=1`), CORES (taskset list,
-# default 8-9), OUT (receipt directory), ALLEN (allen-chat system prompt, default
+# Env: OLLM (an aarch64 build with serve, or a gb10 build), CK (checkpoint), MERGES (V > 256 merges),
+# VERB (serve, default, or gserve on a gb10 build in a GPU window: the per-token forward on the chip),
+# PORT (default 18291), TPORT (default 18292: a second server with `tplmax=4000 test=1`), CORES
+# (taskset list, default 8-9), OUT (receipt directory), ALLEN (allen-chat system prompt, default
 # /opt/allen-chat/system-prompt.txt; absent gives NOT_RUN). The servers run under
 # taskset/nice/bwrap; this script stops only the PIDs it started. Exit 0 only when every check
 # passes and both servers listened on 127.0.0.1 alone.
@@ -12,13 +13,16 @@ PORT=${PORT:-18291}
 TPORT=${TPORT:-18292}
 CORES=${CORES:-8-9}
 ALLEN=${ALLEN:-/opt/allen-chat/system-prompt.txt}
+VERB=${VERB:-serve}
 here=$(cd "$(dirname "$0")" && pwd)
 mkdir -p "$OUT"
 bw="bwrap --dev-bind / / --dev /dev --bind /dev/shm /dev/shm --proc /proc --"
+# gserve opens the chip through /dev/nvidia*, which a fresh --dev /dev does not hold
+[ "$VERB" = gserve ] && bw="bwrap --dev-bind / / --proc /proc --"
 {
 	echo "date $(date -u +%FT%TZ)"
 	echo "host $(hostname) $(uname -m)"
-	echo "ollm $(sha256sum "$OLLM")"
+	echo "ollm $(sha256sum "$OLLM") verb $VERB"
 	echo "ck $(sha256sum "$CK")"
 	echo "merges $(sha256sum "$MERGES")"
 	echo "referee $(sha256sum "$here/serve-check.py")"
@@ -33,7 +37,7 @@ start() {
 	name=$1
 	port=$2
 	shift 2
-	taskset -c "$CORES" nice -n 10 $bw "$OLLM" serve "$port" "$CK" "$MERGES" "$@" >"$OUT/$name.log" 2>&1 &
+	taskset -c "$CORES" nice -n 10 $bw "$OLLM" "$VERB" "$port" "$CK" "$MERGES" "$@" >"$OUT/$name.log" 2>&1 &
 	pid=$!
 	pids="$pids $pid"
 	i=0

@@ -14,12 +14,12 @@ global gkarg uint 32
 global gkna uint 1
 global gkmd uint 2
 fn gkw v uint to void
-at = get gkat 0
-put gkcode at uchar and v 255
-put gkcode add at 1 uchar and shr v 8 255
-put gkcode add at 2 uchar and shr v 16 255
-put gkcode add at 3 uchar shr v 24
-put gkat 0 add at 4
+ap = get gkat 0
+put gkcode ap uchar and v 255
+put gkcode add ap 1 uchar and shr v 8 255
+put gkcode add ap 2 uchar and shr v 16 255
+put gkcode add ap 3 uchar shr v 24
+put gkat 0 add ap 4
 end
 fn gkq a uint b uint c uint d uint to void
 gkw a
@@ -1063,7 +1063,7 @@ ma = 1
 mb = sub ep 1
 bt = false
 end
-big = and ge g 8 and ne g 16 ne g 17
+wide = and ge g 8 and ne g 16 ne g 17
 if ge g 8
 id = add 40 mul sub g 8 2
 end
@@ -1073,7 +1073,7 @@ end
 if ge g 18
 id = add 54 mul ep 2
 end
-if not gkemit id ma mb bt ep big
+if not gkemit id ma mb bt ep wide
 ret false
 end
 end
@@ -1107,11 +1107,11 @@ end
 put gkthr id 128
 ret true
 end
-note Emit one GEMM kernel into slot id (two slots when big, the 64x64 kernel); false on overflow.
-fn gkemit id uint ma uint mb uint bt bool ep uint big bool to bool
+note Emit one GEMM kernel into slot id (two slots when wide, the 64x64 kernel); false on overflow.
+fn gkemit id uint ma uint mb uint bt bool ep uint wide bool to bool
 gkslot id
 ns = uint 1
-if big
+if wide
 gkgemm64 ma mb bt ep
 put gkgpr id 168
 put gksm id 8704

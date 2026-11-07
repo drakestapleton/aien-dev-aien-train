@@ -496,6 +496,10 @@ ggatt l
 ggffn l
 end
 
+note ggnoce 1 (set by oglast only): ggfwd stops after the logits GEMM. CE (kernel 21) rewrites the
+note logits in place to (softmax - [c = y]) / (T B) for training, which keeps their argmax but is not a
+note logit (DRA-292 window gserve-w1: greedy matched, maxdiff 21.6, temperature draws drifted).
+global ggnoce uint 1
 fn ggfwd to void
 d = get og 2
 x = ggl 0 0
@@ -522,6 +526,9 @@ x = gga1 11
 w = ggw 0
 v = get og 0
 ggxwt z w x v d false
+if ne get ggnoce 0 0
+ret
+end
 r = mul ggr 32
 ggu 0 r
 ggpt 1 x
@@ -1876,14 +1883,182 @@ end
 ret add s 1.0f64
 end
 
-note gb10 platform main: gcmp, gcmp2, gtrain, gtrainf, gacmp, geval, gdiag and gprof here, the BF16
-note commands gtrainb, gprofb, gbcmp, gbcmp2 and gbfrag in gb.om, every other command through the CPU
-note main (lio.om)
+note gserve and gsample (aien-train DRA-292): serve and sample (serve.om, cli.om) with the per-token
+note forward on the chip. cli.om's ochipup calls ogchip once the checkpoint loads: B = 1 (one
+note context row, R = T), open the chip, upload the f32 parameters. olastf then calls oglast per
+note token: upload the T context tokens of obx row 0 (positions past CT hold earlier tokens or 0,
+note which the causal forward never reads for position CT - 1), ggfwd with ggnoce (no CE: the logits
+note stay logits), and the logits of position CT - OMUTZ read back as f64 into TMP[0..V) (oa), where
+note argmax and draws run as on the CPU.
+note OMUTZ: 1 in the product; 0 in mutant z (the row past the context), which gscmp must catch.
+const OMUTZ ulong 1
+fn ogchip to void
+put og 6 1
+ggopen
+ggupw
+end
+
+fn oglast to void
+ggupt
+put gkinv 0 1
+put ggnoce 0 1
+ggfwd
+put ggnoce 0 0
+v = get og 0
+r = sub get og 9 OMUTZ
+o = add get gga 11 mul mul r v 4
+tm = get og 27
+for c ulong v
+put oa add tm c ggf add o mul c 4
+end
+end
+
+note gscmp CK N PROMPT MERGES (V > 256): the chip forward against the CPU forward on the contexts of
+note N greedy steps from token 0 then PROMPT's encoding. Each step runs ofwd and olast (f64) into
+note gscl, then oglast (chip, f32) into TMP, and prints `GS step cpu_tok chip_tok maxdiff_nano
+note margin_nano`: maxdiff = max over the V logits of |chip - cpu|, margin = the CPU's top-1 logit
+note minus its top-2. The CPU token is pushed. Last line `GSCMP N diverged maxdiff_nano`: a step
+note diverges when the tokens differ although the margin exceeds 2 GSTOL. Exit 40 when a step
+note diverged or maxdiff exceeds GSTOL.
+const GSTOL f64 0.002
+global gscl f64 65536
+note gscmp totals: gsmd[0] the largest maxdiff, gskd[0] the diverged steps
+global gsmd f64 1
+global gskd ulong 1
+fn ggscmp to void
+if ne oargc 6
+exit 2
+end
+ockload 2
+nn = oargu 3
+v = get og 0
+if le v 256
+exit 2
+end
+obload 5 v
+ogchip
+put og 9 0
+ocpush 0
+np = obprompt 4
+for i ulong np
+ocpush get obtk i
+end
+put gsmd 0 0.0f64
+put gskd 0 0
+for s ulong nn
+a = ggsst s
+ocpush a
+end
+md = get gsmd 0
+kd = get gskd 0
+oputc 71
+oputc 83
+oputc 67
+oputc 77
+oputc 80
+oputc 32
+oputu nn
+oputc 32
+oputu kd
+oputc 32
+oputl long mul md 1000000000.0f64
+oputc 10
+oflush
+r = nvstop
+if or gt kd 0 gt md GSTOL
+exit 40
+end
+end
+
+note one gscmp step s on the current context: prints its GS line, updates the totals, returns the
+note CPU token
+fn ggsst s ulong to ulong
+a1 = ggscpu
+mg = ggsmg a1
+oglast
+a2 = oargmax
+dm = ggsdf
+put gsmd 0 fmax get gsmd 0 dm
+if and ne a1 a2 gt mg mul 2.0f64 GSTOL
+put gskd 0 add get gskd 0 1
+end
+oputc 71
+oputc 83
+oputc 32
+oputu s
+oputc 32
+oputu a1
+oputc 32
+oputu a2
+oputc 32
+oputl long mul dm 1000000000.0f64
+oputc 32
+oputl long mul mg 1000000000.0f64
+oputc 10
+oflush
+ret a1
+end
+
+note the CPU forward's last-position logits into gscl; returns its argmax
+fn ggscpu to ulong
+v = get og 0
+tm = get og 27
+lf = ofwd 0
+olast
+for c ulong v
+put gscl c get oa add tm c
+end
+ret oargmax
+end
+
+note max over c < V of |TMP[c] - gscl[c]|
+fn ggsdf to f64
+tm = get og 27
+dm = 0.0f64
+for c ulong get og 0
+x = fabs sub get oa add tm c get gscl c
+dm = fmax dm x
+end
+ret dm
+end
+
+note the CPU's top-1 logit gscl[a] minus its largest other logit
+fn ggsmg a ulong to f64
+b = bitcast f64 ulong 18442240474082181120
+for c ulong get og 0
+if ne c a
+b = fmax b get gscl c
+end
+end
+ret sub get gscl a b
+end
+
+note gb10 platform main: gcmp, gcmp2, gtrain, gtrainf, gacmp, geval, gdiag, gprof, gserve, gsample
+note and gscmp here, the BF16 commands gtrainb, gprofb, gbcmp, gbcmp2 and gbfrag in gb.om, every
+note other command through the CPU main (lio.om). Command words as in cli.om (Wolfram
+note FromDigits[Reverse[ToCharacterCode[w]],256]): gserve 111559399797607, gsample
+note 28548202775016295, gscmp 482871571303.
 fn main to int
 if lt oargc 2
 exit 2
 end
 w = ocmdw
+if eq w 111559399797607
+put ogpu 0 1
+cmdserve
+r = nvstop
+ret 0
+end
+if eq w 28548202775016295
+put ogpu 0 1
+cmdsamp
+r = nvstop
+ret 0
+end
+if eq w 482871571303
+ggscmp
+ret 0
+end
 if eq w 1886217063
 ggcmp
 ret 0

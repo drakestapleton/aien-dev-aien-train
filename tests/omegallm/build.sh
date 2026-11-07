@@ -48,10 +48,13 @@
 # The pool file (CONTRACT-V3 section 2) follows data.om: lpool.om holds the bank-B globals oww, ogb
 # and oab on the Linux targets, epool.om one-element placeholders on x86efi (its v3 limit is the
 # v2 bank-A capacity).
-# serve (DRA-119, native/omegallm/serve.om): aarch64 starts with the line `om2` and concatenates
+# serve (DRA-119, native/omegallm/serve.om): aarch64 and gb10 start with the line `om2` and concatenate
 # net/http.om, net/json.om and net/jsonw.om (vendored unmodified from omega-mv e5b32567 seed/net/http.om,
 # seed/json/json.om and seed/json/jsonw.om; sha256 below, checked at build) before the ollm units and
-# serve.om after them. gb10, x86linux and x86efi take noserve.om, whose cmdserve exits 2.
+# serve.om after them. x86linux and x86efi take noserve.om, whose cmdserve exits 2. gb10 adds gserve
+# and gsample (serve and sample with the per-token forward on the chip, gpu/gg.om) and gscmp (that
+# forward against the CPU's); mutant z (gg.om OMUTZ) reads the logits of the row past the context,
+# which gscmp must catch.
 # Mutants (ollm-mut-X, one changed line) plant a defect the checks must catch. Variants (ollm-var-X)
 # h5 and h7 (two changed lines) set both gcheck steps GCH and GCH2 to 1e-5 (h5) or 1e-7 (h7), the step
 # sizes that the README's GCH section rejects; r0 (gk.om OKREU 0, one changed line) clears the GEMM FFMA
@@ -77,7 +80,7 @@ OUT=${OUT:-$here/../build}
 CORE=${CORE:-6}
 mut= kind=
 if [ $# -ge 1 ]; then
-  { [ "$1" = --mutant ] || [ "$1" = --variant ]; } && [ $# -eq 2 ] || { echo "usage: build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p|t|r|x|q|w|u|l|o|v|n|y | --variant h5|h7|r0|bx]" >&2; exit 2; }
+  { [ "$1" = --mutant ] || [ "$1" = --variant ]; } && [ $# -eq 2 ] || { echo "usage: build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p|t|r|x|q|w|u|l|o|v|n|y|z | --variant h5|h7|r0|bx]" >&2; exit 2; }
   kind=$1 mut=$2
 fi
 got=$(sha256sum "$OMC" | cut -d' ' -f1)
@@ -85,7 +88,7 @@ got=$(sha256sum "$OMC" | cut -d' ' -f1)
 mkdir -p "$OUT"
 src=$here/native/omegallm
 name=ollm
-if [ "$TARGET" = aarch64 ]; then
+if [ "$TARGET" = aarch64 ] || [ "$TARGET" = gb10 ]; then
   ( cd "$src/net" && sha256sum -c --quiet - ) <<'EOF' || { echo "NET_PIN_MISMATCH" >&2; exit 3; }
 aff258ecd3858454056811a5e6fe1f660f9d650a7207d6c41885105110e046a7  http.om
 456254fc754ea35103ced480407b24fc1a3896d094b90ae0e9623e7b6594e2d2  json.om
@@ -137,11 +140,12 @@ case "$kind$mut" in
   --mutantv) pat='s/^const OMUTV ulong 1$/const OMUTV ulong 0/' want=1 ;;
   --mutantn) pat='s/^const OMUTN ulong 1$/const OMUTN ulong 0/' want=1 ;;
   --mutanty) pat='s/^const OWC ulong 15833472$/const OWC ulong 8400/;s/^const OGC ulong 15833472$/const OGC ulong 5000/;s/^const OAC ulong 15016192$/const OAC ulong 12344/;s/^const OMUTY ulong 1$/const OMUTY ulong 0/' want=4 ;;
+  --mutantz) pat='s/^const OMUTZ ulong 1$/const OMUTZ ulong 0/' want=1 ;;
   --varianth5) pat='s/^const GCH f64 0\.000001$/const GCH f64 0.00001/;s/^const GCH2 f64 0\.00000025$/const GCH2 f64 0.00001/' want=2 ;;
   --varianth7) pat='s/^const GCH f64 0\.000001$/const GCH f64 0.0000001/;s/^const GCH2 f64 0\.00000025$/const GCH2 f64 0.0000001/' want=2 ;;
   --variantr0) pat='s/^const OKREU ulong 1$/const OKREU ulong 0/' want=1 ;;
   --variantbx) pat='s/^const OWC ulong 15833472$/const OWC ulong 8400/;s/^const OGC ulong 15833472$/const OGC ulong 5000/;s/^const OAC ulong 15016192$/const OAC ulong 12344/' want=3 ;;
-  *) echo "usage: build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p|t|r|x|q|w|u|l|o|v|n|y | --variant h5|h7|r0|bx]" >&2; exit 2 ;;
+  *) echo "usage: build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p|t|r|x|q|w|u|l|o|v|n|y|z | --variant h5|h7|r0|bx]" >&2; exit 2 ;;
 esac
 if [ -n "$mut" ]; then
   [ "$kind" = --mutant ] && name=ollm-mut-$mut || name=ollm-var-$mut

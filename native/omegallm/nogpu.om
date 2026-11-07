@@ -3,3 +3,13 @@ note ogkm[0] = 1, which only gpu/gg.om's gcmp2 sets, so reaching it is a defect:
 fn ogmask yo ulong l ulong t ulong to void
 exit 2
 end
+
+note ogchip and oglast (cli.om ochipup, olastf) run only when ogpu[0] = 1, which only gpu/gg.om's
+note gserve and gsample set, so reaching them on a CPU-only target is a defect: exit 2.
+fn ogchip to void
+exit 2
+end
+
+fn oglast to void
+exit 2
+end

@@ -330,6 +330,7 @@ exit 2
 end
 obload 7 v
 end
+ochipup
 osampleloaded st nn tm
 end
 
@@ -384,12 +385,33 @@ end
 note one sampling step (cmdsamp, serve.om): the next token from the logits at the last context
 note position, argmax when TEMPMILLI tm is 0, else a draw with the splitmix64 stream state st.
 fn osstep st ulong tm ulong to ulong
-lf = ofwd 0
-olast
+olastf
 if eq tm 0
 ret oargmax
 end
 ret odraw st div f64 tm 1000.0
+end
+
+note ogpu[0] = 1 when the per-token forward runs on the chip: gpu/gg.om's gserve and gsample set it
+note before cmdserve or cmdsamp; nogpu.om's ogchip and oglast refuse with exit 2 on the CPU targets.
+global ogpu ulong 1
+
+note after the checkpoint loads: on the chip path, open the chip and upload the parameters once
+fn ochipup to void
+if ne get ogpu 0 0
+ogchip
+end
+end
+
+note forward of the context in obx row 0, then its last position's logits into TMP[0..V) (oa),
+note on the chip when ogpu[0] = 1 (oglast), else on the CPU (ofwd, olast)
+fn olastf to void
+if ne get ogpu 0 0
+oglast
+ret
+end
+lf = ofwd 0
+olast
 end
 
 note logits of the last context position into TMP[0..V) (oa)

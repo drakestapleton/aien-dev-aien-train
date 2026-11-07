@@ -140,10 +140,11 @@ defaults. The exit codes are listed in CONTRACT §7.
 ## Serve (DRA-119)
 
 ```sh
-ollm serve PORT CK MERGES [MAXCONN] [tplmax=N] [test=1]   # AArch64 Linux only; prints "PORT n" once listening
+ollm serve PORT CK MERGES [MAXCONN] [tplmax=N] [test=1]    # AArch64 Linux; prints "PORT n" once listening
+ollm-gb10 gserve PORT CK MERGES [MAXCONN] [tplmax=N] [test=1]   # the same server, logits from the GB10
 ```
 
-`serve.om` (aarch64 builds only; gb10 and the x86 targets get `noserve.om`, which exits 2) answers
+`serve.om` (aarch64 and gb10 builds; the x86 targets get `noserve.om`, which exits 2) answers
 OpenAI-style chat requests on 127.0.0.1:PORT with omega-mv's `seed/net/http.om` and
 `seed/json/{json,jsonw}.om`, vendored byte for byte from omega-mv `e5b32567` into
 `native/omegallm/net/`. `build.sh` checks their sha256 (`NET_PIN_MISMATCH`, exit 3) and puts `om2`

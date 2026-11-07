@@ -1829,8 +1829,7 @@ end
 
 note svlogit: the next-token logits divided by tau, then made probabilities (as odraw does)
 fn svlogit tau f64 to void
-lf = ofwd 0
-olast
+olastf
 o = get og 27
 v = get og 0
 m = bitcast f64 ulong 18442240474082181120
@@ -2557,6 +2556,7 @@ mx = svcli sv na
 ockload 3
 v = get og 0
 obload 4 v
+ochipup
 cs = new ulong 320 0
 io = new uchar 131072 0
 bd = new uchar 983040 0
