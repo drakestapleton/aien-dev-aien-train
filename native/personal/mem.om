@@ -1,0 +1,1432 @@
+om2
+note SPDX-License-Identifier: AGPL-3.0-only
+note native/personal/mem.om (DRA-146): editable personal memory with supersession, retrieved at runtime.
+note Derived from the ChatMemory candidate mem.om (chatlog-personalization-20261105/memory/mem.om): the same
+note tokenizer (lowercase ASCII alnum runs of 2..32 bytes, one trailing s dropped when the token is longer
+note than 3 bytes and does not end in ss, FNV-1a 64), lnf (atanh series) and BM25 parameters (k1 1.2, b 0.75,
+note idf ln(1 + (N - df + 0.5)/(df + 0.5)), terms with df > N/4 are stopwords, coverage = sum idf of the
+note matched query terms / sum idf of the non-stop query terms, tau 0.5). Deviation: the stopword rule needs
+note N >= 20 active records (a small store would otherwise lose every term).
+note
+note STORE is an append-only log, one record per line, TAB separated (no TAB or newline inside a field):
+note   op  rid  ts  kind  key  value  prov  target
+note op add | correct | retract; rid = the line's 1-based record number; ts UTC YYYY-MM-DDTHH:MM:SSZ;
+note kind preference | decision | fact | correction | project_fact (retract: -); prov = provenance id
+note (conv_id:record_id:sha256 of the source text, never the text); target = - for add, the rid that
+note this record supersedes (correct) or retracts (retract). Lines starting with # are comments.
+note Resolution (deterministic, replayed in log order): add and correct records start active; correct T
+note marks T superseded by this record; retract T marks T retracted; then among the active records of
+note one identity (kind + normalized key: ASCII lower case, runs of spaces as one) the newest by (ts, rid)
+note stays active and the others become superseded by it (same ts: the larger rid wins).
+note Query: BM25 over the active records (statistics over the active set); the top K active hits are current;
+note a superseded record whose coverage >= tau and whose score beats the weakest current hit (or K is not
+note filled) is listed as superseded with its current replacement (the end of its chain), never as current.
+note Commands:
+note   mem query STORE K TEXT        compact block <= 600 bytes on stdout (nothing for an empty store or no hit)
+note   mem add STORE KIND KEY VALUE TS PROV
+note   mem correct STORE RID KIND KEY VALUE TS PROV
+note   mem retract STORE RID TS PROV
+note   mem history STORE KEY         every record of that normalized key (any kind) with its status
+note   mem hits STORE K TEXT         the query's current hits then superseded hits: `H rid current|superseded score_milli cov_milli`
+note   mem dump STORE                resolved table: rid status by kind ts key (tests, the Lean model link)
+note   mem check STORE               counts: MEM records active superseded retracted events, per kind
+note Exits: 2 usage; 21 store over 4 MiB or 65536 records; 22 a malformed line or argument; 70 I/O.
+note OMSUP 1: supersession on; 0 in the negative-control build (tests/personal/mem-check.sh), which ignores
+note correct, retract and the identity rule (every add/correct record active).
+const OMSUP ulong 1
+const NR ulong 65536
+const FNVB ulong 14695981039346656037
+const FNVP ulong 1099511628211
+const OUTCAP ulong 600
+
+global sb uchar 4194304
+global sbn ulong 1
+global pth uchar 4200
+global ab uchar 4200
+global ob uchar 8192
+global obn ulong 1
+global rop uchar 65536
+global rts ulong 65536
+global rkd uchar 65536
+global rky ulong 65536
+global rvl ulong 65536
+global rpv ulong 65536
+global rtg ulong 65536
+global rst uchar 65536
+global rby ulong 65536
+global rih ulong 65536
+global nrec ulong 1
+global dto ulong 65537
+global dtk ulong 2097152
+global dnt ulong 1
+global qh ulong 64
+global qn ulong 1
+global qtf ulong 65536
+global qsc f64 65536
+global qcv f64 65536
+global fs f64 4
+global tkb uchar 64
+global tks ulong 4
+global wk ulong 16
+
+text k_pref "preference"
+text k_dec "decision"
+text k_fact "fact"
+text k_corr "correction"
+text k_pf "project_fact"
+text o_add "add"
+text o_cor "correct"
+text o_ret "retract"
+text c_q "query"
+text c_add "add"
+text c_cor "correct"
+text c_ret "retract"
+text c_his "history"
+text c_dmp "dump"
+text c_chk "check"
+text c_hit "hits"
+text s_cur "current"
+text s_act "active"
+text s_sup "superseded"
+text s_ret "retracted"
+text s_evt "event"
+text t_mem "MEM"
+text t_hd1 "[memory: "
+text t_hd2 " current]\n"
+text t_sup "- superseded: "
+text t_now " -> now: "
+text t_ret " -> retracted"
+text t_dash "- "
+text t_cs ": "
+text t_op " ("
+text t_cp ")\n"
+text t_cm ", "
+
+note ======== I/O
+
+fn argp i ulong to ulong
+n = argread i pth 0 4096
+if or lt n 0 ge n 4096
+exit 2
+end
+ret ulong n
+end
+
+note argument i into ab (bytes), its length
+fn arga i ulong to ulong
+n = argread i ab 0 4096
+if or lt n 0 ge n 4096
+exit 2
+end
+ret ulong n
+end
+
+fn obc c ulong to void
+n = get obn 0
+if ge n 8192
+exit 21
+end
+put ob n uchar c
+put obn 0 add n 1
+end
+
+fn obt s view uchar * to void
+for i ulong len s
+obc ulong get s i
+end
+end
+
+fn obu v ulong to void
+d = new uchar 24 0
+n = ulong 0
+x = v
+while true bound 30
+put d n uchar add 48 rem x 10
+n = add n 1
+x = div x 10
+if eq x 0
+break
+end
+end
+for i ulong n
+obc ulong get d sub sub n 1 i
+end
+end
+
+note store bytes [o, o + l) packed as o << 32 | l
+fn obf x ulong to void
+o = shr x 32
+l = and x 4294967295
+for i ulong l
+obc ulong get sb add o i
+end
+end
+
+fn obout to void
+n = get obn 0
+o = ulong 0
+while lt o n bound 999999
+r = write 1 ob o sub n o
+if le r 0
+exit 70
+end
+o = add o ulong r
+end
+put obn 0 0
+end
+
+note read the store named by argument 2 into sb; a missing file is an empty store
+fn rdstore to void
+n = argp 2
+put sbn 0 0
+fd = fopen pth 0 n 0 0
+if lt fd 0
+ret
+end
+o = ulong 0
+dn = false
+while not dn bound 999999
+if ge o 4194304
+exit 21
+end
+r = read int fd sb o sub 4194304 o
+if lt r 0
+exit 70
+end
+if eq r 0
+dn = true
+else
+o = add o ulong r
+end
+end
+if ne fclose int fd 0
+exit 70
+end
+put sbn 0 o
+end
+
+note ======== parsing
+
+fn sbat i ulong to ulong
+if ge i get sbn 0
+ret 256
+end
+ret ulong get sb i
+end
+
+note field f of the line [a, e) as o << 32 | l; exit 22 when missing
+fn fld a ulong e ulong f ulong to ulong
+s = a
+k = ulong 0
+for i ulong add sub e a 1
+p = add a i
+if or eq p e eq sbat p 9
+if eq k f
+ret or shl s 32 sub p s
+end
+k = add k 1
+s = add p 1
+end
+end
+exit 22
+end
+
+fn feq x ulong t view uchar * to bool
+o = shr x 32
+l = and x 4294967295
+if ne l len t
+ret false
+end
+for i ulong l
+if ne get sb add o i get t i
+ret false
+end
+end
+ret true
+end
+
+note kind code 0..4 of field x, 255 for `-`, exit 22 otherwise
+fn kcode x ulong to ulong
+if feq x k_pref
+ret 0
+end
+if feq x k_dec
+ret 1
+end
+if feq x k_fact
+ret 2
+end
+if feq x k_corr
+ret 3
+end
+if feq x k_pf
+ret 4
+end
+if and eq and x 4294967295 1 eq sbat shr x 32 45
+ret 255
+end
+exit 22
+end
+
+fn isd c ulong to bool
+ret and ge c 48 le c 57
+end
+
+note decimal field (exit 22 unless 1..19 digits)
+fn fdec x ulong to ulong
+o = shr x 32
+l = and x 4294967295
+if or eq l 0 gt l 19
+exit 22
+end
+v = ulong 0
+for i ulong l
+c = sbat add o i
+if not isd c
+exit 22
+end
+v = add mul v 10 sub c 48
+end
+ret v
+end
+
+note ts field: YYYY-MM-DDTHH:MM:SSZ (20 bytes, digits where digits belong)
+fn tsok x ulong to bool
+o = shr x 32
+if ne and x 4294967295 20
+ret false
+end
+for i ulong 20
+c = sbat add o i
+w = tsch i
+if eq w 1
+if not isd c
+ret false
+end
+else
+if ne c w
+ret false
+end
+end
+end
+ret true
+end
+
+note expected byte of a timestamp at position i: 1 for a digit
+fn tsch i ulong to ulong
+if or eq i 4 eq i 7
+ret 45
+end
+if eq i 10
+ret 84
+end
+if or eq i 13 eq i 16
+ret 58
+end
+if eq i 19
+ret 90
+end
+ret 1
+end
+
+note normalized identity hash of kind k and key field x
+fn idh k ulong x ulong to ulong
+o = shr x 32
+l = and x 4294967295
+h = FNVB
+h = mul xor h add k 1 FNVP
+sp = true
+for i ulong l
+c = sbat add o i
+if eq c 32
+if not sp
+h = mul xor h 32 FNVP
+end
+sp = true
+else
+if and ge c 65 le c 90
+c = add c 32
+end
+h = mul xor h c FNVP
+sp = false
+end
+end
+ret h
+end
+
+note parse every line of sb into the record table; exit 22 on a malformed line
+fn parse to void
+n = get sbn 0
+a = ulong 0
+put nrec 0 0
+for q ulong 5
+while lt a n bound 999999
+e = nxtnl a
+if and gt e a ne sbat a 35
+pline a e
+end
+a = add e 1
+end
+end
+end
+
+fn nxtnl a ulong to ulong
+p = a
+n = get sbn 0
+for q ulong 5
+while lt p n bound 999999
+if eq sbat p 10
+ret p
+end
+p = add p 1
+end
+end
+ret n
+end
+
+fn pline a ulong e ulong to void
+r = get nrec 0
+if ge r NR
+exit 21
+end
+op = ulong 0
+x = fld a e 0
+if feq x o_add
+op = 1
+end
+if feq x o_cor
+op = 2
+end
+if feq x o_ret
+op = 3
+end
+if eq op 0
+exit 22
+end
+if ne fdec fld a e 1 add r 1
+exit 22
+end
+y = fld a e 2
+if not tsok y
+exit 22
+end
+put rop r uchar op
+put rts r shr y 32
+pline2 a e r op
+put nrec 0 add r 1
+end
+
+fn pline2 a ulong e ulong r ulong op ulong to void
+k = kcode fld a e 3
+if eq op 3
+if ne k 255
+exit 22
+end
+else
+if eq k 255
+exit 22
+end
+end
+put rkd r uchar k
+x = fld a e 4
+put rky r x
+put rvl r fld a e 5
+put rpv r fld a e 6
+t = fld a e 7
+tg = ulong 0
+if eq op 1
+if not and eq and t 4294967295 1 eq sbat shr t 32 45
+exit 22
+end
+else
+tg = fdec t
+if or eq tg 0 gt tg r
+exit 22
+end
+end
+put rtg r tg
+if ne op 3
+if eq and x 4294967295 0
+exit 22
+end
+put rih r idh k x
+end
+end
+
+note ======== resolution
+
+note status: 0 active, 1 superseded, 2 retracted, 3 event (a retract line); rby: replacing record + 1, 0 none
+fn resolve to void
+n = get nrec 0
+for r ulong n
+put rby r 0
+put rst r 0
+if eq get rop r uchar 3
+put rst r 3
+end
+end
+if eq OMSUP 0
+ret
+end
+for r2 ulong n
+o = ulong get rop r2
+if ne o 1
+t = sub get rtg r2 1
+if eq get rst t uchar 3
+exit 22
+end
+if eq o 2
+put rst t 1
+put rby t add r2 1
+else
+put rst t 2
+end
+end
+end
+for r3 ulong n
+if eq get rst r3 uchar 0
+idwin r3
+end
+end
+end
+
+note r is active: if a newer active record of the same identity exists, r is superseded by the newest
+fn idwin r ulong to void
+n = get nrec 0
+b = r
+for j ulong n
+if ne j r
+if eq get rst j uchar 0
+if eq get rih j get rih r
+if eq get rkd j get rkd r
+if newer j b
+b = j
+end
+end
+end
+end
+end
+end
+if ne b r
+put rst r 1
+put rby r add b 1
+end
+end
+
+note record j newer than record b by (ts, rid)
+fn newer j ulong b ulong to bool
+c = tscmp get rts j get rts b
+if eq c 1
+ret true
+end
+if eq c 0
+ret gt j b
+end
+ret false
+end
+
+note compare timestamps at store offsets: 0 equal, 1 x newer, 2 y newer
+fn tscmp x ulong y ulong to ulong
+for i ulong 20
+a = sbat add x i
+b = sbat add y i
+if gt a b
+ret 1
+end
+if lt a b
+ret 2
+end
+end
+ret 0
+end
+
+note the end of r's replacement chain (an active or retracted record), at most NR links
+fn chend r ulong to ulong
+x = r
+for q ulong NR
+if eq get rby x 0
+ret x
+end
+x = sub get rby x 1
+end
+ret x
+end
+
+note ======== tokens (ChatMemory tokenizer)
+
+fn tkend to void
+k = get tks 0
+put tks 0 0
+if or lt k 2 gt k 32
+ret
+end
+if gt k 3
+if and eq get tkb sub k 1 uchar 115 ne get tkb sub k 2 uchar 115
+k = sub k 1
+end
+end
+h = FNVB
+for i ulong k
+h = mul xor h ulong get tkb i FNVP
+end
+if eq h 0
+h = 1
+end
+tkout h
+end
+
+note wk 0: sink 0 doc tokens into dtk, 1 query terms into qh (unique, at most 64)
+fn tkout h ulong to void
+if eq get wk 0 0
+n = get dnt 0
+if ge n 2097152
+exit 21
+end
+put dtk n h
+put dnt 0 add n 1
+ret
+end
+m = get qn 0
+for i ulong m
+if eq get qh i h
+ret
+end
+end
+if lt m 64
+put qh m h
+put qn 0 add m 1
+end
+end
+
+fn tkbyte c ulong to void
+k = get tks 0
+if lt k 64
+put tkb k uchar c
+end
+put tks 0 add k 1
+end
+
+fn tkc c ulong to void
+x = c
+if and ge x 65 le x 90
+x = add x 32
+end
+if or and ge x 97 le x 122 isd x
+tkbyte x
+else
+tkend
+end
+end
+
+note tokens of store field x
+fn tkfld x ulong to void
+o = shr x 32
+for i ulong and x 4294967295
+tkc sbat add o i
+end
+tkend
+end
+
+note per-record token lists: key then value; dto[r] .. dto[r + 1]
+fn tkall to void
+put wk 0 0
+put dnt 0 0
+put tks 0 0
+n = get nrec 0
+for r ulong n
+put dto r get dnt 0
+if ne get rop r uchar 3
+tkfld get rky r
+tkc 32
+tkfld get rvl r
+end
+end
+put dto n get dnt 0
+end
+
+fn lnf x f64 to f64
+b = bitcast ulong x
+e = sub long and shr b 52 2047 1023
+m = bitcast f64 or and b 4503599627370495 4607182418800017408
+if gt m 1.414213562373095
+m = div m 2.0
+e = add e 1
+end
+s = div sub m 1.0 add m 1.0
+s2 = mul s s
+t = s
+acc = s
+for k ulong 11
+t = mul t s2
+acc = add acc div t f64 add mul k 2 3
+end
+ret add mul f64 e 0.6931471805599453 mul 2.0 acc
+end
+
+note ======== query
+
+note fs: 0 avgdl over active records, 1 N active, 2 coverage denominator
+fn qstats to void
+n = get nrec 0
+na = ulong 0
+tl = ulong 0
+for r ulong n
+put qsc r 0.0
+put qcv r 0.0
+if eq get rst r uchar 0
+na = add na 1
+tl = add tl sub get dto add r 1 get dto r
+end
+end
+put fs 1 f64 na
+put fs 0 1.0
+if gt na 0
+put fs 0 div f64 tl f64 na
+end
+end
+
+note tf of term h in record r
+fn tfof r ulong h ulong to ulong
+c = ulong 0
+b = get dto r
+e = get dto add r 1
+for i ulong sub e b
+x = get dtk add b i
+if eq x h
+c = add c 1
+end
+end
+ret c
+end
+
+fn bmw tf f64 dl f64 to f64
+r = div dl get fs 0
+r = add 0.25 mul 0.75 r
+r = add tf mul 1.2 r
+ret div mul tf 2.2 r
+end
+
+note one query term over every record (df from the active set); scores land in qsc/qcv
+fn qterm h ulong to void
+n = get nrec 0
+df = ulong 0
+for r ulong n
+t = ulong 0
+if ne get rop r uchar 3
+t = tfof r h
+end
+put qtf r t
+if and gt t 0 eq get rst r uchar 0
+df = add df 1
+end
+end
+na = get fs 1
+if and ge na 20.0 gt mul f64 df 4.0 na
+ret
+end
+fd = f64 df
+idf = lnf add 1.0 div add sub na fd 0.5 add fd 0.5
+put fs 2 add get fs 2 idf
+for r2 ulong n
+qadd r2 idf
+end
+end
+
+fn qadd r ulong idf f64 to void
+t = get qtf r
+if eq t 0
+ret
+end
+dl = f64 sub get dto add r 1 get dto r
+w = bmw f64 t dl
+put qsc r add get qsc r mul idf w
+put qcv r add get qcv r idf
+end
+
+note top K active records by score (ties: the larger rid) into wk 4..; returns the count
+fn qtop k ulong to ulong
+n = get nrec 0
+c = ulong 0
+for s ulong k
+b = ulong NR
+for r ulong n
+if qcand r
+b = qpick r b
+end
+end
+if eq b NR
+ret c
+end
+put rst b 4
+put wk add 4 s b
+c = add c 1
+end
+ret c
+end
+
+note r is an unpicked active record with a positive score and coverage >= tau
+fn qcand r ulong to bool
+if ne get rst r uchar 0
+ret false
+end
+if le get qsc r 0.0
+ret false
+end
+ret ge qcov r 0.5
+end
+
+fn qcov r ulong to f64
+d = get fs 2
+if le d 0.0
+ret 0.0
+end
+ret div get qcv r d
+end
+
+note r when b is none (NR) or r ranks above b, else b (and/or are eager, so b is tested first)
+fn qpick r ulong b ulong to ulong
+if eq b NR
+ret r
+end
+if qbet r b
+ret r
+end
+ret b
+end
+
+fn qbet r ulong b ulong to bool
+if gt get qsc r get qsc b
+ret true
+end
+if eq get qsc r get qsc b
+ret gt r b
+end
+ret false
+end
+
+note ======== block output (<= 600 bytes; a line that does not fit is dropped whole)
+
+note append ob[s ..) only if the block stays within OUTCAP; else cut back to s
+fn fitl s ulong to bool
+if gt get obn 0 OUTCAP
+put obn 0 s
+ret false
+end
+ret true
+end
+
+note value field cut to at most m bytes on a UTF-8 boundary
+fn obvc x ulong m ulong to void
+o = shr x 32
+l = and x 4294967295
+if gt l m
+l = m
+while gt l 0 bound 8
+c = sbat add o l
+if ne and c 192 128
+break
+end
+l = sub l 1
+end
+end
+for i ulong l
+obc ulong get sb add o i
+end
+end
+
+fn obdate r ulong to void
+o = get rts r
+for i ulong 10
+obc ulong get sb add o i
+end
+end
+
+fn obkind r ulong to void
+k = ulong get rkd r
+if eq k 0
+obt k_pref
+end
+if eq k 1
+obt k_dec
+end
+if eq k 2
+obt k_fact
+end
+if eq k 3
+obt k_corr
+end
+if eq k 4
+obt k_pf
+end
+end
+
+note `- key: value (kind, date)`
+fn obcur r ulong to void
+obt t_dash
+obvc get rky r 80
+obt t_cs
+obvc get rvl r 200
+obt t_op
+obkind r
+obt t_cm
+obdate r
+obt t_cp
+end
+
+note `- superseded: key: old (date) -> now: new (date)` or `-> retracted`
+fn obsup r ulong to void
+obt t_sup
+obvc get rky r 60
+obt t_cs
+obvc get rvl r 100
+obt t_op
+obdate r
+obc 41
+x = chend r
+if eq get rst x uchar 2
+obt t_ret
+obc 10
+ret
+end
+obt t_now
+obvc get rvl x 120
+obt t_op
+obdate x
+obt t_cp
+end
+
+note hits (h 1) prints rid lists instead of the block
+fn cquery to void
+cqry 0
+end
+
+fn chits to void
+cqry 1
+end
+
+fn cqry h ulong to void
+if ne argcnt 5
+exit 2
+end
+put wk 3 h
+rdstore
+k = fdeca 3
+if or eq k 0 gt k 8
+exit 2
+end
+parse
+resolve
+tkall
+qstats
+nq = arga 4
+put wk 0 1
+put qn 0 0
+put tks 0 0
+for i ulong nq
+tkc ulong get ab i
+end
+tkend
+put fs 2 0.0
+for j ulong get qn 0
+qterm get qh j
+end
+c = qtop k
+if eq get wk 3 1
+qhits k c
+ret
+end
+if eq c 0
+qsonly
+ret
+end
+obt t_hd1
+obu c
+obt t_hd2
+for s ulong c
+b = get wk add 4 s
+put rst b 0
+st = get obn 0
+obcur b
+if not fitl st
+break
+end
+end
+qsups k c
+obout
+end
+
+note `H rid current|superseded score_milli cov_milli` for the current hits then the superseded ones
+fn qhits k ulong c ulong to void
+for s ulong c
+b = get wk add 4 s
+put rst b 0
+qhline b 0
+end
+lo = 0.0f64
+if eq c k
+lo = get qsc get wk add 4 sub c 1
+end
+for s2 ulong 2
+b2 = ulong NR
+for r ulong get nrec 0
+if qsupc r lo
+b2 = qpick r b2
+end
+end
+if eq b2 NR
+break
+end
+put rst b2 5
+qhline b2 1
+end
+obout
+end
+
+fn qhline r ulong sp ulong to void
+obc 72
+obc 32
+obu add r 1
+obc 32
+if eq sp 0
+obt s_cur
+else
+obt s_sup
+end
+obc 32
+obu ulong mul get qsc r 1000.0
+obc 32
+obu ulong mul qcov r 1000.0
+obc 10
+end
+
+note superseded records that match strongly: coverage >= tau and a score above the weakest current hit
+note (any score when fewer than K current hits); at most 2, best first
+fn qsups k ulong c ulong to void
+lo = 0.0f64
+if eq c k
+lo = get qsc get wk add 4 sub c 1
+end
+for s ulong 2
+b = ulong NR
+for r ulong get nrec 0
+if qsupc r lo
+b = qpick r b
+end
+end
+if eq b NR
+ret
+end
+put rst b 5
+st = get obn 0
+obsup b
+if not fitl st
+ret
+end
+end
+end
+
+fn qsupc r ulong lo f64 to bool
+if ne get rst r uchar 1
+ret false
+end
+if le get qsc r lo
+ret false
+end
+ret ge qcov r 0.5
+end
+
+note no current hit: still report strongly matching superseded records (with a header)
+fn qsonly to void
+s0 = get obn 0
+obt t_hd1
+obu 0
+obt t_hd2
+s1 = get obn 0
+qsups 1 0
+if eq get obn 0 s1
+put obn 0 s0
+end
+obout
+end
+
+note argument i as a decimal
+fn fdeca i ulong to ulong
+n = arga i
+if or eq n 0 gt n 19
+exit 2
+end
+v = ulong 0
+for j ulong n
+c = ulong get ab j
+if not isd c
+exit 2
+end
+v = add mul v 10 sub c 48
+end
+ret v
+end
+
+note ======== edits (append one line; the whole store is re-validated first and after)
+
+note argument i must be a clean field: no TAB, newline or carriage return, 1..4095 bytes
+fn obarg i ulong to void
+n = arga i
+if eq n 0
+exit 22
+end
+for j ulong n
+c = ulong get ab j
+if or or eq c 9 eq c 10 eq c 13
+exit 22
+end
+obc c
+end
+end
+
+fn appendl to void
+n = argp 2
+fd = fopen pth 0 n 1089 384
+if lt fd 0
+exit 70
+end
+m = get obn 0
+o = ulong 0
+while lt o m bound 999999
+r = write int fd ob o sub m o
+if le r 0
+exit 70
+end
+o = add o ulong r
+end
+if ne fclose int fd 0
+exit 70
+end
+put obn 0 0
+end
+
+note store ends with a newline (or is empty); else a newline is added before the new line
+fn nlfix to void
+n = get sbn 0
+if gt n 0
+if ne sbat sub n 1 10
+obc 10
+end
+end
+end
+
+fn cedit op ulong to void
+rdstore
+parse
+resolve
+r = add get nrec 0 1
+nlfix
+if eq op 1
+if ne argcnt 8
+exit 2
+end
+obt o_add
+edrec r 3
+obc 45
+end
+if eq op 2
+if ne argcnt 9
+exit 2
+end
+t = fdeca 3
+edtgt t
+obt o_cor
+edrec r 4
+obu t
+end
+if eq op 3
+if ne argcnt 6
+exit 2
+end
+t2 = fdeca 3
+edtgt t2
+obt o_ret
+obc 9
+obu r
+obc 9
+obarg 4
+obc 9
+obc 45
+obc 9
+obc 45
+obc 9
+obc 45
+obc 9
+obarg 5
+obc 9
+obu t2
+end
+obc 10
+sbapp
+parse
+resolve
+appendl
+obu r
+obc 10
+obout
+end
+
+note the new line (ob) appended to the in-memory store, so it is validated before the file changes
+fn sbapp to void
+n = get sbn 0
+m = get obn 0
+if gt add n m 4194304
+exit 21
+end
+for i ulong m
+put sb add n i get ob i
+end
+put sbn 0 add n m
+end
+
+note the target of a correct / retract must be an existing add or correct record that is not retracted
+fn edtgt t ulong to void
+if or eq t 0 gt t get nrec 0
+exit 22
+end
+x = sub t 1
+if or eq get rop x uchar 3 eq get rst x uchar 2
+exit 22
+end
+end
+
+note TAB rid TAB ts TAB kind TAB key TAB value TAB prov TAB (arguments from a: kind key value ts prov)
+fn edrec r ulong a ulong to void
+obc 9
+obu r
+obc 9
+obarg add a 3
+obc 9
+obarg a
+obc 9
+obarg add a 1
+obc 9
+obarg add a 2
+obc 9
+obarg add a 4
+obc 9
+end
+
+note ======== dump, history, check
+
+fn obst r ulong to void
+s = ulong get rst r
+if eq s 0
+obt s_act
+end
+if eq s 1
+obt s_sup
+end
+if eq s 2
+obt s_ret
+end
+if eq s 3
+obt s_evt
+end
+end
+
+fn obrow r ulong to void
+obu add r 1
+obc 9
+obst r
+obc 9
+obu get rby r
+obc 9
+if eq get rop r uchar 3
+obc 45
+else
+obkind r
+end
+obc 9
+o = get rts r
+for i ulong 20
+obc ulong get sb add o i
+end
+obc 9
+if ne get rop r uchar 3
+obf get rky r
+else
+obc 45
+end
+obc 10
+obout
+end
+
+fn cdump to void
+if ne argcnt 3
+exit 2
+end
+rdstore
+parse
+resolve
+for r ulong get nrec 0
+obrow r
+end
+end
+
+fn chist to void
+if ne argcnt 4
+exit 2
+end
+rdstore
+parse
+resolve
+n = arga 3
+x = ulong 0
+for k ulong 5
+put wk 5 k
+for r ulong get nrec 0
+if ne get rop r uchar 3
+if eq get rkd r uchar k
+if hkey r n
+obrow r
+end
+end
+end
+end
+end
+end
+
+note the key of r normalizes to the same bytes as ab[0 .. n) (kind ignored)
+fn hkey r ulong n ulong to bool
+x = get rky r
+ret eq idh 0 x hab n
+end
+
+note identity hash of ab[0 .. n) as a key of kind 0 (same normalization as idh)
+fn hab n ulong to ulong
+h = FNVB
+h = mul xor h 1 FNVP
+sp = true
+for i ulong n
+c = ulong get ab i
+if eq c 32
+if not sp
+h = mul xor h 32 FNVP
+end
+sp = true
+else
+if and ge c 65 le c 90
+c = add c 32
+end
+h = mul xor h c FNVP
+sp = false
+end
+end
+ret h
+end
+
+fn ccheck to void
+if ne argcnt 3
+exit 2
+end
+rdstore
+parse
+resolve
+st = new ulong 4 0
+kd = new ulong 20 0
+for r ulong get nrec 0
+s = ulong get rst r
+put st s add get st s 1
+if ne s 3
+k = ulong get rkd r
+j = add mul k 4 s
+put kd j add get kd j 1
+end
+end
+obt t_mem
+obc 32
+obu get nrec 0
+for i ulong 4
+obc 32
+obu get st i
+end
+obc 10
+for k2 ulong 5
+put wk 6 k2
+obc 32
+obkk k2
+for s2 ulong 3
+obc 32
+obu get kd add mul k2 4 s2
+end
+obc 10
+end
+obout
+end
+
+fn obkk k ulong to void
+if eq k 0
+obt k_pref
+end
+if eq k 1
+obt k_dec
+end
+if eq k 2
+obt k_fact
+end
+if eq k 3
+obt k_corr
+end
+if eq k 4
+obt k_pf
+end
+end
+
+note ======== main
+
+fn iscmd w view uchar * to bool
+n = argp 1
+if ne n len w
+ret false
+end
+for i ulong n
+if ne get pth i get w i
+ret false
+end
+end
+ret true
+end
+
+fn main to int
+if lt argcnt 3
+exit 2
+end
+if iscmd c_q
+cquery
+ret 0
+end
+if iscmd c_add
+cedit 1
+ret 0
+end
+if iscmd c_cor
+cedit 2
+ret 0
+end
+if iscmd c_ret
+cedit 3
+ret 0
+end
+if iscmd c_his
+chist
+ret 0
+end
+if iscmd c_dmp
+cdump
+ret 0
+end
+if iscmd c_chk
+ccheck
+ret 0
+end
+if iscmd c_hit
+chits
+ret 0
+end
+exit 2
+end

@@ -1,0 +1,7 @@
+# proofs/personal/MemSupersession.lean, checked 2026-11-07 with the lean MCP server lean_run_code: success true, no errors, no sorry
+'Dra146Mem.retrieve_active' depends on axioms: [propext, Quot.sound]
+'Dra146Mem.retrieve_never_superseded' depends on axioms: [propext, Quot.sound]
+'Dra146Mem.retrieve_max' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Dra146Mem.retrieve_unique' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Dra146Mem.nosup_returns_superseded' depends on axioms: [propext]
+'Dra146Mem.nostatus_returns_retracted' depends on axioms: [propext]

@@ -1,0 +1,61 @@
+mem_sha256=792d522d34054f6bea60ff23c812db0d80d1812efff87a3c47fcd6cb2fe2f6d2
+mem_nosup_sha256=1dd703f5a5f23e9522ba2d109dade72fb7ab9d1f8706f63bf51c3609ec7797ef
+CASE stale rc=0 bytes=192
+    | [memory: 1 current]
+    | - editor indent: never use tabs, use 4 spaces (preference, 2026-10-05)
+    | - superseded: editor indent: use tabs (2026-09-01) -> now: never use tabs, use 4 spaces (2026-10-05)
+PASS stale preference: the newer 'never use tabs' is current, 'use tabs' only as superseded
+CASE chain rc=0 bytes=93
+    | [memory: 0 current]
+    | - superseded: deploy host: alpha (2026-09-01) -> now: gamma (2026-10-20)
+PASS chained supersession alpha -> beta -> gamma: the query matching only alpha reports alpha superseded with the chain end gamma
+CASE retract rc=0 bytes=0
+PASS retract: a retracted record is never returned (empty block)
+CASE retchain rc=0 bytes=83
+    | [memory: 0 current]
+    | - superseded: mirror url: old mirror (2026-09-01) -> retracted
+PASS chain ending in a retraction reported as retracted, nothing current
+CASE tie rc=0 bytes=134
+    | [memory: 1 current]
+    | - login shell: zsh (preference, 2026-10-05)
+    | - superseded: login shell: bash (2026-10-05) -> now: zsh (2026-10-05)
+PASS same-ts tie: the larger rid wins
+CASE kinds rc=0 bytes=120
+    | [memory: 2 current]
+    | - deploy: manual approval (preference, 2026-09-01)
+    | - deploy: runs via ci (project_fact, 2026-10-05)
+PASS key collision across kinds: preference and project_fact both current
+CASE old rc=0 bytes=94
+    | [memory: 0 current]
+    | - superseded: editor: use emacs (2026-09-01) -> now: use vim (2026-10-05)
+PASS query matching only the old text: reported superseded with its replacement, never current
+PASS negative control caught: stale fails with supersession disabled (- editor indent: use tabs (preference, 2026-09-01))
+PASS negative control caught: chain fails with supersession disabled (- deploy host: alpha (fact, 2026-09-01))
+PASS negative control caught: retract fails with supersession disabled (- gpu lease mode: exclusive (decision, 2026-09-01))
+PASS negative control caught: retchain fails with supersession disabled (- mirror url: old mirror (fact, 2026-09-01))
+PASS negative control caught: tie fails with supersession disabled (- login shell: zsh (preference, 2026-10-05))
+PASS negative control caught: old fails with supersession disabled (- editor: use emacs (preference, 2026-09-01))
+CASE unicode rc=0 bytes=79
+    | [memory: 1 current]
+    | - café menu: crème brûlée 日本語 (fact, 2026-09-01)
+PASS unicode bytes kept, ASCII tokens matched
+PASS a 301-byte value cut to <= 200 bytes on a UTF-8 boundary (rc 0, 254 bytes)
+CASE missing-store rc=0 bytes=0
+PASS missing store: empty block, rc 0
+PASS empty store: empty block, rc 0
+PASS check of an empty store: MEM 0 0 0 0 0
+PASS block cap: 8 matching 170-byte records -> 408 bytes <= 600, whole lines only
+PASS block ends with a whole line
+CASE history rc=0 bytes=102
+    | 1	active	0	preference	2026-09-01T10:00:00Z	deploy
+    | 2	active	0	project_fact	2026-10-05T10:00:00Z	deploy
+PASS history by normalized key across kinds
+PASS history of the chain: 1 by 2, 2 by 3, 3 active
+PASS dump: superseded, retracted, event
+PASS deterministic rebuild: two dumps identical
+PASS rebuild from a copy of the log is identical
+PASS check counts: records active superseded retracted events
+PASS refused: bad kind, bad ts, unknown rid, TAB in value, argument count, retract of a retracted record (rc 22 22 22 22 2 22)
+PASS refused edits left the store byte-identical
+PASS a log whose rid is not its record number is refused (22)
+MEM_PASS
