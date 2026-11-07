@@ -185,8 +185,8 @@ errors, not successful refusals; no trap is counted as an expected test result.
 `evidence/OMEGALLM/wsp-patch-20261107/` records host CPU execution, the source
 composition diff, exact identities, small acceptance and round40 rollback.
 All product transformations and hashing are Omega. Build orchestration currently
-uses dash 0.5.12-6ubuntu5, sed 0.1.1, git 2.43.0, sha256sum 0.8.0, diff
-(pi-uu-diff) 0.8.0, taskset util-linux 2.39.3 and GNU nice 9.4. The shell composition
+uses dash 0.5.12-6ubuntu5, GNU sed 4.9, git 2.43.0, GNU sha256sum 9.4,
+GNU diffutils 3.10, taskset util-linux 2.39.3 and GNU nice 9.4. The shell composition
 role is the existing build path; its Omega replacement would be a bounded source
 composer, not a hidden host implementation of checkpoint editing. The compiler
 is a pinned verification/build tool. Python 3.12.3 and hashlib/struct/mmap are

@@ -1,0 +1,94 @@
+[
+  {
+    "command": [
+      "sh",
+      "-c",
+      "command -v sed; command -v sha256sum; command -v diff"
+    ],
+    "exit": 0,
+    "stdout": "/usr/bin/sed\n/usr/bin/sha256sum\n/usr/bin/diff\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "dpkg-query",
+      "-W",
+      "dash"
+    ],
+    "exit": 0,
+    "stdout": "dash\t0.5.12-6ubuntu5\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "sed",
+      "--version"
+    ],
+    "exit": 0,
+    "stdout": "sed (GNU sed) 4.9\nPackaged by Debian\nCopyright (C) 2022 Free Software Foundation, Inc.\nLicense GPLv3+: GNU GPL version 3 or later <https://gnu.org/licenses/gpl.html>.\nThis is free software: you are free to change and redistribute it.\nThere is NO WARRANTY, to the extent permitted by law.\n\nWritten by Jay Fenlason, Tom Lord, Ken Pizzini,\nPaolo Bonzini, Jim Meyering, and Assaf Gordon.\n\nThis sed program was built with SELinux support.\nSELinux is disabled on this system.\n\nGNU sed home page: <https://www.gnu.org/software/sed/>.\nGeneral help using GNU software: <https://www.gnu.org/gethelp/>.\nE-mail bug reports to: <bug-sed@gnu.org>.\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "sha256sum",
+      "--version"
+    ],
+    "exit": 0,
+    "stdout": "sha256sum (GNU coreutils) 9.4\nCopyright (C) 2023 Free Software Foundation, Inc.\nLicense GPLv3+: GNU GPL version 3 or later <https://gnu.org/licenses/gpl.html>.\nThis is free software: you are free to change and redistribute it.\nThere is NO WARRANTY, to the extent permitted by law.\n\nWritten by Ulrich Drepper, Scott Miller, and David Madore.\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "diff",
+      "--version"
+    ],
+    "exit": 0,
+    "stdout": "diff (GNU diffutils) 3.10\nCopyright (C) 2023 Free Software Foundation, Inc.\nLicense GPLv3+: GNU GPL version 3 or later <https://gnu.org/licenses/gpl.html>.\nThis is free software: you are free to change and redistribute it.\nThere is NO WARRANTY, to the extent permitted by law.\n\nWritten by Paul Eggert, Mike Haertel, David Hayes,\nRichard Stallman, and Len Tower.\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "git",
+      "--version"
+    ],
+    "exit": 0,
+    "stdout": "git version 2.43.0\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "taskset",
+      "--version"
+    ],
+    "exit": 0,
+    "stdout": "taskset from util-linux 2.39.3\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "nice",
+      "--version"
+    ],
+    "exit": 0,
+    "stdout": "nice (GNU coreutils) 9.4\nCopyright (C) 2023 Free Software Foundation, Inc.\nLicense GPLv3+: GNU GPL version 3 or later <https://gnu.org/licenses/gpl.html>.\nThis is free software: you are free to change and redistribute it.\nThere is NO WARRANTY, to the extent permitted by law.\n\nWritten by David MacKenzie.\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "python3",
+      "--version"
+    ],
+    "exit": 0,
+    "stdout": "Python 3.12.3\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "uname",
+      "-srmo"
+    ],
+    "exit": 0,
+    "stdout": "Linux 7.0.0-1019-nvidia aarch64 GNU/Linux\n",
+    "stderr": ""
+  }
+]
