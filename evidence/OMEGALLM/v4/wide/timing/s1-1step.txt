@@ -2,3 +2,6 @@ receipt: s1-1step
 binary: sha256 aa6cceda5358a797e463bc309d5baeac86db9fe366c8c80a5648837b608deaac
 $ taskset -c 6 nice -n 10 /usr/bin/time ollm train4 s1a.ck /dev/shm/hive/ownmodel/wide4/val3m.u16 4 1 1
 --- output
+T 4 9939786
+TIME wall_s 241.98 user_s 120.61 sys_s 1.06 rss_kb 2235580
+--- rc 0

@@ -1,0 +1,7 @@
+receipt: d384-old-1step
+binary: sha256 beecf5fa3463c36dc44c7e4aa823aa747b55e5d0871a726d52dad243971c7631
+$ taskset -c 6 nice -n 10 /usr/bin/time ollm train4 d384o.ck /dev/shm/hive/ownmodel/wide4/val3m.u16 1 1 1
+--- output
+T 1 10515197
+TIME wall_s 155.33 user_s 129.19 sys_s 0.58 rss_kb 1182448
+--- rc 0

@@ -1,0 +1,8 @@
+receipt: s1-2steps
+binary: sha256 aa6cceda5358a797e463bc309d5baeac86db9fe366c8c80a5648837b608deaac
+$ taskset -c 6 nice -n 10 /usr/bin/time ollm train4 s1b.ck /dev/shm/hive/ownmodel/wide4/val3m.u16 5 5 1
+--- output
+T 5 9799004
+TIME wall_s 282.46 user_s 227.55 sys_s 1.12 rss_kb 2235580
+--- rc 0
+s1a (step 4) vs s1b (step 5) differ as expected: 1

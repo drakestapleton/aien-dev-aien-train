@@ -1,0 +1,8 @@
+receipt: d384-new-1step
+binary: sha256 aa6cceda5358a797e463bc309d5baeac86db9fe366c8c80a5648837b608deaac
+$ taskset -c 6 nice -n 10 /usr/bin/time ollm train4 d384.ck /dev/shm/hive/ownmodel/wide4/val3m.u16 1 1 1
+--- output
+T 1 10515197
+TIME wall_s 136.70 user_s 114.79 sys_s 0.72 rss_kb 1320860
+--- rc 0
+d384 checkpoints after one step: byte-identical

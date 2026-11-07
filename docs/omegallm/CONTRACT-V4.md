@@ -3,7 +3,8 @@
 Source: [`native/omegallm/v4.om`](../../native/omegallm/v4.om) (its header notes are the normative
 detail). Built by [`tests/omegallm/build.sh`](../../tests/omegallm/build.sh) after `cli.om` on the
 Linux targets (aarch64, gb10, x86linux); x86efi gets [`no4.om`](../../native/omegallm/no4.om), whose
-v4 commands exit 2. Receipts: [`tests/omegallm/v4-check.sh`](../../tests/omegallm/v4-check.sh).
+v4 commands exit 2. Receipts: [`tests/omegallm/v4-check.sh`](../../tests/omegallm/v4-check.sh) and, for the wte banks,
+[`tests/omegallm/v4-wide-check.sh`](../../tests/omegallm/v4-wide-check.sh).
 Compiler: omega-mv `e5b32567` omc (sha256 `2c824805…`). No outside weights, tokenizers or models.
 
 ## 1. Model
@@ -140,8 +141,46 @@ own `.om` and docs (byte tokens; u16 copies for V > 256):
 | over 1 GiB: V256 T64 D1024 H16 F4096 L12, P 151,282,688 (CK 3.63 GB) | `init4`, `eval4`, one `train4` step rc 0 (101 s, 4.99 GB RSS) |
 | V 32768 T256 D384 H6 F1536 L6 B4 G2 (P 23,204,736), u16 data, K = 2 | 3 `train4` steps rc 0, loss 10.407 → 9.701, 289.7 s (≈10.6 tok/s incl. load); `kvck` rc 0, 0 of 256 positions differ; byte data refused rc 21 |
 
-NOT_RUN: x86linux and x86efi builds (no x86 pin on Spark), GB10 kernels for v4, `sample4` at
-V > 4096 (needs the 32k tokenizer unit), a long training run.
+### 6.1 Wide receipts (wte banks, wide4)
+
+MEASURED 2026-11-07 on Spark core 6 (nice 10; core 6 was shared with other lanes' processes, so wall
+times are noisy and the per-step costs below are user + sys CPU seconds), aarch64 product binary
+`aa6cceda…` (source of this commit), reference binary `beecf5fa…` (63353c9, wte in `ow`). Evidence:
+[`evidence/OMEGALLM/v4/wide/`](../../evidence/OMEGALLM/v4/wide/).
+
+| Check | Result |
+|---|---|
+| `v4-wide-check.sh` | 46 of 46 PASS |
+| CK03 written by the reference build: `eval4`, `gcheck4`, `kvck`, `sample4` on the bank build | outputs byte-identical; 3 more `train4` steps (K = 2): checkpoints byte-identical |
+| crossing shape V 256 T 32 D 18 H 3 F 32 L 4 on `--variant wx` (R1 = 111, layers and activations staged) | `gcheck4` PASS rc 0, output byte-identical to the reference build's; `train4` K = 1, K = 2 and reference byte-identical; `kvck` 0 of 32 differ |
+| mutant j `gcheck4` / mutant jd `kvck` | rc 40 (max relative error 1.99, tolerance 1e-3) / rc 44 (30 of 32 positions differ), as required |
+| V 32768 D 512 H 8 F 2048 L 2 (R1 = 27,660, product build) | K = 1 vs K = 2 byte-identical; `kvck` 0 of 32 differ; token-mode `eval4`, `sample4` rc 0 |
+| `init4` V 32768 D 768 (L 1 and L 8, P 81,801,984) / D 1024 / V 65536 D 512 | rc 0 / 12 / 12 |
+| old `v4-check.sh` on the bank build (tree snapshot `ce3bb2d`) | 17 of 17 PASS |
+| v3 `equiv.sh` reference vs bank build, product and `--variant bx` | EQUAL (eval lines, checkpoints after 5 steps) |
+| V 32768 D 384 H 6 F 1536 L 6 B 4, one `train4` step | checkpoints byte-identical; 115.5 s CPU vs 129.8 s on the reference (−11.0 %: every layer is now resident) |
+
+`v4-check.sh` trains on this repository's own text, which changes with every commit; its `gcheck4`
+receipt can exceed GCTOL on some texts with the reference build too (`gcheck-textdep.txt`: max
+relative error 1.44e-3, rc 40, byte-identical on both builds).
+
+Full S1 (V 32768 T 256 D 512 H 8 F 2048 L 8 B 2 G 2, P = 41,951,744, CK03 1,006,841,984 bytes) on
+public text (the first 3,000,000 bytes of the base `val.txt`, 32K-tokenized):
+
+| Command | Result |
+|---|---|
+| `init4` | rc 0, 4.9 s, 558 MB RSS |
+| `train4` | loss 10.548, 10.325, 9.996 (steps 1–3); RSS 2.24 GB; marginal step 107.0 s CPU (512 tokens, 4.79 tok/s per core), load + save 14.7 s CPU |
+| `eval4` (token mode, 2 windows) | rc 0, 14.71 bits per token |
+| `sample4` (token mode, 16 tokens, KV decode) | rc 0; decoded with `ollm-tok tokdec` |
+| `kvck` | 0 of 256 positions differ |
+| `tune4` | rc 0 |
+| S1 at T 4096: `init4`, `sample4` / `train4` | rc 0 (decode: 2 resident KV layers + staging) / 12 (training layout) |
+| D 768 H 12 F 3072 L 8 (P 81,801,984): `init4`, `eval4` | rc 0, rc 0 (RSS 2.34 GB) |
+
+NOT_RUN: x86linux and x86efi builds (no x86 pin on Spark), GB10 kernels for v4, `sample4` text I/O at
+V > 4096 inside ollm (needs the 32k tokenizer unit; token mode covers it), a long training run,
+S1 `gcheck4` (gcheck4 runs on the wx crossing shape and the small shapes).
 
 MODELED (Wolfram, 6·P·tokens, attention excluded) for P = 23,204,736 at the GB10's MEASURED
 end-to-end v1 rate of 1.91 TFLOP/s (`evidence/OMEGALLM/gpu-max/README.md`; v4 has no GPU path
