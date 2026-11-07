@@ -1,7 +1,8 @@
 #!/bin/sh
 # serve-bench.sh: measure `ollm serve` on a CK03 checkpoint with OLLMTOK1 merges (DRA-121).
 # Env: OLLM, CK, MERGES, OUT (receipt dir), TEXT (public text, ASCII-filtered for the prompts),
-# CORES (taskset list, default 4), PORT (default 18295), LENS (prompt token targets, default
+# CORES (taskset list, default 4), NICE (the server's nice increment, default 10: set 0 when the
+# driver itself runs under nice -n 10), PORT (default 18295), LENS (prompt token targets, default
 # "256 1024"), DEC (decode tokens per run, default 32), ALLEN (allen-chat system prompt, optional).
 # One server under taskset/nice with test=1 (ollm_test_cold for cold prefills); every time is the
 # server's own log `ms` (monotonic clock in serve.om) unless named client_s. Prints `B ...` lines;
@@ -39,11 +40,11 @@ body() { # bytes max_tokens extra-members
 	printf '{"messages":[{"role":"user","content":"%s"}],"max_tokens":%s,"temperature":0%s}' "$(jtext "$1")" "$2" "$3"
 }
 post() { curl -s -o /dev/null -w '%{http_code} %{time_total}' -H 'Content-Type: application/json' --data-binary @"$1" "http://127.0.0.1:$PORT/v1/chat/completions"; }
-lastlog() { grep '^C 200 ' "$log" | tail -1; }
+lastlog() { sleep 0.5; grep '^C 200 ' "$log" | tail -1; }
 
 t0=$(date +%s%N)
 # shellcheck disable=SC2086
-taskset -c "$CORES" nice -n 10 "$OLLM" serve "$PORT" "$CK" "$MERGES" test=1 ${SARGS:-} >"$log" 2>&1 &
+taskset -c "$CORES" nice -n "${NICE:-10}" "$OLLM" serve "$PORT" "$CK" "$MERGES" test=1 ${SARGS:-} >"$log" 2>&1 &
 pid=$!
 until grep -q '^PORT' "$log" 2>/dev/null; do kill -0 $pid 2>/dev/null || { say "B start_fail $(cat "$log")"; exit 1; }; sleep 0.01; done
 t1=$(date +%s%N)

@@ -1,6 +1,6 @@
 note SPDX-License-Identifier: AGPL-3.0-only
 note omegallm serve.om (aien-train DRA-119): `ollm serve PORT CK MERGES [MAXCONN] [tplmax=N]
-note [test=1]`, an OpenAI-compatible HTTP/1.1 server on 127.0.0.1:PORT only for a checkpoint with
+note [test=1] [par=N]`, an OpenAI-compatible HTTP/1.1 server on 127.0.0.1:PORT only for a checkpoint with
 note V > 256: OLLMCK03 (v4.om, decoded with its KV cache, prefix reuse) or OLLMCK01/02 (v3, a full
 note forward per token), with MERGES either our own OLLMTOK1 (tok/tkcore.om via otok.om; the CHAT1
 note template, section CHAT1; V must equal the checkpoint's, else exit 31) or v1 OLLMBPE1 (bpe.om;
@@ -4005,7 +4005,8 @@ end
 ret v
 end
 
-note svcli: the options after MERGES: [MAXCONN] (first only), tplmax=N, test=1; MAXCONN
+note svcli: the options after MERGES: [MAXCONN] (first only), tplmax=N, test=1, par=N (1 .. 16,
+note default 1: processes for the CK03 layer prefill and the decode logits, sections par=N); MAXCONN
 fn svcli sv edit ulong 64 na ulong to ulong
 mx = ulong 1000000
 for j ulong sub na 5
@@ -4043,7 +4044,7 @@ end
 ret mx
 end
 
-note serve PORT CK MERGES [MAXCONN] [tplmax=N] [test=1]
+note serve PORT CK MERGES [MAXCONN] [tplmax=N] [test=1] [par=N]
 fn cmdserve to void
 na = oargc
 if or lt na 5 gt na 9
