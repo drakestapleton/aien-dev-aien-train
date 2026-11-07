@@ -212,7 +212,13 @@ step stop_T 0 $D stop "$WORK/root-t" 18297
 step stop_A 0 $D stop "$WORK/root" 18296
 for r in root root-t root-m; do cp "$WORK/$r/"osup.*.out "$EV/$r.osup.out" 2>/dev/null; cp "$WORK/$r/"STATE.* "$EV/" 2>/dev/null; done
 grep -v '^PORT' "$WORK/root/serve.18296.log" | tail -40 >"$EV/serve.18296.log.tail"
-step nothing_left 0 sh -c "ps -eo pid,args | grep -v grep | grep -E '$WORK/(root|stage)' ; ss -Hltn | grep -E ':1829[5-9] ' ; [ -z \"\$(ps -eo args | grep -v grep | grep -E '$WORK/(root|stage)')\" ] && [ -z \"\$(ss -Hltn | grep -E ':1829[5-9] ')\" ] && echo clean"
+# only this rehearsal's processes and ports (18295 and 18299 may belong to other lanes)
+left_check() {
+	ps -eo pid,args | grep -v grep | grep -E "$WORK/(root|stage|build)"
+	ss -Hltnp | grep -E ':1829[678] '
+	[ -z "$(ps -eo args | grep -v grep | grep -E "$WORK/(root|stage|build)")" ] && [ -z "$(ss -Hltn | grep -E ':1829[678] ')" ] && echo "clean: no process under $WORK, no listener on 18296-18298"
+}
+step nothing_left 0 left_check
 p91 >>"$EV/env.txt"
 echo "REHEARSAL pass=$pass fail=$fail at $(now)" | tee -a "$EV/summary.txt"
 [ $fail -eq 0 ]

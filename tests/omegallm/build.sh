@@ -49,7 +49,8 @@
 # The pool file (CONTRACT-V3 section 2) follows data.om: lpool.om holds the bank-B globals oww, ogb
 # and oab on the Linux targets, epool.om one-element placeholders on x86efi (its v3 limit is the
 # v2 bank-A capacity).
-# serve (DRA-119, native/omegallm/serve.om): aarch64 starts with the line `om2` and concatenates
+# serve (DRA-119, native/omegallm/serve.om; mutant id, serve.om OMUTID: /health reports ck_fnv xor 1,
+# which tests/omegallm/deploy/mancheck.om live must refuse): aarch64 starts with the line `om2` and concatenates
 # net/http.om, net/json.om and net/jsonw.om (vendored unmodified from omega-mv e5b32567 seed/net/http.om,
 # seed/json/json.om and seed/json/jsonw.om; sha256 below, checked at build) before the ollm units and
 # serve.om after them. gb10, x86linux and x86efi take noserve.om, whose cmdserve exits 2.
