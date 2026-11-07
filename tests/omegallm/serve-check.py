@@ -877,6 +877,51 @@ if TPORT:
           f"health {d1:.3f}s {hb1} stream_ok={ok} text_ok={text == slow}")
     check("t_side_partial_head_control", hb2.get("busy") is True and 0.15 < d2 < 1.5, f"health {d2:.3f}s {hb2}")
 
+    # a burst of 12 ready side requests during a generation (svside serves at most 9 per call):
+    # every one must be answered and the server's descriptor count must come back (review #72:
+    # the 10th accepted descriptor was dropped unanswered); control: the build before the fix fails
+    def srvfds():
+        for d in os.listdir("/proc"):
+            if not d.isdigit():
+                continue
+            try:
+                cl = open(f"/proc/{d}/cmdline", "rb").read().split(b"\0")
+                if len(cl) > 2 and cl[1] == b"serve" and cl[2] == str(TPORT).encode():
+                    return len(os.listdir(f"/proc/{d}/fd"))
+            except OSError:
+                pass
+        return -1
+    fd0 = srvfds()
+    box = {}
+    th = threading.Thread(target=lambda: box.update(r=post_sse(slowb, port=TPORT)))
+    th.start()
+    time.sleep(1.0)
+    burst = []
+    for _ in range(12):
+        b_ = socket.create_connection((HOST, TPORT), timeout=10)
+        b_.sendall(b"GET /health HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n")
+        burst.append(b_)
+    got = 0
+    for b_ in burst:
+        try:
+            data = b""
+            while True:
+                chunk = b_.recv(4096)
+                if not chunk:
+                    break
+                data += chunk
+            if data.startswith(b"HTTP/1.1 200"):
+                got += 1
+        except OSError:
+            pass
+        b_.close()
+    th.join()
+    time.sleep(0.5)
+    fd1 = srvfds()
+    ok, text, fin, _ = box.get("r", (False, "", None, []))
+    check("t_side_burst12_answered", got == 12 and ok and text == slow, f"answered {got}/12 stream_ok={ok}")
+    check("t_side_burst12_fds", fd0 > 0 and fd1 == fd0, f"server fds before {fd0} after {fd1}")
+
     # a non-streaming client that leaves mid-generation frees the slot at the next token
     # (svgone); control: a client that stays gets its whole answer and the slot stays busy
     body = json.dumps(slowb).encode()

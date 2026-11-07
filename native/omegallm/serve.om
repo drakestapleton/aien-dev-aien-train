@@ -3805,15 +3805,18 @@ ret and lt r 0 and ne r -11 ne r -4
 end
 
 note svside: serve the connections svwait yields (the first wait up to tmo ns, then without waiting;
-note at most 9 per call) with svside2
+note at most 9 per call) with svside2. Each pass acquires its connection inside the bounded loop, so
+note a connection is accepted only when it will be served in the same pass (review of #72: acquiring
+note after the 9th one dropped the 10th descriptor unanswered).
 fn svside bd edit uchar 983040 sv edit ulong 64 tmo long to void
-c = svwait sv tmo
+t = tmo
 for k ulong 9
+c = svwait sv t
 if lt c 0
 ret
 end
 svside2 c bd sv
-c = svwait sv 0
+t = long 0
 end
 end
 
