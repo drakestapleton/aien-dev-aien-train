@@ -10,6 +10,8 @@
 #   big     CHIP: smoke of the shapes beyond S1 (ginit4'd beforehand: s1t8192.ck, big.ck in WORK)
 #   resume  CHIP: save/reload/continue == uninterrupted (cmp), geval4 of the trained CK
 #   trainref / trained  CPU ggrad4 of the chip-trained r200, then CHIP gcmp4 on it (+ mutants)
+#   trajcpu / traj  CPU train4 40 steps on p1, then CHIP gtrain4f / gtrain4 from the same CK: loss
+#           trajectories within 1e-4 (f32) / 2^-6 (BF16) relative; v3 mutant h (Adam beta1) must fail
 #   evalcpu CPU eval4 of the chip-trained CK (no chip), compared with the chip geval4 E line
 # Env: OMC (pinned omc), BUILD, WORK (large files), DATA (byte-token train file), DATA16 (the same as
 #      u16), EV (receipts dir, default evidence/OMEGALLM/v4/gb10), G4CORES (taskset list, default 5; a
@@ -66,7 +68,7 @@ dat() { case $1 in p1|p2) echo "$DATA" ;; *) echo "$DATA16" ;; esac; }
 case $PH in
 build)
 	: > "$E/build.txt"
-	for a in "" "--mutant rs" "--mutant ri" "--mutant cc" "--mutant sv"; do
+	for a in "" "--mutant rs" "--mutant ri" "--mutant cc" "--mutant sv" "--mutant h"; do
 		# shellcheck disable=SC2086
 		TARGET=gb10 OUT=$BUILD CORE=${CORES%%-*} sh tests/omegallm/build.sh $a >> "$E/build.txt" 2>&1 || { echo "BUILD_FAIL $a" | tee -a "$E/build.txt"; exit 1; }
 	done
@@ -148,6 +150,31 @@ trained)
 	done
 	rec gcmp4b-r200 0 300 ollm-gb10 gcmp4b "$WORK/r/r200.ck" "$DATA" "$WORK/r/r200.gr"
 	;;
+trajcpu)
+	# CPU train4 on p1 for 40 steps (save every 10): the reference loss trajectory, no chip
+	cp "$WORK/p1.ck" "$WORK/tc.ck"
+	rec traj-cpu 0 1800 ollm-gb10 train4 "$WORK/tc.ck" "$DATA" 40 10
+	;;
+traj)
+	# CHIP: gtrain4f (f32 GEMMs) and gtrain4 (BF16) from the same p1 CK, 40 steps; mutant h (v3 gr.om
+	# OMUTH: on-chip Adam beta1 0.8) must leave the f32 bound. Gate: every T line within 10^-4 relative
+	# of the CPU's (f32), 2^-6 (BF16).
+	for b in ollm-gb10 ollm-mut-h-gb10; do
+		cp "$WORK/p1.ck" "$WORK/tg.ck"
+		rec "traj-chipf-$b" 0 300 "$b" gtrain4f "$WORK/tg.ck" "$DATA" 40 10
+	done
+	cp "$WORK/p1.ck" "$WORK/tg.ck"
+	rec traj-chipb 0 300 ollm-gb10 gtrain4 "$WORK/tg.ck" "$DATA" 40 10
+	trj() { grep '^T ' "$E/$1.txt" | cut -d' ' -f3 | tr '\n' ' '; }
+	c=$(trj traj-cpu)
+	for x in "traj-chipf-ollm-gb10 0.0001 PASS" "traj-chipf-ollm-mut-h-gb10 0.0001 FAIL" "traj-chipb 0.015625 PASS"; do
+		set -- $x
+		g=$(trj "$1")
+		v=$(echo "$c|$g" | awk -F'|' -v tol="$2" '{n=split($1,a," "); m=split($2,b," "); if (n != 4 || m != 4) {print "FAIL"; exit} ok="PASS"; for (i=1;i<=n;i++) {d=(a[i]-b[i])/a[i]; if (d<0) d=-d; if (d>tol) ok="FAIL"} print ok}')
+		echo "$1 cpu [$c] chip [$g] tol $2 -> $v (want $3)" | tee -a "$E/traj-cmp.txt"
+		[ "$v" = "$3" ] || fail=1
+	done
+	;;
 evalcpu)
 	rec eval4-r200 0 3600 ollm-gb10 eval4 "$WORK/r/r200.ck" "$HELD" 146
 	a=$(grep '^E ' "$E/geval4-r200.txt")
@@ -157,7 +184,7 @@ evalcpu)
 	grep -q SAME "$E/eval-cmp.txt" || fail=1
 	;;
 *)
-	echo "usage: v4-gb10-check.sh build|refs|parity|speedck|speed|big|resume|evalcpu|trainref|trained" >&2
+	echo "usage: v4-gb10-check.sh build|refs|parity|speedck|speed|big|resume|evalcpu|trainref|trained|trajcpu|traj" >&2
 	exit 2
 	;;
 esac
