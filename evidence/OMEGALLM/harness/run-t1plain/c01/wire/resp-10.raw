@@ -1,0 +1,6 @@
+HTTP/1.1 200 OK
+Content-Type: application/json
+Content-Length: 310
+Connection: close
+
+{"id":"chatcmpl-ollm-109","object":"chat.completion","created":1794011761,"model":"ollm","choices":[{"index":0,"message":{"role":"assistant","content":"I have completed the task: the requested file is in place."},"finish_reason":"stop"}],"usage":{"prompt_tokens":282,"completion_tokens":13,"total_tokens":295}}

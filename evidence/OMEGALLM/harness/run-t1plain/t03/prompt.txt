@@ -1,0 +1,1 @@
+Append a new line with the text third to the end of log.txt.

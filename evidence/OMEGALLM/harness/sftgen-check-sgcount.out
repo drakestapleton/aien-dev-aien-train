@@ -1,0 +1,99 @@
+ok   sftgen rc 0 x3
+ok   seed 11 twice: identical bytes
+ok   seed 12 differs
+ok   500 lines
+ok   message shape x500
+ok   tools == captured tools (one distinct array)
+ok   system prompt == capture template x500
+ok   captured user name never emitted
+ok   dates: 352 distinct, all equal GNU date America/Chicago
+ok   train families only: append=50 copy=59 count_lines=55 count_words=51 create=57 delete=55 first_line=48 list_dir=37 mkdir_file=41 rename=47 
+BAD  s12 call 2: `cat answer.txt` gave {"output": "10", "exit_code": 0, "error": null}, simulated {"output": "11", "exit_code": 0, "error": null}
+BAD  s12 outcome: FAIL s12 trim answer.txt content_differs
+BAD  s19 outcome: FAIL s19 trim number.txt content_differs
+BAD  s20 outcome: FAIL s20 trim result.txt content_differs
+BAD  s34 call 2: `cat number.txt` gave {"output": "6", "exit_code": 0, "error": null}, simulated {"output": "7", "exit_code": 0, "error": null}
+BAD  s34 outcome: FAIL s34 trim number.txt content_differs
+BAD  s38 outcome: FAIL s38 trim tally.txt content_differs
+BAD  s40 call 2: `cat tally.txt` gave {"output": "11", "exit_code": 0, "error": null}, simulated {"output": "12", "exit_code": 0, "error": null}
+BAD  s40 outcome: FAIL s40 trim tally.txt content_differs
+BAD  s41 call 2: `cat answer.txt` gave {"output": "4", "exit_code": 0, "error": null}, simulated {"output": "5", "exit_code": 0, "error": null}
+BAD  s41 outcome: FAIL s41 trim answer.txt content_differs
+BAD  s49 outcome: FAIL s49 trim total.txt content_differs
+BAD  s58 outcome: FAIL s58 trim number.txt content_differs
+BAD  s59 call 1: `wc -l < ledger.dat > answer.txt && cat answer.txt` gave {"output": "12", "exit_code": 0, "error": null}, simulated {"output": "13", "exit_code": 0, "error": null}
+BAD  s59 outcome: FAIL s59 trim answer.txt content_differs
+BAD  s62 outcome: FAIL s62 trim amount.txt content_differs
+BAD  s82 outcome: FAIL s82 trim total.txt content_differs
+BAD  s86 call 1: `wc -l < ledger.txt > number.txt && cat number.txt` gave {"output": "14", "exit_code": 0, "error": null}, simulated {"output": "15", "exit_code": 0, "error": null}
+BAD  s86 outcome: FAIL s86 trim number.txt content_differs
+BAD  s89 outcome: FAIL s89 trim total.txt content_differs
+BAD  s97 call 2: `cat count.txt` gave {"output": "11", "exit_code": 0, "error": null}, simulated {"output": "12", "exit_code": 0, "error": null}
+BAD  s97 outcome: FAIL s97 trim count.txt content_differs
+BAD  s104 call 1: `wc -l < config.md > count.txt && cat count.txt` gave {"output": "3", "exit_code": 0, "error": null}, simulated {"output": "4", "exit_code": 0, "error": null}
+BAD  s104 outcome: FAIL s104 trim count.txt content_differs
+BAD  s110 outcome: FAIL s110 trim amount.txt content_differs
+BAD  s114 call 2: `cat count.txt` gave {"output": "14", "exit_code": 0, "error": null}, simulated {"output": "15", "exit_code": 0, "error": null}
+BAD  s114 outcome: FAIL s114 trim count.txt content_differs
+BAD  s125 outcome: FAIL s125 trim amount.txt content_differs
+BAD  s136 outcome: FAIL s136 trim total.txt content_differs
+BAD  s151 call 1: `wc -l < summary.md > tally.txt && cat tally.txt` gave {"output": "12", "exit_code": 0, "error": null}, simulated {"output": "13", "exit_code": 0, "error": null}
+BAD  s151 outcome: FAIL s151 trim tally.txt content_differs
+BAD  s156 outcome: FAIL s156 trim answer.txt content_differs
+BAD  s159 call 2: `cat total.txt` gave {"output": "4", "exit_code": 0, "error": null}, simulated {"output": "5", "exit_code": 0, "error": null}
+BAD  s159 outcome: FAIL s159 trim total.txt content_differs
+BAD  s194 outcome: FAIL s194 trim number.txt content_differs
+BAD  s206 call 2: `cat amount.txt` gave {"output": "13", "exit_code": 0, "error": null}, simulated {"output": "14", "exit_code": 0, "error": null}
+BAD  s206 outcome: FAIL s206 trim amount.txt content_differs
+BAD  s207 call 2: `cat amount.txt` gave {"output": "3", "exit_code": 0, "error": null}, simulated {"output": "4", "exit_code": 0, "error": null}
+BAD  s207 outcome: FAIL s207 trim amount.txt content_differs
+BAD  s212 call 2: `cat count.txt` gave {"output": "6", "exit_code": 0, "error": null}, simulated {"output": "7", "exit_code": 0, "error": null}
+BAD  s212 outcome: FAIL s212 trim count.txt content_differs
+BAD  s216 call 1: `wc -l < readme.log > result.txt && cat result.txt` gave {"output": "6", "exit_code": 0, "error": null}, simulated {"output": "7", "exit_code": 0, "error": null}
+BAD  s216 outcome: FAIL s216 trim result.txt content_differs
+BAD  s218 call 1: `wc -l < survey.txt > result.txt && cat result.txt` gave {"output": "3", "exit_code": 0, "error": null}, simulated {"output": "4", "exit_code": 0, "error": null}
+BAD  s218 outcome: FAIL s218 trim result.txt content_differs
+BAD  s254 call 2: `cat answer.txt` gave {"output": "11", "exit_code": 0, "error": null}, simulated {"output": "12", "exit_code": 0, "error": null}
+BAD  s254 outcome: FAIL s254 trim answer.txt content_differs
+BAD  s265 outcome: FAIL s265 trim result.txt content_differs
+BAD  s267 call 2: `cat number.txt` gave {"output": "10", "exit_code": 0, "error": null}, simulated {"output": "11", "exit_code": 0, "error": null}
+BAD  s267 outcome: FAIL s267 trim number.txt content_differs
+BAD  s292 outcome: FAIL s292 trim result.txt content_differs
+BAD  s305 outcome: FAIL s305 trim number.txt content_differs
+BAD  s308 call 1: `wc -l < scores.md > result.txt && cat result.txt` gave {"output": "5", "exit_code": 0, "error": null}, simulated {"output": "6", "exit_code": 0, "error": null}
+BAD  s308 outcome: FAIL s308 trim result.txt content_differs
+BAD  s310 outcome: FAIL s310 trim number.txt content_differs
+BAD  s342 call 2: `cat count.txt` gave {"output": "11", "exit_code": 0, "error": null}, simulated {"output": "12", "exit_code": 0, "error": null}
+BAD  s342 outcome: FAIL s342 trim count.txt content_differs
+BAD  s349 call 1: `wc -l < quotes.txt > total.txt && cat total.txt` gave {"output": "14", "exit_code": 0, "error": null}, simulated {"output": "15", "exit_code": 0, "error": null}
+BAD  s349 outcome: FAIL s349 trim total.txt content_differs
+BAD  s350 call 2: `cat result.txt` gave {"output": "3", "exit_code": 0, "error": null}, simulated {"output": "4", "exit_code": 0, "error": null}
+BAD  s350 outcome: FAIL s350 trim result.txt content_differs
+BAD  s366 call 1: `wc -l < readme.csv > number.txt && cat number.txt` gave {"output": "7", "exit_code": 0, "error": null}, simulated {"output": "8", "exit_code": 0, "error": null}
+BAD  s366 outcome: FAIL s366 trim number.txt content_differs
+BAD  s380 call 2: `cat answer.txt` gave {"output": "10", "exit_code": 0, "error": null}, simulated {"output": "11", "exit_code": 0, "error": null}
+BAD  s380 outcome: FAIL s380 trim answer.txt content_differs
+BAD  s394 call 2: `cat tally.txt` gave {"output": "7", "exit_code": 0, "error": null}, simulated {"output": "8", "exit_code": 0, "error": null}
+BAD  s394 outcome: FAIL s394 trim tally.txt content_differs
+BAD  s406 call 2: `cat number.txt` gave {"output": "13", "exit_code": 0, "error": null}, simulated {"output": "14", "exit_code": 0, "error": null}
+BAD  s406 outcome: FAIL s406 trim number.txt content_differs
+BAD  s411 outcome: FAIL s411 trim result.txt content_differs
+BAD  s412 outcome: FAIL s412 trim answer.txt content_differs
+BAD  s415 call 2: `cat amount.txt` gave {"output": "3", "exit_code": 0, "error": null}, simulated {"output": "4", "exit_code": 0, "error": null}
+BAD  s415 outcome: FAIL s415 trim amount.txt content_differs
+BAD  s416 call 2: `cat amount.txt` gave {"output": "14", "exit_code": 0, "error": null}, simulated {"output": "15", "exit_code": 0, "error": null}
+BAD  s416 outcome: FAIL s416 trim amount.txt content_differs
+BAD  s432 outcome: FAIL s432 trim answer.txt content_differs
+BAD  s457 call 1: `wc -l < roster.md > count.txt && cat count.txt` gave {"output": "8", "exit_code": 0, "error": null}, simulated {"output": "9", "exit_code": 0, "error": null}
+BAD  s457 outcome: FAIL s457 trim count.txt content_differs
+BAD  s462 call 1: `wc -l < outline.txt > answer.txt && cat answer.txt` gave {"output": "14", "exit_code": 0, "error": null}, simulated {"output": "15", "exit_code": 0, "error": null}
+BAD  s462 outcome: FAIL s462 trim answer.txt content_differs
+BAD  s467 outcome: FAIL s467 trim tally.txt content_differs
+BAD  s473 call 2: `cat number.txt` gave {"output": "8", "exit_code": 0, "error": null}, simulated {"output": "9", "exit_code": 0, "error": null}
+BAD  s473 outcome: FAIL s473 trim number.txt content_differs
+BAD  s475 outcome: FAIL s475 trim amount.txt content_differs
+BAD  s487 outcome: FAIL s487 trim total.txt content_differs
+BAD  s495 outcome: FAIL s495 trim count.txt content_differs
+BAD  replay: 86 mismatches (746 calls, 445/500 outcomes PASS)
+GATE FAIL bad=1 checks=11 n=500
+rc 1

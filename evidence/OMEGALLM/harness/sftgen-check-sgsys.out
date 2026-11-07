@@ -1,0 +1,13 @@
+ok   sftgen rc 0 x3
+ok   seed 11 twice: identical bytes
+ok   seed 12 differs
+ok   500 lines
+ok   message shape x500
+ok   tools == captured tools (one distinct array)
+BAD  system prompt: 500 differ
+ok   captured user name never emitted
+ok   dates: 352 distinct, all equal GNU date America/Chicago
+ok   train families only: append=50 copy=59 count_lines=55 count_words=51 create=57 delete=55 first_line=48 list_dir=37 mkdir_file=41 rename=47 
+ok   replay: 746 tool calls equal real bash, 500/500 outcomes PASS verify
+GATE FAIL bad=1 checks=11 n=500
+rc 1

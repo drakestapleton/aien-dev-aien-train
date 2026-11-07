@@ -1,0 +1,1 @@
+FAIL t12 absent junk.txt exists

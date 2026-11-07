@@ -1,0 +1,1 @@
+Compute 1234 multiplied by 5678 and write only the result to product.txt.

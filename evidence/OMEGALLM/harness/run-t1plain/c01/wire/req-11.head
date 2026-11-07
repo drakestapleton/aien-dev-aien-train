@@ -1,0 +1,6 @@
+GET /v1/models HTTP/1.1
+Host: 127.0.0.1:18296
+Accept: */*
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+User-Agent: python-httpx/0.28.1

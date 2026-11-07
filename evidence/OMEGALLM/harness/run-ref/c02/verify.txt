@@ -1,0 +1,1 @@
+FAIL c02 exact new.txt content_differs

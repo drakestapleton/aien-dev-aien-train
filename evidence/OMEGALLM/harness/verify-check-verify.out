@@ -1,0 +1,53 @@
+ok   t01 pre FAIL (FAIL t01 trim notes.txt missing)
+ok   t01 PASS after ref
+ok   t02 pre FAIL (FAIL t02 trim greeting.txt missing)
+ok   t02 PASS after ref
+ok   t03 pre FAIL (FAIL t03 exact log.txt content_differs)
+ok   t03 PASS after ref
+ok   t04 pre FAIL (FAIL t04 exact todo.txt content_differs)
+ok   t04 PASS after ref
+ok   t05 pre FAIL (FAIL t05 trim count.txt missing)
+ok   t05 PASS after ref
+ok   t06 pre FAIL (FAIL t06 trim lines.txt missing)
+ok   t06 PASS after ref
+ok   t07 pre FAIL (FAIL t07 trim listing.txt missing)
+ok   t07 PASS after ref
+ok   t08 pre FAIL (FAIL t08 absent old.txt exists)
+ok   t08 PASS after ref
+ok   t09 pre FAIL (FAIL t09 exact dst.txt missing)
+ok   t09 PASS after ref
+ok   t10 pre FAIL (FAIL t10 dir reports not_a_directory)
+ok   t10 PASS after ref
+ok   t11 pre FAIL (FAIL t11 trim first.txt missing)
+ok   t11 PASS after ref
+ok   t12 pre FAIL (FAIL t12 absent junk.txt exists)
+ok   t12 PASS after ref
+ok   t13 pre FAIL (FAIL t13 trim wc.txt missing)
+ok   t13 PASS after ref
+ok   t14 pre FAIL (FAIL t14 contains hash.txt missing)
+ok   t14 PASS after ref
+ok   t15 pre FAIL (FAIL t15 contains fox.sha256 missing)
+ok   t15 PASS after ref
+ok   t16 pre FAIL (FAIL t16 exact story.txt content_differs)
+ok   t16 PASS after ref
+ok   t17 pre FAIL (FAIL t17 exact sorted.txt missing)
+ok   t17 PASS after ref
+ok   t18 pre FAIL (FAIL t18 exact loud.txt missing)
+ok   t18 PASS after ref
+ok   t19 pre FAIL (FAIL t19 exact whole.txt missing)
+ok   t19 PASS after ref
+ok   t20 pre FAIL (FAIL t20 trim product.txt missing)
+ok   t20 PASS after ref
+ok   c01 pre FAIL (FAIL c01 trim notes.txt missing)
+ok   c01 control FAIL after ref (FAIL c01 trim notes.txt content_differs)
+ok   c02 pre FAIL (FAIL c02 absent old.txt exists)
+ok   c02 control FAIL after ref (FAIL c02 exact new.txt content_differs)
+ok   unknown id exit 3
+ok   malformed dotdot exit 2
+ok   malformed abspath exit 2
+ok   malformed noend exit 2
+ok   malformed kind exit 2
+ok   nothing written outside the work dir
+ok   no expectations FAIL (FAIL y   no_expectations)
+GATE PASS n=51
+rc 0

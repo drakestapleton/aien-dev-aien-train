@@ -1,0 +1,1351 @@
+note ======== sftgen part 2: generator logic (appended after the texts by build.sh)
+
+const SGRS ulong 8192
+const RF1 ulong 0
+const RF2 ulong 1
+const RD ulong 2
+const RC1 ulong 3
+const RX ulong 4
+const RY ulong 5
+const RM ulong 6
+const RK ulong 7
+const RKC ulong 8
+const RN ulong 9
+const RL ulong 10
+const RU ulong 11
+const RA ulong 12
+const RCA ulong 13
+const RCV ulong 14
+const RCI ulong 15
+const RV ulong 16
+const RI ulong 17
+const RT ulong 18
+const RG ulong 19
+const RTR ulong 20
+const RHOME ulong 21
+const RHH ulong 22
+const RCWD ulong 23
+const RDATE ulong 24
+const RC ulong 25
+const RLA ulong 26
+const RDN0 ulong 27
+
+note ======== regions: sgb[32 r ..) of SGRS bytes, sgl[r] the length
+
+fn sgclr r ulong to void
+put sgl r 0
+end
+
+fn sgch r ulong c uchar to void
+n = get sgl r
+if ge n 8192
+exit 21
+end
+put sgb add mul r 8192 n c
+put sgl r add n 1
+end
+
+fn sgtx r ulong t view uchar * to void
+i = ulong 0
+n = len t
+while lt i n bound 999999
+sgch r get t i
+i = add i 1
+end
+end
+
+fn sgcp r ulong q ulong to void
+i = ulong 0
+n = get sgl q
+b = mul q 8192
+while lt i n bound 8193
+sgch r get sgb add b i
+i = add i 1
+end
+end
+
+fn sgat r ulong i ulong to uchar
+ret get sgb add mul r 8192 i
+end
+
+fn sgnum r ulong v ulong to void
+if ge v 10
+sgnum r div v 10
+end
+sgch r uchar add rem v 10 48
+end
+
+note v in decimal with at least two digits
+fn sgnum2 r ulong v ulong to void
+if lt v 10
+sgch r 48
+end
+sgnum r v
+end
+
+note region q without its trailing LFs appended to r (Hermes strips a command's final newline)
+fn sgcps r ulong q ulong to void
+n = get sgl q
+dn = false
+while and not dn gt n 0 bound 8193
+if eq sgat q sub n 1 10
+n = sub n 1
+else
+dn = true
+end
+end
+i = ulong 0
+while lt i n bound 8193
+sgch r sgat q i
+i = add i 1
+end
+end
+
+note whether region r sorts before region q (bytes, shorter first on a common prefix)
+fn sgless r ulong q ulong to bool
+a = get sgl r
+b = get sgl q
+i = ulong 0
+while and lt i a lt i b bound 8193
+x = sgat r i
+y = sgat q i
+if lt x y
+ret true
+end
+if gt x y
+ret false
+end
+i = add i 1
+end
+ret lt a b
+end
+
+note ======== random (splitmix64, the seed's stream)
+
+fn sgnext to ulong
+s = add get sgst 2 0x9e3779b97f4a7c15
+put sgst 2 s
+z = mul xor s shr s 30 0xbf58476d1ce4e5b9
+z = mul xor z shr z 27 0x94d049bb133111eb
+ret xor z shr z 31
+end
+
+fn sgr n ulong to ulong
+ret rem sgnext n
+end
+
+note ======== word lists ("|"-separated texts)
+
+fn sgwn t view uchar * to ulong
+i = ulong 0
+n = len t
+w = ulong 1
+while lt i n bound 999999
+if eq get t i 124
+w = add w 1
+end
+i = add i 1
+end
+ret w
+end
+
+note word k of the list t appended to region r
+fn sgw r ulong t view uchar * k ulong to void
+i = ulong 0
+n = len t
+w = ulong 0
+while lt i n bound 999999
+c = get t i
+if eq c 124
+w = add w 1
+else
+if eq w k
+sgch r c
+end
+end
+i = add i 1
+end
+end
+
+note a random word of t appended to r; its index
+fn sgrw r ulong t view uchar * to ulong
+k = sgr sgwn t
+sgw r t k
+ret k
+end
+
+note a random template of t, expanded into r ({N} {T} {D} {X} {Y} {M} {K} {C} {L} name regions)
+fn sgtpl r ulong t view uchar * to void
+sgclr RT
+x = sgrw RT t
+sgclr r
+sgexp r
+end
+
+fn sgexp r ulong to void
+n = get sgl RT
+i = ulong 0
+while lt i n bound 8193
+c = sgat RT i
+if and eq c 123 lt add i 2 n
+q = sgph sgat RT add i 1
+if lt q 32
+sgcp r q
+i = add i 3
+else
+sgch r c
+i = add i 1
+end
+else
+sgch r c
+i = add i 1
+end
+end
+end
+
+note the region a placeholder letter names, or 99
+fn sgph c uchar to ulong
+if eq c 78
+ret RF1
+end
+if eq c 84
+ret RF2
+end
+if eq c 68
+ret RD
+end
+if eq c 88
+ret RX
+end
+if eq c 89
+ret RY
+end
+if eq c 77
+ret RM
+end
+if eq c 75
+ret RK
+end
+if eq c 67
+ret RN
+end
+if eq c 76
+ret RL
+end
+ret 99
+end
+
+note ======== JSONL output (sgob, fd sgst 1) and world output (sgwb, fd sgst 4)
+
+fn sgoflush to void
+n = get sgst 0
+fd = int get sgst 1
+p = ulong 0
+while lt p n bound 65537
+w = write fd sgob p sub n p
+if le w 0
+exit 70
+end
+p = add p ulong w
+end
+put sgst 0 0
+end
+
+fn sgoc c uchar to void
+n = get sgst 0
+if ge n 65536
+sgoflush
+n = ulong 0
+end
+put sgob n c
+put sgst 0 add n 1
+end
+
+fn sgotx t view uchar * to void
+i = ulong 0
+n = len t
+while lt i n bound 999999
+sgoc get t i
+i = add i 1
+end
+end
+
+fn sghex v ulong to uchar
+if lt v 10
+ret uchar add v 48
+end
+ret uchar add v 87
+end
+
+note one byte as a JSON string character (json.dumps with ensure_ascii False)
+fn sgoe c uchar to void
+if or eq c 34 eq c 92
+sgoc 92
+sgoc c
+ret
+end
+if eq c 10
+sgoc 92
+sgoc 110
+ret
+end
+if eq c 13
+sgoc 92
+sgoc 114
+ret
+end
+if eq c 9
+sgoc 92
+sgoc 116
+ret
+end
+if lt c 32
+sgoc 92
+sgoc 117
+sgoc 48
+sgoc 48
+sgoc sghex shr ulong c 4
+sgoc sghex and ulong c 15
+ret
+end
+sgoc c
+end
+
+fn soesc t view uchar * to void
+i = ulong 0
+n = len t
+while lt i n bound 999999
+sgoe get t i
+i = add i 1
+end
+end
+
+fn sgoer r ulong to void
+i = ulong 0
+n = get sgl r
+while lt i n bound 8193
+sgoe sgat r i
+i = add i 1
+end
+end
+
+note the same escaping into a region
+fn sgce r ulong c uchar to void
+if or eq c 34 eq c 92
+sgch r 92
+sgch r c
+ret
+end
+if eq c 10
+sgch r 92
+sgch r 110
+ret
+end
+if eq c 13
+sgch r 92
+sgch r 114
+ret
+end
+if eq c 9
+sgch r 92
+sgch r 116
+ret
+end
+if lt c 32
+sgch r 92
+sgch r 117
+sgch r 48
+sgch r 48
+sgch r sghex shr ulong c 4
+sgch r sghex and ulong c 15
+ret
+end
+sgch r c
+end
+
+fn sgcer r ulong q ulong to void
+i = ulong 0
+n = get sgl q
+while lt i n bound 8193
+sgce r sgat q i
+i = add i 1
+end
+end
+
+fn sgwflush to void
+n = get sgst 3
+fd = int get sgst 4
+p = ulong 0
+while lt p n bound 65537
+w = write fd sgwb p sub n p
+if le w 0
+exit 70
+end
+p = add p ulong w
+end
+put sgst 3 0
+end
+
+fn sgwc c uchar to void
+if eq get sgst 5 0
+ret
+end
+n = get sgst 3
+if ge n 65536
+sgwflush
+n = ulong 0
+end
+put sgwb n c
+put sgst 3 add n 1
+end
+
+fn sgwtx t view uchar * to void
+i = ulong 0
+n = len t
+while lt i n bound 999999
+sgwc get t i
+i = add i 1
+end
+end
+
+fn sgwr r ulong to void
+i = ulong 0
+n = get sgl r
+while lt i n bound 8193
+sgwc sgat r i
+i = add i 1
+end
+end
+
+note a world @file block: path (region p, or p "/" q when q < 32) with region content c
+fn sgwfile p ulong q ulong c ulong to void
+sgwtx sgtfile
+sgwr p
+if lt q 32
+sgwc 47
+sgwr q
+end
+sgwc 10
+sgwr c
+sgwtx sgtend
+end
+
+note a world @expect line of kind t for path p (or p "/" q); block content region c when c < 32
+note (an LF is added when c does not end with one: only trim blocks, which ignore it)
+fn sgwexp t view uchar * p ulong q ulong c ulong to void
+sgwtx sgtexp
+sgwtx t
+sgwc 32
+sgwr p
+if lt q 32
+sgwc 47
+sgwr q
+end
+sgwc 10
+if lt c 32
+sgwr c
+n = get sgl c
+if eq n 0
+sgwc 10
+else
+if ne sgat c sub n 1 10
+sgwc 10
+end
+end
+sgwtx sgtend
+end
+end
+
+note ======== content
+
+note a phrase of lo .. hi words into r
+fn sgphr r ulong lo ulong hi ulong to void
+sgclr r
+n = add lo sgr add sub hi lo 1
+i = ulong 0
+while lt i n bound 64
+if gt i 0
+sgch r 32
+end
+x = sgrw r sgword
+i = add i 1
+end
+end
+
+note nl lines of 1 .. 4 words into r, each with its LF
+fn sglines r ulong nl ulong to void
+sgclr r
+i = ulong 0
+while lt i nl bound 64
+sgclr RT
+n = add 1 sgr 4
+j = ulong 0
+while lt j n bound 8
+if gt j 0
+sgch RT 32
+end
+x = sgrw RT sgword
+j = add j 1
+end
+sgcp r RT
+sgch r 10
+i = add i 1
+end
+end
+
+note words in region r (runs of bytes other than space and LF)
+fn sgwords r ulong to ulong
+n = get sgl r
+i = ulong 0
+w = ulong 0
+inw = false
+while lt i n bound 8193
+c = sgat r i
+if or eq c 32 eq c 10
+inw = false
+else
+if not inw
+w = add w 1
+end
+inw = true
+end
+i = add i 1
+end
+ret w
+end
+
+note the first line of region q (without LF) into r
+fn sgfirst r ulong q ulong to void
+sgclr r
+n = get sgl q
+i = ulong 0
+dn = false
+while and not dn lt i n bound 8193
+c = sgat q i
+if eq c 10
+dn = true
+else
+sgch r c
+end
+i = add i 1
+end
+end
+
+note a file name: stem k (not avoid) of sgstem plus an extension, into r; returns k
+fn sgfname r ulong avoid ulong to ulong
+k = sgr sgwn sgstem
+i = ulong 0
+while and eq k avoid lt i 64 bound 65
+k = sgr sgwn sgstem
+i = add i 1
+end
+sgclr r
+sgw r sgstem k
+x = sgrw r sgext
+ret k
+end
+
+note ======== environment (the system prompt's machine part)
+
+fn sgrand6 r ulong to void
+i = ulong 0
+while lt i 6 bound 7
+v = sgr 62
+c = add v 48
+if ge v 10
+c = add v 55
+end
+if ge v 36
+c = add v 61
+end
+sgch r uchar c
+i = add i 1
+end
+end
+
+fn sgenv to void
+sgclr RHOME
+sgtx RHOME sghome
+x = sgrw RHOME sguser
+sgclr RHH
+sgcp RHH RHOME
+if eq sgr 2 0
+sgtx RHH sghh0
+else
+sgtx RHH sghh1
+end
+sgclr RCWD
+v = sgr 4
+if eq v 0
+sgcp RCWD RHOME
+sgtx RCWD sgcw0
+x = sgrw RCWD sgstem
+end
+if eq v 1
+sgtx RCWD sgcw1
+x = sgrw RCWD sgstem
+sgch RCWD 46
+sgrand6 RCWD
+end
+if eq v 2
+sgtx RCWD sgcw2
+sgnum2 RCWD add 1 sgr 30
+sgch RCWD 46
+sgrand6 RCWD
+end
+if eq v 3
+sgcp RCWD RHOME
+sgtx RCWD sgcw3
+x = sgrw RCWD sgstem
+end
+sgdate
+end
+
+note a day of 2026 or 2027 as Hermes prints it, America/Chicago:
+note "Friday, November 06, 2026 (CST, UTC-06:00)". Wolfram: 2026-01-01 is a Thursday, 2027-01-01
+note a Friday, neither year is leap; DST runs from day 66 to 303 of 2026 (Mar 8 .. Oct 31) and
+note 72 to 309 of 2027 (Mar 14 .. Nov 6), counting Jan 1 as day 0.
+fn sgdate to void
+y = add 2026 sgr 2
+d = sgr 365
+w0 = ulong 3
+ds = ulong 66
+de = ulong 304
+if eq y 2027
+w0 = 4
+ds = 72
+de = 310
+end
+sgclr RDATE
+sgw RDATE sgdays rem add w0 d 7
+sgch RDATE 44
+sgch RDATE 32
+m = ulong 0
+r = d
+dn = false
+while and not dn lt m 12 bound 13
+ml = sgmlen m
+if lt r ml
+dn = true
+else
+r = sub r ml
+m = add m 1
+end
+end
+sgw RDATE sgmons m
+sgch RDATE 32
+sgnum2 RDATE add r 1
+sgch RDATE 44
+sgch RDATE 32
+sgnum RDATE y
+if and ge d ds lt d de
+sgtx RDATE sgcdt
+else
+sgtx RDATE sgcst
+end
+end
+
+fn sgmlen m ulong to ulong
+if eq m 1
+ret 28
+end
+if or or eq m 3 eq m 5 or eq m 8 eq m 10
+ret 30
+end
+ret 31
+end
+
+note ======== families (train only): world, regions, expectations
+
+note cwd listing (sorted) of up to three name regions (99 = none) into r
+fn sgls3 r ulong a ulong b ulong c ulong to void
+sgclr r
+x = a
+y = b
+z = c
+if and lt y 32 lt x 32
+if sgless y x
+t = x
+x = y
+y = t
+end
+end
+if and lt z 32 lt y 32
+if sgless z y
+t = y
+y = z
+z = t
+end
+end
+if and lt y 32 lt x 32
+if sgless y x
+t = x
+x = y
+y = t
+end
+end
+sglsadd r x
+sglsadd r y
+sglsadd r z
+end
+
+fn sglsadd r ulong q ulong to void
+if ge q 32
+ret
+end
+if gt get sgl r 0
+sgch r 10
+end
+sgcp r q
+end
+
+note f0 create
+fn sgf0 to void
+k = sgfname RF1 999
+sgphr RX 2 6
+sgclr RV
+sgcp RV RX
+sgclr RT
+sgcp RT RX
+sgch RT 10
+sgwexp sgkx RF1 99 RT
+put sgst 9 0
+end
+
+note f1 append
+fn sgf1 to void
+k = sgfname RF1 999
+sglines RC1 add 2 sgr 3
+sgphr RY 1 5
+sgwfile RF1 99 RC1
+sgclr RI
+sgcps RI RC1
+sgclr RT
+sgcp RT RC1
+sgcp RT RY
+sgch RT 10
+sgclr RV
+sgcps RV RT
+sgwexp sgkx RF1 99 RT
+put sgst 9 1
+end
+
+note f2 count_lines
+fn sgf2 to void
+k = sgfname RF1 999
+nl = add 3 sgr 12
+sglines RC1 nl
+sgclr RM
+x = sgrw RM sgcnt
+sgtx RM sgtxt
+sgclr RN
+sgnum RN nl
+sgwfile RF1 99 RC1
+sgclr RV
+sgcp RV RN
+sgls3 RI RF1 99 99
+sgwexp sgkt RM 99 RN
+put sgst 9 1
+end
+
+note f3 list_dir: 2 .. 4 files with distinct first letters in a directory
+fn sgf3 to void
+sgclr RD
+x = sgrw RD sgdirs
+n = add 2 sgr 3
+f = sgr 12
+i = ulong 0
+while lt i n bound 5
+r = add RDN0 i
+sgclr r
+sgw r sgdfile rem add f mul i 5 12
+sgtx r sgtxt
+sgclr RT
+x = sgrw RT sgword
+sgch RT 10
+sgwfile RD r RT
+i = add i 1
+end
+sgclr RM
+x = sgrw RM sglst
+sgtx RM sgtxt
+sgdsort n
+sgclr RN
+sgnum RN n
+sgclr RV
+sgcp RV RLA
+sgclr RI
+sgcp RI RLA
+sgwexp sgkt RM 99 RLA
+put sgst 9 1
+end
+
+note the directory's n names (regions RDN0 ..) sorted into RLA, one per line
+fn sgdsort n ulong to void
+sgclr RLA
+used = ulong 0
+k = ulong 0
+while lt k n bound 5
+b = ulong 99
+i = ulong 0
+while lt i n bound 5
+if eq and shr used i 1 0
+if ge b 32
+b = add RDN0 i
+else
+if sgless add RDN0 i b
+b = add RDN0 i
+end
+end
+end
+i = add i 1
+end
+used = or used shl 1 sub b RDN0
+sglsadd RLA b
+k = add k 1
+end
+end
+
+note a keep file K with one line, stem distinct from stem a
+fn sgkeep a ulong to void
+x = sgfname RK a
+sglines RKC 1
+sgwfile RK 99 RKC
+end
+
+note f4 rename
+fn sgf4 to void
+k = sgfname RF1 999
+sglines RC1 add 1 sgr 3
+sgwfile RF1 99 RC1
+sgkeep k
+k2 = sgfname RF2 k
+while sgnamek RF2 RK bound 64
+k2 = sgfname RF2 k
+end
+sgls3 RI RF1 RK 99
+sgls3 RV RF2 RK 99
+sgwexp sgka RF1 99 99
+sgwexp sgkx RF2 99 RC1
+sgwexp sgkx RK 99 RKC
+put sgst 9 1
+end
+
+note whether regions r and q hold the same bytes
+fn sgnamek r ulong q ulong to bool
+if ne get sgl r get sgl q
+ret false
+end
+ret not or sgless r q sgless q r
+end
+
+note f5 copy
+fn sgf5 to void
+k = sgfname RF1 999
+sglines RC1 add 1 sgr 4
+sgwfile RF1 99 RC1
+sgkeep k
+k2 = sgfname RF2 k
+while sgnamek RF2 RK bound 64
+k2 = sgfname RF2 k
+end
+sgls3 RI RF1 RK 99
+sgclr RV
+sgcps RV RC1
+sgwexp sgkx RF1 99 RC1
+sgwexp sgkx RF2 99 RC1
+sgwexp sgkx RK 99 RKC
+put sgst 9 1
+end
+
+note f6 mkdir_file
+fn sgf6 to void
+sgclr RD
+x = sgrw RD sgdirs
+k = sgfname RF1 999
+sgphr RX 1 5
+sgclr RV
+sgcp RV RX
+sgclr RT
+sgcp RT RX
+sgch RT 10
+sgwexp sgkd RD 99 99
+sgwexp sgkx RD RF1 RT
+put sgst 9 0
+end
+
+note f7 first_line
+fn sgf7 to void
+k = sgfname RF1 999
+sglines RC1 add 2 sgr 5
+sgwfile RF1 99 RC1
+sgclr RM
+x = sgrw RM sgfst
+sgtx RM sgtxt
+sgfirst RL RC1
+sgclr RV
+sgcp RV RL
+sgclr RI
+sgcps RI RC1
+sgclr RT
+sgcp RT RL
+sgch RT 10
+sgwexp sgkx RM 99 RT
+put sgst 9 1
+end
+
+note f8 delete
+fn sgf8 to void
+k = sgfname RF1 999
+sglines RC1 1
+sgwfile RF1 99 RC1
+sgkeep k
+sgls3 RI RF1 RK 99
+sgls3 RV RK 99 99
+sgwexp sgka RF1 99 99
+sgwexp sgkx RK 99 RKC
+put sgst 9 1
+end
+
+note f9 count_words
+fn sgf9 to void
+k = sgfname RF1 999
+sglines RC1 add 1 sgr 6
+sgwfile RF1 99 RC1
+sgclr RM
+x = sgrw RM sgcnt
+sgtx RM sgtxt
+sgclr RN
+sgnum RN sgwords RC1
+sgclr RV
+sgcp RV RN
+sgclr RI
+sgcps RI RC1
+sgwexp sgkt RM 99 RN
+put sgst 9 1
+end
+
+note ======== one conversation
+
+fn sgfam f ulong to void
+if eq f 0
+sgf0
+end
+if eq f 1
+sgf1
+end
+if eq f 2
+sgf2
+end
+if eq f 3
+sgf3
+end
+if eq f 4
+sgf4
+end
+if eq f 5
+sgf5
+end
+if eq f 6
+sgf6
+end
+if eq f 7
+sgf7
+end
+if eq f 8
+sgf8
+end
+if eq f 9
+sgf9
+end
+end
+
+note the family's template lists: k 0 prompts, 1 actions, 2 verify, 3 inspect, 4 finals
+fn sgtf f ulong k ulong r ulong to void
+if eq f 0
+sgtf0 k r
+end
+if eq f 1
+sgtf1 k r
+end
+if eq f 2
+sgtf2 k r
+end
+if eq f 3
+sgtf3 k r
+end
+if eq f 4
+sgtf4 k r
+end
+if eq f 5
+sgtf5 k r
+end
+if eq f 6
+sgtf6 k r
+end
+if eq f 7
+sgtf7 k r
+end
+if eq f 8
+sgtf8 k r
+end
+if eq f 9
+sgtf9 k r
+end
+end
+
+fn sgtf0 k ulong r ulong to void
+if eq k 0
+sgtpl r sg0u
+end
+if eq k 1
+sgtpl r sg0a
+end
+if eq k 2
+sgtpl r sgvn
+end
+if eq k 4
+sgtpl r sg0f
+end
+end
+
+fn sgtf1 k ulong r ulong to void
+if eq k 0
+sgtpl r sg1u
+end
+if eq k 1
+sgtpl r sg1a
+end
+if eq k 2
+sgtpl r sgvn
+end
+if eq k 3
+sgtpl r sgvn
+end
+if eq k 4
+sgtpl r sg1f
+end
+end
+
+fn sgtf2 k ulong r ulong to void
+if eq k 0
+sgtpl r sg2u
+end
+if eq k 1
+sgtpl r sg2a
+end
+if eq k 2
+sgtpl r sgvm
+end
+if eq k 3
+sgtpl r sgils
+end
+if eq k 4
+sgtpl r sg2f
+end
+end
+
+fn sgtf3 k ulong r ulong to void
+if eq k 0
+sgtpl r sg3u
+end
+if eq k 1
+sgtpl r sg3a
+end
+if eq k 2
+sgtpl r sgvm
+end
+if eq k 3
+sgtpl r sgild
+end
+if eq k 4
+sgtpl r sg3f
+end
+end
+
+fn sgtf4 k ulong r ulong to void
+if eq k 0
+sgtpl r sg4u
+end
+if eq k 1
+sgtpl r sg4a
+end
+if eq k 2
+sgtpl r sgils
+end
+if eq k 3
+sgtpl r sgils
+end
+if eq k 4
+sgtpl r sg4f
+end
+end
+
+fn sgtf5 k ulong r ulong to void
+if eq k 0
+sgtpl r sg5u
+end
+if eq k 1
+sgtpl r sg5a
+end
+if eq k 2
+sgtpl r sgvt
+end
+if eq k 3
+sgtpl r sgils
+end
+if eq k 4
+sgtpl r sg5f
+end
+end
+
+fn sgtf6 k ulong r ulong to void
+if eq k 0
+sgtpl r sg6u
+end
+if eq k 1
+sgtpl r sg6a
+end
+if eq k 2
+sgtpl r sgvdn
+end
+if eq k 4
+sgtpl r sg6f
+end
+end
+
+fn sgtf7 k ulong r ulong to void
+if eq k 0
+sgtpl r sg7u
+end
+if eq k 1
+sgtpl r sg7a
+end
+if eq k 2
+sgtpl r sgvm
+end
+if eq k 3
+sgtpl r sgvn
+end
+if eq k 4
+sgtpl r sg7f
+end
+end
+
+fn sgtf8 k ulong r ulong to void
+if eq k 0
+sgtpl r sg8u
+end
+if eq k 1
+sgtpl r sg8a
+end
+if eq k 2
+sgtpl r sgils
+end
+if eq k 3
+sgtpl r sgils
+end
+if eq k 4
+sgtpl r sg8f
+end
+end
+
+fn sgtf9 k ulong r ulong to void
+if eq k 0
+sgtpl r sg9u
+end
+if eq k 1
+sgtpl r sg9a
+end
+if eq k 2
+sgtpl r sgvm
+end
+if eq k 3
+sgtpl r sgvn
+end
+if eq k 4
+sgtpl r sg9f
+end
+end
+
+note one tool call: command region c, output region o (exit 0), call index i
+fn sgcall c ulong o ulong i ulong to void
+sgotx sga3
+sgonum get sgst 6
+sgoc 95
+sgonum i
+sgotx sga4
+sgclr RG
+sgtx RG sgarg0
+sgcer RG c
+sgtx RG sgarg1
+sgoer RG
+sgotx sga5
+sgclr RTR
+sgtx RTR sgtr0
+sgcer RTR o
+sgtx RTR sgtr1
+sgoer RTR
+sgotx sga6
+sgonum get sgst 6
+sgoc 95
+sgonum i
+sgotx sga7
+end
+
+fn sgonum v ulong to void
+if ge v 10
+sgonum div v 10
+end
+sgoc uchar add rem v 10 48
+end
+
+note conversation number sgst 6: world task header, family, templates, pattern, JSON line
+fn sgconv to void
+sgenv
+f = sgr 10
+sgwtx sgttask
+sgwc 115
+sgwnum get sgst 6
+sgwc 32
+sgwfam f
+sgwtx sgttrain
+sgfam f
+sgtf f 0 RU
+sgtf f 1 RCA
+sgtf f 2 RCV
+sgtf f 3 RCI
+sgtf f 4 RA
+sgwtx sgtprm
+sgwr RU
+sgwc 10
+sgwtx sgtend
+sgemit sgr 4
+end
+
+fn sgwnum v ulong to void
+if ge v 10
+sgwnum div v 10
+end
+sgwc uchar add rem v 10 48
+end
+
+fn sgwfam f ulong to void
+sgclr RT
+sgw RT sgfams f
+sgwr RT
+end
+
+note the JSON line; pattern p: 0 action, 1 action && verify, 2 action then verify, 3 inspect
+note then action (families with an inspect command; else as 0)
+fn sgemit p ulong to void
+sgotx sga1
+sgsysa
+sgoer RHH
+soesc sgq2
+sgoer RDATE
+soesc sgq3
+sgoer RHOME
+soesc sgq4
+sgoer RCWD
+soesc sgq5
+sgoer RHH
+soesc sgq6
+sgotx sga2
+sgoer RU
+sgoc 34
+sgoc 125
+sgclr RT
+if eq p 0
+sgcall RCA RT 0
+end
+if eq p 1
+sgclr RC
+sgcp RC RCA
+sgtx RC sgand
+sgcp RC RCV
+sgcall RC RV 0
+end
+if eq p 2
+sgcall RCA RT 0
+sgcall RCV RV 1
+end
+if eq p 3
+if eq get sgst 9 1
+sgcall RCI RI 0
+sgcall RCA RT 1
+else
+sgcall RCA RT 0
+end
+end
+sgotx sga8
+sgoer RA
+sgotx sga9
+sgotx sgtools
+sgotx sga10
+end
+
+note ======== main: sftgen SEED COUNT OUT.jsonl [WORLD]
+
+fn sgargu i ulong to ulong
+r = argread i sgab 0 4096
+if or le r 0 gt r 4096
+exit 2
+end
+n = ulong r
+v = ulong 0
+k = ulong 0
+while lt k n bound 4097
+c = get sgab k
+if or lt c 48 gt c 57
+exit 2
+end
+v = add mul v 10 ulong sub c 48
+k = add k 1
+end
+ret v
+end
+
+fn sgopen i ulong to long
+r = argread i sgab 0 4096
+if or le r 0 gt r 4096
+exit 2
+end
+fd = fopen sgab 0 ulong r 577 420
+if lt fd 0
+exit 70
+end
+ret fd
+end
+
+fn main to int
+c = argcnt
+if or lt c 4 gt c 5
+exit 2
+end
+seed = sgargu 1
+cnt = sgargu 2
+if or eq cnt 0 gt cnt 999998
+exit 2
+end
+put sgst 2 seed
+put sgst 1 ulong sgopen 3
+put sgst 5 0
+if eq c 5
+put sgst 4 ulong sgopen 4
+put sgst 5 1
+end
+i = ulong 0
+while lt i cnt bound 999999
+put sgst 6 i
+sgconv
+i = add i 1
+end
+sgoflush
+if eq get sgst 5 1
+sgwflush
+x = fclose int get sgst 4
+end
+x = fclose int get sgst 1
+ret 0
+end

@@ -1,0 +1,35 @@
+@task s0 rename train
+@file agenda.md
+tomorrow three tree warm
+north
+later
+@end
+@file outline.txt
+ocean red test fix
+@end
+@expect absent agenda.md
+@expect exact scores.csv
+tomorrow three tree warm
+north
+later
+@end
+@expect exact outline.txt
+ocean red test fix
+@end
+@prompt
+Move agenda.md to scores.csv in the same directory.
+@end
+@task s1 delete train
+@file ledger.dat
+ready sun tea
+@end
+@file readme.md
+later cloud south winter
+@end
+@expect absent ledger.dat
+@expect exact readme.md
+later cloud south winter
+@end
+@prompt
+Delete the file ledger.dat but keep readme.md.
+@end

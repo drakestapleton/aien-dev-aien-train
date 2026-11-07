@@ -1,0 +1,131 @@
+om2
+note SPDX-License-Identifier: AGPL-3.0-only
+note native/omegallm/sftgen (ownmodel harness lane): `sftgen SEED COUNT OUT.jsonl [WORLD]`
+note writes COUNT OpenAI-format conversations, one JSON object per line,
+note {"messages":[...],"tools":[...]}, in exactly the shape Hermes Agent v0.22.5 sends with
+note `-t terminal` (captured: evidence/OMEGALLM/harness/captures/hermes-terminal-chat*.json): the
+note real system prompt and the real 4 tool schemas, then a user request, 1 or 2 assistant turns
+note that call `terminal` with {"command": ...}, each followed by the tool result in Hermes's
+note format {"output": "...", "exit_code": 0, "error": null} (the command's stdout+stderr with
+note its final newlines stripped), then the final assistant answer. Only the TRAIN task families
+note (tests/omegallm/harness/TASKS.md) are produced: create, append, count_lines, list_dir,
+note rename, copy, mkdir_file, first_line, delete, count_words. No outside model output is used:
+note every byte comes from the templates and word lists below and the splitmix64 stream of SEED,
+note so a seed gives the same bytes every time.
+note Parameterized (machine/user-specific in the capture): the user home (/home/<synthetic user>;
+note the captured user name is never emitted), HERMES_HOME (<home>/.hermes or
+note <home>/work/harness/hh), the working directory (4 patterns, one of them the harness
+note runner's /dev/shm/hive/ownmodel/harness/work/hw-tNN.XXXXXX) and the conversation date
+note (2026-2027, America/Chicago CST/CDT as Hermes prints it). Kept as captured: the Hermes
+note version's prompt text, "Model: ollm", "Provider: custom", host kernel and Python lines.
+note WORLD (optional) receives one task per conversation in the TASKS.md format: the files that
+note exist before the request (@file), the request (@prompt) and the outcome the conversation
+note claims (@expect), so tests/omegallm/harness/sftgen-check.sh can replay every command in a
+note real shell, compare each simulated tool result, and verify the outcome with verify.om.
+note Exits: 0 ok, 2 usage, 21 a region overflow, 70 I/O.
+note Units: sghead.om (this: globals, word lists, templates), sgprompt.om (the captured system
+note prompt pieces and tools JSON), sglogic.om (the generator); build.sh concatenates them.
+
+global sgb uchar 262144
+global sgl ulong 32
+global sgob uchar 65536
+global sgwb uchar 65536
+global sgst ulong 16
+global sgab uchar 4100
+
+note sgst: 0 JSONL buffer bytes, 1 JSONL fd, 2 splitmix64 state, 3 world buffer bytes, 4 world
+note fd, 5 world on, 6 conversation number, 9 the family has an inspect command
+
+note ======== JSON pieces
+text sga1 "{\"messages\":[{\"role\":\"system\",\"content\":\""
+text sga2 "\"},{\"role\":\"user\",\"content\":\""
+text sga3 ",{\"role\":\"assistant\",\"content\":\"\",\"tool_calls\":[{\"id\":\"call_"
+text sga4 "\",\"type\":\"function\",\"function\":{\"name\":\"terminal\",\"arguments\":\""
+text sga5 "\"}}]},{\"role\":\"tool\",\"content\":\""
+text sga6 "\",\"tool_call_id\":\"call_"
+text sga7 "\"}"
+text sga8 ",{\"role\":\"assistant\",\"content\":\""
+text sga9 "\"}],\"tools\":"
+text sga10 "}\n"
+text sgarg0 "{\"command\":\""
+text sgarg1 "\"}"
+text sgtr0 "{\"output\": \""
+text sgtr1 "\", \"exit_code\": 0, \"error\": null}"
+text sgand " && "
+
+note ======== world (TASKS.md) pieces
+text sgttask "@task "
+text sgttrain " train\n"
+text sgtprm "@prompt\n"
+text sgtend "@end\n"
+text sgtfile "@file "
+text sgtexp "@expect "
+text sgkx "exact"
+text sgkt "trim"
+text sgka "absent"
+text sgkd "dir"
+text sgfams "create|append|count_lines|list_dir|rename|copy|mkdir_file|first_line|delete|count_words"
+
+note ======== environment lists
+text sghome "/home/"
+text sguser "user|dev|alex|sam|kim|lee|ana|omar|ravi|mia|jo|max|nora|ivan|li|zoe"
+text sghh0 "/.hermes"
+text sghh1 "/work/harness/hh"
+text sgcw0 "/projects/"
+text sgcw1 "/tmp/hw-"
+text sgcw2 "/dev/shm/hive/ownmodel/harness/work/hw-t"
+text sgcw3 "/work/"
+text sgdays "Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday"
+text sgmons "January|February|March|April|May|June|July|August|September|October|November|December"
+text sgcst " (CST, UTC-06:00)"
+text sgcdt " (CDT, UTC-05:00)"
+
+note ======== names and words (no stem is a prefix of another, so ls order is locale-proof)
+text sgstem "notes|report|data|todo|journal|budget|recipe|summary|inventory|draft|agenda|memo|ideas|scores|tasks|config|readme|letter|story|poem|guide|index|ledger|outline|roster|survey|wishlist|chapter|minutes|digest|quotes|songs"
+text sgext ".txt|.txt|.txt|.md|.csv|.log|.dat"
+text sgtxt ".txt"
+text sgcnt "count|total|result|answer|tally|number|amount"
+text sglst "listing|files|contents|names|manifest"
+text sgfst "first|head|top|opening"
+text sgdirs "box|docs|archive|reports|output|backup|inbox|assets|logs|stuff|work|shared"
+text sgdfile "alpha|bravo|charlie|delta|echo|foxtrot|golf|hotel|india|juliet|kilo|lima"
+text sgword "apple|river|stone|blue|green|quiet|morning|light|cloud|paper|window|garden|music|silver|winter|summer|bridge|candle|forest|ocean|yellow|simple|happy|little|bright|orange|purple|coffee|tea|bread|honey|mountain|valley|north|south|east|west|seven|three|twelve|first|last|open|close|fast|slow|warm|cold|new|old|red|white|black|sun|moon|star|rain|snow|wind|fire|water|road|house|city|train|boat|book|pen|cat|dog|bird|fish|tree|leaf|flower|grass|sand|glass|metal|wood|cotton|wool|plan|note|list|task|idea|code|test|build|fix|ship|check|review|draft|final|ready|done|soon|later|today|tomorrow|monday|friday|alpha|beta|gamma|delta"
+
+note ======== templates ({N} file, {T} target, {D} directory, {X} {Y} text, {M} output file,
+note {K} kept file, {C} number, {L} first line)
+text sgvn "cat {N}"
+text sgvm "cat {M}"
+text sgvt "cat {T}"
+text sgvdn "cat {D}/{N}"
+text sgils "ls"
+text sgild "ls {D}"
+text sg0u "Create a file named {N} containing exactly the text: {X}|Create a file called {N} whose only line is: {X}|Write the text \"{X}\" into a new file {N}.|Make a new file {N} that contains the line: {X}|Please create {N} with this content: {X}"
+text sg0a "printf '{X}\\n' > {N}|echo '{X}' > {N}|printf '%s\\n' '{X}' > {N}"
+text sg0f "Created {N} containing \"{X}\".|Done: {N} now contains the line \"{X}\".|{N} has been created with the text: {X}"
+text sg1u "Append a new line with the text {Y} to the end of {N}.|Add the line \"{Y}\" at the end of {N}, keeping what is already there.|Add {Y} as a new last line of {N}.|Please append \"{Y}\" to {N}."
+text sg1a "echo '{Y}' >> {N}|printf '{Y}\\n' >> {N}"
+text sg1f "Appended \"{Y}\" to {N}.|Added the line \"{Y}\" to the end of {N}; the earlier lines are unchanged.|{N} now ends with the line: {Y}"
+text sg2u "Count the lines in {N} and write only the number to {M}.|How many lines does {N} have? Save just that number in {M}.|Write the number of lines in {N} to {M}.|Put the line count of {N} into {M}, nothing else."
+text sg2a "wc -l < {N} > {M}"
+text sg2f "{N} has {C} lines; wrote {C} to {M}.|Done: {M} contains {C}.|Counted {C} lines in {N} and saved the number in {M}."
+text sg3u "List the names of the files in the directory {D}, one per line, into the file {M}.|Save a listing of the files in {D} (names only, one per line) to {M}.|Write the file names inside {D} to {M}, one per line.|What files are in {D}? Put their names, one per line, in {M}."
+text sg3a "ls {D} > {M}|ls -1 {D} > {M}"
+text sg3f "Wrote the {C} file names in {D} to {M}.|{M} now lists the {C} files in {D}.|Saved the listing of {D} ({C} files) to {M}."
+text sg4u "Rename {N} to {T}.|Change the name of {N} to {T}.|Please rename the file {N} so it is called {T}.|Move {N} to {T} in the same directory."
+text sg4a "mv {N} {T}"
+text sg4f "Renamed {N} to {T}.|{N} is now called {T}.|Done: the file is now {T}; {K} is unchanged."
+text sg5u "Make a copy of {N} named {T}.|Copy {N} to a new file {T}.|Duplicate {N} as {T}.|Create {T} as an exact copy of {N}."
+text sg5a "cp {N} {T}"
+text sg5f "Copied {N} to {T}.|{T} is now a copy of {N}.|Done: {T} has the same content as {N}."
+text sg6u "Create a directory named {D} and inside it a file {N} containing the text: {X}|Make a folder {D} with a file {N} in it that says: {X}|Create {D}/{N} (making the directory {D}) with the line: {X}"
+text sg6a "mkdir -p {D} && echo '{X}' > {D}/{N}|mkdir {D} && printf '{X}\\n' > {D}/{N}"
+text sg6f "Created {D}/{N} containing \"{X}\".|Made the directory {D} with {N} inside it.|Done: {D}/{N} holds the line \"{X}\"."
+text sg7u "Write the first line of {N} into {M}.|Save the first line of {N} to {M}.|Put only the first line of {N} in {M}.|Copy the opening line of {N} into a new file {M}."
+text sg7a "head -n 1 {N} > {M}|head -1 {N} > {M}"
+text sg7f "Wrote the first line of {N} (\"{L}\") to {M}.|{M} now holds the first line of {N}: {L}|Done: {M} contains \"{L}\"."
+text sg8u "Delete the file {N} but keep {K}.|Remove {N}; leave {K} alone.|Please delete {N}. Do not touch {K}.|Get rid of {N} and keep {K}."
+text sg8a "rm {N}|rm -f {N}"
+text sg8f "Deleted {N}; {K} is untouched.|Removed {N} and kept {K}.|Done: {N} is gone and {K} is still there."
+text sg9u "Count the words in {N} and write only the number to {M}.|How many words are in {N}? Save just the number in {M}.|Write the word count of {N} to {M}."
+text sg9a "wc -w < {N} > {M}"
+text sg9f "{N} has {C} words; wrote {C} to {M}.|Done: {M} contains {C}.|Counted {C} words in {N} and saved the number in {M}."

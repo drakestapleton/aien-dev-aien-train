@@ -1,0 +1,1 @@
+Write the contents of shout.txt converted to uppercase into loud.txt.

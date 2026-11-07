@@ -1,0 +1,29 @@
+date 2026-11-07T00:02:49Z
+endpoint fixture:ref mode ref toolsets terminal tmo 300 maxturns 4 cores 6
+verify f1adcad1a16b05c8ac580c7a1108a349ad65d744225fccbb6122b0419a2b4c72  /dev/shm/hive/ownmodel/harness/bin/verify
+tasks 03e5c1cfc6faec9eebfaaf19642c636d497278a370c1d9975771ce64c9170290  tasks.txt
+runner c194727d15b6e4eed05101b95f489854033390e0c468481d57809c7c4e6a85e5
+hermes Hermes Agent v0.22.5 (2026.9.24) · stable · local bf0203a794a0
+t01 create train PASS 0 26123 3 200
+t02 create train PASS 0 18116 3 200
+t03 append train PASS 0 14573 3 200
+t04 append train PASS 0 14088 3 200
+t05 count_lines train PASS 0 15723 3 200
+t06 count_lines train PASS 0 11686 3 200
+t07 list_dir train PASS 0 6264 3 200
+t08 rename train PASS 0 20363 3 200
+t09 copy train PASS 0 20227 3 200
+t10 mkdir_file train PASS 0 23489 3 200
+t11 first_line train PASS 0 18528 3 200
+t12 delete train PASS 0 18858 3 200
+t13 count_words train PASS 0 20173 3 200
+t14 sha256 heldout PASS 0 9444 3 200
+t15 sha256 heldout PASS 0 34069 3 200
+t16 replace_word heldout PASS 0 29049 3 200
+t17 sort_lines heldout PASS 0 20929 3 200
+t18 uppercase heldout PASS 0 27780 3 200
+t19 concat heldout PASS 0 42365 3 200
+t20 arith heldout PASS 0 41063 3 200
+c01 create control FAIL 0 39390 3 200
+c02 rename control FAIL 0 58212 3 200
+SUMMARY train pass=13/13 heldout pass=7/7 control fail=2/2 invalid=0

@@ -1,0 +1,1 @@
+How many lines does items.csv have? Save just that number in lines.txt.

@@ -1,0 +1,17 @@
+# CHAT1 token counts of captured requests (MEASURED)
+# ollm: serve4 branch origin/feat/ollm-serve-v4 c3cf792446587693c81528ad5c44f04cd9173db4 built with pinned omc; sha256 62711f66ae8cff5c7978cd5bf063e9b794edddb3ea254a60f134fa23a41400df
+# merges: 688b723a894baa831ee92aaf814918d30823225c45de68c85d9dd244eb79947c  /home/drakestapleton/work/hive/ownmodel/data/merges32k.bin
+# ollm-tok: 6a59d5555c6b8cdb7012e84706aac1d1afb483093ac9615456e9737f47c2379d  /dev/shm/hive/ownmodel/b/ollm-tok
+# per file: one JSONL line -> `ollm chatenc MERGES one.jsonl one.u16` (H lines tokens masked; no generation prompt);
+# serve prompt = chatenc + 1 (259). identity: chatenc u16 + [259] == chat1-render.sh | ollm-tok tokenc chat (cmp)
+# file bytes chatenc_tokens serve_prompt_tokens messages tools identical
+hermes-default-chat1 15867 3927 3928 2 8 yes
+hermes-file-chat1 10914 2696 2697 2 4 yes
+hermes-file+terminal-chat1 15792 3899 3900 2 8 yes
+hermes-terminal-chat10 13072 3025 3026 20 4 yes
+hermes-terminal-chat11 1345 272 273 2 0 yes
+hermes-terminal-chat1 10241 2501 2502 2 4 yes
+hermes-terminal-chat2 10536 2550 2551 4 4 yes
+omp-bash-chat1 10426 2902 2903 2 1 yes
+omp-bwr-chat1 13639 3923 3924 2 3 yes
+omp-chat1 30250 8772 8773 2 11 yes

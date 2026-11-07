@@ -1,0 +1,18 @@
+hermes-terminal-turn1 10241 2502 6 2 4
+hermes-terminal-turn2 10536 2551 11 4 4
+hermes-terminal-turn3 10816 2596 16 6 4
+hermes-terminal-turn4 11089 2640 21 8 4
+hermes-terminal-turn5 11355 2679 26 10 4
+hermes-terminal-turn6 11628 2720 31 12 4
+hermes-terminal-turn7 11973 2797 36 14 4
+hermes-terminal-turn8 12290 2847 41 16 4
+hermes-terminal-turn9 12592 2899 46 18 4
+hermes-terminal-turn10 13072 3026 51 20 4
+hermes-title-aux 1345 273 6 2 0
+hermes-terminal-turn1 10285 2512 6 2 4
+hermes-file-turn1 10914 2697 6 2 4
+hermes-file+terminal-turn1 15792 3900 6 2 8
+hermes-default-turn1 15867 3928 6 2 8
+omp-turn1 RENDER_FAIL
+omp-bash-turn1 RENDER_FAIL
+omp-bwr-turn1 RENDER_FAIL

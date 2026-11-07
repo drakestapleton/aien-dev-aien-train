@@ -1,0 +1,1 @@
+Compute the SHA-256 hash of blob.txt and write the hex digest to hash.txt.

@@ -1,0 +1,1 @@
+FAIL t05 trim count.txt missing

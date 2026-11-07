@@ -1,0 +1,1 @@
+In story.txt replace every occurrence of the word cat with dog.

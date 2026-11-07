@@ -1,0 +1,1 @@
+Make a copy of src.txt named dst.txt.

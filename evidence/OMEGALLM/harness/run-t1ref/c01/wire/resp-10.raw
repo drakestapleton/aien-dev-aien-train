@@ -1,0 +1,36 @@
+HTTP/1.1 200 OK
+Content-Type: text/event-stream
+Cache-Control: no-cache
+Transfer-Encoding: chunked
+Connection: close
+
+bd
+data: {"id":"chatcmpl-ollm-63","object":"chat.completion.chunk","created":1794011608,"model":"ollm","choices":[{"index":0,"delta":{"role":"assistant","content":""},"finish_reason":null}]}
+
+
+ab
+data: {"id":"chatcmpl-ollm-63","object":"chat.completion.chunk","created":1794011608,"model":"ollm","choices":[{"index":0,"delta":{"content":"D"},"finish_reason":null}]}
+
+
+ad
+data: {"id":"chatcmpl-ollm-63","object":"chat.completion.chunk","created":1794011608,"model":"ollm","choices":[{"index":0,"delta":{"content":"one"},"finish_reason":null}]}
+
+
+ab
+data: {"id":"chatcmpl-ollm-63","object":"chat.completion.chunk","created":1794011608,"model":"ollm","choices":[{"index":0,"delta":{"content":"."},"finish_reason":null}]}
+
+
+a0
+data: {"id":"chatcmpl-ollm-63","object":"chat.completion.chunk","created":1794011608,"model":"ollm","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}
+
+
+bc
+data: {"id":"chatcmpl-ollm-63","object":"chat.completion.chunk","created":1794011608,"model":"ollm","choices":[],"usage":{"prompt_tokens":2564,"completion_tokens":3,"total_tokens":2567}}
+
+
+e
+data: [DONE]
+
+
+0
+

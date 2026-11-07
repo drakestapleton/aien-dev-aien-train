@@ -1,0 +1,13 @@
+HTTP/1.1 200 OK
+Content-Type: text/event-stream
+Content-Length: 582
+Connection: close
+
+data: {"id":"chatcmpl-c01-plain","object":"chat.completion.chunk","created":0,"model":"ollm","choices":[{"index":0,"delta":{"role":"assistant","content":"I have completed the task: the requested file is in place."},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-c01-plain","object":"chat.completion.chunk","created":0,"model":"ollm","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}
+
+data: {"id":"chatcmpl-c01-plain","object":"chat.completion.chunk","created":0,"model":"ollm","choices":[],"usage":{"prompt_tokens":1,"completion_tokens":1,"total_tokens":2}}
+
+data: [DONE]
+

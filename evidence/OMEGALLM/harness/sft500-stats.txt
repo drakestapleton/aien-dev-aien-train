@@ -1,0 +1,5 @@
+# sftgen 1 500 (seed 1, 500 conversations), sftgen sha256 22b1add4b79ef93b6debbfef4df186508e35b2fb1dd843018c76b2678c0e4501
+# ollm chatenc MERGES sft500.jsonl sft500.u16 sft500.mask -> H 500 1287472 25508
+# jsonl sha256 a98a99a0c3b5e43ec7c49b54e9ad1edd87ba5a86fddadb9e35e6505ea186e20b bytes 5324815
+# per-conversation tokens (split at 263): min 2526 median 2576 max 2634
+# masked (assistant) tokens 25508

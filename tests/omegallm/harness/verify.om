@@ -1,0 +1,798 @@
+om2
+note SPDX-License-Identifier: AGPL-3.0-only
+note tests/omegallm/harness/verify.om: the harness task tool and independent outcome verifier
+note (ownmodel harness lane). Built by tests/omegallm/harness/build.sh with the pinned omc
+note (omega-mv e5b32567, sha256 2c824805...). It reads only the task file and the files on disk
+note in a task's work directory; it never reads Hermes's output or the model's claims.
+note Commands (TASKS is the task file, FORMAT in tests/omegallm/harness/TASKS.md):
+note   verify list TASKS              one line per task: the words after "@task " (ID FAMILY SPLIT)
+note   verify prompt TASKS ID OUT     the @prompt block (no final newline) into the file OUT
+note   verify ref TASKS ID OUT        the @ref block (a reference shell command) into OUT
+note   verify setup TASKS ID DIR      every @file / @file- block written under DIR (parents made)
+note   verify check TASKS ID DIR      every @expect checked under DIR: prints "PASS ID" (exit 0) or
+note                                  "FAIL ID KIND PATH REASON" for the first failing one (exit 1)
+note Expect kinds: exact (bytes equal the block, each line + LF), exact- (the same without the
+note final LF), trim (equal after both drop leading and trailing space, tab, CR, LF), contains
+note (the block without its final LF occurs in the file), absent (no such path), dir (a
+note directory). A task with no @expect fails. Paths are relative: bytes [A-Za-z0-9._/-], no
+note leading "/", no "..", 1 .. 255 bytes.
+note Exits: 0 ok/PASS, 1 FAIL, 2 usage or a malformed task file, 3 unknown task id, 70 I/O.
+note Limits: task file and checked files at most 999423 bytes (a larger checked file FAILs
+note too_big; loop bounds at this omc pin are below 1000000), ID at most 64 bytes.
+
+global hvtf uchar 1048576
+global hvfb uchar 1048576
+global hvab uchar 4100
+global hvpb uchar 8300
+global hvid uchar 64
+global hvob uchar 65536
+global hvst ulong 16
+
+note hvst: 0 task file bytes, 1 stdout buffer bytes, 2 task start, 3 task end, 4 work dir
+note length (its bytes are hvpb[0, w)), 6 id length, 7 block start, 8 block end (the "@end"
+note line), 9 path start, 10 path end, 11 expects seen, 12 directive end of line
+
+text hvtask "@task "
+text hvprm "@prompt"
+text hvref "@ref"
+text hvfile "@file "
+text hvfilen "@file- "
+text hvexp "@expect "
+text hvend "@end"
+text hvcl "list"
+text hvcp "prompt"
+text hvcr "ref"
+text hvcs "setup"
+text hvcc "check"
+text hvkx "exact"
+text hvkxn "exact-"
+text hvkt "trim"
+text hvkc "contains"
+text hvka "absent"
+text hvkd "dir"
+text hvmp "PASS "
+text hvmf "FAIL "
+text hvrmis "missing"
+text hvrbig "too_big"
+text hvrne "content_differs"
+text hvrnf "not_found_in_file"
+text hvrex "exists"
+text hvrnd "not_a_directory"
+text hvrnoe "no_expectations"
+text hvsp " "
+text hvdash "-"
+
+note ======== output (stdout, buffered)
+
+fn hvflush to void
+n = get hvst 1
+p = ulong 0
+while lt p n bound 65537
+w = write 1 hvob p sub n p
+if le w 0
+exit 70
+end
+p = add p ulong w
+end
+put hvst 1 0
+end
+
+fn hvoc c uchar to void
+n = get hvst 1
+if ge n 65536
+hvflush
+n = ulong 0
+end
+put hvob n c
+put hvst 1 add n 1
+end
+
+fn hvot t view uchar * to void
+i = ulong 0
+n = len t
+while lt i n bound 4096
+hvoc get t i
+i = add i 1
+end
+end
+
+note task file bytes [s, e) to stdout
+fn hvotf s ulong e ulong to void
+i = s
+while lt i e bound 999999
+hvoc get hvtf i
+i = add i 1
+end
+end
+
+note ======== arguments and files
+
+note argv[i] into hvab; its length (1 .. 4096) or exit 2
+fn hvarg i ulong to ulong
+r = argread i hvab 0 4096
+if or le r 0 gt r 4096
+exit 2
+end
+ret ulong r
+end
+
+note the task file argv[2] into hvtf
+fn hvrdtf to void
+pl = hvarg 2
+fd = int fopen hvab 0 pl 0 0
+if lt fd 0
+exit 70
+end
+p = ulong 0
+dn = false
+while and not dn lt p 999424 bound 999999
+r = read fd hvtf p sub 999424 p
+if lt r 0
+exit 70
+end
+if eq r 0
+dn = true
+else
+p = add p ulong r
+end
+end
+x = fclose fd
+if ge p 999424
+exit 2
+end
+put hvst 0 p
+end
+
+note the task id argv[3] into hvid
+fn hvrdid to void
+n = hvarg 3
+if gt n 64
+exit 2
+end
+i = ulong 0
+while lt i n bound 65
+put hvid i get hvab i
+i = add i 1
+end
+put hvst 6 n
+end
+
+note the work directory argv[4] into hvpb[0, w)
+fn hvrdwd to void
+n = hvarg 4
+if gt n 4000
+exit 2
+end
+i = ulong 0
+while lt i n bound 4001
+put hvpb i get hvab i
+i = add i 1
+end
+put hvst 4 n
+end
+
+note the file hvpb[0, pl) into hvfb: its byte count, a negative errno, or -27 when it does not
+note fit (999423 bytes at most)
+fn hvrdfb pl ulong to long
+fd = int fopen hvpb 0 pl 0 0
+if lt fd 0
+ret long fd
+end
+p = ulong 0
+dn = false
+while and not dn lt p 999424 bound 999999
+r = read fd hvfb p sub 999424 p
+if lt r 0
+x = fclose fd
+ret r
+end
+if eq r 0
+dn = true
+else
+p = add p ulong r
+end
+end
+x = fclose fd
+if ge p 999424
+ret -27
+end
+ret long p
+end
+
+note ======== task file scanning
+
+note whether the task file at p starts with t (wholly inside the file)
+fn hvis p ulong t view uchar * to bool
+n = len t
+if gt add p n get hvst 0
+ret false
+end
+i = ulong 0
+while lt i n bound 4096
+if ne get hvtf add p i get t i
+ret false
+end
+i = add i 1
+end
+ret true
+end
+
+note whether the line [p, e) is exactly t
+fn hvline p ulong e ulong t view uchar * to bool
+if ne sub e p len t
+ret false
+end
+ret hvis p t
+end
+
+note the end of the line at p: the position of its LF, or the file end
+fn hvle p ulong to ulong
+q = p
+n = get hvst 0
+while lt q n bound 999999
+if eq get hvtf q 10
+ret q
+end
+q = add q 1
+end
+ret n
+end
+
+note whether tf[s, e) is the task id, followed by a space or the line end
+fn hvidm s ulong e ulong to bool
+m = get hvst 6
+if gt add s m e
+ret false
+end
+i = ulong 0
+while lt i m bound 65
+if ne get hvtf add s i get hvid i
+ret false
+end
+i = add i 1
+end
+q = add s m
+if eq q e
+ret true
+end
+ret eq get hvtf q 32
+end
+
+note the task with the id: its lines [hvst 2, hvst 3); exit 3 when there is none
+fn hvfind to void
+n = get hvst 0
+p = ulong 0
+fnd = false
+while lt p n bound 999999
+e = hvle p
+if fnd
+if hvis p hvtask
+put hvst 3 p
+ret
+end
+else
+if hvis p hvtask
+if hvidm add p 6 e
+fnd = true
+put hvst 2 p
+end
+end
+end
+p = add e 1
+end
+if not fnd
+exit 3
+end
+put hvst 3 n
+end
+
+note the block after the directive line ending at e: hvst 7 its start, hvst 8 its "@end" line;
+note exit 2 when the task ends first
+fn hvblk e ulong to void
+t3 = get hvst 3
+s = add e 1
+put hvst 7 s
+q = s
+while lt q t3 bound 999999
+ln = hvle q
+if hvline q ln hvend
+put hvst 8 q
+ret
+end
+q = add ln 1
+end
+exit 2
+end
+
+note the block's content end: hvst 8, less its final LF when nl is false
+fn hvbe nl bool to ulong
+s = get hvst 7
+b = get hvst 8
+if nl
+ret b
+end
+if gt b s
+ret sub b 1
+end
+ret b
+end
+
+note whether c may appear in a path
+fn hvpc c uchar to bool
+if and ge c 97 le c 122
+ret true
+end
+if and ge c 65 le c 90
+ret true
+end
+if and ge c 48 le c 57
+ret true
+end
+if or eq c 46 eq c 95
+ret true
+end
+ret or eq c 45 eq c 47
+end
+
+note the path tf[s, e) appended to the work directory: hvpb[0, result) = DIR "/" PATH; exit 2
+note for a malformed path
+fn hvpath s ulong e ulong to ulong
+w = get hvst 4
+if le e s
+exit 2
+end
+n = sub e s
+if gt n 255
+exit 2
+end
+if eq get hvtf s 47
+exit 2
+end
+put hvpb w 47
+i = ulong 0
+while lt i n bound 256
+c = get hvtf add s i
+if not hvpc c
+exit 2
+end
+if eq c 46
+if lt add i 1 n
+if eq get hvtf add add s i 1 46
+exit 2
+end
+end
+end
+put hvpb add add w 1 i c
+i = add i 1
+end
+ret add add w 1 n
+end
+
+note ======== setup
+
+note every parent directory of hvpb[0, pl) below the work directory, made (existing is fine)
+fn hvmkpar pl ulong to void
+w = add get hvst 4 1
+i = w
+while lt i pl bound 4400
+if eq get hvpb i 47
+r = makedir hvpb 0 i 493
+if and lt r 0 ne r -17
+exit 70
+end
+end
+i = add i 1
+end
+end
+
+note tf[s, e) written as the file hvpb[0, pl)
+fn hvwr pl ulong s ulong e ulong to void
+hvmkpar pl
+fd = int fopen hvpb 0 pl 577 420
+if lt fd 0
+exit 70
+end
+p = s
+while lt p e bound 999999
+w = write fd hvtf p sub e p
+if le w 0
+exit 70
+end
+p = add p ulong w
+end
+if ne fclose fd 0
+exit 70
+end
+end
+
+note ======== checks
+
+fn hvws c uchar to bool
+if or eq c 32 eq c 9
+ret true
+end
+ret or eq c 10 eq c 13
+end
+
+note whether hvfb[a, b) equals tf[s, e)
+fn hveq a ulong b ulong s ulong e ulong to bool
+if ne sub b a sub e s
+ret false
+end
+i = ulong 0
+n = sub b a
+while lt i n bound 999999
+if ne get hvfb add a i get hvtf add s i
+ret false
+end
+i = add i 1
+end
+ret true
+end
+
+note hvfb[0, n) trimmed: its start (into hvst 13) and end
+fn hvtrf n ulong to ulong
+a = ulong 0
+dn = false
+while and not dn lt a n bound 999999
+if hvws get hvfb a
+a = add a 1
+else
+dn = true
+end
+end
+b = n
+dn = false
+while and not dn gt b a bound 999999
+if hvws get hvfb sub b 1
+b = sub b 1
+else
+dn = true
+end
+end
+put hvst 13 a
+ret b
+end
+
+note tf[s, e) trimmed: its start (into hvst 14) and end
+fn hvtrt s ulong e ulong to ulong
+a = s
+dn = false
+while and not dn lt a e bound 999999
+if hvws get hvtf a
+a = add a 1
+else
+dn = true
+end
+end
+b = e
+dn = false
+while and not dn gt b a bound 999999
+if hvws get hvtf sub b 1
+b = sub b 1
+else
+dn = true
+end
+end
+put hvst 14 a
+ret b
+end
+
+note whether tf[s, e) occurs in hvfb[0, n)
+fn hvhas n ulong s ulong e ulong to bool
+m = sub e s
+if gt m n
+ret false
+end
+k = ulong 0
+lim = sub n m
+while le k lim bound 999999
+if hveq k add k m s e
+ret true
+end
+k = add k 1
+end
+ret false
+end
+
+note one FAIL line: FAIL ID KIND PATH REASON (kind tf[ks, ke), path tf[hvst 9, hvst 10))
+fn hvfail ks ulong ke ulong r view uchar * to void
+hvot hvmf
+i = ulong 0
+m = get hvst 6
+while lt i m bound 65
+hvoc get hvid i
+i = add i 1
+end
+hvot hvsp
+hvotf ks ke
+hvot hvsp
+hvotf get hvst 9 get hvst 10
+hvot hvsp
+hvot r
+hvoc 10
+hvflush
+exit 1
+end
+
+note one @expect directive line [p, e): checked; a failure prints and exits 1
+fn hvexp1 p ulong e ulong to ulong
+ks = add p 8
+ke = ks
+while and lt ke e ne get hvtf ke 32 bound 999999
+ke = add ke 1
+end
+if ge ke e
+exit 2
+end
+put hvst 9 add ke 1
+put hvst 10 e
+pl = hvpath add ke 1 e
+if hvline ks ke hvka
+fd = int fopen hvpb 0 pl 0 0
+if ge fd 0
+x = fclose fd
+hvfail ks ke hvrex
+end
+ret e
+end
+if hvline ks ke hvkd
+fd = int fopen hvpb 0 pl 16384 0
+if lt fd 0
+hvfail ks ke hvrnd
+end
+x = fclose fd
+ret e
+end
+hvblk e
+r = hvrdfb pl
+if eq r -27
+hvfail ks ke hvrbig
+end
+if lt r 0
+hvfail ks ke hvrmis
+end
+n = ulong r
+ret hvexp2 ks ke n
+end
+
+note the block kinds (exact, exact-, trim, contains) against hvfb[0, n); the line after the block
+fn hvexp2 ks ulong ke ulong n ulong to ulong
+s = get hvst 7
+if hvline ks ke hvkx
+if not hveq 0 n s hvbe true
+hvfail ks ke hvrne
+end
+ret get hvst 8
+end
+if hvline ks ke hvkxn
+if not hveq 0 n s hvbe false
+hvfail ks ke hvrne
+end
+ret get hvst 8
+end
+if hvline ks ke hvkt
+fe = hvtrf n
+te = hvtrt s hvbe true
+if not hveq get hvst 13 fe get hvst 14 te
+hvfail ks ke hvrne
+end
+ret get hvst 8
+end
+if hvline ks ke hvkc
+if not hvhas n s hvbe false
+hvfail ks ke hvrnf
+end
+ret get hvst 8
+end
+exit 2
+end
+
+note ======== the walk over one task's lines
+
+note mode 1 prompt, 2 ref (write the block to argv[4]), 3 setup, 4 check; returns whether a
+note directive the mode handles was found (hvst 15)
+fn hvwalk md ulong to bool
+p = get hvst 2
+t3 = get hvst 3
+put hvst 15 0
+while lt p t3 bound 999999
+e = hvle p
+q = hvdir1 md p e
+p = add q 1
+end
+ret eq get hvst 15 1
+end
+
+note one line [p, e): a block directive's block is consumed (and handled when the mode wants
+note it); returns the end of the last line consumed (e for a line that is not a block directive)
+fn hvdir1 md ulong p ulong e ulong to ulong
+if hvline p e hvprm
+hvblk e
+if eq md 1
+hvout false
+put hvst 15 1
+end
+ret hvle get hvst 8
+end
+if hvline p e hvref
+hvblk e
+if eq md 2
+hvout false
+put hvst 15 1
+end
+ret hvle get hvst 8
+end
+ret hvdir2 md p e
+end
+
+fn hvdir2 md ulong p ulong e ulong to ulong
+fl = hvis p hvfile
+fx = hvis p hvfilen
+if or fl fx
+s = add p 6
+if fx
+s = add p 7
+end
+pl = hvpath s e
+hvblk e
+if eq md 3
+hvwr pl get hvst 7 hvbe fl
+put hvst 15 1
+end
+ret hvle get hvst 8
+end
+if hvis p hvexp
+ret hvdir3 md p e
+end
+ret e
+end
+
+note an @expect line: checked in mode 4 (a failure exits); its block, if any, consumed
+fn hvdir3 md ulong p ulong e ulong to ulong
+if eq md 4
+put hvst 11 add get hvst 11 1
+put hvst 15 1
+r = hvexp1 p e
+ret hvle r
+end
+ks = add p 8
+ke = ks
+while and lt ke e ne get hvtf ke 32 bound 999999
+ke = add ke 1
+end
+if or hvline ks ke hvka hvline ks ke hvkd
+ret e
+end
+if not hvkind ks ke
+exit 2
+end
+hvblk e
+ret hvle get hvst 8
+end
+
+note whether tf[ks, ke) is a block expect kind
+fn hvkind ks ulong ke ulong to bool
+if or hvline ks ke hvkx hvline ks ke hvkxn
+ret true
+end
+ret or hvline ks ke hvkt hvline ks ke hvkc
+end
+
+note the block [hvst 7, hvbe nl) into the file argv[4]
+fn hvout nl bool to void
+pl = hvarg 4
+fd = int fopen hvab 0 pl 577 420
+if lt fd 0
+exit 70
+end
+p = get hvst 7
+e = hvbe nl
+while lt p e bound 999999
+w = write fd hvtf p sub e p
+if le w 0
+exit 70
+end
+p = add p ulong w
+end
+if ne fclose fd 0
+exit 70
+end
+end
+
+note ======== commands
+
+fn hvlist to void
+n = get hvst 0
+p = ulong 0
+while lt p n bound 999999
+e = hvle p
+if hvis p hvtask
+hvotf add p 6 e
+hvoc 10
+end
+p = add e 1
+end
+hvflush
+end
+
+note whether argv[1] (in hvab[0, n)) is t
+fn hvcmd n ulong t view uchar * to bool
+if ne n len t
+ret false
+end
+i = ulong 0
+while lt i n bound 64
+if ne get hvab i get t i
+ret false
+end
+i = add i 1
+end
+ret true
+end
+
+fn hvrun to int
+c = ulong argcnt
+if lt c 3
+exit 2
+end
+n = hvarg 1
+if hvcmd n hvcl
+hvrdtf
+hvlist
+ret 0
+end
+if lt c 5
+exit 2
+end
+md = ulong 0
+n = hvarg 1
+if hvcmd n hvcp
+md = 1
+end
+if hvcmd n hvcr
+md = 2
+end
+if hvcmd n hvcs
+md = 3
+end
+if hvcmd n hvcc
+md = 4
+end
+if eq md 0
+exit 2
+end
+hvrdtf
+hvrdid
+hvfind
+if ge md 3
+hvrdwd
+end
+put hvst 11 0
+ok = hvwalk md
+if eq md 4
+if eq get hvst 11 0
+put hvst 9 0
+put hvst 10 0
+hvfail 0 0 hvrnoe
+end
+hvot hvmp
+i = ulong 0
+m = get hvst 6
+while lt i m bound 65
+hvoc get hvid i
+i = add i 1
+end
+hvoc 10
+hvflush
+ret 0
+end
+if and le md 2 not ok
+exit 2
+end
+ret 0
+end
+
+fn main to int
+ret hvrun
+end
