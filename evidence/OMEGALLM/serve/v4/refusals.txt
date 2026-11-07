@@ -1,0 +1,20 @@
+## V mismatch refused at startup (OLLMTOK1 V 32768 vs CK03 V 4096)
+$ ollm serve 18295 v4k.ck(V=4096,OLLMCK03) merges32k.bin
+rc 31
+$ ollm sample4 v4k.ck 1 4 0 Hi merges32k.bin
+rc 31
+$ ollm eval4 v4k.ck val3m.u16 1 merges32k.bin
+rc 31
+## control: the same CK03 with v1 merges (OLLMBPE1, V 4096) loads
+$ ollm sample4 v4k.ck 1 4 0 Hi merges4096.bin | od -c
+0000000   H   i   H   i   H   i   H   i
+0000010
+rc 0
+## eval4 with OLLMTOK1 merges on a V 32768 CK03 (s.ck, untrained)
+$ ollm eval4 s.ck val3m.u16 2 merges32k.bin
+E 0 2 10409716 3760019
+rc 0
+## chatenc refuses v1 merges
+$ ollm chatenc merges4096.bin c.jsonl x.u16
+rc 26
+binary a79559fa07b32949f3b4776788206bb405462da2dcb48678ed731ea58837874f  b2/ollm

@@ -2099,7 +2099,9 @@ end
 
 note svpref: the cache positions [cv, ce) of a prefill decoded layer by layer: each layer's weights
 note are staged (xstw) and a staged layer's KV rows loaded (xkvs) once per chunk instead of once per
-note position. The hidden rows wait in svhid, chunks of 2^21 / D positions. Every operation is
+note position. The hidden rows wait in svhid, chunks of min(32, 2^21 / D) positions (so the side
+note connections and the queue are served at least every 32 positions, as in the position-by-position
+note loop, while a staged layer is still loaded 32 times less often). Every operation is
 note xdpos's for the same (layer, position), in an order that keeps each layer's dependencies (its
 note KV rows of the earlier positions), so the cache and the last row are bit-identical to the
 note position-by-position decode (checked against it: test member ollm_test_serial). Between chunks
@@ -2110,6 +2112,9 @@ note ollm_test_serial (c1_prefill_layer_bitexact) must catch it.
 const OMUTPL ulong 1
 fn svpref sv edit ulong 64 bd edit uchar 983040 cv ulong ce ulong to void
 ch = div 2097152 get xg 2
+if gt ch 32
+ch = 32
+end
 p = cv
 while lt p ce bound 65537
 e = add p ch

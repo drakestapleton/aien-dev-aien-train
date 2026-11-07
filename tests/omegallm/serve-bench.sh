@@ -50,12 +50,17 @@ say "B startup_ms $(((t1 - t0) / 1000000)) rss_kb_after_start $(awk '/VmHWM/{pri
 
 for L in $LENS; do
 	nb=$(bytes_for "$L")
+	# cold prefill (max_tokens 1); then the same prompt warm (reuse leaves 1 position to prefill)
+	# with 1 and with DEC + 1 tokens: decode ms/token = the difference / the token difference
 	body "$nb" 1 ',"ollm_test_cold":true' >"$OUT/p$L-1.json"
-	body "$nb" $((DEC + 1)) ',"ollm_test_cold":true' >"$OUT/p$L-d.json"
+	body "$nb" 1 '' >"$OUT/p$L-w1.json"
+	body "$nb" $((DEC + 1)) '' >"$OUT/p$L-wd.json"
 	r1=$(post "$OUT/p$L-1.json"); l1=$(lastlog)
-	r2=$(post "$OUT/p$L-d.json"); l2=$(lastlog)
+	r2=$(post "$OUT/p$L-w1.json"); l2=$(lastlog)
+	r3=$(post "$OUT/p$L-wd.json"); l3=$(lastlog)
 	say "B prefill target=$L bytes=$nb http=$r1 log=[$l1]"
-	say "B decode target=$L http=$r2 log=[$l2]"
+	say "B decode_w1 target=$L http=$r2 log=[$l2]"
+	say "B decode_wd target=$L http=$r3 log=[$l3]"
 done
 
 # prefix reuse: a 2-turn conversation; turn 2 warm (cache of turn 1) against turn 2 cold
@@ -78,8 +83,13 @@ for i in 1 2 3 4; do
 	printf '{"messages":[{"role":"user","content":"client %s: %s"}],"max_tokens":16,"temperature":0}' "$i" "$(jtext "$nb")" >"$OUT/q$i.json"
 done
 n0=$(grep -c '^C 200 ' "$log")
-for i in 1 2 3 4; do (post "$OUT/q$i.json" >"$OUT/q$i.out") & done
-wait
+qp=
+for i in 1 2 3 4; do
+	(post "$OUT/q$i.json" >"$OUT/q$i.out") &
+	qp="$qp $!"
+done
+# shellcheck disable=SC2086
+wait $qp
 for i in 1 2 3 4; do say "B queue client=$i http_client_s=$(cat "$OUT/q$i.out")"; done
 grep '^C 200 ' "$log" | tail -n +$((n0 + 1)) | while read -r l; do say "B queue log=[$l]"; done
 
