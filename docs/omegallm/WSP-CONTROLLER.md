@@ -122,7 +122,9 @@ usage, row format and exit codes in its README). It writes the keys of both file
 row, runs `nvidia-smi` and `upsc` through `execprog` with pipes, and timestamps with `monons` and
 `realns`. Its port gate (2 minute run, keys and types equal to these traces, 71 values per row
 equal to same-moment raw readings on 3 rows, a missing command recorded as a read error) is in
-`gate-om-20261107/` and the evidence README, all PASS (MEASURED).
+`gate-om-20261107/`; the output drain fix (a command with large or endless output is read to the
+end or killed at 4 s and recorded as `truncated`, normal rows unchanged) is in
+`gate-om-drain-20261107/`. Details in the evidence README, all PASS (MEASURED).
 
 The two files below are data from the old Python and shell samplers, which are deleted from the
 tree; their source stays in commit `a64e8707ebd2693254f27285dee6d8bdd0391559`.

@@ -21,7 +21,7 @@ The old sampler produced these 30 minute traces. Its source is in commit
 `1cd419f15260f4c8d3d6b4023b561b02f515cd5114eae207089d6e67c377f09a`). Both files were deleted from
 this directory when the Omega port landed; `git show a64e8707:<path>` still prints them.
 
-## Port gate for ctlsamp.om: `gate-om-20261107/`
+## Port gate for ctlsamp.om: `gate-om-20261107/` (first version, commit f834366a)
 
 Built with omc from omega-mv `e5b32567` (omc sha256
 `2c82480596bbdc50cda9626866209ef662d5834f278f839ff4ce0250c495029f`). Gate binary sha256
@@ -79,3 +79,28 @@ Results, MEASURED:
 ORACLE only, not shipped: `/usr/bin/jq` (reports `jaq 3.1.1`) for the signature and the Wolfram
 MCP evaluator for the value checks. The Wolfram programs were generated from `raw.log` and
 `gate-om.jsonl` in the agent's session; the generated programs are the filed `.wl` files.
+
+## Output drain fix: `gate-om-drain-20261107/`
+
+The first version stopped reading a command's output after 8192 bytes and closed the pipe. A
+command that wrote more then died on SIGPIPE (`rc=-13`) instead of finishing. The fix keeps the
+first 8192 bytes, reads and drops the rest until the command ends, and records `truncated` in the
+error key; the 4 s kill stays. Source `ctlsamp.om` sha256
+`5de467df4bc16f41a03b87d80098cb86ffea14d8594cf4048f87bd8bef33ce5a`, binary sha256
+`7a902cd0d769662d0a102403175618cd7cf1ef3edf6b24606a65eb283c71b7d4`, same omc.
+
+Results, MEASURED, each run on core 0 at nice 19 with a 5 s interval and 2 rows, the first
+version (`-f834`) as the before case (`negctl-exits.txt` has the exits and wall clock):
+
+1. Endless writer: PASS. `upsc_path` set to `/usr/bin/yes`, which prints `spark` without end. The
+   fixed sampler exits 0, both rows have `"ups_error": "timeout,truncated"`, and the samples cost
+   4040211 and 4239306 us, so the 5 s cadence holds (`negctl-endless-new.jsonl`). The first
+   version gave `rc=-13` (`negctl-endless-f834.jsonl`). No `yes` process was left behind.
+2. Large finite writer: PASS. `upsc_path` set to `/usr/bin/cat`, run in a scratch directory where
+   the argument `spark` names a 2097152 byte file. The fixed sampler reads it to the end: exit 0,
+   `"ups_error": "truncated"` (cat exited 0), samples cost about 31 ms (`negctl-2mib-new.jsonl`).
+   The first version gave `rc=-13` (`negctl-2mib-f834.jsonl`). The scratch file is not filed.
+3. Normal rows unchanged: PASS. A 30 s rerun (07:54:14Z to 07:54:44Z, exit 0, 6 rows, 91 raw
+   records) has the same 74 entry key and type signature as the old traces and as the first gate
+   (`sig-compare.json`), and the Wolfram check of 71 values per row against `raw.log` finds no
+   failure in any of the 6 rows (`oracle-seq0.wl` to `oracle-seq5.wl` and `.out`).

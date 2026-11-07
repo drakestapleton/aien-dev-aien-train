@@ -77,6 +77,8 @@ text wvolt "input.voltage"
 text wbatt "battery.runtime"
 text rtimeo "timeout"
 text rrc "rc="
+text rtrunc "truncated"
+text rcomma ","
 text rhdr "== "
 text tgpu "gpu"
 text tups "ups"
@@ -88,6 +90,8 @@ global pb uchar 4096
 global cb uchar 16384
 global cl ulong 2
 global cs long 2
+global tr uchar 2
+global sk uchar 65536
 global xp uchar 4096
 global xl ulong 1
 global fds uchar 8
@@ -837,9 +841,11 @@ end
 note run the packet in xp with stdout into cb[base..base+8192), stderr to /dev/null,
 note 4 s deadline. Store length in cl[slot] and status in cs[slot]: exit code,
 note minus the signal, or -1000 for timeout, -1001 for a pipe or fork failure.
+note tr[slot] is 1 when the child wrote more than 8192 bytes (the rest is read and dropped).
 fn runcmd slot ulong base ulong to void
 put cl slot 0
 put cs slot -1001
+put tr slot 0
 r = pipefds fds 0 8 524288
 if ne r 0
 ret
@@ -856,7 +862,7 @@ if eq pid 0
 childx wr
 end
 r = fclose wr
-n = drain rd base
+n = drain slot rd base
 put cl slot n
 r = fclose rd
 reap slot pid
@@ -870,12 +876,16 @@ end
 r = execprog xp 0 get xl 0
 exit 127
 end
-note read until end of file or the 4 s deadline; return bytes read, or
-note 16384 + bytes when the deadline passed
-fn drain rd int base ulong to ulong
+note read until end of file or the 4 s deadline; return bytes kept, or 16384 + bytes kept
+note when the deadline passed. The first 8192 bytes go to cb[base..); later bytes are read
+note into sk and dropped, so a child that writes more never blocks on a full pipe. The loop
+note count is capped below the compiler bound; reaching it counts as the deadline.
+fn drain slot ulong rd int base ulong to ulong
 dl = add monons 4000000000
 n = ulong 0
-while true bound 100000
+it = ulong 0
+while lt it 999998 bound 999999
+it = add it 1
 left = sub dl monons
 if le left 0
 ret add n 16384
@@ -884,16 +894,21 @@ w = waitio rd 1 left
 if le w 0
 ret add n 16384
 end
+if lt n 8192
 k = read rd cb add base n sub 8192 n
 if le k 0
 ret n
 end
 n = add n ulong k
-if ge n 8192
+else
+k = read rd sk 0 len sk
+if le k 0
 ret n
 end
+put tr slot 1
 end
-ret n
+end
+ret add n 16384
 end
 fn reap slot ulong pid long to void
 n = get cl slot
@@ -912,12 +927,14 @@ else
 put cs slot long get wst 1
 end
 end
+note error text: "timeout", "rc=N" or "truncated", with ",truncated" added when both apply
 fn oerr slot ulong to void
 oc uchar 34
 s = get cs slot
 if eq s -1000
 ot rtimeo
 else
+if ne s 0
 ot rrc
 if lt s 0
 oc uchar 45
@@ -926,7 +943,21 @@ else
 ou ulong s
 end
 end
+end
+if ne get tr slot 0
+if ne s 0
+ot rcomma
+end
+ot rtrunc
+end
 oc uchar 34
+end
+note the command exited 0 and its whole output fitted the buffer
+fn cmdok slot ulong to bool
+if ne get cs slot 0
+ret false
+end
+ret eq get tr slot 0
 end
 
 note ---- nvidia-smi fields ----
@@ -991,7 +1022,7 @@ ostrg a b
 end
 end
 fn ogpu to void
-if ne get cs 0 0
+if not cmdok 0
 osep
 ot kgerr
 oerr 0
@@ -1082,7 +1113,7 @@ end
 ostrg get us 2 get ue 2
 end
 fn upsok to bool
-ret eq get cs 1 0
+ret cmdok 1
 end
 
 note ---- time ----

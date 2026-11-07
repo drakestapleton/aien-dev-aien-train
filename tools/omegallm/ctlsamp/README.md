@@ -85,6 +85,11 @@ Errors:
   `rc=127`), `"rc=-S"` when it dies on signal S, `"rc=-1001"` when the pipe or fork failed, and
   `"timeout"` when it has not finished in 4 s (it is then killed with signal 9). The six GPU keys
   are absent in that row, as in the old sampler.
+- `"truncated"` when the command wrote more than 8192 bytes. The sampler keeps the first 8192
+  bytes, reads the rest until the command ends and drops it, so a command with a large or endless
+  output can never block on a full pipe. Both labels are joined when both apply, for example
+  `"timeout,truncated"` for a command that writes without end and is killed at 4 s, or
+  `"rc=1,truncated"`. The keys of that command are absent in that row.
 - `"ups_error"` with the same forms when `upsc` fails. The five UPS keys are absent in that row.
   This differs from the old shell sampler, which wrote zeros when `upsc` failed.
 
@@ -99,8 +104,9 @@ same-moment reading of the original commands used by the port gate.
 ## Gate checks and ORACLE label
 
 The port gate (`evidence/OMEGALLM/wsp-ctl-traces-20261107/gate-om-20261107/`) compares the rows with
-the raw log and with the independent sensors log. The comparators are ORACLE only and are not
-shipped:
+the raw log and with the independent sensors log; `gate-om-drain-20261107/` next to it holds the
+large and endless output controls and a 30 s rerun of the same checks. The comparators are ORACLE
+only and are not shipped:
 
 - ORACLE: `/usr/bin/jq` (it reports `jaq 3.1.1`) for the key and type signature;
 - ORACLE: Wolfram Language through the Wolfram MCP evaluator for the paired value checks. The

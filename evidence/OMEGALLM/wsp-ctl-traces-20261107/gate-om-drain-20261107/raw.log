@@ -1,0 +1,1056 @@
+== 0 /proc/stat 2529
+cpu  44035889 194110758 69277819 1278104888 14812188 0 422793 0 0 301
+cpu0 1537457 5493532 3354242 67894498 1010254 0 20528 0 0 9
+cpu1 1390159 6962803 3108863 67463160 914203 0 57483 0 0 0
+cpu2 1319951 5736446 3236797 68556202 1097280 0 4426 0 0 0
+cpu3 1296602 6566249 3097774 68204925 860970 0 4111 0 0 51
+cpu4 1219410 6793037 3130773 68138613 742379 0 4062 0 0 9
+cpu5 4940688 7366784 3366994 63698315 722563 0 8812 0 0 16
+cpu6 3263262 12608218 3251381 60437324 583937 0 6185 0 0 12
+cpu7 3368276 10095867 3019429 63035777 609052 0 7155 0 0 53
+cpu8 3377952 11690942 3372752 61132304 554337 0 7247 0 0 20
+cpu9 3067345 12777921 3073238 60804283 446864 0 6299 0 0 0
+cpu10 1126177 14163827 5312686 58567053 875147 0 5133 0 0 25
+cpu11 1130915 14106156 5150073 58931097 774568 0 4754 0 0 38
+cpu12 1174481 11503737 3595173 62830190 959899 0 4083 0 0 30
+cpu13 1344118 11234045 3513296 62848085 664561 0 224575 0 0 0
+cpu14 1301059 11934297 3532303 62674485 641917 0 20456 0 0 0
+cpu15 2939483 9364164 3331848 63657711 712900 0 7529 0 0 10
+cpu16 2806888 8848019 3331154 64413169 732914 0 7522 0 0 0
+cpu17 2797333 8872676 3198017 64591135 696867 0 7473 0 0 17
+cpu18 2381460 9006300 3191570 64938343 655288 0 7433 0 0 3
+cpu19 2252864 8985730 3109448 65288211 556278 0 7515 0 0 0
+intr 13470482764 0 361135438 23819867 0 0 65783129 1304132 0 0 2 0 2258 3398147460 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 4 0 0 2570909 420521 41 0 0 6101 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 358 0 0 0 0 0 0 0 0 0 0 0 222375656 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 0 1 1 0 1 0 0 1 0 0 1 0 0 0 0 85822842 0 0 0 0 0 0 0 92468258 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 42600 63822469 65946545 58162991 34883500 33111619 30667979 26385486 71836145 73316401 32739482 32518817 28825210 27609143 25587101 20857640 5206 0 136047 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 182813
+ctxt 14663970776
+btime 1793232395
+processes 376816862
+procs_running 10
+procs_blocked 0
+softirq 3990737884 710952 326840632 36038 356090114 26821900 0 5254953 591666925 5588253 2677728117
+
+== 0 /proc/stat 2529
+cpu  44036429 194113840 69278267 1278110637 14812270 0 422799 0 0 301
+cpu0 1537504 5493535 3354260 67894894 1010275 0 20528 0 0 9
+cpu1 1390159 6963279 3108885 67463160 914203 0 57485 0 0 0
+cpu2 1319990 5736447 3236808 68556623 1097300 0 4426 0 0 0
+cpu3 1296640 6566249 3097782 68205366 860976 0 4111 0 0 51
+cpu4 1219430 6793180 3130778 68138942 742380 0 4062 0 0 9
+cpu5 4940720 7366784 3367004 63698762 722568 0 8812 0 0 16
+cpu6 3263265 12608632 3251382 60437405 583937 0 6185 0 0 12
+cpu7 3368304 10095867 3019440 63036228 609056 0 7155 0 0 53
+cpu8 3378007 11690942 3372759 61132737 554338 0 7247 0 0 20
+cpu9 3067345 12778185 3073473 60804283 446864 0 6299 0 0 0
+cpu10 1126210 14163828 5312704 58567494 875148 0 5133 0 0 25
+cpu11 1130948 14106156 5150085 58931546 774568 0 4754 0 0 38
+cpu12 1174517 11503737 3595187 62830629 959903 0 4083 0 0 30
+cpu13 1344173 11234045 3513309 62848499 664563 0 224578 0 0 0
+cpu14 1301107 11934297 3532321 62674911 641918 0 20457 0 0 0
+cpu15 2939546 9364164 3331861 63658128 712901 0 7529 0 0 10
+cpu16 2806896 8848385 3331177 64413266 732920 0 7523 0 0 0
+cpu17 2797337 8873088 3198026 64591201 696876 0 7473 0 0 17
+cpu18 2381460 9006800 3191570 64938343 655288 0 7433 0 0 3
+cpu19 2252864 8986229 3109448 65288211 556278 0 7515 0 0 0
+intr 13470609196 0 361135774 23863986 0 0 65783261 1304138 0 0 2 0 2258 3398221287 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 4 0 0 2570921 420521 41 0 0 6101 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 358 0 0 0 0 0 0 0 0 0 0 0 222378342 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 0 1 1 0 1 0 0 1 0 0 1 0 0 0 0 85824495 0 0 0 0 0 0 0 92470028 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 42600 63822547 65946746 58163175 34883850 33111917 30667979 26385486 71836436 73316703 32739488 32518884 28825210 27609236 25587123 20857640 5206 0 136047 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 182813
+ctxt 14664109207
+btime 1793232395
+processes 376817316
+procs_running 12
+procs_blocked 0
+softirq 3990775226 710955 326844130 36038 356097371 26822003 0 5255235 591671301 5588303 2677749890
+
+== 0 /proc/loadavg 34
+15.08 12.89 10.25 13/4631 3706149
+
+== 0 /proc/pressure/cpu 106
+some avg10=14.63 avg60=12.19 avg300=7.47 total=69344049548
+full avg10=0.00 avg60=0.00 avg300=0.00 total=0
+
+== 0 /proc/pressure/memory 112
+some avg10=0.00 avg60=0.03 avg300=0.06 total=1119903639
+full avg10=0.00 avg60=0.03 avg300=0.06 total=1062091006
+
+== 0 /proc/pressure/io 114
+some avg10=0.87 avg60=5.65 avg300=6.21 total=13653017639
+full avg10=0.70 avg60=4.95 avg300=5.52 total=12781931497
+
+== 0 /sys/class/thermal/thermal_zone0/temp 6
+88000
+
+== 0 /sys/class/thermal/thermal_zone1/temp 6
+68600
+
+== 0 /sys/class/thermal/thermal_zone2/temp 6
+70800
+
+== 0 /sys/class/thermal/thermal_zone3/temp 6
+65500
+
+== 0 /sys/class/thermal/thermal_zone4/temp 6
+88000
+
+== 0 /sys/class/thermal/thermal_zone5/temp 6
+68700
+
+== 0 /sys/class/thermal/thermal_zone6/temp 6
+72400
+
+== 0 /proc/meminfo 1534
+MemTotal:       127598532 kB
+MemFree:        32743304 kB
+MemAvailable:   80861856 kB
+Buffers:         8941560 kB
+Cached:         39976704 kB
+SwapCached:            0 kB
+Active:         21709332 kB
+Inactive:       46383268 kB
+Active(anon):   20834140 kB
+Inactive(anon): 14104320 kB
+Active(file):     875192 kB
+Inactive(file): 32278948 kB
+Unevictable:       31020 kB
+Mlocked:           22912 kB
+SwapTotal:             0 kB
+SwapFree:              0 kB
+Zswap:                 0 kB
+Zswapped:              0 kB
+Dirty:            949188 kB
+Writeback:             0 kB
+AnonPages:      19205788 kB
+Mapped:          1601028 kB
+Shmem:          15762376 kB
+KReclaimable:   21158036 kB
+Slab:           24577528 kB
+SReclaimable:   21158036 kB
+SUnreclaim:      3419492 kB
+KernelStack:       74304 kB
+ShadowCallStack:   18680 kB
+PageTables:       243032 kB
+SecPageTables:     42840 kB
+NFS_Unstable:          0 kB
+Bounce:                0 kB
+WritebackTmp:          0 kB
+CommitLimit:    63799264 kB
+Committed_AS:   183995644 kB
+VmallocTotal:   135288315904 kB
+VmallocUsed:      189276 kB
+VmallocChunk:          0 kB
+Percpu:            52800 kB
+HardwareCorrupted:     0 kB
+AnonHugePages:   1949696 kB
+ShmemHugePages:        0 kB
+ShmemPmdMapped:        0 kB
+FileHugePages:    165888 kB
+FilePmdMapped:         0 kB
+CmaTotal:              0 kB
+CmaFree:           94088 kB
+Balloon:               0 kB
+HugePages_Total:       0
+HugePages_Free:        0
+HugePages_Rsvd:        0
+HugePages_Surp:        0
+Hugepagesize:       2048 kB
+Hugetlb:               0 kB
+
+== 0 gpu 27
+59, 0, 43.32, 64, 2489, P0
+
+== 0 ups 1069
+battery.charge: 100
+battery.charge.low: 10
+battery.charge.warning: 20
+battery.mfr.date: CPS
+battery.runtime: 2425
+battery.runtime.low: 300
+battery.type: PbAcid
+battery.voltage: 27.2
+battery.voltage.nominal: 24
+device.mfr: CPS
+device.model: CP1500PFCLCDa
+device.serial: CXXRQ7011530
+device.type: ups
+driver.debug: 0
+driver.flag.allow_killpower: 0
+driver.name: usbhid-ups
+driver.parameter.pollfreq: 30
+driver.parameter.pollinterval: 2
+driver.parameter.port: auto
+driver.parameter.synchronous: auto
+driver.parameter.vendorid: 0764
+driver.state: quiet
+driver.version: 2.8.1
+driver.version.data: CyberPower HID 0.8
+driver.version.internal: 0.52
+driver.version.usb: libusb-1.0.27 (API: 0x100010a)
+input.voltage: 121.0
+input.voltage.nominal: 120
+output.voltage: 121.0
+ups.beeper.status: enabled
+ups.delay.shutdown: 20
+ups.delay.start: 30
+ups.load: 26
+ups.mfr: CPS
+ups.model: CP1500PFCLCDa
+ups.productid: 0601
+ups.realpower.nominal: 1000
+ups.serial: CXXRQ7011530
+ups.status: OL
+ups.test.result: No test initiated
+ups.timer.shutdown: -60
+ups.timer.start: -60
+ups.vendorid: 0764
+
+== 1 /proc/stat 2528
+cpu  44036955 194116662 69278935 1278116288 14812484 0 422807 0 0 301
+cpu0 1537594 5493536 3354293 67895242 1010292 0 20529 0 0 9
+cpu1 1390159 6963759 3108904 67463160 914203 0 57486 0 0 0
+cpu2 1320031 5736448 3236821 68557031 1097327 0 4427 0 0 0
+cpu3 1296668 6566249 3097795 68205804 860988 0 4111 0 0 51
+cpu4 1219448 6793296 3130784 68139297 742381 0 4062 0 0 9
+cpu5 4940746 7366784 3367011 63699208 722582 0 8812 0 0 16
+cpu6 3263266 12609085 3251383 60437449 583937 0 6185 0 0 12
+cpu7 3368337 10095867 3019449 63036668 609067 0 7155 0 0 53
+cpu8 3378037 11690942 3372767 61133176 554356 0 7247 0 0 20
+cpu9 3067345 12778405 3073753 60804283 446864 0 6299 0 0 0
+cpu10 1126230 14163834 5312774 58567874 875155 0 5133 0 0 25
+cpu11 1130976 14106161 5150149 58931928 774578 0 4754 0 0 38
+cpu12 1174557 11503738 3595209 62831034 959926 0 4084 0 0 30
+cpu13 1344227 11234046 3513332 62848887 664583 0 224582 0 0 0
+cpu14 1301152 11934298 3532347 62675314 641935 0 20457 0 0 0
+cpu15 2939592 9364164 3331883 63658539 712918 0 7530 0 0 10
+cpu16 2806908 8848641 3331197 64413469 732927 0 7523 0 0 0
+cpu17 2797349 8873369 3198056 64591360 696891 0 7473 0 0 17
+cpu18 2381460 9007300 3191570 64938343 655288 0 7433 0 0 3
+cpu19 2252864 8986729 3109448 65288211 556278 0 7515 0 0 0
+intr 13470773535 0 361138179 23921207 0 0 65783332 1304154 0 0 2 0 2258 3398316147 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 4 0 0 2570929 420521 41 0 0 6101 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 358 0 0 0 0 0 0 0 0 0 0 0 222380252 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 0 1 1 0 1 0 0 1 0 0 1 0 0 0 0 85826134 0 0 0 0 0 0 0 92471735 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 42603 63824051 65947289 58163648 34883983 33112204 30667979 26385486 71836703 73317147 32739501 32519084 28825211 27609504 25587486 20857640 5206 0 136047 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 182816
+ctxt 14664294364
+btime 1793232395
+processes 376819769
+procs_running 8
+procs_blocked 1
+softirq 3990819918 710957 326848179 36038 356105154 26822247 0 5255446 591675804 5588353 2677777740
+
+== 1 /proc/loadavg 33
+14.68 12.84 10.25 8/4674 3708602
+
+== 1 /proc/pressure/cpu 106
+some avg10=16.35 avg60=12.88 avg300=7.72 total=69344971075
+full avg10=0.00 avg60=0.00 avg300=0.00 total=0
+
+== 1 /proc/pressure/memory 112
+some avg10=0.00 avg60=0.03 avg300=0.06 total=1119903639
+full avg10=0.00 avg60=0.03 avg300=0.06 total=1062091006
+
+== 1 /proc/pressure/io 114
+some avg10=0.81 avg60=5.18 avg300=6.10 total=13653084474
+full avg10=0.71 avg60=4.54 avg300=5.42 total=12781989793
+
+== 1 /sys/class/thermal/thermal_zone0/temp 6
+78000
+
+== 1 /sys/class/thermal/thermal_zone1/temp 6
+68100
+
+== 1 /sys/class/thermal/thermal_zone2/temp 6
+71400
+
+== 1 /sys/class/thermal/thermal_zone3/temp 6
+65600
+
+== 1 /sys/class/thermal/thermal_zone4/temp 6
+78000
+
+== 1 /sys/class/thermal/thermal_zone5/temp 6
+69100
+
+== 1 /sys/class/thermal/thermal_zone6/temp 6
+72300
+
+== 1 /proc/meminfo 1534
+MemTotal:       127598532 kB
+MemFree:        32360752 kB
+MemAvailable:   80561972 kB
+Buffers:         8944800 kB
+Cached:         40056840 kB
+SwapCached:            0 kB
+Active:         21705624 kB
+Inactive:       46440896 kB
+Active(anon):   20827792 kB
+Inactive(anon): 14081920 kB
+Active(file):     877832 kB
+Inactive(file): 32358976 kB
+Unevictable:       31020 kB
+Mlocked:           22912 kB
+SwapTotal:             0 kB
+SwapFree:              0 kB
+Zswap:                 0 kB
+Zswapped:              0 kB
+Dirty:            938384 kB
+Writeback:             0 kB
+AnonPages:      19177424 kB
+Mapped:          1572776 kB
+Shmem:          15762620 kB
+KReclaimable:   21158036 kB
+Slab:           24577528 kB
+SReclaimable:   21158036 kB
+SUnreclaim:      3419492 kB
+KernelStack:       75024 kB
+ShadowCallStack:   18816 kB
+PageTables:       243180 kB
+SecPageTables:     42840 kB
+NFS_Unstable:          0 kB
+Bounce:                0 kB
+WritebackTmp:          0 kB
+CommitLimit:    63799264 kB
+Committed_AS:   183910632 kB
+VmallocTotal:   135288315904 kB
+VmallocUsed:      190148 kB
+VmallocChunk:          0 kB
+Percpu:            52800 kB
+HardwareCorrupted:     0 kB
+AnonHugePages:   1949696 kB
+ShmemHugePages:        0 kB
+ShmemPmdMapped:        0 kB
+FileHugePages:    165888 kB
+FilePmdMapped:         0 kB
+CmaTotal:              0 kB
+CmaFree:           94088 kB
+Balloon:               0 kB
+HugePages_Total:       0
+HugePages_Free:        0
+HugePages_Rsvd:        0
+HugePages_Surp:        0
+Hugepagesize:       2048 kB
+Hugetlb:               0 kB
+
+== 1 gpu 27
+59, 0, 43.41, 64, 2496, P0
+
+== 1 ups 1069
+battery.charge: 100
+battery.charge.low: 10
+battery.charge.warning: 20
+battery.mfr.date: CPS
+battery.runtime: 1600
+battery.runtime.low: 300
+battery.type: PbAcid
+battery.voltage: 27.2
+battery.voltage.nominal: 24
+device.mfr: CPS
+device.model: CP1500PFCLCDa
+device.serial: CXXRQ7011530
+device.type: ups
+driver.debug: 0
+driver.flag.allow_killpower: 0
+driver.name: usbhid-ups
+driver.parameter.pollfreq: 30
+driver.parameter.pollinterval: 2
+driver.parameter.port: auto
+driver.parameter.synchronous: auto
+driver.parameter.vendorid: 0764
+driver.state: quiet
+driver.version: 2.8.1
+driver.version.data: CyberPower HID 0.8
+driver.version.internal: 0.52
+driver.version.usb: libusb-1.0.27 (API: 0x100010a)
+input.voltage: 121.0
+input.voltage.nominal: 120
+output.voltage: 121.0
+ups.beeper.status: enabled
+ups.delay.shutdown: 20
+ups.delay.start: 30
+ups.load: 26
+ups.mfr: CPS
+ups.model: CP1500PFCLCDa
+ups.productid: 0601
+ups.realpower.nominal: 1000
+ups.serial: CXXRQ7011530
+ups.status: OL
+ups.test.result: No test initiated
+ups.timer.shutdown: -60
+ups.timer.start: -60
+ups.vendorid: 0764
+
+== 2 /proc/stat 2529
+cpu  44037373 194118968 69279524 1278122655 14812679 0 422814 0 0 301
+cpu0 1537622 5493538 3354306 67895680 1010296 0 20529 0 0 9
+cpu1 1390159 6964234 3108928 67463160 914203 0 57488 0 0 0
+cpu2 1320059 5736450 3236833 68557476 1097336 0 4427 0 0 0
+cpu3 1296693 6566249 3097804 68206245 861005 0 4112 0 0 51
+cpu4 1219463 6793425 3130789 68139636 742388 0 4062 0 0 9
+cpu5 4940769 7366784 3367017 63699665 722591 0 8813 0 0 16
+cpu6 3263266 12609512 3251383 60437520 583937 0 6186 0 0 12
+cpu7 3368359 10095867 3019454 63037136 609069 0 7155 0 0 53
+cpu8 3378056 11690943 3372772 61133641 554361 0 7248 0 0 20
+cpu9 3067345 12778633 3074025 60804283 446864 0 6299 0 0 0
+cpu10 1126252 14163838 5312821 58568280 875161 0 5133 0 0 25
+cpu11 1130996 14106194 5150245 58932251 774593 0 4754 0 0 38
+cpu12 1174587 11503739 3595222 62831457 959950 0 4084 0 0 30
+cpu13 1344269 11234046 3513349 62849299 664596 0 224585 0 0 0
+cpu14 1301196 11934298 3532359 62675720 641967 0 20457 0 0 0
+cpu15 2939638 9364164 3331899 63658952 712939 0 7530 0 0 10
+cpu16 2806936 8848644 3331215 64413906 732937 0 7523 0 0 0
+cpu17 2797375 8873372 3198076 64591786 696913 0 7474 0 0 17
+cpu18 2381460 9007800 3191570 64938343 655288 0 7433 0 0 3
+cpu19 2252864 8987229 3109448 65288211 556278 0 7515 0 0 0
+intr 13470919031 0 361139574 23973605 0 0 65783441 1304160 0 0 2 0 2258 3398398618 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 4 0 0 2570941 420521 41 0 0 6101 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 358 0 0 0 0 0 0 0 0 0 0 0 222382616 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 0 1 1 0 1 0 0 1 0 0 1 0 0 0 0 85827577 0 0 0 0 0 0 0 92473261 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 42603 63825399 65947722 58164264 34884117 33112523 30667979 26385486 71836826 73317537 32739691 32519224 28825211 27609533 25587536 20857640 5206 0 136047 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 182816
+ctxt 14664432210
+btime 1793232395
+processes 376821686
+procs_running 10
+procs_blocked 0
+softirq 3990859333 710960 326852019 36038 356111846 26822618 0 5255667 591680162 5588403 2677801620
+
+== 2 /proc/loadavg 34
+14.06 12.75 10.24 10/4724 3710519
+
+== 2 /proc/pressure/cpu 106
+some avg10=15.57 avg60=12.95 avg300=7.81 total=69345736707
+full avg10=0.00 avg60=0.00 avg300=0.00 total=0
+
+== 2 /proc/pressure/memory 112
+some avg10=0.00 avg60=0.02 avg300=0.06 total=1119907365
+full avg10=0.00 avg60=0.02 avg300=0.06 total=1062094719
+
+== 2 /proc/pressure/io 114
+some avg10=0.87 avg60=4.91 avg300=6.03 total=13653144322
+full avg10=0.81 avg60=4.31 avg300=5.36 total=12782045805
+
+== 2 /sys/class/thermal/thermal_zone0/temp 6
+77600
+
+== 2 /sys/class/thermal/thermal_zone1/temp 6
+67000
+
+== 2 /sys/class/thermal/thermal_zone2/temp 6
+71100
+
+== 2 /sys/class/thermal/thermal_zone3/temp 6
+65000
+
+== 2 /sys/class/thermal/thermal_zone4/temp 6
+77600
+
+== 2 /sys/class/thermal/thermal_zone5/temp 6
+69000
+
+== 2 /sys/class/thermal/thermal_zone6/temp 6
+71900
+
+== 2 /proc/meminfo 1534
+MemTotal:       127598532 kB
+MemFree:        33356148 kB
+MemAvailable:   80918768 kB
+Buffers:         8946316 kB
+Cached:         39416892 kB
+SwapCached:            0 kB
+Active:         21695384 kB
+Inactive:       45777784 kB
+Active(anon):   20799636 kB
+Inactive(anon): 14074700 kB
+Active(file):     895748 kB
+Inactive(file): 31703084 kB
+Unevictable:       31020 kB
+Mlocked:           22912 kB
+SwapTotal:             0 kB
+SwapFree:              0 kB
+Zswap:                 0 kB
+Zswapped:              0 kB
+Dirty:            890992 kB
+Writeback:             0 kB
+AnonPages:      19140628 kB
+Mapped:          1579212 kB
+Shmem:          15762624 kB
+KReclaimable:   21157412 kB
+Slab:           24576872 kB
+SReclaimable:   21157412 kB
+SUnreclaim:      3419460 kB
+KernelStack:       75888 kB
+ShadowCallStack:   19076 kB
+PageTables:       242880 kB
+SecPageTables:     42840 kB
+NFS_Unstable:          0 kB
+Bounce:                0 kB
+WritebackTmp:          0 kB
+CommitLimit:    63799264 kB
+Committed_AS:   183854344 kB
+VmallocTotal:   135288315904 kB
+VmallocUsed:      191076 kB
+VmallocChunk:          0 kB
+Percpu:            52800 kB
+HardwareCorrupted:     0 kB
+AnonHugePages:   1949696 kB
+ShmemHugePages:        0 kB
+ShmemPmdMapped:        0 kB
+FileHugePages:    145408 kB
+FilePmdMapped:         0 kB
+CmaTotal:              0 kB
+CmaFree:           96644 kB
+Balloon:               0 kB
+HugePages_Total:       0
+HugePages_Free:        0
+HugePages_Rsvd:        0
+HugePages_Surp:        0
+Hugepagesize:       2048 kB
+Hugetlb:               0 kB
+
+== 2 gpu 27
+59, 0, 43.42, 64, 2489, P0
+
+== 2 ups 1069
+battery.charge: 100
+battery.charge.low: 10
+battery.charge.warning: 20
+battery.mfr.date: CPS
+battery.runtime: 1625
+battery.runtime.low: 300
+battery.type: PbAcid
+battery.voltage: 27.2
+battery.voltage.nominal: 24
+device.mfr: CPS
+device.model: CP1500PFCLCDa
+device.serial: CXXRQ7011530
+device.type: ups
+driver.debug: 0
+driver.flag.allow_killpower: 0
+driver.name: usbhid-ups
+driver.parameter.pollfreq: 30
+driver.parameter.pollinterval: 2
+driver.parameter.port: auto
+driver.parameter.synchronous: auto
+driver.parameter.vendorid: 0764
+driver.state: quiet
+driver.version: 2.8.1
+driver.version.data: CyberPower HID 0.8
+driver.version.internal: 0.52
+driver.version.usb: libusb-1.0.27 (API: 0x100010a)
+input.voltage: 121.0
+input.voltage.nominal: 120
+output.voltage: 121.0
+ups.beeper.status: enabled
+ups.delay.shutdown: 20
+ups.delay.start: 30
+ups.load: 26
+ups.mfr: CPS
+ups.model: CP1500PFCLCDa
+ups.productid: 0601
+ups.realpower.nominal: 1000
+ups.serial: CXXRQ7011530
+ups.status: OL
+ups.test.result: No test initiated
+ups.timer.shutdown: -60
+ups.timer.start: -60
+ups.vendorid: 0764
+
+== 3 /proc/stat 2528
+cpu  44037906 194121244 69280077 1278129163 14812706 0 422820 0 0 301
+cpu0 1537648 5493538 3354322 67896126 1010297 0 20529 0 0 9
+cpu1 1390159 6964697 3108963 67463160 914203 0 57489 0 0 0
+cpu2 1320085 5736452 3236843 68557928 1097338 0 4427 0 0 0
+cpu3 1296724 6566249 3097813 68206697 861007 0 4112 0 0 51
+cpu4 1219492 6793540 3130796 68139981 742389 0 4062 0 0 9
+cpu5 4940801 7366785 3367025 63700120 722591 0 8813 0 0 16
+cpu6 3263269 12609947 3251386 60437580 583937 0 6186 0 0 12
+cpu7 3368380 10095867 3019464 63037598 609069 0 7155 0 0 53
+cpu8 3378118 11690943 3372778 61134067 554362 0 7248 0 0 20
+cpu9 3067345 12778851 3074307 60804283 446864 0 6299 0 0 0
+cpu10 1126283 14163838 5312842 58568719 875161 0 5133 0 0 25
+cpu11 1131034 14106229 5150308 58932609 774594 0 4754 0 0 38
+cpu12 1174622 11503739 3595237 62831898 959952 0 4085 0 0 30
+cpu13 1344320 11234047 3513358 62849717 664599 0 224588 0 0 0
+cpu14 1301240 11934298 3532375 62676150 641970 0 20457 0 0 0
+cpu15 2939679 9364164 3331912 63659391 712941 0 7530 0 0 10
+cpu16 2806946 8849043 3331217 64413990 732940 0 7523 0 0 0
+cpu17 2797405 8873375 3198092 64592229 696917 0 7474 0 0 17
+cpu18 2381482 9007903 3191583 64938700 655290 0 7433 0 0 3
+cpu19 2252864 8987729 3109448 65288211 556278 0 7515 0 0 0
+intr 13471031529 0 361139983 24010163 0 0 65783641 1304166 0 0 2 0 2258 3398466434 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 4 0 0 2570968 420521 41 0 0 6101 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 358 0 0 0 0 0 0 0 0 0 0 0 222385433 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 0 1 1 0 1 0 0 1 0 0 1 0 0 0 0 85829227 0 0 0 0 0 0 0 92475032 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 42603 63825437 65947904 58164487 34884287 33112758 30668044 26385486 71836924 73317652 32739721 32519233 28825211 27609560 25587587 20857640 5206 0 136047 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 182816
+ctxt 14664533486
+btime 1793232395
+processes 376822456
+procs_running 6
+procs_blocked 1
+softirq 3990895635 710962 326855219 36039 356119529 26822746 0 5255971 591684336 5588453 2677822380
+
+== 3 /proc/loadavg 33
+13.58 12.67 10.22 7/4681 3711289
+
+== 3 /proc/pressure/cpu 106
+some avg10=13.14 avg60=12.78 avg300=7.88 total=69346231946
+full avg10=0.00 avg60=0.00 avg300=0.00 total=0
+
+== 3 /proc/pressure/memory 112
+some avg10=0.00 avg60=0.02 avg300=0.06 total=1119907365
+full avg10=0.00 avg60=0.02 avg300=0.06 total=1062094719
+
+== 3 /proc/pressure/io 114
+some avg10=0.47 avg60=4.44 avg300=5.90 total=13653157595
+full avg10=0.44 avg60=3.90 avg300=5.25 total=12782056913
+
+== 3 /sys/class/thermal/thermal_zone0/temp 6
+76400
+
+== 3 /sys/class/thermal/thermal_zone1/temp 6
+67900
+
+== 3 /sys/class/thermal/thermal_zone2/temp 6
+71700
+
+== 3 /sys/class/thermal/thermal_zone3/temp 6
+64500
+
+== 3 /sys/class/thermal/thermal_zone4/temp 6
+76400
+
+== 3 /sys/class/thermal/thermal_zone5/temp 6
+68800
+
+== 3 /sys/class/thermal/thermal_zone6/temp 6
+69200
+
+== 3 /proc/meminfo 1534
+MemTotal:       127598532 kB
+MemFree:        33572192 kB
+MemAvailable:   81185388 kB
+Buffers:         8950292 kB
+Cached:         39462988 kB
+SwapCached:            0 kB
+Active:         21508380 kB
+Inactive:       45820276 kB
+Active(anon):   20611360 kB
+Inactive(anon): 14068332 kB
+Active(file):     897020 kB
+Inactive(file): 31751944 kB
+Unevictable:       31020 kB
+Mlocked:           22912 kB
+SwapTotal:             0 kB
+SwapFree:              0 kB
+Zswap:                 0 kB
+Zswapped:              0 kB
+Dirty:            922796 kB
+Writeback:             0 kB
+AnonPages:      18920672 kB
+Mapped:          1235452 kB
+Shmem:          15762340 kB
+KReclaimable:   21157412 kB
+Slab:           24576808 kB
+SReclaimable:   21157412 kB
+SUnreclaim:      3419396 kB
+KernelStack:       75136 kB
+ShadowCallStack:   18872 kB
+PageTables:       242792 kB
+SecPageTables:     42396 kB
+NFS_Unstable:          0 kB
+Bounce:                0 kB
+WritebackTmp:          0 kB
+CommitLimit:    63799264 kB
+Committed_AS:   183920708 kB
+VmallocTotal:   135288315904 kB
+VmallocUsed:      185480 kB
+VmallocChunk:          0 kB
+Percpu:            52800 kB
+HardwareCorrupted:     0 kB
+AnonHugePages:   1949696 kB
+ShmemHugePages:        0 kB
+ShmemPmdMapped:        0 kB
+FileHugePages:    145408 kB
+FilePmdMapped:         0 kB
+CmaTotal:              0 kB
+CmaFree:           96644 kB
+Balloon:               0 kB
+HugePages_Total:       0
+HugePages_Free:        0
+HugePages_Rsvd:        0
+HugePages_Surp:        0
+Hugepagesize:       2048 kB
+Hugetlb:               0 kB
+
+== 3 gpu 27
+49, 0, 40.48, 62, 2496, P0
+
+== 3 ups 1069
+battery.charge: 100
+battery.charge.low: 10
+battery.charge.warning: 20
+battery.mfr.date: CPS
+battery.runtime: 1625
+battery.runtime.low: 300
+battery.type: PbAcid
+battery.voltage: 27.2
+battery.voltage.nominal: 24
+device.mfr: CPS
+device.model: CP1500PFCLCDa
+device.serial: CXXRQ7011530
+device.type: ups
+driver.debug: 0
+driver.flag.allow_killpower: 0
+driver.name: usbhid-ups
+driver.parameter.pollfreq: 30
+driver.parameter.pollinterval: 2
+driver.parameter.port: auto
+driver.parameter.synchronous: auto
+driver.parameter.vendorid: 0764
+driver.state: quiet
+driver.version: 2.8.1
+driver.version.data: CyberPower HID 0.8
+driver.version.internal: 0.52
+driver.version.usb: libusb-1.0.27 (API: 0x100010a)
+input.voltage: 121.0
+input.voltage.nominal: 120
+output.voltage: 121.0
+ups.beeper.status: enabled
+ups.delay.shutdown: 20
+ups.delay.start: 30
+ups.load: 25
+ups.mfr: CPS
+ups.model: CP1500PFCLCDa
+ups.productid: 0601
+ups.realpower.nominal: 1000
+ups.serial: CXXRQ7011530
+ups.status: OL
+ups.test.result: No test initiated
+ups.timer.shutdown: -60
+ups.timer.start: -60
+ups.vendorid: 0764
+
+== 4 /proc/stat 2529
+cpu  44038344 194123639 69280605 1278135251 14813104 0 422827 0 0 301
+cpu0 1537679 5493560 3354344 67896540 1010300 0 20529 0 0 9
+cpu1 1390159 6965151 3109007 67463160 914203 0 57491 0 0 0
+cpu2 1320102 5736503 3236869 68558310 1097353 0 4427 0 0 0
+cpu3 1296750 6566249 3097825 68207139 861018 0 4112 0 0 51
+cpu4 1219507 6793670 3130810 68140275 742427 0 4063 0 0 9
+cpu5 4940819 7366785 3367036 63700550 722624 0 8813 0 0 16
+cpu6 3263272 12610365 3251394 60437649 583938 0 6186 0 0 12
+cpu7 3368400 10095867 3019474 63038035 609094 0 7155 0 0 53
+cpu8 3378136 11690977 3372799 61134483 554368 0 7248 0 0 20
+cpu9 3067347 12779119 3074485 60804332 446868 0 6299 0 0 0
+cpu10 1126314 14163847 5312867 58569101 875200 0 5133 0 0 25
+cpu11 1131064 14106234 5150328 58933004 774632 0 4754 0 0 38
+cpu12 1174646 11503739 3595263 62832253 960030 0 4085 0 0 30
+cpu13 1344364 11234047 3513379 62850100 664630 0 224591 0 0 0
+cpu14 1301286 11934298 3532395 62676550 641992 0 20457 0 0 0
+cpu15 2939719 9364165 3331924 63659801 712969 0 7530 0 0 10
+cpu16 2806946 8849543 3331217 64413990 732940 0 7523 0 0 0
+cpu17 2797449 8873378 3198125 64592627 696935 0 7474 0 0 17
+cpu18 2381512 9007905 3191607 64939133 655296 0 7433 0 0 3
+cpu19 2252864 8988229 3109448 65288211 556278 0 7515 0 0 0
+intr 13471176959 0 361141287 24053966 0 0 65783778 1304181 0 0 2 0 2258 3398541012 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 4 0 0 2570980 420521 41 0 0 6101 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 358 0 0 0 0 0 0 0 0 0 0 0 222387737 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 0 1 1 0 1 0 0 1 0 0 1 0 0 0 0 85830743 0 0 0 0 0 0 0 92476591 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 42603 63829008 65953457 58167026 34884287 33113752 30668348 26385486 71837191 73319098 32741611 32521014 28825247 27610872 25587874 20857840 5206 0 136047 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 182840
+ctxt 14664678269
+btime 1793232395
+processes 376823534
+procs_running 10
+procs_blocked 0
+softirq 3990938033 710965 326859203 36039 356126795 26823838 0 5256211 591688811 5588503 2677847668
+
+== 4 /proc/loadavg 33
+12.89 12.54 10.19 8/4644 3712371
+
+== 4 /proc/pressure/cpu 105
+some avg10=8.81 avg60=11.96 avg300=7.77 total=69346264326
+full avg10=0.00 avg60=0.00 avg300=0.00 total=0
+
+== 4 /proc/pressure/memory 112
+some avg10=0.00 avg60=0.02 avg300=0.06 total=1119909932
+full avg10=0.00 avg60=0.02 avg300=0.05 total=1062097253
+
+== 4 /proc/pressure/io 114
+some avg10=1.12 avg60=4.31 avg300=5.86 total=13653304856
+full avg10=1.10 avg60=3.81 avg300=5.21 total=12782201231
+
+== 4 /sys/class/thermal/thermal_zone0/temp 6
+77000
+
+== 4 /sys/class/thermal/thermal_zone1/temp 6
+67100
+
+== 4 /sys/class/thermal/thermal_zone2/temp 6
+70600
+
+== 4 /sys/class/thermal/thermal_zone3/temp 6
+64100
+
+== 4 /sys/class/thermal/thermal_zone4/temp 6
+77000
+
+== 4 /sys/class/thermal/thermal_zone5/temp 6
+65100
+
+== 4 /sys/class/thermal/thermal_zone6/temp 6
+67800
+
+== 4 /proc/meminfo 1534
+MemTotal:       127598532 kB
+MemFree:        34503252 kB
+MemAvailable:   81492504 kB
+Buffers:         9083900 kB
+Cached:         38707268 kB
+SwapCached:            0 kB
+Active:         21385908 kB
+Inactive:       45173648 kB
+Active(anon):   20485520 kB
+Inactive(anon): 14048060 kB
+Active(file):     900388 kB
+Inactive(file): 31125588 kB
+Unevictable:       31020 kB
+Mlocked:           22912 kB
+SwapTotal:             0 kB
+SwapFree:              0 kB
+Zswap:                 0 kB
+Zswapped:              0 kB
+Dirty:            927524 kB
+Writeback:             0 kB
+AnonPages:      18799968 kB
+Mapped:          1223488 kB
+Shmem:          15762640 kB
+KReclaimable:   21156900 kB
+Slab:           24576196 kB
+SReclaimable:   21156900 kB
+SUnreclaim:      3419296 kB
+KernelStack:       74736 kB
+ShadowCallStack:   18712 kB
+PageTables:       241784 kB
+SecPageTables:     42396 kB
+NFS_Unstable:          0 kB
+Bounce:                0 kB
+WritebackTmp:          0 kB
+CommitLimit:    63799264 kB
+Committed_AS:   182146404 kB
+VmallocTotal:   135288315904 kB
+VmallocUsed:      184632 kB
+VmallocChunk:          0 kB
+Percpu:            52800 kB
+HardwareCorrupted:     0 kB
+AnonHugePages:   1949696 kB
+ShmemHugePages:        0 kB
+ShmemPmdMapped:        0 kB
+FileHugePages:    135168 kB
+FilePmdMapped:         0 kB
+CmaTotal:              0 kB
+CmaFree:          105912 kB
+Balloon:               0 kB
+HugePages_Total:       0
+HugePages_Free:        0
+HugePages_Rsvd:        0
+HugePages_Surp:        0
+Hugepagesize:       2048 kB
+Hugetlb:               0 kB
+
+== 4 gpu 25
+0, 0, 22.00, 58, 598, P0
+
+== 4 ups 1069
+battery.charge: 100
+battery.charge.low: 10
+battery.charge.warning: 20
+battery.mfr.date: CPS
+battery.runtime: 1950
+battery.runtime.low: 300
+battery.type: PbAcid
+battery.voltage: 27.2
+battery.voltage.nominal: 24
+device.mfr: CPS
+device.model: CP1500PFCLCDa
+device.serial: CXXRQ7011530
+device.type: ups
+driver.debug: 0
+driver.flag.allow_killpower: 0
+driver.name: usbhid-ups
+driver.parameter.pollfreq: 30
+driver.parameter.pollinterval: 2
+driver.parameter.port: auto
+driver.parameter.synchronous: auto
+driver.parameter.vendorid: 0764
+driver.state: quiet
+driver.version: 2.8.1
+driver.version.data: CyberPower HID 0.8
+driver.version.internal: 0.52
+driver.version.usb: libusb-1.0.27 (API: 0x100010a)
+input.voltage: 121.0
+input.voltage.nominal: 120
+output.voltage: 121.0
+ups.beeper.status: enabled
+ups.delay.shutdown: 20
+ups.delay.start: 30
+ups.load: 25
+ups.mfr: CPS
+ups.model: CP1500PFCLCDa
+ups.productid: 0601
+ups.realpower.nominal: 1000
+ups.serial: CXXRQ7011530
+ups.status: OL
+ups.test.result: No test initiated
+ups.timer.shutdown: -60
+ups.timer.start: -60
+ups.vendorid: 0764
+
+== 5 /proc/stat 2528
+cpu  44038714 194126165 69281039 1278141352 14813501 0 422835 0 0 301
+cpu0 1537701 5493561 3354364 67896955 1010325 0 20530 0 0 9
+cpu1 1390159 6965615 3109041 67463160 914203 0 57493 0 0 0
+cpu2 1320122 5736519 3236885 68558708 1097388 0 4427 0 0 0
+cpu3 1296780 6566250 3097835 68207576 861032 0 4112 0 0 51
+cpu4 1219512 6793902 3130816 68140522 742434 0 4063 0 0 9
+cpu5 4940836 7366786 3367047 63700974 722663 0 8813 0 0 16
+cpu6 3263272 12610832 3251400 60437674 583938 0 6186 0 0 12
+cpu7 3368418 10095867 3019485 63038479 609114 0 7156 0 0 53
+cpu8 3378149 11691048 3372823 61134846 554390 0 7248 0 0 20
+cpu9 3067348 12779370 3074646 60804415 446870 0 6299 0 0 0
+cpu10 1126338 14163859 5312884 58569503 875231 0 5134 0 0 25
+cpu11 1131093 14106234 5150346 58933433 774645 0 4754 0 0 38
+cpu12 1174680 11503742 3595281 62832619 960088 0 4085 0 0 30
+cpu13 1344399 11234049 3513392 62850500 664658 0 224595 0 0 0
+cpu14 1301332 11934298 3532408 62676971 642002 0 20458 0 0 0
+cpu15 2939745 9364165 3331939 63660204 713014 0 7530 0 0 10
+cpu16 2806946 8850043 3331217 64413990 732940 0 7523 0 0 0
+cpu17 2797478 8873380 3198146 64593049 696954 0 7474 0 0 17
+cpu18 2381533 9007908 3191627 64939552 655327 0 7434 0 0 3
+cpu19 2252864 8988729 3109448 65288211 556278 0 7515 0 0 0
+intr 13471316591 0 361142120 24093679 0 0 65783932 1304185 0 0 2 0 2258 3398613863 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 4 0 0 2570988 420521 41 0 0 6101 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 358 0 0 0 0 0 0 0 0 0 0 0 222390448 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 0 1 1 0 1 0 0 1 0 0 1 0 0 0 0 85832254 0 0 0 0 0 0 0 92478181 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 42603 63831413 65957704 58169579 34884287 33114750 30670024 26385486 71838543 73321528 32741951 32522951 28825247 27611981 25588973 20857950 5206 0 136047 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 182840
+ctxt 14664818732
+btime 1793232395
+processes 376824270
+procs_running 7
+procs_blocked 0
+softirq 3990976380 710967 326863139 36043 356134023 26824329 0 5256368 591693267 5588553 2677869691
+
+== 5 /proc/loadavg 33
+12.50 12.46 10.18 9/4652 3713107
+
+== 5 /proc/pressure/cpu 105
+some avg10=4.83 avg60=10.82 avg300=7.61 total=69346293943
+full avg10=0.00 avg60=0.00 avg300=0.00 total=0
+
+== 5 /proc/pressure/memory 112
+some avg10=0.00 avg60=0.02 avg300=0.06 total=1119909932
+full avg10=0.00 avg60=0.02 avg300=0.05 total=1062097253
+
+== 5 /proc/pressure/io 114
+some avg10=1.52 avg60=4.09 avg300=5.78 total=13653426371
+full avg10=1.51 avg60=3.64 avg300=5.15 total=12782320571
+
+== 5 /sys/class/thermal/thermal_zone0/temp 6
+74500
+
+== 5 /sys/class/thermal/thermal_zone1/temp 6
+65700
+
+== 5 /sys/class/thermal/thermal_zone2/temp 6
+69900
+
+== 5 /sys/class/thermal/thermal_zone3/temp 6
+62800
+
+== 5 /sys/class/thermal/thermal_zone4/temp 6
+74500
+
+== 5 /sys/class/thermal/thermal_zone5/temp 6
+66800
+
+== 5 /sys/class/thermal/thermal_zone6/temp 6
+66600
+
+== 5 /proc/meminfo 1534
+MemTotal:       127598532 kB
+MemFree:        33543488 kB
+MemAvailable:   80698916 kB
+Buffers:         9244500 kB
+Cached:         38712300 kB
+SwapCached:            0 kB
+Active:         21758548 kB
+Inactive:       45335708 kB
+Active(anon):   20856316 kB
+Inactive(anon): 14045788 kB
+Active(file):     902232 kB
+Inactive(file): 31289920 kB
+Unevictable:       31020 kB
+Mlocked:           22912 kB
+SwapTotal:             0 kB
+SwapFree:              0 kB
+Zswap:                 0 kB
+Zswapped:              0 kB
+Dirty:            883420 kB
+Writeback:             0 kB
+AnonPages:      19168844 kB
+Mapped:          1588872 kB
+Shmem:          15762684 kB
+KReclaimable:   21156900 kB
+Slab:           24578260 kB
+SReclaimable:   21156900 kB
+SUnreclaim:      3421360 kB
+KernelStack:       74928 kB
+ShadowCallStack:   18824 kB
+PageTables:       245220 kB
+SecPageTables:     42840 kB
+NFS_Unstable:          0 kB
+Bounce:                0 kB
+WritebackTmp:          0 kB
+CommitLimit:    63799264 kB
+Committed_AS:   185482348 kB
+VmallocTotal:   135288315904 kB
+VmallocUsed:      188404 kB
+VmallocChunk:          0 kB
+Percpu:            52800 kB
+HardwareCorrupted:     0 kB
+AnonHugePages:   1949696 kB
+ShmemHugePages:        0 kB
+ShmemPmdMapped:        0 kB
+FileHugePages:    135168 kB
+FilePmdMapped:         0 kB
+CmaTotal:              0 kB
+CmaFree:          105912 kB
+Balloon:               0 kB
+HugePages_Total:       0
+HugePages_Free:        0
+HugePages_Rsvd:        0
+HugePages_Surp:        0
+Hugepagesize:       2048 kB
+Hugetlb:               0 kB
+
+== 5 gpu 27
+59, 0, 42.79, 62, 2509, P0
+
+== 5 ups 1069
+battery.charge: 100
+battery.charge.low: 10
+battery.charge.warning: 20
+battery.mfr.date: CPS
+battery.runtime: 1950
+battery.runtime.low: 300
+battery.type: PbAcid
+battery.voltage: 27.2
+battery.voltage.nominal: 24
+device.mfr: CPS
+device.model: CP1500PFCLCDa
+device.serial: CXXRQ7011530
+device.type: ups
+driver.debug: 0
+driver.flag.allow_killpower: 0
+driver.name: usbhid-ups
+driver.parameter.pollfreq: 30
+driver.parameter.pollinterval: 2
+driver.parameter.port: auto
+driver.parameter.synchronous: auto
+driver.parameter.vendorid: 0764
+driver.state: quiet
+driver.version: 2.8.1
+driver.version.data: CyberPower HID 0.8
+driver.version.internal: 0.52
+driver.version.usb: libusb-1.0.27 (API: 0x100010a)
+input.voltage: 121.0
+input.voltage.nominal: 120
+output.voltage: 121.0
+ups.beeper.status: enabled
+ups.delay.shutdown: 20
+ups.delay.start: 30
+ups.load: 25
+ups.mfr: CPS
+ups.model: CP1500PFCLCDa
+ups.productid: 0601
+ups.realpower.nominal: 1000
+ups.serial: CXXRQ7011530
+ups.status: OL
+ups.test.result: No test initiated
+ups.timer.shutdown: -60
+ups.timer.start: -60
+ups.vendorid: 0764
+
