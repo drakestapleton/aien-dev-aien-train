@@ -24,8 +24,12 @@ next to it. Row counts, byte sizes and shas are bookkeeping and are not sent to 
 - **Gap that does not duplicate:** an offline, replay-only study that (a) defines the telemetry
   feature vector and a fixed baseline rule over sched's existing knobs, and (b) trains and scores a
   tiny `.om` policy on held-out recorded traces. Its output is evidence for DRA-431, handed to pearl.
-  It writes no knob, adds no sched word and opens no GPU. This needs a reply from both lanes on the
-  BOARD before any code (section 7).
+  It writes no knob, adds no sched word and opens no GPU. Linear DRA-438 (this component) is
+  rescoped to exactly this offline study, feeding pearl's DRA-431.
+- **sched's reply (BOARD, 2026-11-07T06:32:58Z):** the three words exist at sched head
+  `9f5ebd35` (omega-mv #1064). Offline replay may model them as actions. A live controller in a
+  journaled Node must not call `sched_*` directly; it targets `jn_cap`, `jn_policy` and
+  `auth_pause` once DRA-398 lands (section 6.1).
 
 ## 2. sched lane: what it already does
 
@@ -175,8 +179,17 @@ agreement with R0 would say nothing. This is a MEASURED finding about the data, 
 
 ### 6.1 Boundary
 
-- Reads telemetry; writes only through sched's existing validated words (`sched_cap`,
-  `sched_policy`, `sched_pause`). A refused call (-7, -8) means no change, logged.
+- Offline replay (this study): the actions in 6.2 are modelled with sched's words `sched_cap`,
+  `sched_policy`, `sched_pause`. A refused call (-7, -8) means no change, logged. Nothing is
+  written to a live scheduler.
+- Live use (later, owned by pearl DRA-431 and DRA-430): a controller must NOT call `sched_*`
+  directly in a journaled Node, because a direct call is not journaled and crash replay would
+  diverge (sched, BOARD line 2026-11-07T06:32:58Z). It targets `jn_cap` and `jn_policy`
+  (journaled as a type 11 POLICY record before `sched_cap`/`sched_policy` take effect) and
+  `auth_pause` (journaled PAUSE), once DRA-398 lands. Source:
+  `~/handoffs/hive/sched/dra398-design.md`, mtime 2026-11-07T00:28:35-06:00, 151 lines, sha256
+  `333ff9060c5217a9d9c6241291afa69ae4e5c800175429bf7d3c089b482ea517`, lines 63-65 and 137.
+  That design and those journaled words are PROPOSED, not implemented.
 - Never writes clocks, power limits, firmware, or GPU state (pearl CAPABILITY-MATRIX line 62).
 - Telemetry older than 15 s, or any read error, forces the fail-safe action (pause new
   assignments; running jobs continue). The model is never asked in that case.
@@ -185,7 +198,7 @@ agreement with R0 would say nothing. This is a MEASURED finding about the data, 
 
 ### 6.2 Action set (7 discrete actions)
 
-| Id | Action | sched call |
+| Id | Action | Offline model (sched word) |
 |---|---|---|
 | A0 | keep | none |
 | A1 | pause new assignments | `sched_pause c true` |
@@ -254,18 +267,25 @@ across train and test.
 
 ### 6.8 Bounded hardware-run plan (NOT_RUN; needs authorization)
 
-Only after both lanes agree and pearl DRA-430 provides the action path. One authorized
+Only after both lanes agree, pearl DRA-430 provides the action path and DRA-398 lands; the arms
+act only through `jn_cap`, `jn_policy` and `auth_pause`, never `sched_*` directly. One authorized
 spark-window, a fixed synthetic job mix through sched, three arms of equal length (sched defaults,
 R0, learned policy), order randomized, one decision per 10 s, no clock or power writes. Record
 completed jobs, sched overdue count, PSI, acpitz, GPU W and UPS W. Wall energy stays
 BLOCKED_INPUT until a qualified meter exists; UPS W is reported as PARTIAL only.
 
-## 7. BOARD proposal
+## 7. BOARD proposal and replies
 
-Posted to `~/handoffs/BOARD.md` addressed to sched and pearl (see the BOARD line with
-`wsp/CtlTraces PROPOSE`). It asks sched to confirm the three words above are the stable action
-interface, and pearl to say whether DRA-431 accepts this offline study as its replay input or
-wants wsp to stand down. No code is written until both reply on the BOARD.
+Posted to `~/handoffs/BOARD.md` at 2026-11-07T06:27:07Z addressed to sched and pearl (the line
+with `wsp/CtlTraces PROPOSE`). It asked sched to confirm the three words above are the stable
+action interface, and pearl to say whether DRA-431 accepts this offline study as its replay input
+or wants wsp to stand down.
+
+sched replied at 2026-11-07T06:32:58Z (`grep '06:32:58Z sched to wsp' ~/handoffs/BOARD.md`): the
+words exist at head `9f5ebd35` (#1064); the offline study may model them; a live controller uses
+`jn_cap` / `jn_policy` / `auth_pause` after DRA-398, whose journaled words are PROPOSED. Linear
+DRA-438 is rescoped as the offline study feeding pearl's DRA-431. No reply from pearl is recorded
+in this document.
 
 ## 8. Open risks
 
