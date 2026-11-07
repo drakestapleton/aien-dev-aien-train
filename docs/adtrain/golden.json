@@ -1,0 +1,27 @@
+{
+  "schema": "adtrain-golden-v1",
+  "note": "Golden receipts of aien-train PR #42 (merge 80bcbd183b597bb1bb3dd220f3e9bf53b008ebee), reproduced byte for byte by the DRA-14 replay (evidence/ADTRAIN-REPLAY-20261107). Built from the compiler and dependencies pinned in dependencies.json; tests/adtrain/run-adtrain.sh step 3 checks them and fails with the named gate.",
+  "receipts": [
+    {
+      "gate": "golden-T-stdout",
+      "artifact": "run/T.stdout",
+      "what": "mode T: 201 L rows (loss bits, steps 0-200), 58 P rows (final parameter bits), ADTRAIN_T_PASS",
+      "evidence": "evidence/ADTRAIN/run/T.stdout",
+      "sha256": "e21d0f1a2eef79ee6ae0a5a3a3624c8926f5d005499195ae5cf04921f026f933"
+    },
+    {
+      "gate": "golden-ck120",
+      "artifact": "adtrain.ck.good",
+      "what": "mode S: the 536-byte checkpoint written after step 120 with data seed 17",
+      "evidence": "evidence/ADTRAIN/frozen/adtrain.ck.good",
+      "sha256": "185e38b702f2ba262af1a794b40f56db021c0bc1a4260d683d46b8a0c722a85d"
+    },
+    {
+      "gate": "golden-G-stdout",
+      "artifact": "run/G.stdout",
+      "what": "mode G: 58 tape gradient rows and the central-difference rows at step h = 1/64",
+      "evidence": "evidence/ADTRAIN/run/G.stdout",
+      "sha256": "dcfead80f1905684da28076cb2fab01a156d619ed1db817c1153a52953fffeba"
+    }
+  ]
+}

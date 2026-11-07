@@ -1,8 +1,9 @@
 #!/bin/sh
 # SPDX-License-Identifier: AGPL-3.0-only
 # DRA-14 independent replay of the bounded native autodiff-to-training path:
-# checkpoint refusals with valid checksums, one-check-removed load mutants, and
-# independent semantic mutants of the native tape and of the trainer.
+# checkpoint refusals with valid checksums, one-check-removed load mutants,
+# independent semantic mutants of the native tape and of the trainer, and the
+# negative controls of the suite's golden gates (mutants-golden.txt).
 #   OMC=<pinned omc 62775d2a...> OMEGA=<omega-mv checkout> OUT=<new empty dir> \
 #     sh tests/adtrain/replay/run-replay.sh
 # Host glue only (concatenation, copies, comparisons); the mutant injection
@@ -83,12 +84,23 @@ CK=$OUT/w/adtrain.ck
 [ "$(runm "$E" T ref-T)" = 0 ] || { say "REPLAY_FAIL reference T"; exit 1; }
 [ "$(runm "$E" S ref-S)" = 0 ] || { say "REPLAY_FAIL reference S"; exit 1; }
 cp "$CK" "$OUT/good.ck"
+[ "$(runm "$E" G ref-G)" = 0 ] || { say "REPLAY_FAIL reference G"; exit 1; }
 tailof "$OUT/b/ref-T.stdout" > "$OUT/ref-T.tail"
-for pair in "b/ref-T.stdout:run/T.stdout" "good.ck:frozen/adtrain.ck.good"; do
+for pair in "b/ref-T.stdout:run/T.stdout" "good.ck:frozen/adtrain.ck.good" "b/ref-G.stdout:run/G.stdout"; do
     a=${pair%%:*}; g=${pair#*:}
     if [ -f "$EV/$g" ] && cmp -s "$OUT/$a" "$EV/$g"; then say "GOLDEN $a == evidence/ADTRAIN/$g PASS"
     else bad "GOLDEN $a vs evidence/ADTRAIN/$g"; fi
 done
+# The suite's golden.json must name exactly these receipts and their sha256.
+GJ=$ROOT/docs/adtrain/golden.json
+for gate in golden-T-stdout golden-ck120 golden-G-stdout; do
+    ev=$(jq -r --arg g "$gate" '[.receipts[] | select(.gate == $g)] | if length == 1 then .[0].evidence else "" end' "$GJ")
+    gs=$(jq -r --arg g "$gate" '[.receipts[] | select(.gate == $g)] | if length == 1 then .[0].sha256 else "" end' "$GJ")
+    if [ -n "$ev" ] && [ -f "$ROOT/$ev" ] && [ "$(sha256sum "$ROOT/$ev" | cut -d' ' -f1)" = "$gs" ]; then
+        say "GOLDEN-PIN $gate == sha256($ev) $gs PASS"
+    else bad "GOLDEN-PIN $gate ($ev $gs)"; fi
+done
+[ "$(jq '.receipts | length' "$GJ")" = 3 ] && say "GOLDEN-PIN golden.json has 3 receipts PASS" || bad "GOLDEN-PIN receipt count"
 
 # 2. Checkpoint refusals: every structural check reached with a valid checksum.
 forge() { # $1 mode $2 out
@@ -194,16 +206,40 @@ grep -v '^#' "$HERE/mutants-mlp.txt" | while IFS='	' read -r id pat rep; do
     case "$s" in ADTRAIN_SUITE_PASS) k=SURVIVED ;; *-inject) k=UNKNOWN ;; ADTRAIN_SUITE_FAIL*) k=KILLED ;; *) k=UNKNOWN ;; esac
     if [ "$k" = UNKNOWN ]; then echo "MLPMUT $id INVALID suite-output ($s)" | tee -a "$REP"; echo x >> "$OUT/invalid"; continue; fi
     cat "$META" "$TAPE" "$tree/native/adtrain/mlp.om" "$MAIN" > "$OUT/m/$id.om"
-    if ! build "$OUT/m/$id.om" "$OUT/m/$id.elf"; then gt=COMPILE_REFUSED; gc=COMPILE_REFUSED
+    if ! build "$OUT/m/$id.om" "$OUT/m/$id.elf"; then gt=COMPILE_REFUSED; gc=COMPILE_REFUSED; gg=COMPILE_REFUSED
     else
         a=$(runm "$OUT/m/$id.elf" T "mlp-$id-T")
         if [ "$a" = 0 ] && cmp -s "$OUT/b/mlp-$id-T.stdout" "$EV/run/T.stdout"; then gt=SAME; else gt="DIFFER(rc=$a)"; fi
         b=$(runm "$OUT/m/$id.elf" S "mlp-$id-S")
         if [ "$b" = 0 ] && cmp -s "$CK" "$EV/frozen/adtrain.ck.good"; then gc=SAME; else gc="DIFFER(rc=$b)"; fi
+        c=$(runm "$OUT/m/$id.elf" G "mlp-$id-G")
+        if [ "$c" = 0 ] && cmp -s "$OUT/b/mlp-$id-G.stdout" "$EV/run/G.stdout"; then gg=SAME; else gg="DIFFER(rc=$c)"; fi
     fi
-    line="MLPMUT $id suite=$k ($s) golden_T=$gt golden_ck=$gc"
+    line="MLPMUT $id suite=$k ($s) golden_T=$gt golden_ck=$gc golden_G=$gg"
     if [ "$k" = SURVIVED ]; then line="$line GAP"; echo x >> "$OUT/gap"; fi
     echo "$line" | tee -a "$REP"
+done
+
+# 6. Negative controls of the golden gates and of dgeps: the suite on a copy of
+#    the tree with one declared edit must end with the declared line.
+grep -v '^#' "$HERE/mutants-golden.txt" | while IFS='	' read -r id f pat rep want pat2 rep2; do
+    [ -n "$id" ] || continue
+    tree=$OUT/m/gtree-$id
+    mkdir -p "$tree/docs" "$tree/native" "$tree/tests"
+    cp -R "$ROOT/docs/adtrain" "$tree/docs/" && cp -R "$ROOT/native/adtrain" "$tree/native/" \
+        && cp -R "$ROOT/tests/adtrain" "$tree/tests/" || { echo "GOLDCTL $id INVALID copy" | tee -a "$REP"; echo x >> "$OUT/invalid"; continue; }
+    mut "$ROOT/$f" "$pat" "$rep" "$tree/$f"; r=$?
+    if [ "$r" = 0 ] && [ -n "$pat2" ]; then
+        cp "$tree/$f" "$OUT/m/$id.first"
+        mut "$OUT/m/$id.first" "$pat2" "$rep2" "$tree/$f"; r=$?
+    fi
+    if [ "$r" != 0 ]; then echo "GOLDCTL $id INVALID subst=$r" | tee -a "$REP"; echo x >> "$OUT/invalid"; continue; fi
+    (cd "$tree" && OMC=$OMC OMEGA=$OMEGA OUT=$OUT/m/gsuite-$id sh tests/adtrain/run-adtrain.sh) > "$OUT/b/gsuite-$id.log" 2>&1
+    s=$(tail -n 1 "$OUT/b/gsuite-$id.log")
+    case "$s" in
+        "$want"*) echo "GOLDCTL $id ($s) PASS" | tee -a "$REP" ;;
+        *) echo "GOLDCTL $id want=($want) got=($s) FAIL" | tee -a "$REP"; echo x >> "$OUT/fail" ;;
+    esac
 done
 
 [ -f "$OUT/fail" ] && NFAIL=$((NFAIL + $(wc -l < "$OUT/fail")))

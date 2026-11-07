@@ -1,0 +1,14 @@
+# Negative controls of the golden gates (docs/adtrain/golden.json) and of the
+# gradient-check step dgeps (tests/adtrain/main.om). Columns (TAB): id, file
+# (relative to the tree), pattern, replacement, expected last line prefix of
+# tests/adtrain/run-adtrain.sh, then optionally a second pattern and replacement
+# applied to the result. Backslash-n is a newline (printf %b). Each pattern must
+# match exactly once (subst.om) or the setup is INVALID; any other last line FAILs.
+g-T-hex	docs/adtrain/golden.json	21f026f933"	21f026f934"	ADTRAIN_SUITE_FAIL golden-T-stdout (e21d0f1a
+g-ck-hex	docs/adtrain/golden.json	0c722a85d"	0c722a85e"	ADTRAIN_SUITE_FAIL golden-ck120 (185e38b7
+g-G-hex	docs/adtrain/golden.json	953fffeba"	953fffebb"	ADTRAIN_SUITE_FAIL golden-G-stdout (dcfead80
+g-ck-missing	docs/adtrain/golden.json	"gate": "golden-ck120"	"gate": "golden-ck121"	ADTRAIN_SUITE_FAIL golden-ck120 (no single golden.json entry)
+g-T-dup	docs/adtrain/golden.json	"gate": "golden-G-stdout"	"gate": "golden-T-stdout"	ADTRAIN_SUITE_FAIL golden-T-stdout (no single golden.json entry)
+e-h128-scale64	tests/adtrain/main.om	fn dgeps to f32\nret div 1.0f32 64.0f32	fn dgeps to f32\nret div 1.0f32 128.0f32	ADTRAIN_SUITE_FAIL golden-G-stdout	d = mul sub fp fm 32.0f32	d = mul sub fp fm 64.0f32
+e-h32	tests/adtrain/main.om	fn dgeps to f32\nret div 1.0f32 64.0f32	fn dgeps to f32\nret div 1.0f32 32.0f32	ADTRAIN_SUITE_FAIL gradcheck
+e-eps-mllr	tests/adtrain/main.om	eps = dgeps	eps = mllr	ADTRAIN_SUITE_PASS

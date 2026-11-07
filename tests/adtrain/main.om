@@ -131,10 +131,18 @@ dparams
 dtext 2
 end
 
+note Gradient-check step h = 1/64 (exact in binary32, bits 0x3C800000). It is
+note its own constant, not the learning rate mllr, so a changed lr is caught
+note by the golden gate and not hidden in the finite-difference step. dgc
+note scales by 32.0 = 1/(2h); change both together.
+fn dgeps to f32
+ret div 1.0f32 64.0f32
+end
+
 note One central difference; returns 0 skipped, 1 agreed, 2 disagreed.
 fn dgc i ulong to ulong
 p = get MP i
-eps = mllr
+eps = dgeps
 put MP i add p eps
 fp = mlfwd
 okp = mlsame

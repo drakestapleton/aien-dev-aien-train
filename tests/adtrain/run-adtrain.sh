@@ -1,6 +1,8 @@
 #!/bin/sh
 # SPDX-License-Identifier: AGPL-3.0-only
-# adtrain suite: native tape training example, gates 1-4 and the host arm of 5.
+# adtrain suite: native tape training example, gates 1-4 and the host arm of 5,
+# plus the golden receipts of PR #42 (docs/adtrain/golden.json: T trajectory,
+# step-120 checkpoint, G rows), so a self-consistent but different trainer fails.
 #   OMC=<pinned seed/out/omc> OMEGA=<omega-mv checkout> OUT=<scratch dir> sh tests/adtrain/run-adtrain.sh
 # OMEGA must contain the commits pinned in docs/adtrain/dependencies.json; the
 # fixture host arm runs `make test-autodiff-fixture` in OMEGA as checked out.
@@ -50,6 +52,17 @@ run() {
     echo $? > "$OUT/run/$1.rc"
     cat "$OUT/run/$1.rc"
 }
+# golden GATE FILE: FILE must hash to the sha256 recorded for GATE in
+# docs/adtrain/golden.json (PR #42's receipts); a missing entry also fails.
+GOLD=$ROOT/docs/adtrain/golden.json
+golden() {
+    g=$(jq -r --arg g "$1" '[.receipts[] | select(.gate == $g)] | if length == 1 then .[0].sha256 else "" end' "$GOLD")
+    [ -n "$g" ] || fail "$1 (no single golden.json entry)"
+    h=$(sha256sum "$2" | cut -d' ' -f1)
+    echo "$1 want=$g have=$h" >> "$OUT/run/golden.txt"
+    [ "$h" = "$g" ] || fail "$1 ($h)"
+}
+: > "$OUT/run/golden.txt"
 flip() { # flip FILE OFFSET: xor one byte with 1
     b=$(od -An -tu1 -j"$2" -N1 "$1" | tr -d ' ')
     printf "\\$(printf %o $((b ^ 1)))" | dd of="$1" bs=1 seek="$2" conv=notrunc 2> /dev/null
@@ -72,12 +85,15 @@ l200=$(awk '$1=="L"&&$2==200{print $3}' "$OUT/run/T.stdout")
 # loss >= 0, so binary32 bit patterns order like the values
 [ "$l200" -lt "$l0" ] && [ "$l200" -lt "$l100" ] || fail loss-gate
 echo "L0=$l0 L100=$l100 L200=$l200" > "$OUT/run/loss-gate.txt"
+# Golden trajectory: every L and P row bit for bit as recorded by PR #42.
+golden golden-T-stdout "$OUT/run/T.stdout"
 
 # 3. Gate 2: tape gradients against central differences (G).
 [ "$(run G "$E" G)" = 0 ] || fail gradcheck
 ok=$(grep -c '^GC [0-9]* [0-9]* 1$' "$OUT/run/G.stdout")
 bad=$(grep -c '^GC [0-9]* [0-9]* 0$' "$OUT/run/G.stdout")
 [ "$ok" -ge 50 ] && [ "$bad" = 0 ] || fail "gradcheck-rows ok=$ok bad=$bad"
+golden golden-G-stdout "$OUT/run/G.stdout"
 
 # 4. Fixture for the C oracle (D).
 [ "$(run D "$E" D)" = 0 ] || fail fixture
@@ -88,6 +104,8 @@ cp "$OUT/work/adtrain.fix" "$OUT/adtrain.fix"
 [ "$(run S "$E" S)" = 0 ] || fail save
 [ "$(wc -c < "$CK")" = 536 ] || fail checkpoint-size
 cp "$CK" "$OUT/adtrain.ck.good"
+# Golden checkpoint: the step-120 image byte for byte as recorded by PR #42.
+golden golden-ck120 "$OUT/adtrain.ck.good"
 [ "$(run R "$E" R)" = 0 ] || fail resume
 grep -qx ADTRAIN_R_PASS "$OUT/run/R.stdout" || fail resume-output
 awk '($1=="L"&&$2>=120)||$1=="P"' "$OUT/run/T.stdout" > "$OUT/run/T.tail"

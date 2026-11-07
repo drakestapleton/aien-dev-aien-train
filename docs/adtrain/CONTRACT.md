@@ -42,9 +42,23 @@ pinned Git objects and checks every SHA-256 first.
 | 3 updates reduce loss | T | `loss[200] < loss[0]` and `loss[200] < loss[100]`, in the program (exit 88) and again on the printed bits by the runner |
 | 4 checkpoint/resume | S, R | train to 120, save, fresh process loads and continues to 200; `L 120..200` and all `P` rows `cmp`-identical to the uninterrupted T run |
 | 5 CPU/GPU agreement | D | fixture replayed by omega-mv `tests/test_omega_ad_fixture.c`: host arm (M20 CPU table) PASS; GB10 arm `tests/run_ad_chip.sh` PASS 75/75 `max_ulp=0` on the GB10, sign-flip control FAIL (`evidence/ADTRAIN/gb10/`) |
+| golden receipts | T, S, G | SHA-256 of `run/T.stdout`, the step-120 checkpoint and `run/G.stdout` equal `docs/adtrain/golden.json` (PR #42's `evidence/ADTRAIN` receipts); fails as `golden-T-stdout`, `golden-ck120` or `golden-G-stdout` |
+
+Gates 1–4 are self-consistency checks: a trainer that is wrong but consistent
+with itself (a parameter never updated, another learning rate in the update
+only, a different data hash) passes them. The golden gates bind the run to
+the recorded trajectory, checkpoint and gradient rows of the pinned build, so
+such a trainer fails. Any intended change to the trainer, data or compiler pin
+needs new receipts and a new `golden.json` in the same change. The negative
+controls of these gates (one hex digit changed, entry missing or duplicated,
+another gradient-check step) are `tests/adtrain/replay/mutants-golden.txt`, run by
+`tests/adtrain/replay/run-replay.sh` (`evidence/ADTRAIN-GOLDEN-20261107/`).
 
 Central-difference rule (si19 `qfdone`, extended for small gradients):
-`d = (f(p+ε) − f(p−ε))·32`. The check passes iff `|g| ≥ 1/64` and
+`d = (f(p+ε) − f(p−ε))·32`, with ε = 1/64 from `dgeps` in `tests/adtrain/main.om`,
+its own constant: it equals the learning rate but does not follow it, so a change
+of `mllr` is caught by the golden gates and not through the finite-difference step.
+The check passes iff `|g| ≥ 1/64` and
 `16·|d − g| ≤ |g|`, or `|g| < 1/64` and `|d − g| ≤ 1/64`. A parameter is
 skipped when either perturbation changes the relu pattern. Observed: 58
 checked, 0 skipped, 0 failed.
