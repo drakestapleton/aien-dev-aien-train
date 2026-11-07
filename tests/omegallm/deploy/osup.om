@@ -1,0 +1,206 @@
+om2
+note SPDX-License-Identifier: AGPL-3.0-only
+note osup.om (aien-train DRA-125 deploy, docs/omegallm/DEPLOY.md): a foreground supervisor for one
+note service process. aien-supervise (aien-dev/spark-supervisor) is not installed for this user on
+note the Spark (no ~/.config/aien-supervise, no user process; checked 2026-11-07), so the candidate
+note rehearsal runs under this loop, started and stopped by the rehearsal driver.
+note   osup STOPFILE LOGFILE PROG [ARGS...]
+note forks and execs PROG ARGS (execprog: no PATH search, empty environment, working directory
+note kept) with stdout and stderr appended to LOGFILE, and restarts it 500 ms after it exits, for
+note any reason (exit, signal, kill -9). It polls every 50 ms. When STOPFILE exists it sends the
+note child SIGTERM, waits up to 10 s (then SIGKILL), reaps it and exits 0: a clean stop leaves no
+note process behind. More than 10 restarts with no child living 30 s is a crash loop: the
+note supervisor stops and exits 3, leaving nothing running. Its own stdout gets one line per event:
+note   osup start GEN PID UNIXSEC | osup exit GEN PID STATUS UNIXSEC (STATUS the raw wait4 status:
+note   the signal number for a signal, 256 x code for an exit) | osup stop GEN PID STATUS UNIXSEC |
+note   osup crashloop GEN UNIXSEC
+note Exits: 0 stopped, 2 usage, 3 crash loop, 70 fork failed. The child exits 127 when exec fails.
+global pk uchar 4096
+global pb uchar 4096
+global ws uchar 8
+global ob uchar 256
+global og ulong 4
+
+text tusage "usage: osup STOPFILE LOGFILE PROG [ARGS...]\n"
+text tpre "osup "
+text tstart "start "
+text texit "exit "
+text tstop "stop "
+text tloop "crashloop "
+
+fn oflush to void
+n = get og 0
+if gt n 0
+k = write 1 ob 0 n
+end
+put og 0 0
+end
+
+fn oput c ulong to void
+if ge get og 0 255
+oflush
+end
+put ob get og 0 uchar c
+put og 0 add get og 0 1
+end
+
+fn otext t view uchar * to void
+for i ulong len t
+oput ulong get t i
+end
+end
+
+fn odec v ulong to void
+d = new uchar 20 0
+i = ulong 20
+x = v
+for it ulong 20
+i = sub i 1
+put d i uchar add rem x 10 48
+x = div x 10
+if eq x 0
+break
+end
+end
+for k ulong sub 20 i
+oput ulong get d add i k
+end
+end
+
+note one event line: osup WORD GEN [PID [STATUS]] UNIXSEC (PID / STATUS printed when not 2^64 - 1)
+fn oevent t view uchar * gen ulong pid ulong ws1 ulong to void
+otext tpre
+otext t
+odec gen
+if ne pid 18446744073709551615
+oput 32
+odec pid
+end
+if ne ws1 18446744073709551615
+oput 32
+odec ws1
+end
+oput 32
+odec div ulong realns 1000000000
+oput 10
+oflush
+end
+
+note pack argv[3 ..] as an execprog packed list into pk; its length
+fn pack to ulong
+na = ulong argcnt
+put pk 0 uchar and sub na 3 255
+put pk 1 0
+p = ulong 2
+for j ulong sub na 3
+k = argread add j 3 pk add p 2 sub 4000 p
+if le k 0
+exit 2
+end
+put pk p uchar and ulong k 255
+put pk add p 1 uchar shr ulong k 8
+p = add add p 2 ulong k
+end
+ret p
+end
+
+fn wstat to ulong
+v = ulong 0
+for k ulong 4
+v = or v shl ulong get ws k mul k 8
+end
+ret v
+end
+
+note start the child: log at pb[2048, +ll); returns its pid (the child never returns)
+fn spawn n ulong ll ulong to long
+c = fork
+if lt c 0
+exit 70
+end
+if eq c 0
+lf = fopen pb 2048 ll 1089 420
+if lt lf 0
+exit 126
+end
+r = dupfd int lf 1 0
+r = dupfd int lf 2 0
+if gt lf 2
+r = fclose int lf
+end
+r = execprog pk 0 n
+exit 127
+end
+ret c
+end
+
+note watch pid: 0 when it exited (status in ws), 1 when the stop file pb[0, +sl) appeared
+fn watch pid long sl ulong to ulong
+for i ulong 999999
+w = waitpid int pid ws 0 4 1
+if eq w pid
+ret 0
+end
+if eq faccess pb 0 sl 0 0
+ret 1
+end
+r = sleepns 50000000
+end
+ret 1
+end
+
+note stop pid: SIGTERM, up to 10 s, then SIGKILL; reaped. Its status.
+fn stopc pid long to ulong
+r = killpid int pid 15
+for i ulong 200
+w = waitpid int pid ws 0 4 1
+if eq w pid
+ret wstat
+end
+r = sleepns 50000000
+end
+r = killpid int pid 9
+w = waitpid int pid ws 0 4 0
+ret wstat
+end
+
+fn main to int
+na = argcnt
+if lt na 4
+k = write 2 tusage 0 len tusage
+ret 2
+end
+n = pack
+sl = argread 1 pb 0 2000
+ll = argread 2 pb 2048 2000
+if or le sl 0 le ll 0
+ret 2
+end
+none = ulong 18446744073709551615
+rs = ulong 0
+for gen ulong 999999
+t0 = monons
+pid = spawn n ulong ll
+oevent tstart gen ulong pid none
+w = watch pid ulong sl
+if eq w 1
+s = stopc pid
+oevent tstop gen ulong pid s
+ret 0
+end
+oevent texit gen ulong pid wstat
+if gt sub monons t0 30000000000
+rs = 0
+end
+rs = add rs 1
+if gt rs 10
+oevent tloop gen none none
+ret 3
+end
+r = sleepns 500000000
+if eq faccess pb 0 ulong sl 0 0
+ret 0
+end
+end
+ret 0
+end

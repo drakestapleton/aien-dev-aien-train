@@ -1,0 +1,9 @@
+# 2026-11-07T04:56:45Z neg_live_R_vs_A_manifest want_rc=1
+$ sh /home/drakestapleton/work/hive/ownmodel/deploy/aien-train/tests/omegallm/deploy/deploy.sh live /home/drakestapleton/work/hive/ownmodel/deploy/w/stage/A 18296
+LIVE pid=2976877 exe=/home/drakestapleton/work/hive/ownmodel/deploy/w/stage/R/bin/ollm listen=127.0.0.1:18296 
+LIVE health {"status":"ok","in_flight":0,"queued":0,"capacity":32,"busy":false,"model":{"ck":"OLLMCK03","V":32768,"T":1024,"D":384,"H":6,"F":1536,"L":8,"B":16,"step":0,"P":26745216,"ck_bytes":641885312,"ck_fnv":"e9c5eff757d02c69","tok":"OLLMTOK1","tok_V":32768,"tok_fnv":"920b3046a17db9be"}}
+LIVE exe 8bfd6c1b0ea399cdc87880863fdb84e60a8bb4c5f3927a879ad7eacf44439757
+LIVE path /home/drakestapleton/work/hive/ownmodel/deploy/w/stage/R/bin/ollm
+LIVE argv /home/drakestapleton/work/hive/ownmodel/deploy/w/root/current/bin/ollm serve 18296 /home/drakestapleton/work/hive/ownmodel/deploy/w/root/current/checkpoint.ck /home/drakestapleton/work/hive/ownmodel/deploy/w/root/current/merges.tok
+MANCHECK FAIL the running server's /health identity differs from deploy.manifest
+rc 1

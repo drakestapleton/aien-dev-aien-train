@@ -1,0 +1,6 @@
+# 2026-11-07T04:54:52Z build want_rc=0
+$ sh /home/drakestapleton/work/hive/ownmodel/deploy/aien-train/tests/omegallm/deploy/deploy.sh build /home/drakestapleton/work/hive/ownmodel/deploy/w/build
+BUILD_OK 8bfd6c1b0ea399cdc87880863fdb84e60a8bb4c5f3927a879ad7eacf44439757 /home/drakestapleton/work/hive/ownmodel/deploy/w/build/ollm source_sha256 0c4e36c81a81f0b7666e16385b3637475dc436849a315b3aa7d1284847b2f9e6
+BUILD_OK 4cde05ce70d66735308946cac9ffc7e464775e3a01e1d64f8225915c83218bb4 /home/drakestapleton/work/hive/ownmodel/deploy/w/build/mancheck source_sha256 272953227cb54b9fa22ff63c2d09d45a7bf0db7adea55591877afcfd14efaa7f
+BUILD_OK b831ae59b6606da0913eb383c27da1150659fa87d6f4d14b9d06361581788309 /home/drakestapleton/work/hive/ownmodel/deploy/w/build/osup source_sha256 e38a96120746c25f0572d0d247b8cddadee918a968015cd10ad2cda98443c073
+rc 0

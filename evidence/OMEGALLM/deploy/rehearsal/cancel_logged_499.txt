@@ -1,0 +1,4 @@
+# 2026-11-07T04:55:25Z cancel_logged_499 want_rc=0
+$ sh -c grep '^C 499 ' '/home/drakestapleton/work/hive/ownmodel/deploy/w/root/serve.18296.log' && curl -s http://127.0.0.1:18296/health | grep -q '"in_flight":0,"queued":0'
+C 499 13 27 4 3049 0 13 0
+rc 0

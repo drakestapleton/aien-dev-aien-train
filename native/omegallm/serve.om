@@ -14,7 +14,8 @@ note been served. A connection is served once its first bytes arrive; a silent o
 note of 8 pending slots and is closed unanswered 10 s after its accept (svwait). tplmax=N
 note (256 .. 983040, default 65536) caps the chat template in bytes; test=1 enables the test-only
 note members ollm_test_output and ollm_test_delay_ms (refused otherwise).
-note Routes: GET /health {"status":"ok","in_flight":0,"queued":0,"capacity":32,"busy":false}; GET /v1/models;
+note Routes: GET /health {"status":"ok","in_flight":0,"queued":0,"capacity":32,"busy":false,"model":{..}}
+note (the loaded identity, section loaded identity, DRA-125); GET /v1/models;
 note POST /v1/chat/completions with JSON or SSE (stream true) responses; other paths 404, other
 note methods 405. in_flight counts the generating chat completions (0 or 1, one slot); busy is
 note in_flight 1. While a completion generates, the listener and pending connections are served
@@ -3363,8 +3364,8 @@ text svthl1 "{\"status\":\"ok\",\"in_flight\":"
 text svthl2 ",\"queued\":"
 text svthl3 ",\"capacity\":"
 text svthl4 ",\"busy\":"
-text svttru "true}"
-text svtfal "false}"
+text svttru "true"
+text svtfal "false"
 
 note svqput: the request read on cs/io with body bd[0, n) into a free slot; false when all are taken
 fn svqput cs edit ulong 320 io edit uchar 131072 bd edit uchar 983040 n ulong to bool
@@ -3504,7 +3505,7 @@ ret hfe r hwfin cs io
 end
 
 note svhb: text t into b at p; the next p
-fn svhb b edit uchar 160 p ulong t view uchar * to ulong
+fn svhb b edit uchar 640 p ulong t view uchar * to ulong
 q = p
 for i ulong len t
 put b q get t i
@@ -3513,7 +3514,7 @@ end
 ret q
 end
 
-fn svhd b edit uchar 160 p ulong v ulong to ulong
+fn svhd b edit uchar 640 p ulong v ulong to ulong
 d = new uchar 20 0
 i = ulong 20
 x = v
@@ -3533,9 +3534,10 @@ end
 ret q
 end
 
-note svhlth: GET /health {"status":"ok","in_flight":N,"queued":Q,"capacity":32,"busy":B}
+note svhlth: GET /health {"status":"ok","in_flight":N,"queued":Q,"capacity":32,"busy":B,
+note "model":{...}} (the loaded identity, section loaded identity)
 fn svhlth cs edit ulong 320 io edit uchar 131072 to long
-b = new uchar 160 0
+b = new uchar 640 0
 f = get svqn 2
 p = svhb b 0 svthl1
 p = svhd b p f
@@ -3549,7 +3551,145 @@ p = svhb b p svttru
 else
 p = svhb b p svtfal
 end
+p = svidj b p
 ret svstat cs io 200 view part b 0 p
+end
+
+note ======== loaded identity (DRA-125 deploy, docs/omegallm/DEPLOY.md)
+note svidn, filled once at start after both loads succeeded: 0 checkpoint magic, 1 .. 7 V T D H F L B,
+note 8 step, 9 P, 10 ck_fnv, 11 merges kind (1 OLLMTOK1, 2 v1 OLLMBPE1), 12 merges V, 13 tok_fnv,
+note 14 checkpoint bytes. ck_fnv is the header's payload FNV-1a 64; xload / ockload recomputed it over
+note the payload they decoded and exit 14 when it differs, so a serving process reports the value it
+note verified. tok_fnv is the OLLMTOK1 header checksum tkload verified (exit 26 otherwise); v1 merges
+note carry no checksum (null). GET /health appends them as "model":{"ck":MAGIC,"V":..,"T":..,"D":..,
+note "H":..,"F":..,"L":..,"B":..,"step":..,"P":..,"ck_bytes":..,"ck_fnv":HEX16,"tok":KIND,"tok_V":..,
+note "tok_fnv":HEX16|null}. Mutant id (OMUTID 0) reports ck_fnv xor 1, which the deploy live check
+note (tests/omegallm/deploy/mancheck.om live) must refuse.
+const OMUTID ulong 1
+global svidn ulong 16
+text svi0 ",\"model\":{\"ck\":\""
+text svi1 "\",\"V\":"
+text svi2 ",\"T\":"
+text svi3 ",\"D\":"
+text svi4 ",\"H\":"
+text svi5 ",\"F\":"
+text svi6 ",\"L\":"
+text svi7 ",\"B\":"
+text svi8 ",\"step\":"
+text svi9 ",\"P\":"
+text svia ",\"ck_bytes\":"
+text svib ",\"ck_fnv\":\""
+text svic "\",\"tok\":\""
+text svit1 "OLLMTOK1"
+text svitb "OLLMBPE1"
+text svif "\",\"tok_V\":"
+text svig ",\"tok_fnv\":\""
+text svih "\"}}"
+text svinul ",\"tok_fnv\":null}}"
+
+note svidck: the checkpoint argument 3's header fields, read after its load succeeded
+fn svidck to void
+n = ofsz 3
+r = oprd 3 0 0 128
+mg = opw8 0
+put svidn 0 mg
+for i ulong 7
+put svidn add i 1 opw8 mul add i 1 8
+end
+put svidn 8 opw8 72
+put svidn 9 opw8 96
+fo = ulong 120
+if eq mg XCK2
+fo = 112
+end
+if eq mg XCK1
+fo = 104
+end
+h = opw8 fo
+if eq OMUTID 0
+h = xor h 1
+end
+put svidn 10 h
+put svidn 14 n
+end
+
+note svidtk: the merges identity, after otload succeeded
+fn svidtk to void
+if otison
+put svidn 11 1
+put svidn 12 get otkm 1
+h = ulong 0
+for k ulong 8
+h = or h shl ulong get tkmf add 24 k mul k 8
+end
+put svidn 13 h
+else
+put svidn 11 2
+put svidn 12 get og 0
+end
+end
+
+note svhx: v as 16 lowercase hex digits at b[p ..)
+fn svhx b edit uchar 640 p ulong v ulong to ulong
+q = p
+for i ulong 16
+d = and shr v mul sub 15 i 4 15
+if lt d 10
+put b q uchar add d 48
+else
+put b q uchar add d 87
+end
+q = add q 1
+end
+ret q
+end
+
+note svidj: the "model" member and the closing brace of /health at b[p ..)
+fn svidj b edit uchar 640 p ulong to ulong
+q = svhb b p svi0
+mg = get svidn 0
+for k ulong 8
+put b add q k uchar and shr mg mul k 8 255
+end
+q = add q 8
+q = svhb b q svi1
+q = svhd b q get svidn 1
+q = svhb b q svi2
+q = svhd b q get svidn 2
+q = svhb b q svi3
+q = svhd b q get svidn 3
+q = svhb b q svi4
+q = svhd b q get svidn 4
+q = svhb b q svi5
+q = svhd b q get svidn 5
+q = svhb b q svi6
+q = svhd b q get svidn 6
+q = svhb b q svi7
+q = svhd b q get svidn 7
+q = svhb b q svi8
+q = svhd b q get svidn 8
+q = svhb b q svi9
+q = svhd b q get svidn 9
+q = svhb b q svia
+q = svhd b q get svidn 14
+q = svhb b q svib
+q = svhx b q get svidn 10
+q = svhb b q svic
+if eq get svidn 11 1
+q = svhb b q svit1
+else
+q = svhb b q svitb
+end
+q = svhb b q svif
+q = svhd b q get svidn 12
+if eq get svidn 11 1
+q = svhb b q svig
+q = svhx b q get svidn 13
+q = svhb b q svih
+else
+q = svhb b q svinul
+end
+ret q
 end
 
 note ======== requests during a generation
@@ -4075,8 +4215,10 @@ else
 ockload 3
 put sv 41 3
 end
+svidck
 v = get og 0
 otload 4 v
+svidtk
 if otison
 put sv 40 1
 if eq get sv 53 0

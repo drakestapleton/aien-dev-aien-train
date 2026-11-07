@@ -1,0 +1,56 @@
+PASS build rc=0 
+PASS build_mutant_id rc=0 
+PASS rollback_ck_recorded_sha rc=0 
+PASS stage_A rc=0 
+PASS stage_R rc=0 
+PASS gate_A rc=0 MANCHECK PASS name=ollm-s2-step3000 ck=OLLMCK03 step=3000 ck_fnv=df3d63290ce275c4 tok_fnv=920b3046a17db9be
+PASS gate_R rc=0 MANCHECK PASS name=ollm-s2-step0 ck=OLLMCK03 step=0 ck_fnv=e9c5eff757d02c69 tok_fnv=920b3046a17db9be
+PASS neg_wrong_ck_sha rc=1 MANCHECK FAIL a sha256 differs from SUMS (or SUMS lacks the file)
+PASS neg_ck_sha_not_a_file_line rc=1 MANCHECK FAIL checkpoint and tokenizer are not two different file lines
+PASS neg_swapped_checkpoint rc=1 MANCHECK FAIL a sha256 differs from SUMS (or SUMS lacks the file)
+PASS neg_swapped_checkpoint_rewritten_manifest rc=1 MANCHECK FAIL deploy.manifest ck line differs from the checkpoint
+PASS neg_deploy_ck_fnv rc=1 MANCHECK FAIL deploy.manifest ck line differs from the checkpoint
+PASS neg_forbidden_name rc=1 MANCHECK FAIL names outside weights or a download address
+PASS neg_url_line rc=1 MANCHECK FAIL a line that is not a key or a file line
+PASS neg_si_pending_manifest rc=1 MANCHECK FAIL checkpoint is not OLLMCK0N SHA256
+PASS neg_duplicate_key rc=1 MANCHECK FAIL a key twice
+PASS neg_other_serve_binary rc=1 MANCHECK FAIL bin/ollm sha256 differs from serve
+PASS neg_payload_byte rc=1 MANCHECK FAIL checkpoint payload FNV differs from its header
+PASS neg_payload_byte_id rc=1 MANCHECK FAIL checkpoint payload FNV differs from its header
+PASS neg_payload_byte_serve_exit14 rc=14 
+PASS neg_tokenizer_byte rc=1 MANCHECK FAIL tokenizer checksum differs from its header
+PASS start_A rc=0 
+PASS health_A rc=0 
+PASS live_A rc=0 MANCHECK PASS name=ollm-s2-step3000 ck=OLLMCK03 step=3000 ck_fnv=df3d63290ce275c4 tok_fnv=920b3046a17db9be live=exe,path,argv,health
+PASS neg_live_A_vs_R_manifest rc=1 MANCHECK FAIL the running server's /health identity differs from deploy.manifest
+PASS neg_live_same_files_other_dir rc=1 MANCHECK FAIL the running executable is not DIR/bin/ollm
+PASS cancel_client_leaves rc=28 
+PASS cancel_logged_499 rc=0 
+PASS start_T rc=0 
+PASS health_T rc=0 
+PASS serve_check rc=0 
+PASS serve_check_summary rc=0 
+PASS kill9 rc=0 
+PASS health_after_kill9 rc=0 
+PASS new_pid_after_kill9 rc=0 
+PASS live_A_after_kill9 rc=0 MANCHECK PASS name=ollm-s2-step3000 ck=OLLMCK03 step=3000 ck_fnv=df3d63290ce275c4 tok_fnv=920b3046a17db9be live=exe,path,argv,health
+PASS identity_same_after_kill9 rc=0 
+PASS switch_to_R rc=0 MANCHECK PASS name=ollm-s2-step0 ck=OLLMCK03 step=0 ck_fnv=e9c5eff757d02c69 tok_fnv=920b3046a17db9be
+PASS health_R rc=0 
+PASS live_R rc=0 MANCHECK PASS name=ollm-s2-step0 ck=OLLMCK03 step=0 ck_fnv=e9c5eff757d02c69 tok_fnv=920b3046a17db9be live=exe,path,argv,health
+PASS neg_live_R_vs_A_manifest rc=1 MANCHECK FAIL the running server's /health identity differs from deploy.manifest
+PASS identity_R_differs rc=0 
+PASS switch_back_to_A rc=0 MANCHECK PASS name=ollm-s2-step3000 ck=OLLMCK03 step=3000 ck_fnv=df3d63290ce275c4 tok_fnv=920b3046a17db9be
+PASS health_A_back rc=0 
+PASS live_A_back rc=0 MANCHECK PASS name=ollm-s2-step3000 ck=OLLMCK03 step=3000 ck_fnv=df3d63290ce275c4 tok_fnv=920b3046a17db9be live=exe,path,argv,health
+PASS identity_A_back rc=0 
+PASS neg_switch_refused rc=1 MANCHECK FAIL a sha256 differs from SUMS (or SUMS lacks the file)
+PASS still_A_after_refused_switch rc=0 MANCHECK PASS name=ollm-s2-step3000 ck=OLLMCK03 step=3000 ck_fnv=df3d63290ce275c4 tok_fnv=920b3046a17db9be live=exe,path,argv,health
+PASS start_M rc=0 
+PASS health_M rc=0 
+PASS neg_live_mutant_id rc=1 MANCHECK FAIL the running server's /health identity differs from deploy.manifest
+PASS stop_M rc=0 
+PASS stop_T rc=0 
+PASS stop_A rc=0 
+PASS nothing_left rc=0 
+REHEARSAL pass=55 fail=0 at 2026-11-07T04:57:01Z

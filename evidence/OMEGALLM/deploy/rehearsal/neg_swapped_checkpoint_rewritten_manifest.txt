@@ -1,0 +1,4 @@
+# 2026-11-07T04:55:01Z neg_swapped_checkpoint_rewritten_manifest want_rc=1
+$ sh /home/drakestapleton/work/hive/ownmodel/deploy/aien-train/tests/omegallm/deploy/deploy.sh gate /home/drakestapleton/work/hive/ownmodel/deploy/w/neg/swap2
+MANCHECK FAIL deploy.manifest ck line differs from the checkpoint
+rc 1

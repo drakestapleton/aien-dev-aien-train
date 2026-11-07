@@ -1,0 +1,5 @@
+# 2026-11-07T04:56:53Z neg_switch_refused want_rc=1
+$ sh /home/drakestapleton/work/hive/ownmodel/deploy/aien-train/tests/omegallm/deploy/deploy.sh switch /home/drakestapleton/work/hive/ownmodel/deploy/w/root /home/drakestapleton/work/hive/ownmodel/deploy/w/neg/swap 18296
+MANCHECK FAIL a sha256 differs from SUMS (or SUMS lacks the file)
+DEPLOY_FAIL gate refused /home/drakestapleton/work/hive/ownmodel/deploy/w/neg/swap: not switching
+rc 1

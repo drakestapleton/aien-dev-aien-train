@@ -1,0 +1,3 @@
+# 2026-11-07T04:56:32Z serve_check_summary want_rc=0
+$ grep -q ^SUMMARY pass=[0-9]* fail=0$ /home/drakestapleton/work/hive/ownmodel/deploy/aien-train/evidence/OMEGALLM/deploy/rehearsal/serve_check.txt
+rc 0

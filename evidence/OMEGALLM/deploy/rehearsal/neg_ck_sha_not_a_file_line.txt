@@ -1,0 +1,4 @@
+# 2026-11-07T04:55:00Z neg_ck_sha_not_a_file_line want_rc=1
+$ sh /home/drakestapleton/work/hive/ownmodel/deploy/aien-train/tests/omegallm/deploy/deploy.sh gate /home/drakestapleton/work/hive/ownmodel/deploy/w/neg/shakey
+MANCHECK FAIL checkpoint and tokenizer are not two different file lines
+rc 1

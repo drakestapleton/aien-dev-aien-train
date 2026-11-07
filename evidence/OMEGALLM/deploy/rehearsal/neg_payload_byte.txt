@@ -1,0 +1,4 @@
+# 2026-11-07T04:55:06Z neg_payload_byte want_rc=1
+$ sh /home/drakestapleton/work/hive/ownmodel/deploy/aien-train/tests/omegallm/deploy/deploy.sh gate /home/drakestapleton/work/hive/ownmodel/deploy/w/neg/payload
+MANCHECK FAIL checkpoint payload FNV differs from its header
+rc 1

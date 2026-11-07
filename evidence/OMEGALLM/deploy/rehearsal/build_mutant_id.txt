@@ -1,0 +1,4 @@
+# 2026-11-07T04:54:52Z build_mutant_id want_rc=0
+$ env OMC=/home/drakestapleton/workspace/hive-worktrees/arch-scale-x/omc/seed/out/omc OUT=/home/drakestapleton/work/hive/ownmodel/deploy/w/build CORE=6 sh /home/drakestapleton/work/hive/ownmodel/deploy/aien-train/tests/omegallm/build.sh --mutant id
+BUILD_OK af94ab2f34e6eaa7559e51832b03286d35d98b67a8bc3b24c8f9ed6f13be8463 /home/drakestapleton/work/hive/ownmodel/deploy/w/build/ollm-mut-id source_sha256 13c95c7249cf510d09a6b0750b1880570f824856536a4377ec7a91ced84453be
+rc 0

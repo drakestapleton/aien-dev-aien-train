@@ -1,0 +1,3 @@
+# 2026-11-07T04:55:08Z neg_payload_byte_serve_exit14 want_rc=14
+$ timeout 300 taskset -c 6 nice -n 10 /home/drakestapleton/work/hive/ownmodel/deploy/w/build/ollm serve 18298 /home/drakestapleton/work/hive/ownmodel/deploy/w/neg/payload/checkpoint.ck /home/drakestapleton/work/hive/ownmodel/deploy/w/neg/payload/merges.tok
+rc 14

@@ -1,0 +1,4 @@
+# 2026-11-07T04:55:08Z neg_payload_byte_id want_rc=1
+$ taskset -c 6 nice -n 10 /home/drakestapleton/work/hive/ownmodel/deploy/w/build/mancheck id /home/drakestapleton/work/hive/ownmodel/deploy/w/neg/payload checkpoint.ck merges.tok
+MANCHECK FAIL checkpoint payload FNV differs from its header
+rc 1

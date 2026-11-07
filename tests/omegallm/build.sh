@@ -1,7 +1,6 @@
 #!/bin/sh
 # Build ollm (aien-train#52) from native/omegallm/*.om with the pinned seeded omc.
-# Usage: sh tests/omegallm/build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p|t|r|x|q|w|u|l|o|v|n|y|i|z|j|jd|pj|c1|pl|pp|pq | --variant h5|h7|r0|bx|wx]
-# Usage: sh tests/omegallm/build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p|t|r|x|q|w|u|l|o|v|n|y|i|z|rs|ri|cc|sv|od | --variant h5|h7|r0|bx]
+# Usage: sh tests/omegallm/build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p|t|r|x|q|w|u|l|o|v|n|y|i|z|j|jd|pj|c1|id|pl|pp|pq|kg|lw|rs|ri|cc|sv|od | --variant h5|h7|r0|bx|wx]
 # Env: TARGET (aarch64, the default, gb10, x86linux or x86efi), OMC (default ../omega-mv/seed/out/omc
 #      beside this clone for aarch64 and gb10, ../omega-mv-x86/seed/out/omc for x86linux,
 #      ../omega-efi-ident/seed/out/omc for x86efi), OUT (default ../build beside it), CORE (taskset core,
@@ -49,7 +48,8 @@
 # The pool file (CONTRACT-V3 section 2) follows data.om: lpool.om holds the bank-B globals oww, ogb
 # and oab on the Linux targets, epool.om one-element placeholders on x86efi (its v3 limit is the
 # v2 bank-A capacity).
-# serve (DRA-119, native/omegallm/serve.om): aarch64 starts with the line `om2` and concatenates
+# serve (DRA-119, native/omegallm/serve.om; mutant id, serve.om OMUTID: /health reports ck_fnv xor 1,
+# which tests/omegallm/deploy/mancheck.om live must refuse): aarch64 starts with the line `om2` and concatenates
 # net/http.om, net/json.om and net/jsonw.om (vendored unmodified from omega-mv e5b32567 seed/net/http.om,
 # seed/json/json.om and seed/json/jsonw.om; sha256 below, checked at build) before the ollm units and
 # serve.om after them. gb10, x86linux and x86efi take noserve.om, whose cmdserve exits 2.
@@ -88,7 +88,7 @@ OUT=${OUT:-$here/../build}
 CORE=${CORE:-6}
 mut= kind=
 if [ $# -ge 1 ]; then
-  { [ "$1" = --mutant ] || [ "$1" = --variant ]; } && [ $# -eq 2 ] || { echo "usage: build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p|t|r|x|q|w|u|l|o|v|n|y|i|z|j|jd|pj|c1|pl|pp|pq|kg|lw|rs|ri|cc|sv|od | --variant h5|h7|r0|bx|wx]" >&2; exit 2; }
+  { [ "$1" = --mutant ] || [ "$1" = --variant ]; } && [ $# -eq 2 ] || { echo "usage: build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p|t|r|x|q|w|u|l|o|v|n|y|i|z|j|jd|pj|c1|id|pl|pp|pq|kg|lw|rs|ri|cc|sv|od | --variant h5|h7|r0|bx|wx]" >&2; exit 2; }
   kind=$1 mut=$2
 fi
 got=$(sha256sum "$OMC" | cut -d' ' -f1)
@@ -154,6 +154,7 @@ case "$kind$mut" in
   --mutantz) pat='s/^const OMUTZ ulong 1$/const OMUTZ ulong 0/' want=1 ;;
   --mutantpj) pat='s/^const OMUTPJ ulong 1$/const OMUTPJ ulong 0/' want=1 ;;
   --mutantc1) pat='s/^const OMUTC1 ulong 1$/const OMUTC1 ulong 0/' want=1 ;;
+  --mutantid) pat='s/^const OMUTID ulong 1$/const OMUTID ulong 0/' want=1 ;;
   --mutantpl) pat='s/^const OMUTPL ulong 1$/const OMUTPL ulong 0/' want=1 ;;
   --mutantpp) pat='s/^const OMUTPP ulong 1$/const OMUTPP ulong 0/' want=1 ;;
   --mutantpq) pat='s/^const OMUTPQ ulong 1$/const OMUTPQ ulong 0/' want=1 ;;
@@ -171,7 +172,7 @@ case "$kind$mut" in
   --variantwx) pat='s/^const OWC ulong 15833472$/const OWC ulong 8400/;s/^const OGC ulong 15833472$/const OGC ulong 5000/;s/^const OAC ulong 15016192$/const OAC ulong 12344/;s/^const XWB1 ulong 14161920$/const XWB1 ulong 2000/' want=4 ;;
   --mutantj) pat='s/^const OWC ulong 15833472$/const OWC ulong 8400/;s/^const OGC ulong 15833472$/const OGC ulong 5000/;s/^const OAC ulong 15016192$/const OAC ulong 12344/;s/^const XWB1 ulong 14161920$/const XWB1 ulong 2000/;s/^const OMUTJ ulong 1$/const OMUTJ ulong 0/' want=5 ;;
   --mutantjd) pat='s/^const OWC ulong 15833472$/const OWC ulong 8400/;s/^const OGC ulong 15833472$/const OGC ulong 5000/;s/^const OAC ulong 15016192$/const OAC ulong 12344/;s/^const XWB1 ulong 14161920$/const XWB1 ulong 2000/;s/^const OMUTJD ulong 1$/const OMUTJD ulong 0/' want=5 ;;
-  *) echo "usage: build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p|t|r|x|q|w|u|l|o|v|n|y|i|z|j|jd|pj|c1|pl|pp|pq|kg|lw|rs|ri|cc|sv|od | --variant h5|h7|r0|bx|wx]" >&2; exit 2 ;;
+  *) echo "usage: build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p|t|r|x|q|w|u|l|o|v|n|y|i|z|j|jd|pj|c1|id|pl|pp|pq|kg|lw|rs|ri|cc|sv|od | --variant h5|h7|r0|bx|wx]" >&2; exit 2 ;;
 esac
 if [ -n "$mut" ]; then
   [ "$kind" = --mutant ] && name=ollm-mut-$mut || name=ollm-var-$mut

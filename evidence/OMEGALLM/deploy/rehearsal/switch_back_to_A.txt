@@ -1,0 +1,5 @@
+# 2026-11-07T04:56:46Z switch_back_to_A want_rc=0
+$ sh /home/drakestapleton/work/hive/ownmodel/deploy/aien-train/tests/omegallm/deploy/deploy.sh switch /home/drakestapleton/work/hive/ownmodel/deploy/w/root /home/drakestapleton/work/hive/ownmodel/deploy/w/stage/A 18296
+MANCHECK PASS name=ollm-s2-step3000 ck=OLLMCK03 step=3000 ck_fnv=df3d63290ce275c4 tok_fnv=920b3046a17db9be
+SWITCHED current=/home/drakestapleton/work/hive/ownmodel/deploy/w/stage/A old_child=2976877 at 2026-11-07T04:56:48Z
+rc 0

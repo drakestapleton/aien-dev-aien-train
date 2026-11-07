@@ -1,0 +1,4 @@
+# 2026-11-07T04:57:01Z nothing_left want_rc=0
+$ left_check
+clean: no process under /home/drakestapleton/work/hive/ownmodel/deploy/w, no listener on 18296-18298
+rc 0
