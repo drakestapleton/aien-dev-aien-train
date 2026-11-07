@@ -150,4 +150,11 @@ checker). Status: NOT_RUN.
 
 ## 10. Amendments
 
-None.
+A1 (2026-11-07T00:25Z, before the baseline is scored; gates, items and checkers unchanged). Measured on the
+integration build: one 64-token completion of a 23-token prompt took 119113 ms (serve log `C 200 23 64 2
+119113`, about 1.86 s per token, one core, no KV cache in v3). The full section 7 baseline (all arms, 533 public
+dev rows that fit its 256-token window and generate up to 2048 tokens each) cannot finish by the 05:00Z
+deadline. Baseline scope, in this order: (1) arm t0 on the test split plus the own-written dev rows
+(`SPLITS="dev test" PUBLIC=0`, concurrency 2, harness tasks included); (2) only if time remains, the public
+IFEval / HumanEval dev rows and the stochastic arms. Whatever does not run is reported NOT_RUN with this reason.
+`run.sh` gains `PUBLIC=0` to leave the public dev rows out; nothing else changes.

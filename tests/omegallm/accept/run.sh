@@ -4,7 +4,7 @@
 # Env: ACCEPT (runner binary, built by build.sh), OMC (pinned omc, for omega exec items), CORES (assigned
 #   cores for taskset), SPLITS (default "dev test"; "train" for the public training split), HOLDOUT (the
 #   private test split dir, default ~/work/hive/ownmodel/accept/holdout), NWORKERS (default 2: the
-#   pre-registered concurrency), REPEATS (stochastic seeds, default 3), STEMP (their temperature in
+#   pre-registered concurrency), PUBLIC (default 1; 0 leaves the public IFEval / HumanEval dev rows out), REPEATS (stochastic seeds, default 3), STEMP (their temperature in
 #   thousandths, default 700), HARNESS (the harness lane's tests/omegallm/harness dir on feat/ollm-harness;
 #   with VERIFY, its verify binary, the private held-out harness tasks HOLDOUT/harness-test.txt run through its
 #   run.sh against http://HOST:PORT/v1 with proxy port HPPORT, default 18298; else harness rows are NOT_RUN).
@@ -33,12 +33,14 @@ for sp in $SPLITS; do
     *) echo "unknown split $sp" >&2; exit 2 ;;
   esac
 done
-case " $SPLITS " in *" dev "*) cp "$D/suite/ifeval.jsonl" "$D/suite/humaneval.jsonl" "$OUT/suite/" ;; esac
+if [ "${PUBLIC:-1}" = 1 ]; then
+  case " $SPLITS " in *" dev "*) cp "$D/suite/ifeval.jsonl" "$D/suite/humaneval.jsonl" "$OUT/suite/" ;; esac
+fi
 cp "$D/suite/hive-system.txt" "$D/suite/critical.txt" "$OUT/suite/"
 chmod -R go-rwx "$OUT"
 { echo "accept $(sha256sum "$ACCEPT" | cut -c1-64)"; echo "omc $(sha256sum "$OMC" | cut -c1-64)"
   echo "prereg $(sha256sum "$D/PREREG.md" | cut -c1-64)"; echo "thresholds $(sha256sum "$D/suite/thresholds.tsv" | cut -c1-64)"
-  echo "endpoint $HOST:$PORT model $MODEL splits $SPLITS workers $NW repeats $REPEATS stemp $STEMP"
+  echo "endpoint $HOST:$PORT model $MODEL splits $SPLITS public ${PUBLIC:-1} workers $NW repeats $REPEATS stemp $STEMP"
   echo "start $(date -u +%Y-%m-%dT%H:%M:%SZ)"; } > "$OUT/receipt.txt"
 comb() { # verdict codes: FAIL 1 beats NOT_RUN 3 beats PASS 0
   if [ "$1" = 1 ] || [ "$2" = 1 ]; then echo 1; elif [ "$1" = 3 ] || [ "$2" = 3 ]; then echo 3; else echo "$2"; fi; }
