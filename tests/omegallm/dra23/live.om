@@ -1,0 +1,1357 @@
+note SPDX-License-Identifier: AGPL-3.0-only
+note dra23live: DRA-23 live identity probe for the model process bound to 127.0.0.1:PORT.
+note Composed after the vendored om/sha256/sha256-om2.om (omega-mv e5b32567) by build.sh, which
+note turns its four `export fn` lines into `fn` (the only change) so the unit is a program.
+note Read-only: it never binds a port, never opens a GPU device, never signals a process.
+note Usage: dra23live PORT EXE_SHA256|- GPU [PATH SHA256]...
+note   PORT     decimal 1..65535; the listener is looked up in /proc/net/tcp and /proc/net/tcp6
+note   EXE      64 lowercase hex digits the /proc/PID/exe bytes must hash to, or - to only report
+note   GPU      none, nvrm (raw NVIDIA RM nodes /dev/nvidiactl, /dev/nvidiaN, /dev/nvidia-uvm,
+note            the device layer vendored from CUDApp native/nvrm/context.om) or aiengpu (/dev/aien-gpu*)
+note   PATH SHA files (checkpoint, tokenizer merges) that must hash to SHA now and appear verbatim
+note            as one argument of /proc/PID/cmdline; at most 8 pairs
+note Steps: listener inode -> the one process holding that socket -> exe sha256 -> cmdline ->
+note GET /health and a one-token POST /v1/chat/completions (so a lazily opened device is open) ->
+note /proc/PID/maps (no shared object may be mapped) and /proc/PID/fd device nodes -> one GPU class.
+note Exit 0 verdict PASS, 1 verdict FAIL, 2 usage, 3 verdict NOT_RUN (nothing listens on PORT).
+note Limits: an fd/maps snapshot shows what the process holds at that instant; files are hashed now,
+note not at load time; the server reports no build identity of its own.
+
+text hexd "0123456789abcdef"
+text tnl "\n"
+text tsp " "
+text thead "DRA23LIVE v1\n"
+text tport "port "
+text tusage "usage: dra23live PORT EXE_SHA256|- none|nvrm|aiengpu [PATH SHA256]...\n"
+text tnone "none"
+text tnvrm "nvrm"
+text taien "aiengpu"
+text tdrm "drm"
+text tmixed "mixed"
+text taccel "accel"
+text tdash "-"
+text tnet4 "/proc/net/tcp"
+text tnet6 "/proc/net/tcp6"
+text tproc "/proc"
+text tprocs "/proc/"
+text tfd "/fd"
+text tfds "/fd/"
+text texe "/exe"
+text tmaps "/maps"
+text tcmdl "/cmdline"
+text tsock "socket:["
+text tsockz "]"
+text tdev "/dev/"
+text tdnv "/dev/nvidia"
+text tdai "/dev/aien-gpu"
+text tddri "/dev/dri/"
+text tdacc "/dev/accel"
+text tdkfd "/dev/kfd"
+text tso ".so"
+text tlino "listen_inode "
+text tladdr " local "
+text tholder "holder_pid "
+text txlink "exe_link "
+text txsha "exe_sha256 "
+text tmatch " MATCH\n"
+text tmism " MISMATCH\n"
+text texpect "expect "
+text tcarg "cmd_arg "
+text tmapf "map_file "
+text tmapd "map_dev "
+text tmaps2 "map_self_segments "
+text tdevfd "dev_fd "
+text tgpu "gpu_observed "
+text tgexp "gpu_expected "
+text tfile "file "
+text tfsha " sha256 "
+text tincmd " in_cmdline "
+text tyes "yes"
+text tno "no"
+text thttp "http "
+text tstat " status "
+text tline " line "
+text tfail "fail "
+text tvpass "verdict PASS\n"
+text tvfail "verdict FAIL failures "
+text tvnr "verdict NOT_RUN no_listener_on_port\n"
+text tget1 "GET /health HTTP/1.1"
+text tget2 "GET /v1/models HTTP/1.1"
+text tpost "POST /v1/chat/completions HTTP/1.1"
+text thost "Host: 127.0.0.1"
+text tclose "Connection: close"
+text tctype "Content-Type: application/json"
+text tclen "Content-Length: "
+text tbody "{\"model\":\"ollm\",\"messages\":[{\"role\":\"user\",\"content\":\"ping\"}],\"max_tokens\":1,\"temperature\":0}"
+text thlth "/health"
+text tmods "/v1/models"
+text tchat "/v1/chat/completions"
+text tr1 "holder_count_not_1"
+text tr2 "exe_sha256_mismatch"
+text tr3 "exe_unreadable"
+text tr4 "shared_object_mapped"
+text tr5 "gpu_backend_mixed"
+text tr6 "gpu_expect_mismatch"
+text tr7 "file_sha256_mismatch"
+text tr8 "file_unreadable"
+text tr9 "file_not_in_cmdline"
+text tr10 "http_health_not_200"
+text tr11 "http_models_not_200"
+text tr12 "http_chat_not_200"
+text tr13 "proc_unreadable"
+text tr14 "listener_not_loopback"
+text tr15 "proc_file_truncated"
+text tlo4 "0100007F"
+text tlo6 "00000000000000000000000001000000"
+text tlo6m "0000000000000000FFFF00000100007F"
+
+note Path under construction and its length.
+global pb uchar 1024
+global plen ulong 1
+note A symbolic link target (fd entry, exe) and its length.
+global lb uchar 4096
+global llen ulong 1
+note The exe link, kept for the maps comparison.
+global xl uchar 4096
+global xlen ulong 1
+note File contents (/proc/net/tcp*, maps) and their length.
+note one spare element: eager `and` conditions may read fb[flen] when flen is the capacity
+global fb uchar 983041
+global flen ulong 1
+note /proc/PID/cmdline.
+global cb uchar 65536
+global clen ulong 1
+note getdents buffers: /proc and /proc/PID/fd.
+global db uchar 32768
+global d2 uchar 32768
+note Argument bytes.
+global ab uchar 1024
+note Digest hex computed, expected hex.
+global hx uchar 64
+global ex uchar 64
+note Listener inodes and local-address loopback flags.
+global ino ulong 8
+global iloop uchar 8
+global nino ulong 1
+note "socket:[INODE]" for each listener inode.
+global sk uchar 512
+global sklen ulong 8
+note Holder pids.
+global pids ulong 16
+global npid ulong 1
+note Port, failures, GPU class bits seen, self segments.
+global gport ulong 1
+global nfail ulong 1
+global gseen ulong 1
+global nself ulong 1
+note HTTP request and response.
+global rq uchar 1024
+global rqlen ulong 1
+global hb uchar 16385
+global hlen ulong 1
+global sa uchar 16
+
+note ---------------------------------------------------------------- output
+fn outt t view uchar * to void
+k = write 1 t 0 len t
+end
+fn outn v ulong to void
+b = new uchar 24 0
+i = ulong 24
+x = v
+c = true
+while c bound 30
+i = sub i 1
+put b i uchar add 48 rem x 10
+x = div x 10
+if eq x 0
+c = false
+end
+end
+k = write 1 b i sub 24 i
+end
+fn outlb to void
+k = write 1 lb 0 get llen 0
+end
+fn outpb to void
+k = write 1 pb 0 get plen 0
+end
+fn outhx to void
+k = write 1 hx 0 64
+end
+fn fail t view uchar * to void
+outt tfail
+outt t
+outt tnl
+put nfail 0 add get nfail 0 1
+end
+
+note ---------------------------------------------------------------- paths
+fn pclr to void
+put plen 0 0
+end
+fn padd t view uchar * to void
+p = get plen 0
+for i ulong len t
+put pb add p i get t i
+end
+put plen 0 add p len t
+end
+fn paddn v ulong to void
+b = new uchar 24 0
+i = ulong 24
+x = v
+c = true
+while c bound 30
+i = sub i 1
+put b i uchar add 48 rem x 10
+x = div x 10
+if eq x 0
+c = false
+end
+end
+p = get plen 0
+for j ulong sub 24 i
+put pb add p j get b add i j
+end
+put plen 0 add p sub 24 i
+end
+note append db[o .. o+k) or d2[o .. o+k)
+fn padddb o ulong k ulong to void
+p = get plen 0
+for i ulong k
+put pb add p i get db add o i
+end
+put plen 0 add p k
+end
+fn paddd2 o ulong k ulong to void
+p = get plen 0
+for i ulong k
+put pb add p i get d2 add o i
+end
+put plen 0 add p k
+end
+fn ppid pid ulong t view uchar * to void
+pclr
+padd tprocs
+paddn pid
+padd t
+end
+
+note ---------------------------------------------------------------- argument parsing
+fn argto i ulong to ulong
+r = argread i ab 0 1024
+if or lt r 1 gt r 1023
+outt tusage
+exit 2
+end
+ret ulong r
+end
+fn argnum i ulong to ulong
+n = argto i
+if gt n 10
+outt tusage
+exit 2
+end
+v = ulong 0
+for j ulong n
+d = get ab j
+if or lt d 48 gt d 57
+outt tusage
+exit 2
+end
+v = add mul v 10 ulong sub d 48
+end
+ret v
+end
+note arg i must be 64 lowercase hex digits (into ex); returns false for "-"
+fn argsha i ulong to bool
+n = argto i
+if and eq n 1 eq get ab 0 45
+ret false
+end
+if ne n 64
+outt tusage
+exit 2
+end
+for j ulong 64
+d = get ab j
+if and or lt d 48 gt d 57 or lt d 97 gt d 102
+outt tusage
+exit 2
+end
+put ex j d
+end
+ret true
+end
+fn abis t view uchar * n ulong to bool
+if ne n len t
+ret false
+end
+for j ulong n
+if ne get ab j get t j
+ret false
+end
+end
+ret true
+end
+fn argpath i ulong to void
+n = argto i
+pclr
+for j ulong n
+put pb j get ab j
+end
+put plen 0 n
+end
+
+note ---------------------------------------------------------------- whole files into fb
+fn slurp to long
+fd = fopen pb 0 get plen 0 0 0
+if lt fd 0
+ret fd
+end
+f = int fd
+n = ulong 0
+go = true
+while go bound 999999
+if ge n 983040
+go = false
+else
+r = read f fb n sub 983040 n
+if le r 0
+go = false
+else
+n = add n ulong r
+end
+end
+end
+k = fclose f
+put flen 0 n
+if ge n 983040
+fail tr15
+end
+ret long n
+end
+
+note ---------------------------------------------------------------- sha256 of the file at pb into hx
+fn tohex o view uchar 32 to void
+for j ulong 32
+x = get o j
+p = mul j 2
+put hx p get hexd shr x 4
+put hx add p 1 get hexd and x 15
+end
+end
+fn hashpb to long
+c = new uchar 104 0
+b = new uchar 65536 0
+o = new uchar 32 0
+fd = fopen pb 0 get plen 0 0 0
+if lt fd 0
+ret fd
+end
+f = int fd
+sha256_init c
+t = ulong 0
+go = true
+while go bound 999999
+r = read f b 0 65536
+if lt r 0
+k = fclose f
+ret r
+end
+if eq r 0
+go = false
+else
+sha256_update c part b 0 ulong r
+t = add t ulong r
+end
+end
+k = fclose f
+sha256_final c o
+tohex o
+ret long t
+end
+fn hexeq to bool
+for j ulong 64
+if ne get hx j get ex j
+ret false
+end
+end
+ret true
+end
+
+note ---------------------------------------------------------------- line and field scanning in fb
+fn isws c uchar to bool
+ret or eq c 32 eq c 9
+end
+note end of the line starting at s (index of the newline, or flen)
+fn eol s ulong to ulong
+n = get flen 0
+i = s
+while lt i n bound 999999
+if eq get fb i 10
+ret i
+end
+i = add i 1
+end
+ret n
+end
+note start of field k (0-based, blank-separated) in fb[s .. e), or e
+fn fieldat s ulong e ulong k ulong to ulong
+i = s
+f = ulong 0
+inw = false
+while lt i e bound 999999
+w = isws get fb i
+if w
+inw = false
+else
+if eq inw false
+if eq f k
+ret i
+end
+f = add f 1
+inw = true
+end
+end
+i = add i 1
+end
+ret e
+end
+fn tokend s ulong e ulong to ulong
+i = s
+while lt i e bound 999999
+if isws get fb i
+ret i
+end
+i = add i 1
+end
+ret e
+end
+fn hexv c uchar to ulong
+if and ge c 48 le c 57
+ret ulong sub c 48
+end
+if and ge c 65 le c 70
+ret add ulong sub c 65 10
+end
+if and ge c 97 le c 102
+ret add ulong sub c 97 10
+end
+ret 16
+end
+
+note ---------------------------------------------------------------- listeners in /proc/net/tcp*
+note A local address is loopback when it is 0100007F (IPv4), ::1 or ::ffff:127.0.0.1 (IPv6), as
+note /proc/net/tcp* print them (each 32-bit word in host order, hex digits upper case).
+fn fbeq s ulong t view uchar * to bool
+for j ulong len t
+if ne get fb add s j get t j
+ret false
+end
+end
+ret true
+end
+fn isloop s ulong n ulong to bool
+if eq n 8
+ret fbeq s tlo4
+end
+if ne n 32
+ret false
+end
+if fbeq s tlo6
+ret true
+end
+ret fbeq s tlo6m
+end
+fn addino v ulong lp bool to void
+n = get nino 0
+for j ulong n
+if eq get ino j v
+ret
+end
+end
+if ge n 8
+ret
+end
+put ino n v
+put iloop n uchar 0
+if lp
+put iloop n uchar 1
+end
+put nino 0 add n 1
+end
+fn colon a ulong ae ulong to ulong
+c = a
+while and lt c ae ne get fb c 58 bound 999999
+c = add c 1
+end
+ret c
+end
+fn hexport c ulong to ulong
+p = ulong 0
+for j ulong 4
+p = or shl p 4 hexv get fb add add c 1 j
+end
+ret p
+end
+fn islisten s ulong e ulong to bool
+st = fieldat s e 3
+if ne get fb st 48
+ret false
+end
+ret eq get fb add st 1 65
+end
+fn decat q ulong qe ulong to ulong
+v = ulong 0
+for j ulong sub qe q
+v = add mul v 10 ulong sub get fb add q j 48
+end
+ret v
+end
+fn tcpkeep s ulong e ulong a ulong c ulong ae ulong to void
+q = fieldat s e 9
+qe = tokend q e
+v = decat q qe
+lp = isloop a sub c a
+outt tlino
+outn v
+outt tladdr
+k = write 1 fb a sub ae a
+outt tnl
+addino v lp
+end
+fn tcpline s ulong e ulong to void
+a = fieldat s e 1
+ae = tokend a e
+c = colon a ae
+if ne sub ae c 5
+ret
+end
+if ne hexport c get gport 0
+ret
+end
+if islisten s e
+tcpkeep s e a c ae
+end
+end
+fn tcpscan t view uchar * to void
+pclr
+padd t
+r = slurp
+if lt r 0
+ret
+end
+n = get flen 0
+s = eol 0
+s = add s 1
+while lt s n bound 999999
+e = eol s
+tcpline s e
+s = add e 1
+end
+end
+
+note ---------------------------------------------------------------- holders of the listener socket
+note lb (length llen) equals "socket:[INODE]" for some listener inode
+fn issock to bool
+n = get llen 0
+if lt n 10
+ret false
+end
+for j ulong 8
+if ne get lb j get tsock j
+ret false
+end
+end
+if ne get lb sub n 1 93
+ret false
+end
+v = ulong 0
+for j ulong sub n 9
+d = get lb add 8 j
+if or lt d 48 gt d 57
+ret false
+end
+v = add mul v 10 ulong sub d 48
+end
+for j ulong get nino 0
+if eq get ino j v
+ret true
+end
+end
+ret false
+end
+fn addpid pid ulong to void
+n = get npid 0
+for j ulong n
+if eq get pids j pid
+ret
+end
+end
+if lt n 16
+put pids n pid
+put npid 0 add n 1
+end
+end
+fn readlb to long
+r = readlnk pb 0 get plen 0 lb 0 4096
+if lt r 0
+put llen 0 0
+ret r
+end
+put llen 0 ulong r
+ret r
+end
+note getdents64 record at o: reclen at o+16 (u16 little endian), name from o+19, NUL-terminated
+fn d2rl o ulong to ulong
+ret or ulong get d2 add o 16 shl ulong get d2 add o 17 8
+end
+fn d2nl o ulong to ulong
+k = ulong 0
+while ne get d2 add add o 19 k 0 bound 256
+k = add k 1
+end
+ret k
+end
+fn dbrl o ulong to ulong
+ret or ulong get db add o 16 shl ulong get db add o 17 8
+end
+fn dbnl o ulong to ulong
+k = ulong 0
+while ne get db add add o 19 k 0 bound 256
+k = add k 1
+end
+ret k
+end
+note one /proc/PID/fd entry at d2[o]: mode 0 looks for the listener socket, mode 1 for devices
+fn fdent pid ulong o ulong md ulong to void
+k = d2nl o
+if eq get d2 add o 19 46
+ret
+end
+ppid pid tfds
+paddd2 add o 19 k
+x = readlb
+if le x 0
+ret
+end
+if eq md 0
+if issock
+addpid pid
+end
+ret
+end
+if lbpre tdev
+g = gclass
+put gseen 0 or get gseen 0 g
+outt tdevfd
+k2 = write 1 d2 add o 19 k
+outt tsp
+outlb
+outt tnl
+end
+end
+note every entry of /proc/PID/fd; f is the fd directory's descriptor
+fn fdwalk pid ulong f int md ulong to void
+go = true
+while go bound 999999
+r = getdnts f d2 0 32768
+if le r 0
+ret
+end
+o = ulong 0
+while lt o ulong r bound 999999
+fdent pid o md
+o = add o d2rl o
+end
+end
+end
+fn chkpid pid ulong to void
+ppid pid tfd
+fd = fopen pb 0 get plen 0 16384 0
+if lt fd 0
+ret
+end
+f = int fd
+fdwalk pid f 0
+k = fclose f
+end
+fn isnum o ulong k ulong to ulong
+v = ulong 0
+if or eq k 0 gt k 10
+ret 0
+end
+for j ulong k
+d = get db add o j
+if or lt d 48 gt d 57
+ret 0
+end
+v = add mul v 10 ulong sub d 48
+end
+ret v
+end
+fn scanproc to void
+pclr
+padd tproc
+fd = fopen pb 0 get plen 0 16384 0
+if lt fd 0
+fail tr13
+ret
+end
+f = int fd
+go = true
+while go bound 999999
+r = getdnts f db 0 32768
+if le r 0
+go = false
+else
+o = ulong 0
+while lt o ulong r bound 999999
+k = dbnl o
+pid = isnum add o 19 k
+if gt pid 0
+chkpid pid
+end
+o = add o dbrl o
+end
+end
+end
+k = fclose f
+end
+
+note ---------------------------------------------------------------- GPU class of a device path in lb
+note bits: 1 nvrm, 2 aiengpu, 4 drm, 8 accel/kfd; 0 for a device that is not a GPU node
+fn lbpre t view uchar * to bool
+n = get llen 0
+if lt n len t
+ret false
+end
+for j ulong len t
+if ne get lb j get t j
+ret false
+end
+end
+ret true
+end
+fn gclass to ulong
+if lbpre tdai
+ret 2
+end
+if lbpre tdnv
+ret 1
+end
+if lbpre tddri
+ret 4
+end
+if lbpre tdacc
+ret 8
+end
+if lbpre tdkfd
+ret 8
+end
+ret 0
+end
+fn outgc g ulong to void
+if eq g 0
+outt tnone
+ret
+end
+if eq g 1
+outt tnvrm
+ret
+end
+if eq g 2
+outt taien
+ret
+end
+if eq g 4
+outt tdrm
+ret
+end
+if eq g 8
+outt taccel
+ret
+end
+outt tmixed
+end
+
+note ---------------------------------------------------------------- /proc/PID/maps
+note lb = fb[s .. e)
+fn fbtolb s ulong e ulong to void
+n = sub e s
+if gt n 4096
+n = 4096
+end
+for j ulong n
+put lb j get fb add s j
+end
+put llen 0 n
+end
+fn lbisx to bool
+n = get llen 0
+if ne n get xlen 0
+ret false
+end
+for j ulong n
+if ne get lb j get xl j
+ret false
+end
+end
+ret true
+end
+note lb contains ".so" followed by end, "." or blank
+fn soend q ulong n ulong to bool
+if ge q n
+ret true
+end
+c = get lb q
+ret or eq c 46 eq c 32
+end
+fn lbso to bool
+n = get llen 0
+if lt n 3
+ret false
+end
+for j ulong sub n 2
+if eq get lb j 46
+if eq get lb add j 1 115
+if eq get lb add j 2 111
+if soend add j 3 n
+ret true
+end
+end
+end
+end
+end
+ret false
+end
+note fb[p .. e) equals the previous line's path fb[ps .. pe) (consecutive segments of one file)
+fn fbsame p ulong e ulong ps ulong pe ulong to bool
+if le pe ps
+ret false
+end
+if ne sub e p sub pe ps
+ret false
+end
+for j ulong sub e p
+if ne get fb add p j get fb add ps j
+ret false
+end
+end
+ret true
+end
+fn mapline s ulong e ulong ps ulong pe ulong to void
+p = fieldat s e 5
+if ge p e
+ret
+end
+if eq get fb p 91
+ret
+end
+fbtolb p e
+if lbisx
+put nself 0 add get nself 0 1
+ret
+end
+if fbsame p e ps pe
+ret
+end
+if lbpre tdev
+g = gclass
+put gseen 0 or get gseen 0 g
+outt tmapd
+outlb
+outt tnl
+ret
+end
+outt tmapf
+outlb
+outt tnl
+if lbso
+fail tr4
+end
+end
+fn mapscan pid ulong to void
+ppid pid tmaps
+r = slurp
+if lt r 0
+fail tr13
+ret
+end
+n = get flen 0
+s = ulong 0
+ps = ulong 0
+pe = ulong 0
+while lt s n bound 999999
+e = eol s
+mapline s e ps pe
+p = fieldat s e 5
+if lt p e
+ps = p
+pe = e
+end
+s = add e 1
+end
+outt tmaps2
+outn get nself 0
+outt tnl
+end
+
+note ---------------------------------------------------------------- /proc/PID/fd device nodes
+fn fdscan pid ulong to void
+ppid pid tfd
+fd = fopen pb 0 get plen 0 16384 0
+if lt fd 0
+fail tr13
+ret
+end
+f = int fd
+fdwalk pid f 1
+k = fclose f
+end
+
+note ---------------------------------------------------------------- /proc/PID/cmdline
+fn cmdread pid ulong to void
+ppid pid tcmdl
+r = slurp
+n = get flen 0
+if gt n 65536
+n = 65536
+end
+for j ulong n
+put cb j get fb j
+end
+put clen 0 n
+i = ulong 0
+s = ulong 0
+a = ulong 0
+while lt i n bound 999999
+if eq get cb i 0
+outt tcarg
+outn a
+outt tsp
+k = write 1 cb s sub i s
+outt tnl
+a = add a 1
+s = add i 1
+end
+i = add i 1
+end
+end
+note pb equals one NUL-terminated argument of cb
+fn pbincmd to bool
+n = get clen 0
+m = get plen 0
+s = ulong 0
+i = ulong 0
+while lt i n bound 999999
+if eq get cb i 0
+if eq sub i s m
+same = true
+for j ulong m
+if ne get cb add s j get pb j
+same = false
+end
+end
+if same
+ret true
+end
+end
+s = add i 1
+end
+i = add i 1
+end
+ret false
+end
+
+note ---------------------------------------------------------------- HTTP on 127.0.0.1:PORT
+fn rqclr to void
+put rqlen 0 0
+end
+fn rqadd t view uchar * to void
+p = get rqlen 0
+for i ulong len t
+put rq add p i get t i
+end
+put rqlen 0 add p len t
+end
+fn rqcrlf to void
+p = get rqlen 0
+put rq p 13
+put rq add p 1 10
+put rqlen 0 add p 2
+end
+fn rqaddn v ulong to void
+b = new uchar 24 0
+i = ulong 24
+x = v
+c = true
+while c bound 30
+i = sub i 1
+put b i uchar add 48 rem x 10
+x = div x 10
+if eq x 0
+c = false
+end
+end
+p = get rqlen 0
+for j ulong sub 24 i
+put rq add p j get b add i j
+end
+put rqlen 0 add p sub 24 i
+end
+fn rqhead t view uchar * to void
+rqclr
+rqadd t
+rqcrlf
+rqadd thost
+rqcrlf
+rqadd tclose
+rqcrlf
+end
+note send rq, read the response into hb until close or tmo seconds; returns the status code or 0
+fn exch tmo ulong to ulong
+put hlen 0 0
+put sa 0 2
+put sa 1 0
+put sa 2 uchar shr get gport 0 8
+put sa 3 uchar and get gport 0 255
+put sa 4 127
+put sa 5 0
+put sa 6 0
+put sa 7 1
+s = int socknew 2 1 0
+if lt s 0
+ret 0
+end
+c = connect s sa 0 16
+if lt c 0
+k = fclose s
+ret 0
+end
+o = ulong 0
+n = get rqlen 0
+while lt o n bound 999999
+w = send s rq o sub n o 0
+if le w 0
+k = fclose s
+ret 0
+end
+o = add o ulong w
+end
+t0 = monons
+h = ulong 0
+go = true
+while go bound 999999
+if ge h 16384
+go = false
+else
+el = div ulong sub monons t0 1000000000
+if ge el tmo
+go = false
+else
+z = waitio s 1 1000000000
+if gt z 0
+r = recv s hb h sub 16384 h 0
+if le r 0
+go = false
+else
+h = add h ulong r
+end
+end
+end
+end
+end
+k = fclose s
+put hlen 0 h
+if lt h 12
+ret 0
+end
+v = ulong 0
+for j ulong 3
+d = get hb add 9 j
+if or lt d 48 gt d 57
+ret 0
+end
+v = add mul v 10 ulong sub d 48
+end
+ret v
+end
+fn outhttp t view uchar * code ulong to void
+outt thttp
+outt t
+outt tstat
+outn code
+outt tline
+h = get hlen 0
+i = ulong 0
+while and lt i h ne get hb i 13 bound 16385
+i = add i 1
+end
+k = write 1 hb 0 i
+outt tnl
+end
+fn httpall to void
+rqhead tget1
+rqcrlf
+v = exch 30
+outhttp thlth v
+if ne v 200
+fail tr10
+end
+rqhead tget2
+rqcrlf
+v = exch 30
+outhttp tmods v
+if ne v 200
+fail tr11
+end
+rqhead tpost
+rqadd tctype
+rqcrlf
+rqadd tclen
+rqaddn len tbody
+rqcrlf
+rqcrlf
+rqadd tbody
+v = exch 600
+outhttp tchat v
+if ne v 200
+fail tr12
+end
+end
+
+note ---------------------------------------------------------------- expected files
+fn filechk i ulong to void
+argpath i
+hs = argsha add i 1
+r = hashpb
+outt tfile
+outpb
+if lt r 0
+outt tnl
+fail tr8
+ret
+end
+outt tfsha
+outhx
+if hs
+if hexeq
+outt tmatch
+else
+outt tmism
+fail tr7
+end
+else
+outt tnl
+end
+outt tfile
+outpb
+outt tincmd
+if pbincmd
+outt tyes
+outt tnl
+else
+outt tno
+outt tnl
+fail tr9
+end
+end
+
+note ---------------------------------------------------------------- main
+note Inspection-only mode: dra23live --pid PID GPU reads /proc/PID (exe hash, maps, fd devices)
+note and checks the GPU class only; no listener lookup and no HTTP request are made.
+text tpidm "--pid"
+text tmode "mode pid_inspect\n"
+fn pidmode na ulong to int
+if ne na 4
+outt tusage
+ret 2
+end
+pid = argnum 2
+gn = argto 3
+gx = ulong 99
+if abis tnone gn
+gx = 0
+end
+if abis tnvrm gn
+gx = 1
+end
+if abis taien gn
+gx = 2
+end
+if or eq gx 99 eq pid 0
+outt tusage
+ret 2
+end
+outt thead
+outt tmode
+outt tgexp
+outgc gx
+outt tnl
+outt tholder
+outn pid
+outt tnl
+r = inspect pid
+g = get gseen 0
+gpuchk g gx
+ret verdict
+end
+note exe link, exe hash, maps and fd devices of pid; returns the exe hash status
+fn inspect pid ulong to long
+ppid pid texe
+r = readlb
+outt txlink
+outlb
+outt tnl
+for j ulong get llen 0
+put xl j get lb j
+end
+put xlen 0 get llen 0
+ppid pid texe
+h = hashpb
+if lt h 0
+fail tr3
+else
+outt txsha
+outhx
+outt tnl
+end
+mapscan pid
+fdscan pid
+ret h
+end
+fn gpuchk g ulong gx ulong to void
+outt tgpu
+outgc g
+outt tnl
+if and ne g 0 ne and g sub g 1 0
+fail tr5
+end
+if ne g gx
+fail tr6
+end
+end
+fn verdict to int
+if eq get nfail 0 0
+outt tvpass
+ret 0
+end
+outt tvfail
+outn get nfail 0
+outt tnl
+ret 1
+end
+fn main to int
+na = ulong argcnt
+if ge na 2
+n1 = argto 1
+if abis tpidm n1
+ret pidmode na
+end
+end
+if or lt na 4 gt na 20
+outt tusage
+ret 2
+end
+if ne rem sub na 4 2 0
+outt tusage
+ret 2
+end
+pt = argnum 1
+if or eq pt 0 gt pt 65535
+outt tusage
+ret 2
+end
+put gport 0 pt
+xs = argsha 2
+gn = argto 3
+gx = ulong 99
+if abis tnone gn
+gx = 0
+end
+if abis tnvrm gn
+gx = 1
+end
+if abis taien gn
+gx = 2
+end
+if eq gx 99
+outt tusage
+ret 2
+end
+outt thead
+outt tport
+outn pt
+outt tnl
+outt tgexp
+outgc gx
+outt tnl
+tcpscan tnet4
+tcpscan tnet6
+if eq get nino 0 0
+outt tvnr
+ret 3
+end
+for j ulong get nino 0
+if eq get iloop j 0
+fail tr14
+end
+end
+scanproc
+for j ulong get npid 0
+outt tholder
+outn get pids j
+outt tnl
+end
+if ne get npid 0 1
+fail tr1
+outt tvfail
+outn get nfail 0
+outt tnl
+ret 1
+end
+pid = get pids 0
+ppid pid texe
+r = readlb
+outt txlink
+outlb
+outt tnl
+for j ulong get llen 0
+put xl j get lb j
+end
+put xlen 0 get llen 0
+ppid pid texe
+r = hashpb
+if lt r 0
+fail tr3
+else
+outt txsha
+outhx
+outt tnl
+if xs
+outt texpect
+k = write 1 ex 0 64
+if hexeq
+outt tmatch
+else
+outt tmism
+fail tr2
+end
+end
+end
+cmdread pid
+httpall
+mapscan pid
+fdscan pid
+g = get gseen 0
+gpuchk g gx
+i = ulong 4
+while lt i na bound 20
+filechk i
+i = add i 2
+end
+ret verdict
+end

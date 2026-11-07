@@ -1,0 +1,23 @@
+DRA23LIVE v1
+port 18923
+gpu_expected none
+listen_inode 796925381 local 0100007F:49EB
+holder_pid 1108130
+exe_link ~/work/hive/t_f35fbfcd/build/ollm-aarch64-a/ollm
+exe_sha256 819664d5a2284189cd9baca67681675ed2b4685e19d1d976ce071b0f6fcaa5ea
+expect bcc179a2d091b19016f1b37a4263d29bdbb01ab61828de6dfff094fff9803aef MISMATCH
+fail exe_sha256_mismatch
+cmd_arg 0 ~/work/hive/t_f35fbfcd/aien-train/../build/ollm-aarch64-a/ollm
+cmd_arg 1 serve
+cmd_arg 2 18923
+cmd_arg 3 /tmp/gk/r10/run/ck60000.bin
+cmd_arg 4 ~/handoffs/omega-llm-20261101/v1-data/merges4096.bin
+http /health status 200 line HTTP/1.1 200 OK
+http /v1/models status 200 line HTTP/1.1 200 OK
+http /v1/chat/completions status 200 line HTTP/1.1 200 OK
+map_self_segments 1
+dev_fd 0 /dev/null
+gpu_observed none
+file /tmp/gk/r10/run/ck60000.bin sha256 a53ced7265818c8f6197449315e9ca4082721665022fec4f81d4538e8d6c2d0f MATCH
+file /tmp/gk/r10/run/ck60000.bin in_cmdline yes
+verdict FAIL failures 1

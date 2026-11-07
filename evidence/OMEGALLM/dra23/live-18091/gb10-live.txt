@@ -1,0 +1,4 @@
+DRA23LIVE v1
+port 18091
+gpu_expected nvrm
+verdict NOT_RUN no_listener_on_port

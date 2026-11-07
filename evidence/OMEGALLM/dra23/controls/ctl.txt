@@ -1,0 +1,5 @@
+CTL s1 vendored context.om code edit, gb10: rc=4 vendored context.om 00e4520cef2c3270de29bafbb063267f8d56a6d4 CUDApp_MISMATCH STATIC FAIL vendored_device_layer 
+CTL s5 same commit, aarch64 (the CPU build does not include gpu/): rc=3 census device_node_texts 0 devcall_lines 0 STATIC PASS expected_exe_sha256 819664d5a2284189cd9baca67681675ed2b4685e19d1d976ce071b0f6fcaa5ea verdict NOT_RUN no_listener_on_port 
+CTL s2 second device node text in gg.om, gb10: rc=4 census device_node_texts 4 devcall_lines 2 STATIC FAIL second_device_layer nodes=4 calls=2 want=3/2 
+CTL s3 dirty tree: rc=4 DIRTY_TREE 1
+CTL s4 abbreviated REV: rc=4 REV_MISMATCH clone at 0518c915dea370b3bffbb90d579b1daa5ba8b8f5, want 0518c915

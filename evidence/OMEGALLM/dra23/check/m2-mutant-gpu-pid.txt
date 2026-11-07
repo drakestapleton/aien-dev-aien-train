@@ -1,0 +1,17 @@
+DRA23LIVE v1
+mode pid_inspect
+gpu_expected nvrm
+holder_pid 68451
+exe_link ~/.local/share/omega-tool-model/round40-fast/server
+exe_sha256 092c1953924ca7a52e19fec309065b3efb50f034bf0ba561cc819543f4734085
+map_dev /dev/nvidiactl
+map_dev /dev/nvidia0
+map_self_segments 1
+dev_fd 0 /dev/null
+dev_fd 5 /dev/nvidiactl
+dev_fd 6 /dev/nvidia0
+dev_fd 7 /dev/nvidia-uvm
+dev_fd 8 /dev/nvidia-uvm
+gpu_observed none
+fail gpu_expect_mismatch
+verdict FAIL failures 1

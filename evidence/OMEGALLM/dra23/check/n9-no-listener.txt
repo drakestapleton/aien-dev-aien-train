@@ -1,0 +1,4 @@
+DRA23LIVE v1
+port 18925
+gpu_expected none
+verdict NOT_RUN no_listener_on_port

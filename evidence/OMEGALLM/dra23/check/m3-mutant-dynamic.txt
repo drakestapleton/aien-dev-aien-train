@@ -1,0 +1,34 @@
+DRA23LIVE v1
+port 18924
+gpu_expected none
+listen_inode 797044825 local 0100007F:49EC
+holder_pid 1131534
+exe_link ~/.hermes/tools/python-3.14.9+20261021-linux-arm64/bin/python3.14
+exe_sha256 9d9e7b954f88f8c1acba21bdefce6689ddcdd9004cb2f6870ef968994d747571
+cmd_arg 0 python3
+cmd_arg 1 -m
+cmd_arg 2 http.server
+cmd_arg 3 --bind
+cmd_arg 4 127.0.0.1
+cmd_arg 5 18924
+http /health status 404 line HTTP/1.0 404 File not found
+fail http_health_not_200
+http /v1/models status 404 line HTTP/1.0 404 File not found
+fail http_models_not_200
+http /v1/chat/completions status 501 line HTTP/1.0 501 Unsupported method ('POST')
+fail http_chat_not_200
+map_file /usr/lib/locale/locale-archive
+map_file /usr/lib/aarch64-linux-gnu/libc.so.6
+map_file /usr/lib/aarch64-linux-gnu/libgcc_s.so.1
+map_file /usr/lib/aarch64-linux-gnu/librt.so.1
+map_file /usr/lib/aarch64-linux-gnu/libm.so.6
+map_file /usr/lib/aarch64-linux-gnu/libutil.so.1
+map_file /usr/lib/aarch64-linux-gnu/libdl.so.2
+map_file /usr/lib/aarch64-linux-gnu/libpthread.so.0
+map_file /usr/lib/aarch64-linux-gnu/ld-linux-aarch64.so.1
+map_file /usr/lib/aarch64-linux-gnu/gconv/gconv-modules.cache
+map_file /usr/lib/aarch64-linux-gnu/ld-linux-aarch64.so.1
+map_self_segments 5
+dev_fd 0 /dev/null
+gpu_observed none
+verdict FAIL failures 3
