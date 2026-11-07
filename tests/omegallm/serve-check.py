@@ -98,7 +98,7 @@ def call(method, path, body=None, raw=None, timeout=600, port=None):
 # before; identity_checks() then requires one identical, complete identity per port, equal to
 # SERVE_IDENTITY (a JSON object) when that is set.
 IDS = {}
-IDKEYS = ["ck", "V", "T", "D", "H", "F", "L", "B", "step", "P", "ck_bytes", "ck_fnv", "tok", "tok_V", "tok_fnv"]
+IDKEYS = ["ck", "V", "T", "D", "H", "F", "L", "B", "step", "P", "ck_bytes", "ck_fnv", "rope", "tok", "tok_V", "tok_fnv"]
 
 
 def _strip_identity(port, out):
