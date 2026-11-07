@@ -1,0 +1,25 @@
+date 2026-11-07T00:11:59Z
+endpoint fixture:plain mode plain toolsets terminal tmo 300 maxturns 4 cores 6
+verify f1adcad1a16b05c8ac580c7a1108a349ad65d744225fccbb6122b0419a2b4c72  /dev/shm/hive/OllmAccept124/hbin/verify
+tasks b828695cfc36591c9d1050114d4c707e2f57367e731a694506b20d7b2a083b05  /home/drakestapleton/work/hive/ownmodel/accept/holdout/harness-test.txt
+runner c194727d15b6e4eed05101b95f489854033390e0c468481d57809c7c4e6a85e5
+hermes Hermes Agent v0.22.5 (2026.9.24) · stable · local bf0203a794a0
+hn-te-sha256-01 sha256 heldout FAIL 0 6205 2 200
+hn-te-sha256-02 sha256 heldout FAIL 0 6215 2 200
+hn-te-sha256-03 sha256 heldout FAIL 0 6193 2 200
+hn-te-replace_word-01 replace_word heldout FAIL 0 6264 2 200
+hn-te-replace_word-02 replace_word heldout FAIL 0 6156 2 200
+hn-te-replace_word-03 replace_word heldout FAIL 0 6529 2 200
+hn-te-sort_lines-01 sort_lines heldout FAIL 0 6321 2 200
+hn-te-sort_lines-02 sort_lines heldout FAIL 0 6610 2 200
+hn-te-sort_lines-03 sort_lines heldout FAIL 0 6055 2 200
+hn-te-uppercase-01 uppercase heldout FAIL 0 5677 2 200
+hn-te-uppercase-02 uppercase heldout FAIL 0 6208 2 200
+hn-te-uppercase-03 uppercase heldout FAIL 0 5932 2 200
+hn-te-concat-01 concat heldout FAIL 0 6111 2 200
+hn-te-concat-02 concat heldout FAIL 0 6120 2 200
+hn-te-concat-03 concat heldout FAIL 0 6100 2 200
+hn-te-arith-01 arith heldout FAIL 0 6350 2 200
+hn-te-arith-02 arith heldout FAIL 0 5567 2 200
+hn-te-arith-03 arith heldout FAIL 0 5562 2 200
+SUMMARY train pass=0/0 heldout pass=0/18 control fail=0/0 invalid=0

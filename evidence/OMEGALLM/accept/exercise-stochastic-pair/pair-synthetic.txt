@@ -1,0 +1,6 @@
+# synthetic pair check: A 8 PASS + x9 FAIL; B x1-5 FAIL, x6-7 PASS, x9 PASS, x8 absent
+$ accept pair pa pb
+role	split	both	a_only	b_only	neither	missing_in_b	mcnemar_p
+hive	test	2	5	1	0	1	0.2188
+rc=0
+expected: both 2, a_only 5, b_only 1, missing 1, p = 2 (C(6,0)+C(6,1)) / 2^6 = 0.21875

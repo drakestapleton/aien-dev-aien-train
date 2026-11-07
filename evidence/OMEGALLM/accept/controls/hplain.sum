@@ -1,0 +1,14 @@
+role	split	n	pass	not_run	rate	wilson95_lo	wilson95_hi	p50_ms	p95_ms	ctx_max	ctx_p95	crit	reasons	gate	verdict
+assistant	test	0	0	0	0.0000	0.0000	0.0000	0	0	0	0	0	none	gated	NOT_RUN
+coding	test	0	0	0	0.0000	0.0000	0.0000	0	0	0	0	0	none	gated	NOT_RUN
+hive	test	0	0	0	0.0000	0.0000	0.0000	0	0	0	0	0	none	gated	NOT_RUN
+harness	test	18	0	0	0.0000	0.0000	0.1759	6156	6610	0	0	0	rule=18	gated	FAIL
+overall	FAIL
+
+role	split	family	pass	n
+harness	test	sha256	0	3
+harness	test	replace_word	0	3
+harness	test	sort_lines	0	3
+harness	test	uppercase	0	3
+harness	test	concat	0	3
+harness	test	arith	0	3

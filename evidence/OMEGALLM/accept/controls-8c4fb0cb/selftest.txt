@@ -1,0 +1,2 @@
+selftest rows=1124 mismatches=0
+rc=0

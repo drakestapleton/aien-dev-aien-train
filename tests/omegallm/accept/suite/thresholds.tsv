@@ -1,0 +1,7 @@
+# DRA-124 pre-registered gates (PREREG.md section 4). role TAB split TAB n TAB min_lo_permille TAB p95_ms TAB ctx_min
+# A gated line PASSES only with exactly n rows, no NOT_RUN row, Wilson 95% lower bound >= min_lo_permille / 1000,
+# nearest-rank p95 latency <= p95_ms over status-200 rows, and zero rows with reason crit, busy or ctx.
+assistant	test	44	700	30000	8192
+coding	test	28	500	120000	8192
+hive	test	46	850	15000	8192
+harness	test	18	700	300000	8192

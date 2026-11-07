@@ -1,0 +1,32 @@
+ref sum rc 3
+PASS C1 ref assistant test PASS
+PASS C1 ref coding test PASS
+PASS C1 ref hive test PASS
+PASS C1 ref harness NOT_RUN (no harness results)
+PASS C1 ref assistant dev 379/379
+PASS C1 ref coding dev 176/176
+PASS C1 ref hive dev 16/16
+PASS C3 control-crit-expect-fail 0/5 PASS
+PASS C3 control-glob-expect-fail 0/3 PASS
+PASS C3 control-crit-expect-pass 2/2 PASS
+PASS C3 control-glob-expect-pass 2/2 PASS
+m4 sum rc 1
+PASS M4 MUTANTOP exact caught (hive test FAIL)
+m3 sum rc 3
+PASS M3 mutant crit caught (5/5 crit-expect-fail rows PASS)
+garbage sum rc 1
+PASS C2 garbage ifeval-public 50/369 PASS = the upstream-oracle floor 50 for reply zq
+PASS C2 garbage 0 PASS rows in every other family (own items, HumanEval, controls)
+PASS C2 garbage assistant test FAIL
+PASS C2 garbage coding test FAIL
+PASS C2 garbage hive test FAIL
+m1 sum rc 1
+PASS M1 mutant line caught (18 hive rows PASS on garbage)
+m2 sum rc 1
+PASS M2 mutant exec caught (40 coding rows PASS on garbage)
+PASS C4 harness fixture:ref 18/18 PASS
+PASS C4 harness fixture:plain 0/18 PASS
+accept a20097120cc6c521d497fb2401a434728b51adc3a0616ac8d89cd4b35eb387ad
+accept-mut-line a867a3ac55238729e68135e9893841d5c5ae2af7c11ae7551bcf1a7722051fb3
+accept-mut-exec 1c6dacd5ab187dd59cf0a2afb00a441a821d33d6353e153204c808e3c7a3b9bc
+accept-mut-crit df2f966b548ffd6d286c3f08f7767255abfa2711097e46e932311fb393154894
