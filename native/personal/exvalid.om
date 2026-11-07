@@ -1,0 +1,448 @@
+om2
+note exvalid.om: validate a curated-example TSV projection (DRA-146 correction-sequence examples).
+note Input on stdin, one row per example, nine TAB-separated fields:
+note   id  split  conv_id  target_role  outcome_label  target_allowed  cond_bytes  target_bytes  hashes
+note split train, dev or test; outcome_label verified, approved, rejected or unverified; target_allowed 0 or 1;
+note cond_bytes and target_bytes decimal; hashes are 16 lowercase hex digits, comma separated, or a single -.
+note Refuses: a target whose role is not agent, target_allowed 1 with an outcome other than verified or approved,
+note a conversation in two splits, a hash shared train-dev, train-test or dev-test, cond_bytes over 600 and
+note target_bytes over 400. Output: PASS or FAIL per check, then SUMMARY. Exit 0 all pass, 1 a violation,
+note 2 malformed input or a full table. Fields are compared by FNV-1a 64 of their bytes.
+note Capacity: 12582912 distinct hashes (75 percent of a 2^24 table), 786432 conversations.
+global hk ulong 16777216
+global hm uchar 16777216
+global ck ulong 1048576
+global cs uchar 1048576
+global S ulong 32
+global E ulong 32
+global K ulong 16
+text wtrain "train"
+text wdev "dev"
+text wtest "test"
+text wagent "agent"
+text wver "verified"
+text wapp "approved"
+text wrej "rejected"
+text wunv "unverified"
+text lhead "exvalid rows="
+text lconv " convs="
+text lhash " hashes="
+text lallow " target_allowed="
+text lnl "\n"
+text lpass "PASS "
+text lfail "FAIL "
+text lviol " violations="
+text n1 "target_role_agent"
+text n2 "allowed_only_verified_or_approved"
+text n3 "conv_one_split"
+text n4 "no_shared_hash_train_dev"
+text n5 "no_shared_hash_train_test"
+text n6 "no_shared_hash_dev_test"
+text n7 "cond_bytes_le_600"
+text n8 "target_bytes_le_400"
+text n9 "well_formed_rows"
+text n10 "table_capacity"
+text lsum "SUMMARY pass="
+text lsfail " fail="
+
+note S slots: 0 field, 1 field FNV, 2 conv FNV, 3 split bit, 4 role ok, 5 outcome code, 6 allowed, 7 cond bytes,
+note 8 target bytes, 9 malformed, 12 row has bytes, 13 hex value, 14 hex digits,
+note 15 decimal digits in field. K: FNV of the known words (0 train, 1 dev, 2 test, 3 agent, 4..7 outcomes).
+note E slots: 0 rows, 1 non-agent target, 2 allowed with bad outcome, 3 conv split differs, 4 cond oversize,
+note 5 target oversize, 6 malformed rows, 7 table full, 8 train-dev, 9 train-test, 10 dev-test, 11 allowed rows,
+note 12 distinct hashes, 13 conversations
+
+fn einc i ulong to void
+put E i add get E i 1
+end
+
+fn say t view uchar * to void
+k = write 1 t 0 len t
+end
+
+fn putnum v ulong to void
+b = new uchar 24 0
+i = ulong 24
+x = v
+if eq x 0
+i = ulong 23
+put b 23 48
+end
+while gt x 0 bound 25
+i = sub i 1
+put b i uchar add 48 rem x 10
+x = div x 10
+end
+k = write 1 b i sub 24 i
+end
+
+fn fnvstep h ulong b uchar to ulong
+ret mul xor h ulong b 1099511628211
+end
+
+fn fnvtext t view uchar * to ulong
+h = ulong 14695981039346656037
+i = ulong 0
+while lt i len t bound 64
+h = fnvstep h get t i
+i = add i 1
+end
+ret h
+end
+
+fn rowreset to void
+i = ulong 0
+while lt i 16 bound 17
+put S i 0
+i = add i 1
+end
+put S 1 14695981039346656037
+end
+
+fn hput h ulong bit uchar to long
+k = h
+if eq k 0
+k = ulong 1
+end
+i = and k 16777215
+n = ulong 0
+while lt n 999999 bound 999999
+c = get hk i
+if eq c 0
+put hk i k
+put hm i bit
+einc 12
+ret 1
+end
+if eq c k
+put hm i or get hm i bit
+ret 0
+end
+i = and add i 1 16777215
+n = add n 1
+end
+ret -1
+end
+
+fn cput h ulong code uchar to void
+k = h
+if eq k 0
+k = ulong 1
+end
+i = and k 1048575
+n = ulong 0
+while lt n 999999 bound 999999
+c = get ck i
+if eq c 0
+put ck i k
+put cs i code
+einc 13
+ret
+end
+if eq c k
+if ne get cs i code
+einc 3
+end
+ret
+end
+i = and add i 1 1048575
+n = add n 1
+end
+einc 7
+end
+
+fn hexend to void
+n = get S 14
+if eq n 0
+ret
+end
+put S 14 0
+if ne n 16
+put S 9 1
+ret
+end
+bit = uchar get S 3
+if eq bit 0
+put S 9 1
+ret
+end
+r = hput get S 13 bit
+put S 13 0
+if lt r 0
+einc 7
+end
+if gt get E 12 12582912
+einc 7
+end
+end
+
+note a field ended: classify it by its FNV
+fn fend f ulong to void
+h = get S 1
+if eq f 1
+if eq h get K 0
+put S 3 1
+end
+if eq h get K 1
+put S 3 2
+end
+if eq h get K 2
+put S 3 4
+end
+if eq get S 3 0
+put S 9 1
+end
+end
+if eq f 2
+put S 2 h
+end
+if eq f 3
+if eq h get K 3
+put S 4 1
+end
+end
+if eq f 4
+if eq h get K 4
+put S 5 1
+end
+if eq h get K 5
+put S 5 2
+end
+if eq h get K 6
+put S 5 3
+end
+if eq h get K 7
+put S 5 4
+end
+if eq get S 5 0
+put S 9 1
+end
+end
+if or eq f 6 eq f 7
+if eq get S 15 0
+put S 9 1
+end
+end
+if eq f 8
+hexend
+end
+put S 1 14695981039346656037
+put S 15 0
+end
+
+fn rowend to void
+if eq get S 12 0
+ret
+end
+einc 0
+if ne get S 0 8
+put S 9 1
+end
+if ne get S 9 0
+einc 6
+rowreset
+ret
+end
+if eq get S 4 0
+einc 1
+end
+if eq get S 6 1
+einc 11
+if gt get S 5 2
+einc 2
+end
+end
+if gt get S 7 600
+einc 4
+end
+if gt get S 8 400
+einc 5
+end
+cput get S 2 uchar get S 3
+rowreset
+end
+
+fn decbyte slot ulong b uchar to void
+if and ge b 48 le b 57
+v = get S slot
+if lt v 1000000000
+put S slot add mul v 10 sub ulong b 48
+end
+put S 15 add get S 15 1
+else
+put S 9 1
+end
+end
+
+fn feed b uchar to void
+f = get S 0
+put S 12 1
+if eq b 10
+fend f
+rowend
+ret
+end
+if eq b 9
+fend f
+put S 0 add f 1
+if gt f 7
+put S 9 1
+end
+ret
+end
+put S 1 fnvstep get S 1 b
+if eq f 5
+if eq b 49
+put S 6 1
+else
+if ne b 48
+put S 9 1
+end
+end
+ret
+end
+if eq f 6
+decbyte 7 b
+ret
+end
+if eq f 7
+decbyte 8 b
+ret
+end
+if eq f 8
+hexbyte b
+end
+end
+
+fn hexbyte b uchar to void
+if eq b 44
+hexend
+ret
+end
+if eq b 45
+ret
+end
+d = ulong 16
+if and ge b 48 le b 57
+d = sub ulong b 48
+end
+if and ge b 97 le b 102
+d = sub ulong b 87
+end
+if gt d 15
+put S 9 1
+ret
+end
+put S 13 or shl get S 13 4 d
+put S 14 add get S 14 1
+end
+
+fn check nm view uchar * v ulong to ulong
+if eq v 0
+say lpass
+else
+say lfail
+end
+say nm
+say lviol
+putnum v
+say lnl
+if eq v 0
+ret 0
+end
+ret 1
+end
+
+fn scan to void
+q = ulong 0
+while lt q 32 bound 33
+j = ulong 0
+while lt j 524288 bound 524289
+m = get hm add shl q 19 j
+if eq and m 3 3
+einc 8
+end
+if eq and m 5 5
+einc 9
+end
+if eq and m 6 6
+einc 10
+end
+j = add j 1
+end
+q = add q 1
+end
+end
+
+fn main to int
+put K 0 fnvtext wtrain
+put K 1 fnvtext wdev
+put K 2 fnvtext wtest
+put K 3 fnvtext wagent
+put K 4 fnvtext wver
+put K 5 fnvtext wapp
+put K 6 fnvtext wrej
+put K 7 fnvtext wunv
+rowreset
+buf = new uchar 524288 0
+go = true
+outer = ulong 0
+while and go lt outer 999999 bound 999999
+inner = ulong 0
+while and go lt inner 999999 bound 999999
+k = read 0 buf 0 524288
+if lt k 0
+ret 2
+end
+if eq k 0
+go = false
+else
+n = ulong k
+i = ulong 0
+while lt i n bound 524289
+feed get buf i
+i = add i 1
+end
+end
+inner = add inner 1
+end
+outer = add outer 1
+end
+if ne get S 12 0
+fend get S 0
+rowend
+end
+scan
+say lhead
+putnum get E 0
+say lconv
+putnum get E 13
+say lhash
+putnum get E 12
+say lallow
+putnum get E 11
+say lnl
+bad = ulong 0
+bad = add bad check n1 get E 1
+bad = add bad check n2 get E 2
+bad = add bad check n3 get E 3
+bad = add bad check n4 get E 8
+bad = add bad check n5 get E 9
+bad = add bad check n6 get E 10
+bad = add bad check n7 get E 4
+bad = add bad check n8 get E 5
+inp = check n9 get E 6
+inp = add inp check n10 get E 7
+say lsum
+putnum sub 10 add bad inp
+say lsfail
+putnum add bad inp
+say lnl
+if gt inp 0
+ret 2
+end
+if gt bad 0
+ret 1
+end
+ret 0
+end

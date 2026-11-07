@@ -1,0 +1,6 @@
+ex_syn01	train	syn:c1	agent	verified	1	420	180	00000000000000a1,1111111111111111
+ex_syn02	train	syn:c1	agent	rejected	0	600	400	00000000000000a2
+ex_syn03	dev	syn:c2	agent	approved	1	100	50	00000000000000b1,2222222222222222
+ex_syn04	test	syn:c2	agent	unverified	0	90	20	00000000000000b2
+ex_syn05	test	syn:c3	agent	verified	1	300	399	00000000000000c1,3333333333333333
+ex_syn06	train	syn:c4	agent	approved	1	10	10	00000000000000a1
