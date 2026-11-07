@@ -118,12 +118,13 @@ live)
 	curl -s -m 10 "http://127.0.0.1:$PORT/health" >"$t/health" || die "no /health on :$PORT"
 	{
 		echo "exe $(sha256sum "/proc/$pid/exe" | cut -d' ' -f1)"
+		echo "path $(readlink "/proc/$pid/exe")"
 		echo "argv $(tr '\0' ' ' <"/proc/$pid/cmdline" | sed 's/ $//')"
 	} >"$t/live"
 	echo "LIVE pid=$pid exe=$(readlink "/proc/$pid/exe") listen=$(ss -Hltn "sport = :$PORT" | awk '{print $4}' | tr '\n' ' ')"
 	echo "LIVE health $(cat "$t/health")"
 	sed 's/^/LIVE /' "$t/live"
-	run "$BIN/mancheck" live "$DIR" "$t/sums" "$t/health" "$t/live"
+	run "$BIN/mancheck" live "$(readlink -f "$DIR")" "$t/sums" "$t/health" "$t/live"
 	rc=$?
 	rm -rf "$t"
 	exit $rc
@@ -136,18 +137,23 @@ start)
 	[ -z "$(pid_on "$PORT")" ] || die ":$PORT is taken"
 	rm -f "$ROOT/stop.$PORT"
 	C=$ROOT/current
-	run "$BIN/osup" "$ROOT/stop.$PORT" "$ROOT/serve.$PORT.log" "$C/bin/ollm" serve "$PORT" "$C/checkpoint.ck" "$C/merges.tok" "$@" \
-		>>"$ROOT/osup.$PORT.out" 2>&1 &
-	echo $! >"$ROOT/osup.$PORT.pid"
-	echo "STARTED osup=$! port=$PORT at $(now)"
+	# no shell function here: taskset and nice exec, so $! is the osup process itself
+	taskset -c "$CORES" nice -n 10 "$BIN/osup" "$ROOT/stop.$PORT" "$ROOT/serve.$PORT.log" "$C/bin/ollm" serve "$PORT" \
+		"$C/checkpoint.ck" "$C/merges.tok" "$@" >>"$ROOT/osup.$PORT.out" 2>&1 &
+	sp=$!
+	echo $sp >"$ROOT/osup.$PORT.pid"
+	sleep 0.2
+	[ "$(readlink "/proc/$sp/exe")" = "$(readlink -f "$BIN/osup")" ] || die "pid $sp is not osup"
+	echo "STARTED osup=$sp exe=$(readlink "/proc/$sp/exe") port=$PORT at $(now)"
 	;;
 switch)
 	ROOT=${1:?ROOT} DIR=${2:?DIR} PORT=${3:?PORT}
 	sh "$0" gate "$DIR" || die "gate refused $DIR: not switching"
 	ln -sfn "$DIR" "$ROOT/current.new" && mv -T "$ROOT/current.new" "$ROOT/current" || die "symlink"
 	sp=$(cat "$ROOT/osup.$PORT.pid")
-	c=$(pgrep -P "$sp")
-	[ -n "$c" ] || die "osup $sp has no child"
+	c=$(pid_on "$PORT")
+	[ -n "$c" ] || die "nothing listens on :$PORT"
+	[ "$(awk '{print $4}' "/proc/$c/stat")" = "$sp" ] || die "listener $c is not a child of osup $sp"
 	kill -TERM "$c"
 	echo "SWITCHED current=$(readlink "$ROOT/current") old_child=$c at $(now)"
 	;;

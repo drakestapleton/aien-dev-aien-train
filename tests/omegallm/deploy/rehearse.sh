@@ -49,7 +49,9 @@ waith() { # wait up to 120 s for /health 200 on port $1; prints seconds waited (
 	done
 	echo "health_up_ms $((($(date +%s%N) - t0) / 1000000))"
 }
-model_of() { curl -s -m 5 "http://127.0.0.1:$1/health" | sed 's/.*"model"://'; }
+model_of() { curl -s -m 5 "http://127.0.0.1:$1/health" | sed 's/.*"model"://; s/}$//'; }
+ppid_of() { awk '{print $4}' "/proc/$1/stat"; }
+chk_restart() { echo "before $1 after $2 parent $(ppid_of "$2") osup $3"; [ -n "$2" ] && [ "$1" != "$2" ] && [ "$(ppid_of "$2")" = "$3" ]; }
 p91() { echo "ss :18091 at $(now): [$(ss -Hltnp 'sport = :18091' | tr '\n' ' ')]"; }
 
 {
@@ -150,6 +152,8 @@ step start_A 0 $D start "$WORK/root" 18296
 step health_A 0 waith 18296
 step live_A 0 $D live "$A" 18296
 step neg_live_A_vs_R_manifest 1 $D live "$R" 18296
+mkneg same
+step neg_live_same_files_other_dir 1 $D live "$WORK/neg/same" 18296
 IDA=$(model_of 18296)
 echo "$IDA" >"$EV/identity_A.json"
 # explicit cancellation on the candidate itself (no test mode): a streaming client that leaves
@@ -173,7 +177,7 @@ p1=$(ss -Hltnp 'sport = :18296' | grep -o 'pid=[0-9]*' | head -1 | cut -d= -f2)
 step kill9 0 kill -9 "$p1"
 step health_after_kill9 0 waith 18296
 p2=$(ss -Hltnp 'sport = :18296' | grep -o 'pid=[0-9]*' | head -1 | cut -d= -f2)
-step new_pid_after_kill9 0 sh -c "echo 'before $p1 after $p2'; [ -n '$p2' ] && [ '$p1' != '$p2' ]"
+step new_pid_after_kill9 0 chk_restart "$p1" "$p2" "$(cat "$WORK/root/osup.18296.pid")"
 step live_A_after_kill9 0 $D live "$A" 18296
 step identity_same_after_kill9 0 sh -c "[ '$(model_of 18296)' = '$IDA' ] && echo same: $IDA"
 

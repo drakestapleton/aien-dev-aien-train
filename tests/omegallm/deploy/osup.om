@@ -125,6 +125,9 @@ exit 126
 end
 r = dupfd int lf 1 0
 r = dupfd int lf 2 0
+if gt lf 2
+r = fclose int lf
+end
 r = execprog pk 0 n
 exit 127
 end

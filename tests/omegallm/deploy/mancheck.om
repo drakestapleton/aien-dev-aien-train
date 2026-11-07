@@ -26,8 +26,9 @@ note                                      header fields, FNV-1a 64) against depl
 note   mancheck live DIR SUMS HEALTH LIVE the static check, then the running process: HEALTH (the
 note                                      body of its GET /health) must hold exactly the "model"
 note                                      member deploy.manifest implies, and LIVE (`exe SHA256` of
-note                                      /proc/PID/exe, `argv` + its command line) must match serve
-note                                      and the launch line
+note                                      /proc/PID/exe, `path` + the kernel's resolved exe path,
+note                                      `argv` + its command line) must match serve, DIR/bin/ollm
+note                                      (DIR given resolved) and the launch line
 note Prints `MANCHECK PASS ...` on success. Every check reads the files itself; nothing is cached.
 
 note gb regions: 0 model.manifest (8192), 8192 deploy.manifest, 12288 SUMS, 16384 HEALTH, 20480
@@ -132,6 +133,7 @@ text rvv "tokenizer V differs from the checkpoint V"
 text rhlth "the running server's /health identity differs from deploy.manifest"
 text rexe "the running executable's sha256 differs from serve"
 text rargv "the running command line differs from the launch line"
+text rpath "the running executable is not DIR/bin/ollm"
 text jm0 "\"model\":{\"ck\":\""
 text jm1 "\",\"V\":"
 text jm2 ",\"T\":"
@@ -150,6 +152,8 @@ text jme "\"}}"
 text jst "{\"status\":\"ok\","
 text lexe "exe"
 text largv "argv"
+text lpath "path"
+text sbin "/bin/ollm"
 text tsp " "
 text tnl "\n"
 text tck "ck="
@@ -157,7 +161,7 @@ text tstep " step="
 text tcfnv " ck_fnv="
 text ttfnv " tok_fnv="
 text tname "name="
-text tlive " live=exe,argv,health"
+text tlive " live=exe,path,argv,health"
 
 note ======== output
 
@@ -1219,6 +1223,10 @@ if eqt get tp 0 tlen 0 largv
 liveav p q
 av = add av 1
 end
+if and eq n 2 eqt get tp 0 tlen 0 lpath
+livepth get tp 1 get tq 1
+put gl 14 add get gl 14 1
+end
 p = add q 1
 end
 if ne ex 1
@@ -1226,6 +1234,24 @@ bad rexe
 end
 if ne av 1
 bad rargv
+end
+if ne get gl 14 1
+bad rpath
+end
+end
+
+note the `path` line: the kernel's resolved /proc/PID/exe, which must be exactly DIR/bin/ollm (DIR
+note as given, so give it resolved)
+fn livepth a ulong b ulong to void
+d = get gl 5
+if ne sub b a add d len sbin
+bad rpath
+end
+if not eqg a 36864 d
+bad rpath
+end
+if not eqt add a d len sbin sbin
+bad rpath
 end
 end
 
