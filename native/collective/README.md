@@ -84,3 +84,7 @@ Only with much larger matching matrix shapes and low-rank learned adapter deltas
 6. Final product-owned code/tooling remains seeded .om, and [architecture #300/#316](https://github.com/aien-dev/aien-architecture-mv/issues/300) controls elimination of first-party legacy runtime dependencies after separate verification.
 
 No code in this branch changes the production server or shared compiler. GitHub draft PR does not mean qualified execution.
+
+## Native replay with an independent oracle (2026-11-07, DRA-15)
+
+`replay/run.sh` compiles this program with the pinned omc (omega-mv `e5b32567`, sha256 `2c824805…`, re-born from seed-0), runs its self-test, and builds an observation variant (every line before `fn main` unchanged, plus `replay/p0emit-main.om`) whose stdout must equal the Wolfram-produced `replay/expected-p0e1.out` byte for byte. Eight compiled mutants (sign, routing, factor, base reuse, admission mask, phase refusal, index refusal, and one that also rewrites this program's own expected tables) are each rejected by that oracle; the last one passes the self-test, so the self-test alone is not an independent check. An overflowing input traps (exit 101). Receipt and the refusal-contract status table: [`evidence/COLLECTIVE-P0/README.md`](../../evidence/COLLECTIVE-P0/README.md). Result: `P0REPLAY PASS` on host AArch64; the rank, shape, base identity, generation, budget, score/permission and staleness refusals of the #26 P0 contract are not implemented by this fixed-shape program (MISSING_IMPLEMENTATION). Device, model and P1-P4 work remain NOT_RUN.

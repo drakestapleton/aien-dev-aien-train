@@ -1,0 +1,118 @@
+note SPDX-License-Identifier: AGPL-3.0-only
+note DRA-15 / aien-train#26 P0 observation tail. Appended after every line of
+note shared_bank_p0.om before its fn main (lines 1..149), byte-identical, by
+note native/collective/replay/run.sh. It replaces only the self-test main:
+note the same init/makebase/pick/apply run, and every observable is printed so
+note an oracle that the program does not contain (the Wolfram expected file)
+note can judge it. It adds no arithmetic of its own and checks nothing itself.
+note Line format: P0E1 base b0 b1 / P0E1 y id phase status o0 o1 /
+note P0E1 top2 a b / P0E1 deny1top a / P0E1 status s1 s2 s3 /
+note P0E1 alldenied a / P0E1 counts base calls / END.
+
+global Buf uchar 64
+global Pos ulong 1
+
+text tb "P0E1 base"
+text ty "P0E1 y"
+text tt "P0E1 top2"
+text td "P0E1 deny1top"
+text ts "P0E1 status"
+text ta "P0E1 alldenied"
+text tc "P0E1 counts"
+text te "END\n"
+
+fn pc c ulong to void
+p = get Pos 0
+put Buf p uchar c
+put Pos 0 add p 1
+end
+
+note Appends one space and the signed decimal of v to Buf.
+fn pnum v long to void
+d = new uchar 20 0
+pc 32
+u = ulong 0
+if lt v 0
+pc 45
+u = ulong neg v
+else
+u = ulong v
+end
+n = ulong 0
+c = true
+while c bound 20
+put d n uchar add rem u 10 48
+n = add n 1
+u = div u 10
+if eq u 0
+c = false
+end
+end
+for i ulong 20
+if lt i n
+pc ulong get d sub sub n 1 i
+end
+end
+end
+
+fn flush to void
+p = get Pos 0
+put Buf p uchar 10
+k = write 1 Buf 0 add p 1
+put Pos 0 0
+end
+
+fn main to int
+init
+makebase
+k = write 1 tb 0 len tb
+pnum get Shared 0
+pnum get Shared 1
+flush
+for id ulong 8
+for s ulong 2
+ph = long 1
+if eq s 1
+ph = long -1
+end
+st = apply id ph
+k = write 1 ty 0 len ty
+pnum long id
+pnum ph
+pnum st
+pnum get Out 0
+pnum get Out 1
+flush
+end
+end
+first = pick 0
+used = shl ulong 1 first
+second = pick used
+k = write 1 tt 0 len tt
+pnum long first
+pnum long second
+flush
+put Allowed 1 0
+top = pick 0
+k = write 1 td 0 len td
+pnum long top
+flush
+k = write 1 ts 0 len ts
+pnum apply 1 1
+pnum apply 8 1
+pnum apply 3 0
+flush
+for id ulong 8
+put Allowed id 0
+end
+none = pick 0
+k = write 1 ta 0 len ta
+pnum long none
+flush
+k = write 1 tc 0 len tc
+pnum long get Counts 0
+pnum long get Counts 1
+flush
+k = write 1 te 0 len te
+ret 0
+end

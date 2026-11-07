@@ -1,0 +1,267 @@
+note SPDX-License-Identifier: AGPL-3.0-only
+note aien-train#26: first native .om sparse-collective algebraic experiment.
+note ONE shared 2x3 matrix + EIGHT rank-one signed specialist differences.
+note All data and scores are synthetic. No model checkpoint is loaded.
+note This is neither a trained specialist nor a GPU/runtime dispatch implementation.
+note Seeded omc names are at most 8 characters (error 13). bscore replaces bestscore.
+note Full reference numbers independently calculated in Wolfram Language.
+
+global B long 6
+global U long 16
+global V long 24
+global X long 3
+global Shared long 2
+global Out long 2
+global Scores long 8
+global Allowed uchar 8
+global Counts ulong 2
+global Plus long 16
+global Minus long 16
+
+fn init to void
+put B 0 2
+put B 1 -1
+put B 2 3
+put B 3 1
+put B 4 0
+put B 5 -2
+put X 0 2
+put X 1 3
+put X 2 5
+put Scores 0 4
+put Scores 1 11
+put Scores 2 7
+put Scores 3 9
+put Scores 4 8
+put Scores 5 0
+put Scores 6 3
+put Scores 7 2
+for id ulong 8
+put Allowed id 1
+sid = long id
+ui = mul id 2
+vi = mul id 3
+put U ui sub sid 3
+put U add ui 1 add sid 1
+put V vi 1
+put V add vi 1 sub 3 sid
+put V add vi 2 -1
+end
+put Counts 0 0
+put Counts 1 0
+put Plus 0 -2
+put Plus 1 -2
+put Plus 2 10
+put Plus 3 -2
+put Plus 4 16
+put Plus 5 -8
+put Plus 6 16
+put Plus 7 -20
+put Plus 8 10
+put Plus 9 -38
+put Plus 10 -2
+put Plus 11 -62
+put Plus 12 -20
+put Plus 13 -92
+put Plus 14 -44
+put Plus 15 -128
+put Minus 0 34
+put Minus 1 -14
+put Minus 2 22
+put Minus 3 -14
+put Minus 4 16
+put Minus 5 -8
+put Minus 6 16
+put Minus 7 4
+put Minus 8 22
+put Minus 9 22
+put Minus 10 34
+put Minus 11 46
+put Minus 12 52
+put Minus 13 76
+put Minus 14 76
+put Minus 15 112
+end
+
+fn makebase to void
+for row ulong 2
+acc = long 0
+for col ulong 3
+idx = add mul row 3 col
+z = mul get B idx get X col
+acc = add acc z
+end
+put Shared row acc
+end
+put Counts 0 add get Counts 0 1
+end
+
+note Tiny synthetic admission only. Capability authority remains Omega/AEGIS.
+note Returns index 8 if no candidate allowed, rather than silently dispatching.
+fn pick used ulong to ulong
+best = ulong 8
+bscore = long -9999
+for id ulong 8
+if eq get Allowed id 1
+flag = and used shl ulong 1 id
+if eq flag 0
+score = get Scores id
+if lt score bscore
+bscore = score
+best = id
+end
+end
+end
+end
+ret best
+end
+
+note Status 0=success; -1=bad index; -2=refused; -3=bad phase.
+note Outputs are written only for successful calls.
+note Formula: y = B*x + phase*U[id]*(V[id]^T*x), phase in {-1,+1}.
+fn apply id ulong phase long to long
+if ge id 8
+ret -1
+end
+if ne get Allowed id 1
+ret -2
+end
+if ne phase 1
+if ne phase -1
+ret -3
+end
+end
+dot = long 0
+vi = mul id 3
+for col ulong 3
+v = get V add vi col
+dot = add dot mul v get X col
+end
+ui = mul id 2
+for row ulong 2
+diff = mul get U add ui row dot
+result = add get Shared row mul phase diff
+put Out row result
+end
+put Counts 1 add get Counts 1 1
+ret 0
+end
+
+note SPDX-License-Identifier: AGPL-3.0-only
+note DRA-15 / aien-train#26 P0 observation tail. Appended after every line of
+note shared_bank_p0.om before its fn main (lines 1..149), byte-identical, by
+note native/collective/replay/run.sh. It replaces only the self-test main:
+note the same init/makebase/pick/apply run, and every observable is printed so
+note an oracle that the program does not contain (the Wolfram expected file)
+note can judge it. It adds no arithmetic of its own and checks nothing itself.
+note Line format: P0E1 base b0 b1 / P0E1 y id phase status o0 o1 /
+note P0E1 top2 a b / P0E1 deny1top a / P0E1 status s1 s2 s3 /
+note P0E1 alldenied a / P0E1 counts base calls / END.
+
+global Buf uchar 64
+global Pos ulong 1
+
+text tb "P0E1 base"
+text ty "P0E1 y"
+text tt "P0E1 top2"
+text td "P0E1 deny1top"
+text ts "P0E1 status"
+text ta "P0E1 alldenied"
+text tc "P0E1 counts"
+text te "END\n"
+
+fn pc c ulong to void
+p = get Pos 0
+put Buf p uchar c
+put Pos 0 add p 1
+end
+
+note Appends one space and the signed decimal of v to Buf.
+fn pnum v long to void
+d = new uchar 20 0
+pc 32
+u = ulong 0
+if lt v 0
+pc 45
+u = ulong neg v
+else
+u = ulong v
+end
+n = ulong 0
+c = true
+while c bound 20
+put d n uchar add rem u 10 48
+n = add n 1
+u = div u 10
+if eq u 0
+c = false
+end
+end
+for i ulong 20
+if lt i n
+pc ulong get d sub sub n 1 i
+end
+end
+end
+
+fn flush to void
+p = get Pos 0
+put Buf p uchar 10
+k = write 1 Buf 0 add p 1
+put Pos 0 0
+end
+
+fn main to int
+init
+makebase
+k = write 1 tb 0 len tb
+pnum get Shared 0
+pnum get Shared 1
+flush
+for id ulong 8
+for s ulong 2
+ph = long 1
+if eq s 1
+ph = long -1
+end
+st = apply id ph
+k = write 1 ty 0 len ty
+pnum long id
+pnum ph
+pnum st
+pnum get Out 0
+pnum get Out 1
+flush
+end
+end
+first = pick 0
+used = shl ulong 1 first
+second = pick used
+k = write 1 tt 0 len tt
+pnum long first
+pnum long second
+flush
+put Allowed 1 0
+top = pick 0
+k = write 1 td 0 len td
+pnum long top
+flush
+k = write 1 ts 0 len ts
+pnum apply 1 1
+pnum apply 8 1
+pnum apply 3 0
+flush
+for id ulong 8
+put Allowed id 0
+end
+none = pick 0
+k = write 1 ta 0 len ta
+pnum long none
+flush
+k = write 1 tc 0 len tc
+pnum long get Counts 0
+pnum long get Counts 1
+flush
+k = write 1 te 0 len te
+ret 0
+end
