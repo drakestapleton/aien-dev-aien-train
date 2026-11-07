@@ -1,0 +1,46 @@
+# serve-bench.sh on CK-A (a2048.ck)
+command: OLLM=b3/ollm CK=a2048.ck MERGES=merges32k.bin OUT=fbenchA TEXT=~/data-omega/base/val.txt CORES=4 PORT=18295 LENS="256 1024 2016" DEC=31 sh tests/omegallm/serve-bench.sh  (rc 0)
+B env date=2026-11-07T00:57:38Z host=spark-b87b cores=4 ollm=f667ba15c67d0ec0f984c4462ec8bcdb717ad4d3f12d6b8d5dcce3ea1ec55ec0 ck=a2048.ck ck_bytes=556913792
+B startup_ms 5451 rss_kb_after_start 646980
+B prefill target=256 bytes=977 http=200 9.608732 log=[C 200 256 1 2 9608 0 256 0]
+B decode_w1 target=256 http=200 0.406812 log=[C 200 256 1 2 406 255 1 0]
+B decode_wd target=256 http=200 13.099502 log=[C 200 256 32 2 13099 255 1 0]
+B prefill target=1024 bytes=4065 http=200 54.201892 log=[C 200 1024 1 2 54202 0 1024 0]
+B decode_w1 target=1024 http=200 0.419820 log=[C 200 1024 1 2 419 1023 1 0]
+B decode_wd target=1024 http=200 13.398194 log=[C 200 1024 32 2 13398 1023 1 0]
+B prefill target=2016 bytes=8062 http=200 102.893625 log=[C 200 2016 1 2 102894 0 2016 0]
+B decode_w1 target=2016 http=200 0.434852 log=[C 200 2016 1 2 434 2015 1 0]
+B decode_wd target=2016 http=200 13.901709 log=[C 200 2016 32 2 13901 2015 1 0]
+B reuse turn1 log=[C 200 908 8 2 58251 1 907 0]
+B reuse turn2_warm http=200 5.675874 log=[C 200 927 8 2 5675 908 19 0]
+B reuse turn1 log=[C 200 908 8 2 3771 907 1 0]
+B reuse turn2_cold http=200 77.986970 log=[C 200 927 8 2 77987 0 927 0]
+B queue client=1 http_client_s=200 52.684124
+B queue client=2 http_client_s=200 79.504270
+B queue client=3 http_client_s=200 25.801112
+B queue client=4 http_client_s=200 101.894152
+B queue log=[C 200 259 16 2 25800 1 258 0]
+B queue log=[C 200 259 16 2 52683 4 255 25800]
+B queue log=[C 200 259 16 2 79503 4 255 52683]
+B queue log=[C 200 259 16 2 99428 4 255 77036]
+B peak_rss_kb 736456
+B done
+## server.log
+PORT 18295
+C 200 256 1 2 9608 0 256 0
+C 200 256 1 2 406 255 1 0
+C 200 256 32 2 13099 255 1 0
+C 200 1024 1 2 54202 0 1024 0
+C 200 1024 1 2 419 1023 1 0
+C 200 1024 32 2 13398 1023 1 0
+C 200 2016 1 2 102894 0 2016 0
+C 200 2016 1 2 434 2015 1 0
+C 200 2016 32 2 13901 2015 1 0
+C 200 908 8 2 58251 1 907 0
+C 200 927 8 2 5675 908 19 0
+C 200 908 8 2 3771 907 1 0
+C 200 927 8 2 77987 0 927 0
+C 200 259 16 2 25800 1 258 0
+C 200 259 16 2 52683 4 255 25800
+C 200 259 16 2 79503 4 255 52683
+C 200 259 16 2 99428 4 255 77036

@@ -1,0 +1,146 @@
+note SPDX-License-Identifier: AGPL-3.0-only
+note omegallm otok.om (DRA-121 serve v4): our own byte-level BPE tokenizer (tok/tkcore.om, OLLMTOK1
+note merges files, tests/omegallm/tok/FORMAT.md) inside ollm, beside the v1 tokenizer bpe.om
+note (OLLMBPE1). build.sh concatenates tok/tkcore.om and this unit after cli.om on the targets
+note that take v4.om (aarch64, gb10, x86linux); x86efi takes neither. A merges argument is
+note recognised by its magic: OLLMTOK1 loads through tkcore, anything else through bpe.om obload
+note as before. Users: v4.om (sample4, eval4) and serve.om. Started from the adopted tokenizer-hook
+note WIP (otload, otlen, otput, otprompt); --tok flags are not needed because the magic decides.
+note Exits: 26 a bad OLLMTOK1 file (tkload), or one over 131072 bytes; 31 OLLMTOK1 merges whose V is
+note not the checkpoint's V (the model's output layer and the tokenizer must agree exactly); 70 I/O.
+note v1 merges keep bpe.om's rules (27 when V is above the file's).
+global otkm ulong 2
+
+note otkm: 0 = 1 once OLLMTOK1 merges are loaded (otlen, otput, otcap and otprompt then use
+note tkcore, else the v1 bpe.om merges); 1 their V.
+
+note whether the file in argv[ai] starts with the magic OLLMTOK1
+fn otis1 ai ulong to bool
+if lt ofsz ai 8
+ret false
+end
+r = oprd ai 0 0 8
+if ne r 8
+ret false
+end
+for k ulong 8
+if ne get opw k get tkmagic k
+ret false
+end
+end
+ret true
+end
+
+note load the merges file argument ai for a checkpoint of vocabulary v: OLLMTOK1 (exit 26 bad file,
+note 31 V differs from v) or v1 (bpe.om obload)
+fn otload ai ulong v ulong to void
+if not otis1 ai
+obload ai v
+ret
+end
+n = ofsz ai
+if or lt n 32 gt n 131072
+exit 26
+end
+if ne oprd ai 0 0 n n
+exit 70
+end
+for i ulong n
+put tkmf i get opw i
+end
+tkinit
+vt = tkload n
+if ne vt v
+exit 31
+end
+put otkm 0 1
+put otkm 1 vt
+end
+
+fn otison to bool
+ret eq get otkm 0 1
+end
+
+note decoded byte length of token t
+fn otlen t ulong to ulong
+if otison
+ret tkdec1 t
+end
+ret obtlen t
+end
+
+note the decoded bytes of token t to stdout
+fn otput t ulong to void
+if otison
+l = tkdec1 t
+for k ulong l
+oputc ulong get tkdb k
+end
+else
+obtput t
+end
+end
+
+note the decoded bytes of token t into obo[0 .. obon[0]) (serve.om)
+fn otcap t ulong to void
+if otison
+l = tkdec1 t
+for k ulong l
+put obo k get tkdb k
+end
+put obon 0 l
+else
+obtcap t
+end
+end
+
+note encode argument ai (at most 4000 bytes, else exit 2) into obtk; returns the token count. With
+note OLLMTOK1 merges the encoding is chat mode: the sample PROMPT is the operator's own trusted text,
+note so its exact chat markers become special ids (FORMAT.md section 6); text without markers
+note encodes as in raw mode. Untrusted text (serve requests, files) never comes through here.
+fn otprompt ai ulong to ulong
+if not otison
+ret obprompt ai
+end
+n = oargp ai
+if gt n 4000
+exit 2
+end
+for k ulong n
+put tkw k get oarg k
+end
+i = ulong 0
+m = ulong 0
+while lt i n bound 4001
+l = tknext i n true
+s = get tkv 1
+if ne s 0
+put obtk m s
+m = add m 1
+else
+c = tkencc i l
+for k ulong c
+put obtk add m k ulong get tkct k
+end
+m = add m c
+end
+i = add i l
+end
+ret m
+end
+
+note the context's start token: <|doc|> (263) with OLLMTOK1 merges, else token 0 (CONTRACT-V1 7.2)
+fn otstart to ulong
+if otison
+ret 263
+end
+ret 0
+end
+
+note whether a sampled token ends sample4's output: <|end|> (256) with OLLMTOK1 merges, else 0
+fn otstop c ulong to bool
+if otison
+ret eq c 256
+end
+ret eq c 0
+end

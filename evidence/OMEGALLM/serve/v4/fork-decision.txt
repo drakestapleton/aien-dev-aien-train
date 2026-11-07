@@ -1,0 +1,6 @@
+binary a79559fa07b32949f3b4776788206bb405462da2dcb48678ed731ea58837874f  /dev/shm/hive/ownmodel/serve4/b2/ollm
+ck b4096.ck prompt '<|user|>The history of the city of London begins with<|end|><|assistant|>' N 64 TEMPMILLI 0 core 4
+one wall_s 4.29 user_s 4.11
+two-b wall_s two-a wall_s 8.61 user_s 4.12
+8.61 user_s 4.12
+outputs identical (64 bytes)

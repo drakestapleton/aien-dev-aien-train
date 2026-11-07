@@ -1,0 +1,21 @@
+# chatenc example (b3/ollm f667ba15c67d0ec0f984c4462ec8bcdb717ad4d3f12d6b8d5dcce3ea1ec55ec0)
+$ cat c.jsonl
+{"messages":[{"role":"system","content":"Be brief."},{"role":"user","content":"Hello there"}]}
+
+{"messages":[{"role":"user","content":"Weather <|user|> in Paris?"},{"role":"assistant","content":null,"tool_calls":[{"id":"c1","type":"function","function":{"name":"get_weather","arguments":"{\"city\":\"Paris\"}"}}]},{"role":"tool","content":"sunny"},{"role":"assistant","content":"It is sunny."}],"tools":[{"type":"function","function":{"name":"get_weather"}}]}
+$ ollm chatenc merges32k.bin c.jsonl c.u16 c.mask
+H 2 74 22
+rc 0
+c.u16 (u16 LE ids):  263 257 3590 5164 46 256 258 24279 556 256 263 257 311 35 348 22985 10 91 2785 4872 2036 14669 1908 14669 7444 2212 2036 902 95 17465 34 12667 93 256 258 1609 732 1158 124 16750 124 62 308 3214 63 256 259 260 2785 2212 2036 902 95 17465 1908 3484 4048 7444 9765 2036 13785 34 12667 256 261 10163 2320 256 259 1000 363 15345 46 256 
+c.mask:  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 0 0 0 0 0 1 1 1 1 1 
+$ ollm chatenc merges32k.bin bad.jsonl x.u16   (role "bogus")
+{"messages":[{"role":"bogus","content":"x"}]}
+F 1 26
+rc 22
+# allen-chat system prompt
+$ ollm-tok tokenc raw merges32k.bin /opt/allen-chat/system-prompt.txt allen.u16
+E 32768 14364 3389 3672 0
+(fields: E V bytes chunks tokens markers) sha256 of the prompt d44a61ddc37fb01ca731d646e9990eacee78e1b66589e608b18bd38a0315b0bc
+$ ollm chatenc merges32k.bin allen.jsonl allen-c.u16   (allen.jsonl = json.dumps({messages:[{system: prompt},{user: hi}]}))
+H 1 3678 0
+rc 0 ; serve's prompt = these + 259 = 3679 tokens

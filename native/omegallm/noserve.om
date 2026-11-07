@@ -4,3 +4,8 @@ note `ollm serve` refuses here with exit 2.
 fn cmdserve to void
 exit 2
 end
+
+note chatenc needs serve.om's CHAT1 encoder (aarch64 only): exit 2 here
+fn cmdchatenc to void
+exit 2
+end

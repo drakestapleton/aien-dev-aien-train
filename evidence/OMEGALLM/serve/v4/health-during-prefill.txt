@@ -1,0 +1,35 @@
+# GET /health during a long prefill (driver below, run on core 4)
+binary f667ba15c67d0ec0f984c4462ec8bcdb717ad4d3f12d6b8d5dcce3ea1ec55ec0 ck b4096.ck request: 4064-token cold prefill, max_tokens 1
+request: 200 106.869410
+server: C 200 4064 1 2 106869 0 4064 0
+health polls: 113, busy answers: 113
+health latency s: min 0.004690 median 0.424097 max 0.883127
+## driver
+#!/bin/sh
+# health latency while a long cold prefill (CK-B, ~4000 tokens) runs: one GET /health every 0.5 s
+S=/dev/shm/hive/ownmodel/serve4
+O=$S/hp
+mkdir -p $O
+B=$S/b3/ollm
+M=~/work/hive/ownmodel/data/merges32k.bin
+C=~/work/hive/ownmodel/serve4/ck/b4096.ck
+cp $S/fbenchB/p4064-1.json $O/req.json
+taskset -c 4 nice -n 10 $B serve 18295 $C $M test=1 > $O/server.log 2>&1 &
+pid=$!
+until grep -q '^PORT' $O/server.log; do sleep 0.05; done
+curl -s -o /dev/null -w '%{http_code} %{time_total}\n' -H 'Content-Type: application/json' --data-binary @$O/req.json http://127.0.0.1:18295/v1/chat/completions > $O/req.out &
+cp=$!
+sleep 1
+: > $O/health.txt
+while kill -0 $cp 2>/dev/null; do
+	curl -s -w ' %{time_total}\n' http://127.0.0.1:18295/health >> $O/health.txt
+	sleep 0.5
+done
+wait $cp
+kill $pid
+wait $pid 2>/dev/null
+echo "binary $(sha256sum $B | cut -c1-64) ck b4096.ck request: 4064-token cold prefill, max_tokens 1"
+echo "request: $(cat $O/req.out)"
+echo "server: $(grep '^C' $O/server.log | grep -v '^C 200 0 0 0 0' | tail -1)"
+echo "health polls: $(wc -l < $O/health.txt), busy answers: $(grep -c '"busy":true' $O/health.txt)"
+awk '{print $NF}' $O/health.txt | sort -n | awk '{a[NR]=$1} END {print "health latency s: min", a[1], "median", a[int((NR+1)/2)], "max", a[NR]}'
