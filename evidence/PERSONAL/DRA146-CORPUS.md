@@ -63,17 +63,19 @@ hashes of an existing train row) printed `FAIL no_shared_hash_train_test violati
 
 ## Corpus v4 aggregates (for the reviewer; no text)
 
-Records by role and split (split by conversation start; dev/test after cross-split dedupe are the counts
+Records by role and split, corpus v4.1 (after a relabel pass that set 164 harness/runtime turns, 1,185 records,
+from drake/drake_quote to system; text, conversations and splits unchanged, so the projection above still
+applies). Split by conversation start; dev/test after cross-split dedupe are the counts
 in the split files; `no start ts` conversations have no timestamp and are in no split):
 
 | role | train | dev (before dedupe) | test (before dedupe) | no start ts | total |
 |---|---|---|---|---|---|
-| drake | 101502 | 624 | 906 | 431 | 103463 |
-| drake_quote | 13153 | 150 | 21 | 140 | 13464 |
+| drake | 100836 | 624 | 901 | 431 | 102792 |
+| drake_quote | 12643 | 150 | 17 | 140 | 12950 |
 | third_party | 3 | 0 | 3 | 0 | 6 |
 | agent | 666811 | 102608 | 84729 | 1783 | 855931 |
 | tool | 445853 | 81479 | 67326 | 0 | 594658 |
-| system | 46410 | 7334 | 7998 | 0 | 61742 |
+| system | 47586 | 7334 | 8007 | 0 | 62927 |
 | unknown | 1606 | 959 | 791 | 0 | 3356 |
 | all | 1275338 | 193154 | 161774 | 2354 | 1632620 |
 
