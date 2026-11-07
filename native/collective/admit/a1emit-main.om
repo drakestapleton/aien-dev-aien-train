@@ -1,0 +1,72 @@
+note SPDX-License-Identifier: AGPL-3.0-only
+note DRA-15 / aien-train#26 P0 admission observation tail. Appended after every
+note line of native/collective/admit_p0.om before its fn main, byte-identical,
+note by native/collective/admit/run.sh. It replaces only the self-test main:
+note the same setcase/run sequence runs in one process and every observable is
+note printed, so an oracle the program does not contain (Wolfram,
+note expected-a1.out) can judge it. It adds no arithmetic and checks nothing.
+note Line format: A1 case status y0 y1 base_count adapter_count, then END.
+
+global Buf uchar 128
+global Pos ulong 1
+
+text ta "A1"
+text te "END\n"
+
+fn pc c ulong to void
+p = get Pos 0
+put Buf p uchar c
+put Pos 0 add p 1
+end
+
+note Appends one space and the signed decimal of v to Buf.
+fn pnum v long to void
+d = new uchar 20 0
+pc 32
+u = ulong 0
+if lt v 0
+pc 45
+u = ulong neg v
+else
+u = ulong v
+end
+n = ulong 0
+c = true
+while c bound 20
+put d n uchar add rem u 10 48
+n = add n 1
+u = div u 10
+if eq u 0
+c = false
+end
+end
+for i ulong 20
+if lt i n
+pc ulong get d sub sub n 1 i
+end
+end
+end
+
+fn flush to void
+p = get Pos 0
+put Buf p uchar 10
+k = write 1 Buf 0 add p 1
+put Pos 0 0
+end
+
+fn main to int
+for n ulong NCASE
+setcase n
+s = run
+k = write 1 ta 0 len ta
+pnum long n
+pnum s
+pnum get Yv 0
+pnum get Yv 1
+pnum long get Counts 0
+pnum long get Counts 1
+flush
+end
+k = write 1 te 0 len te
+ret 0
+end

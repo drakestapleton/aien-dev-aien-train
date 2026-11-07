@@ -1,0 +1,100 @@
+note SPDX-License-Identifier: AGPL-3.0-only
+note DRA-15 / aien-train#26 P0 admission, one case per process. Appended after
+note every line of native/collective/admit_p0.om before its fn main,
+note byte-identical, by native/collective/admit/run.sh. argv[1] is a case
+note number 0..45 in decimal. An admitted case writes "Y y0 y1" and a newline
+note and exits 0. A refused case writes nothing to stdout and exits with
+note minus its status (1..16). Usage errors exit 96..99, never 0. The
+note judge is expected-cli.out (Wolfram); this tail checks nothing itself.
+
+global Buf uchar 128
+global Pos ulong 1
+global Ab uchar 32
+
+text ty "Y"
+
+fn pc c ulong to void
+p = get Pos 0
+put Buf p uchar c
+put Pos 0 add p 1
+end
+
+note Appends one space and the signed decimal of v to Buf.
+fn pnum v long to void
+d = new uchar 20 0
+pc 32
+u = ulong 0
+if lt v 0
+pc 45
+u = ulong neg v
+else
+u = ulong v
+end
+n = ulong 0
+c = true
+while c bound 20
+put d n uchar add rem u 10 48
+n = add n 1
+u = div u 10
+if eq u 0
+c = false
+end
+end
+for i ulong 20
+if lt i n
+pc ulong get d sub sub n 1 i
+end
+end
+end
+
+fn flush to void
+p = get Pos 0
+put Buf p uchar 10
+k = write 1 Buf 0 add p 1
+put Pos 0 0
+end
+
+note Decimal argv[1]; 99 when absent, 98 when empty or too long, 97 on a
+note non-digit, 96 when not below NCASE.
+fn argcase to ulong
+if lt argcnt 2
+exit 99
+end
+k = argread 1 Ab 0 32
+if le k 0
+exit 98
+end
+if gt k 4
+exit 98
+end
+m = ulong k
+n = ulong 0
+for i ulong m
+ch = ulong get Ab i
+if lt ch 48
+exit 97
+end
+if gt ch 57
+exit 97
+end
+n = add mul n 10 sub ch 48
+end
+if ge n NCASE
+exit 96
+end
+ret n
+end
+
+fn main to int
+n = argcase
+setcase n
+s = run
+if ne s 0
+ret int neg s
+end
+k = write 1 ty 0 len ty
+pnum get Yv 0
+pnum get Yv 1
+flush
+ret 0
+end
