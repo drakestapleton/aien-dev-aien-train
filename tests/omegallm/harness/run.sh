@@ -5,6 +5,11 @@
 # that this script starts on FPORT for each task (scripted answers, never model output):
 #   fixture:ref    turn 1 calls `terminal` with the task's @ref command, then answers "Done."
 #   fixture:plain  every turn is a plain answer claiming success, no tool call (negative control)
+# INJECT=ref|plain with an http ENDPOINT (protocol checks against `ollm serve ... test=1` only):
+# the proxy adds "ollm_test_output" to each chat POST (CHAT1 chat-mode text: ref = turn 1
+# `<|tool_call|>{"name":"terminal","arguments":{"command":REF}}<|end|>`, later turns
+# `Done.<|end|>`; plain = a success claim with no tool call), so the server's own CHAT1 encoding,
+# tool-call parsing and streaming run with real Hermes requests while the output is scripted.
 # Per task, in OUTDIR/ID: prompt.txt, pre.txt (the check before Hermes runs: must FAIL, else the
 # task is INVALID), hermes.{out,rc,ms} (stdout+stderr, exit status, wall ms), wire/ (every HTTP
 # request head and exact body Hermes sent and every raw response, through a logging proxy on
@@ -44,7 +49,7 @@ busy "$pport" && { echo "run.sh: proxy port $pport is busy" >&2; exit 2; }
 sum=$out/summary.txt
 {
 	echo "date $(date -u +%FT%TZ)"
-	echo "endpoint $ep mode $mode toolsets $ts tmo $tmo maxturns ${MAXTURNS:-4} cores $CORES"
+	echo "endpoint $ep mode $mode inject ${INJECT:-none} toolsets $ts tmo $tmo maxturns ${MAXTURNS:-4} cores $CORES"
 	echo "verify $(sha256sum "$VERIFY")"
 	echo "tasks $(sha256sum "$tf")"
 	echo "runner $(cat "$here"/run.sh "$here"/hermes1.sh "$here"/proxy1.sh "$here"/respond.sh "$here"/sse.sh | sha256sum | cut -d' ' -f1)"
@@ -62,6 +67,18 @@ while read -r id fam sp; do
 	prc=$?
 	"$VERIFY" prompt "$tf" "$id" "$d/prompt.txt"
 	fpid=
+	inj=
+	if [ "$mode" = server ] && [ -n "${INJECT:-}" ]; then
+		inj=$d/inject
+		mkdir -p "$inj"
+		if [ "$INJECT" = ref ]; then
+			"$VERIFY" ref "$tf" "$id" "$inj/ref.sh"
+			jq -Rsj '"<|tool_call|>" + ({name: "terminal", arguments: {command: .}} | tojson) + "<|end|>"' "$inj/ref.sh" >"$inj/1.txt"
+			printf 'Done.<|end|>' >"$inj/default.txt"
+		else
+			printf 'I have completed the task: the requested file is in place.<|end|>' >"$inj/default.txt"
+		fi
+	fi
 	if [ "$mode" != server ]; then
 		f=$d/fixture
 		mkdir -p "$f/script"
@@ -78,7 +95,7 @@ while read -r id fam sp; do
 		waitport "$fport"
 	fi
 	taskset -c "$CORES" nice -n 10 socat TCP-LISTEN:"$pport",bind=127.0.0.1,reuseaddr,fork \
-		EXEC:"sh $here/proxy1.sh $d/wire $host $port" 2>/dev/null &
+		EXEC:"sh $here/proxy1.sh $d/wire $host $port $inj" 2>/dev/null &
 	ppid_=$!
 	waitport "$pport"
 	sh "$here/hermes1.sh" "http://127.0.0.1:$pport/v1" "$wd" "$d/prompt.txt" "$ts" "$tmo" "$d/hermes"

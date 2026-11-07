@@ -1,0 +1,1 @@
+FAIL c02 absent old.txt exists

@@ -1,0 +1,601 @@
+ok   sftgen rc 0 x3
+ok   seed 11 twice: identical bytes
+ok   seed 12 differs
+ok   500 lines
+ok   message shape x500
+ok   tools == captured tools (one distinct array)
+ok   system prompt == capture template x500
+ok   captured user name never emitted
+ok   dates: 352 distinct, all equal GNU date America/Chicago
+ok   train families only: append=50 copy=59 count_lines=55 count_words=51 create=57 delete=55 first_line=48 list_dir=37 mkdir_file=41 rename=47 
+BAD  s0 call 1: `cat todo.dat` gave {"output": "yellow bread red
+done
+paper fix draft", "exit_code": 0, "error": null}, simulated {"output": "yellow bread red
+done
+paper fix draft
+", "exit_code": 0, "error": null}
+BAD  s10 call 2: `cat index.dat` gave {"output": "blue idea test
+pen white
+house", "exit_code": 0, "error": null}, simulated {"output": "blue idea test
+pen white
+house
+", "exit_code": 0, "error": null}
+BAD  s16 call 1: `cat agenda.txt` gave {"output": "alpha moon", "exit_code": 0, "error": null}, simulated {"output": "alpha moon
+", "exit_code": 0, "error": null}
+BAD  s23 call 1: `cp report.dat chapter.txt && cat chapter.txt` gave {"output": "plan bird
+fire dog moon
+tomorrow winter tomorrow ready
+check build simple", "exit_code": 0, "error": null}, simulated {"output": "plan bird
+fire dog moon
+tomorrow winter tomorrow ready
+check build simple
+", "exit_code": 0, "error": null}
+BAD  s30 call 2: `cat memo.txt` gave {"output": "silver coffee
+music first done later
+bird", "exit_code": 0, "error": null}, simulated {"output": "silver coffee
+music first done later
+bird
+", "exit_code": 0, "error": null}
+BAD  s32 call 1: `cat notes.dat` gave {"output": "water beta
+water east", "exit_code": 0, "error": null}, simulated {"output": "water beta
+water east
+", "exit_code": 0, "error": null}
+BAD  s52 call 2: `cat quotes.csv` gave {"output": "ocean today
+yellow", "exit_code": 0, "error": null}, simulated {"output": "ocean today
+yellow
+", "exit_code": 0, "error": null}
+BAD  s57 call 1: `printf 'wool city twelve little house
+' >> wishlist.txt && cat wishlist.txt` gave {"output": "candle slow
+three cat
+wool city twelve little house", "exit_code": 0, "error": null}, simulated {"output": "candle slow
+three cat
+wool city twelve little house
+", "exit_code": 0, "error": null}
+BAD  s64 call 1: `cat draft.log` gave {"output": "first friday
+cotton
+house delta three last
+city later", "exit_code": 0, "error": null}, simulated {"output": "first friday
+cotton
+house delta three last
+city later
+", "exit_code": 0, "error": null}
+BAD  s66 call 1: `cat summary.log` gave {"output": "idea warm music water
+ship music", "exit_code": 0, "error": null}, simulated {"output": "idea warm music water
+ship music
+", "exit_code": 0, "error": null}
+BAD  s72 call 1: `cat chapter.txt` gave {"output": "first
+sun", "exit_code": 0, "error": null}, simulated {"output": "first
+sun
+", "exit_code": 0, "error": null}
+BAD  s73 call 1: `echo 'idea tea' >> index.txt && cat index.txt` gave {"output": "monday
+happy
+tea garden quiet river
+leaf soon
+idea tea", "exit_code": 0, "error": null}, simulated {"output": "monday
+happy
+tea garden quiet river
+leaf soon
+idea tea
+", "exit_code": 0, "error": null}
+BAD  s74 call 1: `cat draft.txt` gave {"output": "leaf fish check done
+road green
+bright purple fish
+fix plan music metal
+yellow snow book", "exit_code": 0, "error": null}, simulated {"output": "leaf fish check done
+road green
+bright purple fish
+fix plan music metal
+yellow snow book
+", "exit_code": 0, "error": null}
+BAD  s88 call 2: `cat summary.csv` gave {"output": "glass tree monday
+music new simple garden
+city three draft review
+wood boat
+old", "exit_code": 0, "error": null}, simulated {"output": "glass tree monday
+music new simple garden
+city three draft review
+wood boat
+old
+", "exit_code": 0, "error": null}
+BAD  s90 call 2: `cat todo.txt` gave {"output": "note check bright ship", "exit_code": 0, "error": null}, simulated {"output": "note check bright ship
+", "exit_code": 0, "error": null}
+BAD  s105 call 1: `cat index.dat` gave {"output": "first orange
+pen plan three
+dog grass
+candle little bird today
+yellow grass", "exit_code": 0, "error": null}, simulated {"output": "first orange
+pen plan three
+dog grass
+candle little bird today
+yellow grass
+", "exit_code": 0, "error": null}
+BAD  s111 call 1: `cat letter.dat` gave {"output": "metal
+forest alpha garden
+slow fast
+blue build
+today bread test open", "exit_code": 0, "error": null}, simulated {"output": "metal
+forest alpha garden
+slow fast
+blue build
+today bread test open
+", "exit_code": 0, "error": null}
+BAD  s116 call 1: `cp letter.md readme.txt && cat readme.txt` gave {"output": "list rain apple tree
+black white apple
+water
+music", "exit_code": 0, "error": null}, simulated {"output": "list rain apple tree
+black white apple
+water
+music
+", "exit_code": 0, "error": null}
+BAD  s118 call 2: `cat config.csv` gave {"output": "soon cat note ready
+paper
+cotton
+east fish
+red garden red", "exit_code": 0, "error": null}, simulated {"output": "soon cat note ready
+paper
+cotton
+east fish
+red garden red
+", "exit_code": 0, "error": null}
+BAD  s120 call 2: `cat outline.txt` gave {"output": "new wind review
+green music list
+tree blue cloud
+tea house
+build fire purple", "exit_code": 0, "error": null}, simulated {"output": "new wind review
+green music list
+tree blue cloud
+tea house
+build fire purple
+", "exit_code": 0, "error": null}
+BAD  s131 call 1: `cp todo.csv poem.dat && cat poem.dat` gave {"output": "close rain coffee quiet
+bird
+delta", "exit_code": 0, "error": null}, simulated {"output": "close rain coffee quiet
+bird
+delta
+", "exit_code": 0, "error": null}
+BAD  s139 call 1: `cat scores.txt` gave {"output": "red metal open
+south
+morning
+monday", "exit_code": 0, "error": null}, simulated {"output": "red metal open
+south
+morning
+monday
+", "exit_code": 0, "error": null}
+BAD  s141 call 1: `cat minutes.txt` gave {"output": "last
+bridge
+moon silver west cotton
+wind simple music window
+star tree
+done delta", "exit_code": 0, "error": null}, simulated {"output": "last
+bridge
+moon silver west cotton
+wind simple music window
+star tree
+done delta
+", "exit_code": 0, "error": null}
+BAD  s143 call 1: `cp scores.txt letter.dat && cat letter.dat` gave {"output": "forest build
+wool build winter", "exit_code": 0, "error": null}, simulated {"output": "forest build
+wool build winter
+", "exit_code": 0, "error": null}
+BAD  s147 call 1: `cat quotes.log` gave {"output": "idea
+coffee candle", "exit_code": 0, "error": null}, simulated {"output": "idea
+coffee candle
+", "exit_code": 0, "error": null}
+BAD  s160 call 1: `cat journal.log` gave {"output": "today", "exit_code": 0, "error": null}, simulated {"output": "today
+", "exit_code": 0, "error": null}
+BAD  s166 call 1: `printf 'today draft
+' >> report.dat && cat report.dat` gave {"output": "final wool tea
+first sun silver
+fast
+today draft", "exit_code": 0, "error": null}, simulated {"output": "final wool tea
+first sun silver
+fast
+today draft
+", "exit_code": 0, "error": null}
+BAD  s169 call 1: `echo 'later wool beta' >> index.log && cat index.log` gave {"output": "tomorrow
+wood silver fix fire
+open wool
+cotton plan white wool
+later wool beta", "exit_code": 0, "error": null}, simulated {"output": "tomorrow
+wood silver fix fire
+open wool
+cotton plan white wool
+later wool beta
+", "exit_code": 0, "error": null}
+BAD  s170 call 1: `cat ideas.md` gave {"output": "last tree bridge soon
+last
+build stone city dog", "exit_code": 0, "error": null}, simulated {"output": "last tree bridge soon
+last
+build stone city dog
+", "exit_code": 0, "error": null}
+BAD  s173 call 1: `cat digest.txt` gave {"output": "delta snow beta
+happy idea light", "exit_code": 0, "error": null}, simulated {"output": "delta snow beta
+happy idea light
+", "exit_code": 0, "error": null}
+BAD  s176 call 1: `cp poem.txt guide.txt && cat guide.txt` gave {"output": "valley ship cotton black
+honey fast window
+seven bread twelve city
+fast dog task tomorrow", "exit_code": 0, "error": null}, simulated {"output": "valley ship cotton black
+honey fast window
+seven bread twelve city
+fast dog task tomorrow
+", "exit_code": 0, "error": null}
+BAD  s183 call 1: `cat tasks.dat` gave {"output": "later wood black
+window", "exit_code": 0, "error": null}, simulated {"output": "later wood black
+window
+", "exit_code": 0, "error": null}
+BAD  s187 call 2: `cat inventory.txt` gave {"output": "train paper list
+house close window
+bright
+rain fix red
+cloud", "exit_code": 0, "error": null}, simulated {"output": "train paper list
+house close window
+bright
+rain fix red
+cloud
+", "exit_code": 0, "error": null}
+BAD  s197 call 1: `printf 'red yellow book book
+' >> config.log && cat config.log` gave {"output": "quiet mountain
+gamma final paper
+red yellow book book", "exit_code": 0, "error": null}, simulated {"output": "quiet mountain
+gamma final paper
+red yellow book book
+", "exit_code": 0, "error": null}
+BAD  s199 call 2: `cat ledger.txt` gave {"output": "test idea west", "exit_code": 0, "error": null}, simulated {"output": "test idea west
+", "exit_code": 0, "error": null}
+BAD  s209 call 1: `printf 'close gamma
+' >> index.txt && cat index.txt` gave {"output": "fix yellow
+new
+last forest
+close gamma", "exit_code": 0, "error": null}, simulated {"output": "fix yellow
+new
+last forest
+close gamma
+", "exit_code": 0, "error": null}
+BAD  s215 call 2: `cat outline.md` gave {"output": "tomorrow orange
+cold morning sun
+forest bread
+bridge black", "exit_code": 0, "error": null}, simulated {"output": "tomorrow orange
+cold morning sun
+forest bread
+bridge black
+", "exit_code": 0, "error": null}
+BAD  s228 call 2: `cat guide.csv` gave {"output": "three snow north ship
+green valley ocean
+red
+east boat gamma book", "exit_code": 0, "error": null}, simulated {"output": "three snow north ship
+green valley ocean
+red
+east boat gamma book
+", "exit_code": 0, "error": null}
+BAD  s229 call 2: `cat inventory.txt` gave {"output": "yellow
+test
+open coffee task
+honey fix
+yellow coffee", "exit_code": 0, "error": null}, simulated {"output": "yellow
+test
+open coffee task
+honey fix
+yellow coffee
+", "exit_code": 0, "error": null}
+BAD  s232 call 2: `cat minutes.txt` gave {"output": "three book metal
+check final idea
+coffee", "exit_code": 0, "error": null}, simulated {"output": "three book metal
+check final idea
+coffee
+", "exit_code": 0, "error": null}
+BAD  s239 call 1: `cat guide.dat` gave {"output": "monday wool
+last summer ready idea", "exit_code": 0, "error": null}, simulated {"output": "monday wool
+last summer ready idea
+", "exit_code": 0, "error": null}
+BAD  s242 call 1: `cat draft.dat` gave {"output": "draft check winter
+cold flower house", "exit_code": 0, "error": null}, simulated {"output": "draft check winter
+cold flower house
+", "exit_code": 0, "error": null}
+BAD  s245 call 1: `cp digest.dat story.dat && cat story.dat` gave {"output": "star cold apple apple
+sun
+green quiet
+mountain water friday train", "exit_code": 0, "error": null}, simulated {"output": "star cold apple apple
+sun
+green quiet
+mountain water friday train
+", "exit_code": 0, "error": null}
+BAD  s247 call 1: `cat draft.csv` gave {"output": "done
+leaf today code", "exit_code": 0, "error": null}, simulated {"output": "done
+leaf today code
+", "exit_code": 0, "error": null}
+BAD  s249 call 1: `cat letter.md` gave {"output": "mountain new boat dog
+music", "exit_code": 0, "error": null}, simulated {"output": "mountain new boat dog
+music
+", "exit_code": 0, "error": null}
+BAD  s250 call 1: `echo 'fish glass cotton fast final' >> tasks.md && cat tasks.md` gave {"output": "three cloud
+plan
+fish glass cotton fast final", "exit_code": 0, "error": null}, simulated {"output": "three cloud
+plan
+fish glass cotton fast final
+", "exit_code": 0, "error": null}
+BAD  s251 call 1: `cat config.txt` gave {"output": "music warm
+last check cotton paper
+apple
+water", "exit_code": 0, "error": null}, simulated {"output": "music warm
+last check cotton paper
+apple
+water
+", "exit_code": 0, "error": null}
+BAD  s263 call 1: `cat readme.md` gave {"output": "metal draft
+note morning south", "exit_code": 0, "error": null}, simulated {"output": "metal draft
+note morning south
+", "exit_code": 0, "error": null}
+BAD  s273 call 1: `cat inventory.md` gave {"output": "first little", "exit_code": 0, "error": null}, simulated {"output": "first little
+", "exit_code": 0, "error": null}
+BAD  s275 call 2: `cat tasks.md` gave {"output": "train
+honey
+winter draft cold", "exit_code": 0, "error": null}, simulated {"output": "train
+honey
+winter draft cold
+", "exit_code": 0, "error": null}
+BAD  s276 call 1: `cp todo.csv roster.txt && cat roster.txt` gave {"output": "north", "exit_code": 0, "error": null}, simulated {"output": "north
+", "exit_code": 0, "error": null}
+BAD  s279 call 2: `cat guide.log` gave {"output": "fire
+cloud wool music later
+happy today wool tomorrow", "exit_code": 0, "error": null}, simulated {"output": "fire
+cloud wool music later
+happy today wool tomorrow
+", "exit_code": 0, "error": null}
+BAD  s294 call 1: `cp survey.txt agenda.md && cat agenda.md` gave {"output": "code close paper
+twelve glass seven open
+close cotton
+sun moon", "exit_code": 0, "error": null}, simulated {"output": "code close paper
+twelve glass seven open
+close cotton
+sun moon
+", "exit_code": 0, "error": null}
+BAD  s307 call 1: `echo 'rain forest south wool' >> roster.csv && cat roster.csv` gave {"output": "tree
+fish
+paper metal
+rain forest south wool", "exit_code": 0, "error": null}, simulated {"output": "tree
+fish
+paper metal
+rain forest south wool
+", "exit_code": 0, "error": null}
+BAD  s312 call 2: `cat roster.csv` gave {"output": "simple window", "exit_code": 0, "error": null}, simulated {"output": "simple window
+", "exit_code": 0, "error": null}
+BAD  s314 call 1: `cat agenda.txt` gave {"output": "black later list
+open idea
+fish", "exit_code": 0, "error": null}, simulated {"output": "black later list
+open idea
+fish
+", "exit_code": 0, "error": null}
+BAD  s317 call 1: `cat readme.txt` gave {"output": "boat window white
+open review paper wood
+old city code
+morning last", "exit_code": 0, "error": null}, simulated {"output": "boat window white
+open review paper wood
+old city code
+morning last
+", "exit_code": 0, "error": null}
+BAD  s320 call 1: `cat guide.csv` gave {"output": "cat mountain test
+list
+stone
+fast glass mountain final", "exit_code": 0, "error": null}, simulated {"output": "cat mountain test
+list
+stone
+fast glass mountain final
+", "exit_code": 0, "error": null}
+BAD  s329 call 2: `cat ideas.log` gave {"output": "blue
+dog bridge
+quiet garden black alpha", "exit_code": 0, "error": null}, simulated {"output": "blue
+dog bridge
+quiet garden black alpha
+", "exit_code": 0, "error": null}
+BAD  s333 call 1: `cat songs.txt` gave {"output": "orange metal water
+ocean list valley
+music last wind orange
+east
+garden old forest", "exit_code": 0, "error": null}, simulated {"output": "orange metal water
+ocean list valley
+music last wind orange
+east
+garden old forest
+", "exit_code": 0, "error": null}
+BAD  s336 call 2: `cat recipe.txt` gave {"output": "garden delta beta moon
+fix house
+valley cotton
+water purple little", "exit_code": 0, "error": null}, simulated {"output": "garden delta beta moon
+fix house
+valley cotton
+water purple little
+", "exit_code": 0, "error": null}
+BAD  s344 call 1: `cat roster.log` gave {"output": "rain book tea
+train happy plan
+today cold", "exit_code": 0, "error": null}, simulated {"output": "rain book tea
+train happy plan
+today cold
+", "exit_code": 0, "error": null}
+BAD  s347 call 1: `cp config.txt wishlist.txt && cat wishlist.txt` gave {"output": "bread
+glass train cotton
+ready soon metal yellow
+ship happy", "exit_code": 0, "error": null}, simulated {"output": "bread
+glass train cotton
+ready soon metal yellow
+ship happy
+", "exit_code": 0, "error": null}
+BAD  s353 call 2: `cat ledger.dat` gave {"output": "cat train boat
+stone little city final
+gamma three snow bright
+old honey pen soon", "exit_code": 0, "error": null}, simulated {"output": "cat train boat
+stone little city final
+gamma three snow bright
+old honey pen soon
+", "exit_code": 0, "error": null}
+BAD  s362 call 2: `cat budget.log` gave {"output": "star final
+code rain summer
+quiet tomorrow wool
+blue pen metal silver", "exit_code": 0, "error": null}, simulated {"output": "star final
+code rain summer
+quiet tomorrow wool
+blue pen metal silver
+", "exit_code": 0, "error": null}
+BAD  s364 call 2: `cat minutes.md` gave {"output": "later water south moon
+garden glass gamma new
+honey
+three south south metal
+today water delta alpha", "exit_code": 0, "error": null}, simulated {"output": "later water south moon
+garden glass gamma new
+honey
+three south south metal
+today water delta alpha
+", "exit_code": 0, "error": null}
+BAD  s367 call 2: `cat scores.txt` gave {"output": "snow monday
+metal beta last happy
+cloud boat ready
+dog red beta", "exit_code": 0, "error": null}, simulated {"output": "snow monday
+metal beta last happy
+cloud boat ready
+dog red beta
+", "exit_code": 0, "error": null}
+BAD  s373 call 1: `cp journal.csv wishlist.md && cat wishlist.md` gave {"output": "pen ready snow later
+morning wood seven bird
+bird", "exit_code": 0, "error": null}, simulated {"output": "pen ready snow later
+morning wood seven bird
+bird
+", "exit_code": 0, "error": null}
+BAD  s374 call 1: `cat notes.csv` gave {"output": "ocean wood beta
+blue seven", "exit_code": 0, "error": null}, simulated {"output": "ocean wood beta
+blue seven
+", "exit_code": 0, "error": null}
+BAD  s376 call 1: `printf 'yellow bridge cold window fish
+' >> inventory.md && cat inventory.md` gave {"output": "fish wool
+fast river three
+yellow bridge cold window fish", "exit_code": 0, "error": null}, simulated {"output": "fish wool
+fast river three
+yellow bridge cold window fish
+", "exit_code": 0, "error": null}
+BAD  s382 call 2: `cat inventory.txt` gave {"output": "warm house honey
+slow south open
+cotton bread rain
+close final river
+water cotton", "exit_code": 0, "error": null}, simulated {"output": "warm house honey
+slow south open
+cotton bread rain
+close final river
+water cotton
+", "exit_code": 0, "error": null}
+BAD  s395 call 2: `cat data.txt` gave {"output": "last leaf
+done soon west
+west
+ready north", "exit_code": 0, "error": null}, simulated {"output": "last leaf
+done soon west
+west
+ready north
+", "exit_code": 0, "error": null}
+BAD  s398 call 1: `cat draft.txt` gave {"output": "twelve purple open list
+slow cotton
+later
+train
+slow slow
+old check silver old", "exit_code": 0, "error": null}, simulated {"output": "twelve purple open list
+slow cotton
+later
+train
+slow slow
+old check silver old
+", "exit_code": 0, "error": null}
+BAD  s407 call 1: `printf 'star grass slow
+' >> ledger.dat && cat ledger.dat` gave {"output": "little fire
+water house valley fish
+star grass slow", "exit_code": 0, "error": null}, simulated {"output": "little fire
+water house valley fish
+star grass slow
+", "exit_code": 0, "error": null}
+BAD  s422 call 1: `cat minutes.txt` gave {"output": "fix
+twelve
+stone review bread road", "exit_code": 0, "error": null}, simulated {"output": "fix
+twelve
+stone review bread road
+", "exit_code": 0, "error": null}
+BAD  s423 call 1: `cp config.csv letter.txt && cat letter.txt` gave {"output": "coffee window simple paper
+stone yellow yellow beta
+red close little", "exit_code": 0, "error": null}, simulated {"output": "coffee window simple paper
+stone yellow yellow beta
+red close little
+", "exit_code": 0, "error": null}
+BAD  s424 call 1: `cat minutes.md` gave {"output": "monday
+slow city bridge
+apple bright star", "exit_code": 0, "error": null}, simulated {"output": "monday
+slow city bridge
+apple bright star
+", "exit_code": 0, "error": null}
+BAD  s427 call 1: `cat minutes.txt` gave {"output": "yellow pen", "exit_code": 0, "error": null}, simulated {"output": "yellow pen
+", "exit_code": 0, "error": null}
+BAD  s429 call 2: `cat journal.txt` gave {"output": "fix
+dog cat
+apple list silver window", "exit_code": 0, "error": null}, simulated {"output": "fix
+dog cat
+apple list silver window
+", "exit_code": 0, "error": null}
+BAD  s434 call 1: `cp letter.csv songs.md && cat songs.md` gave {"output": "house happy", "exit_code": 0, "error": null}, simulated {"output": "house happy
+", "exit_code": 0, "error": null}
+BAD  s437 call 2: `cat tasks.log` gave {"output": "final
+happy wool
+house
+window quiet", "exit_code": 0, "error": null}, simulated {"output": "final
+happy wool
+house
+window quiet
+", "exit_code": 0, "error": null}
+BAD  s442 call 1: `cat scores.csv` gave {"output": "paper
+old warm ready", "exit_code": 0, "error": null}, simulated {"output": "paper
+old warm ready
+", "exit_code": 0, "error": null}
+BAD  s448 call 2: `cat report.log` gave {"output": "bright
+yellow fish north road
+code sun fire wind note", "exit_code": 0, "error": null}, simulated {"output": "bright
+yellow fish north road
+code sun fire wind note
+", "exit_code": 0, "error": null}
+BAD  s449 call 2: `cat readme.txt` gave {"output": "review light twelve tea
+candle tree
+bright alpha alpha twelve close", "exit_code": 0, "error": null}, simulated {"output": "review light twelve tea
+candle tree
+bright alpha alpha twelve close
+", "exit_code": 0, "error": null}
+BAD  s458 call 2: `cat todo.txt` gave {"output": "happy cat book
+tea beta
+tea simple bird black
+code fire winter wind", "exit_code": 0, "error": null}, simulated {"output": "happy cat book
+tea beta
+tea simple bird black
+code fire winter wind
+", "exit_code": 0, "error": null}
+BAD  s483 call 1: `echo 'monday river candle delta' >> survey.txt && cat survey.txt` gave {"output": "north
+cat done check forest
+boat
+moon warm bright
+monday river candle delta", "exit_code": 0, "error": null}, simulated {"output": "north
+cat done check forest
+boat
+moon warm bright
+monday river candle delta
+", "exit_code": 0, "error": null}
+BAD  s490 call 2: `cat agenda.txt` gave {"output": "wood three draft
+fish
+yellow", "exit_code": 0, "error": null}, simulated {"output": "wood three draft
+fish
+yellow
+", "exit_code": 0, "error": null}
+BAD  s492 call 1: `cp config.txt story.md && cat story.md` gave {"output": "apple stone", "exit_code": 0, "error": null}, simulated {"output": "apple stone
+", "exit_code": 0, "error": null}
+BAD  s494 call 2: `cat quotes.md` gave {"output": "cat star yellow cotton
+task wind list candle
+candle light
+note
+sand ready", "exit_code": 0, "error": null}, simulated {"output": "cat star yellow cotton
+task wind list candle
+candle light
+note
+sand ready
+", "exit_code": 0, "error": null}
+BAD  replay: 89 mismatches (746 calls, 500/500 outcomes PASS)
+GATE FAIL bad=1 checks=11 n=500
+rc 1

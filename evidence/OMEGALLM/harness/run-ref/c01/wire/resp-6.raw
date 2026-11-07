@@ -1,0 +1,15 @@
+HTTP/1.1 200 OK
+Content-Type: text/event-stream
+Content-Length: 822
+Connection: close
+
+data: {"id":"chatcmpl-c01","object":"chat.completion.chunk","created":0,"model":"ollm","choices":[{"index":0,"delta":{"role":"assistant","content":null},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-c01","object":"chat.completion.chunk","created":0,"model":"ollm","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"id":"call_c01_0","type":"function","function":{"name":"terminal","arguments":"{\"command\":\"printf 'hello world\\\\n' > notes.txt\"}"}}]},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-c01","object":"chat.completion.chunk","created":0,"model":"ollm","choices":[{"index":0,"delta":{},"finish_reason":"tool_calls"}]}
+
+data: {"id":"chatcmpl-c01","object":"chat.completion.chunk","created":0,"model":"ollm","choices":[],"usage":{"prompt_tokens":1,"completion_tokens":1,"total_tokens":2}}
+
+data: [DONE]
+

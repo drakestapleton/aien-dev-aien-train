@@ -50,3 +50,4 @@ ok   malformed kind exit 2
 ok   nothing written outside the work dir
 ok   no expectations FAIL (FAIL y   no_expectations)
 GATE FAIL bad=5 n=51
+rc 1
