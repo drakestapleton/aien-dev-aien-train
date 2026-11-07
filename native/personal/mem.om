@@ -447,6 +447,14 @@ tg = fdec t
 if or eq tg 0 gt tg r
 exit 22
 end
+note a correction may not be dated before its target (review round 2: a backdated correct made the
+note identity rule point the target back at its own replacement, a cycle); with this every replacement
+note link, explicit or by identity, goes to a strictly larger (ts, rid), so chains are acyclic
+if eq op 2
+if eq tscmp get rts r get rts sub tg 1 2
+exit 22
+end
+end
 end
 put rtg r tg
 if ne op 3

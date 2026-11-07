@@ -78,6 +78,16 @@ done
 # the stale mutant must show the specific wrong answer: the superseded value as current
 "$MEMNS" query "$W/ns-stale" 3 "indent tabs" | grep -qxF -- "- editor indent: use tabs (preference, 2026-09-01)" \
   && ok "negative control prints the superseded 'use tabs' as current" || no "negative control did not print the stale value as current"
+# a backdated correction (dated before its target) is refused and leaves the log byte-identical
+S=$W/back; "$MEM" add "$S" preference "editor indent" "use tabs" $T2 syn:k:1 > /dev/null; h0=$(sha256sum "$S" | cut -d' ' -f1)
+"$MEM" correct "$S" 1 preference "editor indent" "use spaces" $T1 syn:k:2 > /dev/null 2>&1; rb=$?
+[ $rb -eq 22 ] && [ "$(sha256sum "$S" | cut -d' ' -f1)" = "$h0" ] && ok "backdated correction refused (rc 22), log byte-identical" || no "backdated correction rc $rb"
+printf 'add\t1\t%s\tpreference\teditor indent\tuse tabs\tsyn:k:1\t-\ncorrect\t2\t%s\tpreference\teditor indent\tuse spaces\tsyn:k:2\t1\n' $T2 $T1 > "$W/back2.tsv"
+"$MEM" query "$W/back2.tsv" 3 "editor indent" > /dev/null 2>&1; rq=$?
+[ $rq -eq 22 ] && ok "a log holding a backdated correction is refused (22), no false 'now' line" || no "backdated log rc $rq"
+"$MEM" add "$S" preference "editor indent" "use spaces" $T2 syn:k:3 > /dev/null; "$MEM" correct "$S" 1 preference "editor indent" "use 2 spaces" $T2 syn:k:4 > /dev/null; rs=$?
+"$MEM" query "$S" 3 "editor indent" | head -n 2 | tail -n 1 | grep -qxF -- "- editor indent: use 2 spaces (preference, 2026-10-05)" && [ $rs -eq 0 ] \
+  && ok "same-ts correction accepted; the correcting record (larger rid) is current" || no "same-ts correction rc $rs"
 # a store that exists but cannot be read: edits refused (file unchanged), query fails (not an empty result)
 S=$W/unread; "$MEM" add "$S" fact "k1" "v1" $T1 syn:u:1 > /dev/null; h0=$(sha256sum "$S" | cut -d' ' -f1)
 chmod 0200 "$S"; "$MEM" add "$S" fact "k2" "v2" $T2 syn:u:2 > /dev/null 2>&1; ra=$?

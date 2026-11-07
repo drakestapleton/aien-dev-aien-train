@@ -133,3 +133,16 @@ Results: fresh build mem 15180a17ef315795..., mem-nosup f5e1138065e76dc7...;
 `sh tests/personal/mem-check.sh` -> 34 PASS, 0 FAIL, MEM_PASS (mem-check.txt). The 24f14cb7 build
 fails the new cases (revive; unreadable add rc 0; unreadable query rc 0); MEMNS=/bin/false now fails.
 On the private 48-record store the fix changes no dump and no query output (137 eval queries compared).
+
+## Review round 2 fix (lead dra146, 2026-11-07)
+
+Round-2 verdict on 5723a1a6: B1, B2, N1 FIXED; new B3: a backdated `correct` (dated before its target) made
+the identity rule point the target back at its replacement, a cycle with a false `now` line. Fix: the log
+parser refuses a correction dated before its target (rc 22; an edit leaves the log byte-identical; a log
+already holding one is refused). With it every replacement link, explicit or by identity, goes to a strictly
+larger (ts, rid), so replacement chains are acyclic by construction. Same-ts corrections stay valid (the
+correcting record has the larger rid). New cases: backdated edit refused, backdated log refused, same-ts
+correction current. Fresh build mem b6230baa2f35baae..., mem-nosup 040c83af53a4c34e...:
+`sh tests/personal/mem-check.sh` -> 37 PASS, 0 FAIL, MEM_PASS. The 5723a1a6 build fails the two backdated cases.
+Not fixed (non-blocking): N2 header counts selected hits before the byte cap; N3 extra fields in a log row.
+The private 48-record store dumps identically with this build.

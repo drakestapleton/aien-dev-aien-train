@@ -1,5 +1,5 @@
-mem_sha256=15180a17ef315795a24e4e836c98193a861fcf5e259406c39f5662d05e3ac663
-mem_nosup_sha256=f5e1138065e76dc7b0ce0341446aee0807b0c62b52b96f287f54eaf578fb36be
+mem_sha256=b6230baa2f35baaeed484c85f50dd6c331c743db3a86a67a9f9f41ff33ec2ec1
+mem_nosup_sha256=040c83af53a4c34ea7f00b0a0cc3a8daafd5c867885eb25a4cb1e69ab27f1722
 CASE stale rc=0 bytes=192
     | [memory: 1 current]
     | - editor indent: never use tabs, use 4 spaces (preference, 2026-10-05)
@@ -40,6 +40,9 @@ PASS negative control caught: retchain fails with supersession disabled (- mirro
 PASS negative control caught: tie fails with supersession disabled (- login shell: zsh (preference, 2026-10-05))
 PASS negative control caught: old fails with supersession disabled (- editor: use emacs (preference, 2026-09-01))
 PASS negative control prints the superseded 'use tabs' as current
+PASS backdated correction refused (rc 22), log byte-identical
+PASS a log holding a backdated correction is refused (22), no false 'now' line
+PASS same-ts correction accepted; the correcting record (larger rid) is current
 PASS unreadable store: add refused (rc 70), file byte-identical
 PASS unreadable store: query fails (rc 70), not an empty block
 PASS unreadable store: still one valid record after the refused add
