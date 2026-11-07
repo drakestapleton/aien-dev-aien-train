@@ -9,6 +9,7 @@
 #   speed   CHIP, --quiet exclusive: gtrain4 at S1 (V 32768 D 512 H 8 F 2048 L 8) for T 1024/2048/4096
 #   big     CHIP: smoke of the shapes beyond S1 (ginit4'd beforehand: s1t8192.ck, big.ck in WORK)
 #   resume  CHIP: save/reload/continue == uninterrupted (cmp), geval4 of the trained CK
+#   trainref / trained  CPU ggrad4 of the chip-trained r200, then CHIP gcmp4 on it (+ mutants)
 #   evalcpu CPU eval4 of the chip-trained CK (no chip), compared with the chip geval4 E line
 # Env: OMC (pinned omc), BUILD, WORK (large files), DATA (byte-token train file), DATA16 (the same as
 #      u16), EV (receipts dir, default evidence/OMEGALLM/v4/gb10), G4CORES (taskset list, default 5; a
@@ -135,6 +136,18 @@ resume)
 	cp "$R/u-ollm-gb10.ck" "$R/r200.ck"
 	rec geval4-r200 0 300 ollm-gb10 geval4 "$R/r200.ck" "$HELD" 146
 	;;
+trainref)
+	# CPU reference gradient of the chip-trained r200 checkpoint (resume phase output), no chip
+	rec ggrad4-r200 0 1800 ollm-gb10 ggrad4 "$WORK/r/r200.ck" "$DATA" "$WORK/r/r200.gr"
+	;;
+trained)
+	# CHIP: gcmp4 on the chip-trained r200 (step 200: attention far from uniform), mutants must fail
+	rec gcmp4-r200 0 300 ollm-gb10 gcmp4 "$WORK/r/r200.ck" "$DATA" "$WORK/r/r200.gr"
+	for m in rs ri cc; do
+		rec "mut-$m-gcmp4-r200" 51 300 "ollm-mut-$m-gb10" gcmp4 "$WORK/r/r200.ck" "$DATA" "$WORK/r/r200.gr"
+	done
+	rec gcmp4b-r200 0 300 ollm-gb10 gcmp4b "$WORK/r/r200.ck" "$DATA" "$WORK/r/r200.gr"
+	;;
 evalcpu)
 	rec eval4-r200 0 3600 ollm-gb10 eval4 "$WORK/r/r200.ck" "$HELD" 146
 	a=$(grep '^E ' "$E/geval4-r200.txt")
@@ -144,7 +157,7 @@ evalcpu)
 	grep -q SAME "$E/eval-cmp.txt" || fail=1
 	;;
 *)
-	echo "usage: v4-gb10-check.sh build|refs|parity|speedck|speed|big|resume|evalcpu" >&2
+	echo "usage: v4-gb10-check.sh build|refs|parity|speedck|speed|big|resume|evalcpu|trainref|trained" >&2
 	exit 2
 	;;
 esac

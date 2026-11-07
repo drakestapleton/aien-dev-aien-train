@@ -73,7 +73,12 @@ bits, FNV-1a 64 of the payload; payload 24·P bytes (params, m, v; f64 little-en
 inverse): `gcheck4` and `ropeck`'s shift check must fail. `--mutant z` applies R instead of Rᵀ in
 the backward: `gcheck4` must fail.
 
-## 6. Receipts
+## 6. GB10 path
+
+The chip path (`ginit4`, `gtrain4`, `geval4`, `gcmp4`, …; f32 master and Adam resident on the chip, CK03
+through mapping 0) is [CONTRACT-V4-GB10.md](CONTRACT-V4-GB10.md).
+
+## 7. Receipts
 
 MEASURED 2026-11-06 on Spark cores 4-5 (nice 10), aarch64 build, training text = this repository's
 own `.om` and docs (byte tokens; u16 copies for V > 256):
@@ -90,10 +95,10 @@ own `.om` and docs (byte tokens; u16 copies for V > 256):
 | over 1 GiB: V256 T64 D1024 H16 F4096 L12, P 151,282,688 (CK 3.63 GB) | `init4`, `eval4`, one `train4` step rc 0 (101 s, 4.99 GB RSS) |
 | V 32768 T256 D384 H6 F1536 L6 B4 G2 (P 23,204,736), u16 data, K = 2 | 3 `train4` steps rc 0, loss 10.407 → 9.701, 289.7 s (≈10.6 tok/s incl. load); `kvck` rc 0, 0 of 256 positions differ; byte data refused rc 21 |
 
-NOT_RUN: x86linux and x86efi builds (no x86 pin on Spark), GB10 kernels for v4, `sample4` at
+NOT_RUN: x86linux and x86efi builds (no x86 pin on Spark), `sample4` at
 V > 4096 (needs the 32k tokenizer unit), a long training run.
 
 MODELED (Wolfram, 6·P·tokens, attention excluded) for P = 23,204,736 at the GB10's MEASURED
 end-to-end v1 rate of 1.91 TFLOP/s (`evidence/OMEGALLM/gpu-max/README.md`; v4 has no GPU path
-yet, so this assumes one): 13,718 tok/s, i.e. 1.19e9 tokens in 24 h, 8.30e9 in 7 d, 3.56e10 in
+yet when written, so this assumes one; the measured chip rates are in CONTRACT-V4-GB10): 13,718 tok/s, i.e. 1.19e9 tokens in 24 h, 8.30e9 in 7 d, 3.56e10 in
 30 d; one epoch of the 550M-token base text 11.1 h, of a 3M-token personal corpus 3.6 min.

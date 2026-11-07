@@ -19,3 +19,17 @@ resume-u-ollm-mut-sv-gb10	0	0	PASS
 resume-s1-ollm-mut-sv-gb10	0	0	PASS
 resume-s2-ollm-mut-sv-gb10	0	0	PASS
 geval4-r200	0	0	PASS
+ggrad4-r200	0	0	PASS
+init4-p1	0	0	PASS
+ggrad4-p1	0	0	PASS
+init4-p2	0	0	PASS
+ggrad4-p2	0	0	PASS
+init4-p4	0	0	PASS
+ggrad4-p4	0	0	PASS
+init4-p3	0	0	PASS
+ggrad4-p3	0	0	PASS
+gcmp4-r200	0	0	PASS
+mut-rs-gcmp4-r200	51	51	PASS
+mut-ri-gcmp4-r200	51	51	PASS
+mut-cc-gcmp4-r200	51	51	PASS
+gcmp4b-r200	0	0	PASS

@@ -1,0 +1,4 @@
+receipt	rc	expect	verdict
+speed-s1t1024	0	0	PASS
+speed-s1t2048	0	0	PASS
+speed-s1t4096	0	0	PASS
