@@ -3,7 +3,8 @@
 # Env: OLLM (an aarch64 build with serve), CK (checkpoint), MERGES (V > 256 merges), PORT (default
 # 18291), TPORT (default 18292: a second server with `tplmax=4000 test=1`), CORES (taskset list,
 # default 8-9), OUT (receipt directory), ALLEN (allen-chat system prompt, default
-# /opt/allen-chat/system-prompt.txt; absent gives NOT_RUN). The servers run under
+# /opt/allen-chat/system-prompt.txt; absent gives NOT_RUN), SARGS (extra serve options for both
+# servers, e.g. `par=2`). The servers run under
 # taskset/nice/bwrap; this script stops only the PIDs it started. Exit 0 only when every check
 # passes and both servers listened on 127.0.0.1 alone.
 set -u
@@ -22,6 +23,7 @@ bw="bwrap --dev-bind / / --dev /dev --bind /dev/shm /dev/shm --proc /proc --"
 	echo "ck $(sha256sum "$CK")"
 	echo "merges $(sha256sum "$MERGES")"
 	echo "referee $(sha256sum "$here/serve-check.py")"
+	echo "sargs ${SARGS:-}"
 	[ -r "$ALLEN" ] && echo "allen_prompt $(sha256sum "$ALLEN") $(wc -c <"$ALLEN") bytes"
 } >"$OUT/env.txt"
 
@@ -60,8 +62,10 @@ stop() {
 	echo "stopped launchers=$pids servers=$spids" >>"$OUT/env.txt"
 }
 
-start server "$PORT"
-start server-test "$TPORT" tplmax=4000 test=1
+# shellcheck disable=SC2086
+start server "$PORT" ${SARGS:-}
+# shellcheck disable=SC2086
+start server-test "$TPORT" tplmax=4000 test=1 ${SARGS:-}
 SERVE_TLOG="$OUT/server-test.log" taskset -c "$CORES" nice -n 10 $bw python3 "$here/serve-check.py" "$PORT" "$OLLM" "$CK" "$MERGES" "$TPORT" "$ALLEN" | tee "$OUT/referee.txt"
 rc=$?
 grep -q "^SUMMARY pass=[0-9]* fail=0$" "$OUT/referee.txt" || rc=1

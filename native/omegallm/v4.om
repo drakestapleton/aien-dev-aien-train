@@ -37,7 +37,8 @@ note 41 first sequence of the block 43 sc bits 44 RK (resident KV layers) 45 KVB
 note layer 47 CV (cache valid) 48 CT (context count) 49 XR 50 HN 51 QR 52 OR 53 HMR 54 RLR 55 SS
 note 56 hash mode 57 mismatches 59 T D 60-63 gcheck stats 65 gf virtual index 66 master mapped
 note 67 KV mapped 68 activations mapped 69 training layout fits (1) 70-71 ropeck counts 72 R1 73 RT
-note 74 V D 75 token mode (V > 256 without merges: u16 prompt file and output, bits per token).
+note 74 V D 75 token mode (V > 256 without merges: u16 prompt file and output, bits per token) 76 RK2
+note (KV bank 2 layers in ogr, serve only).
 note Per-layer activation slot (ASTR4 = 6 T D + 2 T + T F + H T): HIN, Q, K (after RoPE), U, O,
 note HMID (T D each), S1[T], S2[T], RL[T][F] (post-ReLU; its sign is the backward mask), LSE[H][T].
 
@@ -2217,6 +2218,11 @@ ret add get xg 45 mul l kvs
 end
 bs = add get xg 45 mul rk kvs
 if ne get xg 46 l
+if lt sub l rk get xg 76
+xkvg l t bs
+put xg 46 l
+ret bs
+end
 if gt t 0
 xkvmk
 td = get xg 59
@@ -2230,9 +2236,80 @@ end
 ret bs
 end
 
+note KV bank 2 (serve only): xg 76 = RK2 (0 unless xkvg2 ran) staged KV layers l, RK <= l < RK + RK2,
+note keep their rows in ogr (the gradient window, which serve never uses) at (l - RK) 2 T D instead
+note of mapping 3, with the same layout (K rows from 0, U rows from T D). A layer switch then
+note copies its rows 0 .. t-1 into the staging slot with plain loads (xkvg) instead of one mapget
+note per value, and xkvgf writes a position's new rows back. The values are the same bits as the
+note mapping's, so decode and prefill are bit-identical to the mapping-3 path (checked:
+note tests/omegallm/serve-par-check.sh against the binary before KV bank 2). Mutant kg (OMUTKG 0)
+note loads one row fewer: the check must fail.
+const OMUTKG ulong 1
+fn xkvg2 to void
+kvs = mul 2 get xg 59
+r = div OGC kvs
+st = sub get xg 5 get xg 44
+if lt st r
+r = st
+end
+put xg 76 r
+end
+
+fn xkvg l ulong t ulong bs ulong to void
+if eq t 0
+ret
+end
+kvs = mul 2 get xg 59
+go = mul sub l get xg 44 kvs
+n = mul t get xg 2
+if eq OMUTKG 0
+n = sub n get xg 2
+end
+td = get xg 59
+xg2a go bs n
+xg2a add go td add bs td n
+end
+
+fn xkvgf l ulong t ulong kv ulong to void
+kvs = mul 2 get xg 59
+go = mul sub l get xg 44 kvs
+d = get xg 2
+r = mul t d
+td = get xg 59
+xa2g add go r add kv r d
+xa2g add add go td r add add kv td r d
+end
+
+note oa[o + i] = ogr[g + i] (xg2a); ogr[g + i] = oa[o + i] (xa2g), i < n
+fn xg2a g ulong o ulong n ulong to void
+for q ulong ocn n
+i = mul q OCH
+ie = oce q n
+while lt i ie bound 999999
+put oa add o i get ogr add g i
+i = add i 1
+end
+end
+end
+
+fn xa2g g ulong o ulong n ulong to void
+for q ulong ocn n
+i = mul q OCH
+ie = oce q n
+while lt i ie bound 999999
+put ogr add g i get oa add o i
+i = add i 1
+end
+end
+end
+
 note a staged layer writes its new K and U rows back to mapping 3
 fn xkvf l ulong t ulong kv ulong to void
 if lt l get xg 44
+ret
+end
+if lt sub l get xg 44 get xg 76
+xkvgf l t kv
 ret
 end
 xkvmk

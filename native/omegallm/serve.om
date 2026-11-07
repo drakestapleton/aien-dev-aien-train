@@ -73,7 +73,8 @@ note millionths, 30 tools, 31 tool detection, 32 tool calls, 33 marker position,
 note 35 stop strings, 36 listen fd, 40 OLLMTOK1/CHAT1 on, 41 model (3 v3, 4 v4), 44 reused, 45
 note prefilled, 48 CHAT1 tools token + 1, 49 first-step logits FNV, 50 generated <|tool_call|>
 note count, 51 ollm_test_info, 52 ollm_test_cold, 53 tplmax given, 54 queue ms, 55
-note ollm_test_serial. With CHAT1, tplmax caps each raw segment (default 983040).
+note ollm_test_serial, 56 par (processes of the layer prefill, section par), 57 every step's logits FNV
+note folded (FNV-1a 64 over the steps' svlhash words; test=1 only). With CHAT1, tplmax caps each raw segment (default 983040).
 
 text svtjson "application/json"
 text svtctyp "Content-Type"
@@ -133,6 +134,7 @@ text sktcol "ollm_test_cold"
 text sktser "ollm_test_serial"
 text sktobj "ollm_test"
 text sklfnv "logits_fnv"
+text sklfna "logits_fnv_all"
 text skreu "reused"
 text skpre "prefilled"
 text skprm "prompt"
@@ -163,6 +165,7 @@ text svtcz "}</tool_call>"
 text svempt "{}"
 text svoptt "tplmax="
 text svopte "test=1"
+text svoptp "par="
 text secjson "invalid_json"
 text secreq "invalid_request"
 text secctx "context_length_exceeded"
@@ -219,6 +222,10 @@ global svpt ulong 65536
 global svpm uchar 65536
 global svpn ulong 4
 global svtcp ulong 16
+note par=N logits pool (section par=N: the decode head): worker pids, pipe descriptors, state
+global svlw long 16
+global svlf uchar 160
+global svls ulong 8
 
 note ======== small byte helpers over wb
 
@@ -749,6 +756,8 @@ svwt ob sktobj
 js_wobj ob
 svwt ob sklfnv
 js_wulong ob get sv 49
+svwt ob sklfna
+js_wulong ob get sv 57
 svwt ob skreu
 js_wulong ob get sv 44
 svwt ob skpre
@@ -2062,7 +2071,12 @@ put xg 47 sub cn 1
 end
 while lt get xg 47 cn bound 65537
 cv = get xg 47
+if and eq cv sub cn 1 ge get svls 1 2
+xdpos cv false
+svlhead
+else
 xdpos cv eq cv sub cn 1
+end
 put xg 47 add cv 1
 if eq and cv 31 31
 svside bd sv 0
@@ -2114,6 +2128,10 @@ fn svpref sv edit ulong 64 bd edit uchar 983040 cv ulong ce ulong to void
 ch = div 2097152 get xg 2
 if gt ch 32
 ch = 32
+end
+if svpok sv ch cv ce
+svpar sv bd cv ce ch
+ret
 end
 p = cv
 while lt p ce bound 65537
@@ -2170,6 +2188,603 @@ xdlay l add s t
 for i ulong d
 put svhid add o i get oa add xr i
 end
+end
+
+note ======== par=N: the layer prefill of one svpref split over N processes
+note svpar runs svpref's chunks with N - 1 workers forked for this prefill only (v4.om's train4
+note fork/waitpid pattern). Every process holds the whole model (fork's copy) and its own copy of
+note the KV cache. Position s + i of a chunk belongs to process i mod N (the parent is process 0,
+note worker w is process w + 1). Per layer l: stage A (each process, its own positions) is the
+note first half of xdlay (rms, Q K U = A Wq, Wk, Wv, RoPE; Q saved in svqr); each process
+note publishes its K and U rows into the shared mapping (mapnew flags 33, region l), one barrier,
+note each imports the other processes' rows into its own cache; stage B (its own positions) is the
+note second half (attention over the rows 0 .. t, Wo, FFN) into its svhid rows. The last layer's
+note stage B is skipped (only the cache is kept from a prefill; svmlog decodes the last prompt
+note position with xdpos). Every kept value (the KV cache of every layer and position) comes from
+note the same kernels on the same inputs in the same order as svpref's serial path, so the cache
+note is bit-identical (checked: tests/omegallm/serve-par-check.sh against par=1 and against
+note ollm_test_serial). Barriers are pipes (the kernel's pipe lock orders the mapping writes
+note before the reads): each worker writes one byte to the shared up pipe and reads one byte from
+note its own down pipe; the parent reads N - 1 bytes, then writes one to each down pipe.
+note Lifecycle: the workers exist only inside svpar. Each worker closes every inherited descriptor
+note but its two pipe ends (so the listener, client and queued connections are the parent's
+note alone), runs the chunks, then exits 0; the parent waits for each (waitpid) before svpar
+note returns. A worker whose down pipe reaches end of file (the parent exited: SIGTERM, SIGKILL,
+note a trap) exits 75 at its next barrier; a parent whose up pipe stays silent for 1 s checks its
+note workers with waitpid WNOHANG and exits 70 if one has ended early. A client that leaves during
+note the prefill is noticed after it (svgone), as with par=1. par=N needs
+note ch D <= 65536 (svqr); otherwise, and for N = 1, the serial path runs. A staged KV layer (l >=
+note xg 44) is loaded per chunk by xkvs from this process's own bank (ogr or mapping 3, copied at
+note fork) and every process writes the chunk's rows back (svpi), so each bank stays whole.
+note Mutant pp (OMUTPP 0): each worker skips stage B of its last position of every chunk (that
+note row keeps its layer input): serve-par-check.sh must catch it.
+const SVPMAX ulong 16
+const OMUTPP ulong 1
+global svpw long 16
+global svpf uchar 160
+global svps ulong 8
+global svpy uchar 16
+global svqr f64 65536
+
+note svpok: whether this prefill runs on N > 1 processes
+fn svpok sv edit ulong 64 ch ulong cv ulong ce ulong to bool
+n = get sv 56
+if or lt n 2 gt n SVPMAX
+ret false
+end
+if gt mul ch get xg 2 65536
+ret false
+end
+ret ge sub ce cv 2
+end
+
+note svpfd: descriptor k of svpf (pipe k's read end at 2k, write end at 2k + 1; pipe 0 the up pipe,
+note pipe p >= 1 process p's down pipe), from pipefds' little-endian 32-bit pairs
+fn svpfdk k ulong to int
+o = mul k 4
+v = or ulong get svpf o shl ulong get svpf add o 1 8
+v = or v shl ulong get svpf add o 2 16
+ret int v
+end
+
+note svpmap: the shared mapping of L ch 2 D values (once per server; the shape does not change)
+fn svpmap ch ulong to void
+nv = mul mul get xg 5 ch mul 2 get xg 2
+if ge get svps 1 nv
+ret
+end
+h = mapnew int -1 0 mul nv 8 3 33
+if lt h 0
+exit 70
+end
+put svps 0 bitcast ulong h
+put svps 1 nv
+end
+
+fn svpar sv edit ulong 64 bd edit uchar 983040 cv ulong ce ulong ch ulong to void
+n = get sv 56
+svpmap ch
+put svps 4 cv
+put svps 5 ce
+put svps 6 ch
+oflush
+for k ulong n
+x = pipefds svpf mul k 8 8 0
+if lt x 0
+exit 70
+end
+end
+for w ulong sub n 1
+p = add w 1
+pid = fork
+if lt pid 0
+exit 70
+end
+if eq pid 0
+svpwrk p n sv bd
+end
+put svpw p pid
+end
+svpcl0 n
+put svps 3 0
+svpchk 0 n sv bd
+svpjoin n
+end
+
+note svpcl0: the parent keeps the up pipe's read end and the down pipes' write ends
+fn svpcl0 n ulong to void
+x = fclose svpfdk 1
+for p ulong sub n 1
+y = fclose svpfdk mul add p 1 2
+end
+end
+
+note svpwrk: worker p: close every descriptor but its up write end and its down read end, run the
+note chunks, exit 0
+fn svpwrk p ulong n ulong sv edit ulong 64 bd edit uchar 983040 to void
+ku = svpfdk 1
+kd = svpfdk mul p 2
+for f ulong 1021
+fd = int add f 3
+if and ne fd ku ne fd kd
+x = fclose fd
+end
+end
+put svps 3 p
+svpchk p n sv bd
+exit 0
+end
+
+note svpjoin: wait for every worker (status 0), then close the parent's pipe ends
+fn svpjoin n ulong to void
+for w ulong sub n 1
+p = add w 1
+pd = int get svpw p
+x = waitpid pd svpy 0 4 0
+if ne x long pd
+exit 70
+end
+if ne or get svpy 0 get svpy 1 0
+exit 70
+end
+y = fclose svpfdk add mul p 2 1
+end
+z = fclose svpfdk 0
+end
+
+note svpchk: the chunks of [cv, ce) as svpref's loop; the parent serves the side connections and the
+note queue between chunks (svps 4, 5, 6: cv, ce, ch)
+fn svpchk p ulong n ulong sv edit ulong 64 bd edit uchar 983040 to void
+q = get svps 4
+ce = get svps 5
+while lt q ce bound 65537
+e = add q get svps 6
+if gt e ce
+e = ce
+end
+svpc1 p n q e
+q = e
+if eq p 0
+svside bd sv 0
+svqpoll
+end
+end
+end
+
+fn svpc1 p ulong n ulong s ulong e ulong to void
+d = get xg 2
+for i ulong sub e s
+if eq rem i n p
+svpemb i get xtk add s i d
+end
+end
+nl = sub get xg 5 sub 1 OMUTPL
+for l ulong nl
+svpa p n l s e
+svbar p n
+svpi p n l s e
+if lt add l 1 get xg 5
+svpb p n l s e
+end
+end
+end
+
+note svpa: stage A of layer l for process p's positions, its K and U rows published (region l)
+fn svpa p ulong n ulong l ulong s ulong e ulong to void
+xstw l
+w = xwl l
+kv = xkvs l s
+for i ulong sub e s
+if eq rem i n p
+svpa1 add s i i w kv
+svpput l i add s i kv
+end
+end
+end
+
+fn svpa1 t ulong i ulong w ulong kv ulong to void
+d = get xg 2
+o = mul i d
+hn = get xg 50
+svh2a hn o d
+r = mul t d
+put xar 0 get xg 51
+put xar 1 add kv r
+put xar 2 add add kv get xg 59 r
+xrqkv hn get xg 55 w
+xrope get xg 51 t 1.0f64
+xropk add kv r t
+sva2q get xg 51 o d
+end
+
+note row copies: oa[a + j] = svhid[o + j] (svh2a), svhid[o + j] = oa[a + j] (sva2h),
+note svqr[o + j] = oa[a + j] (sva2q), oa[a + j] = svqr[o + j] (svq2a), j < d
+fn svh2a a ulong o ulong d ulong to void
+for j ulong d
+put oa add a j get svhid add o j
+end
+end
+
+fn sva2h a ulong o ulong d ulong to void
+for j ulong d
+put svhid add o j get oa add a j
+end
+end
+
+fn sva2q a ulong o ulong d ulong to void
+for j ulong d
+put svqr add o j get oa add a j
+end
+end
+
+fn svq2a a ulong o ulong d ulong to void
+for j ulong d
+put oa add a j get svqr add o j
+end
+end
+
+note svpput: the K and U rows of position t (chunk index i) into region l of the mapping
+fn svpput l ulong i ulong t ulong kv ulong to void
+d = get xg 2
+m = mul add mul l get svps 6 i mul 2 d
+k = add kv mul t d
+svpw1 m k d
+svpw1 add m d add k get xg 59 d
+end
+
+note svpw1: mapping [m + j] = oa[a + j], j < d (svpr1 the other way)
+fn svpw1 m ulong a ulong d ulong to void
+h = bitcast long get svps 0
+for j ulong d
+x = mapset h mul add m j 8 8 bitcast ulong get oa add a j
+end
+end
+
+fn svpr1 m ulong a ulong d ulong to void
+h = bitcast long get svps 0
+for j ulong d
+put oa add a j bitcast f64 mapget h mul add m j 8 8
+end
+end
+
+note svpget: the K and U rows of position t from region l into this process's cache
+fn svpget l ulong i ulong t ulong kv ulong to void
+d = get xg 2
+m = mul add mul l get svps 6 i mul 2 d
+k = add kv mul t d
+svpr1 m k d
+svpr1 add m d add k get xg 59 d
+end
+
+note svpi: the other processes' rows of layer l, then every row of the chunk written back to the
+note layer's KV bank when it is staged (xkvf, as xdlay does per position)
+fn svpi p ulong n ulong l ulong s ulong e ulong to void
+kv = xkvs l s
+for i ulong sub e s
+if ne rem i n p
+svpget l i add s i kv
+end
+end
+for i2 ulong sub e s
+xkvf l add s i2 kv
+end
+end
+
+note svpb: stage B of layer l for process p's positions (mutant pp: a worker skips its last one)
+fn svpb p ulong n ulong l ulong s ulong e ulong to void
+w = xwl l
+kv = xkvs l s
+c = sub e s
+la = c
+if and eq OMUTPP 0 gt p 0
+la = add mul div sub c add p 1 n n p
+end
+for i ulong c
+if and eq rem i n p ne i la
+svpb1 add s i i w kv
+end
+end
+end
+
+fn svpb1 t ulong i ulong w ulong kv ulong to void
+d = get xg 2
+o = mul i d
+hn = get xg 50
+svh2a hn o d
+svq2a get xg 51 o d
+xdatt kv t
+xdlay2 w hn
+sva2h get xg 49 o d
+end
+
+note svbar: the barrier of the N processes (p 0 the parent)
+fn svbar p ulong n ulong to void
+if gt p 0
+put svpy 8 1
+x = write svpfdk 1 svpy 8 1
+y = read svpfdk mul p 2 svpy 9 1
+if ne y 1
+exit 75
+end
+ret
+end
+c = ulong 0
+u = svpfdk 0
+while lt c sub n 1 bound 999999
+r = waitio u 1 long 1000000000
+if eq r 0
+svpdead n
+continue
+end
+k = read u svpy 0 sub sub n 1 c
+if le k 0
+exit 70
+end
+c = add c ulong k
+end
+put svpy 8 1
+for w ulong sub n 1
+z = write svpfdk add mul add w 1 2 1 svpy 8 1
+if ne z 1
+exit 70
+end
+end
+end
+
+note svpdead: exit 70 when a worker has ended (waitpid WNOHANG)
+fn svpdead n ulong to void
+for w ulong sub n 1
+pd = int get svpw add w 1
+x = waitpid pd svpy 0 4 1
+if ne x 0
+exit 70
+end
+end
+end
+
+note ======== par=N: the decode head's logits split over N processes
+note With par=N (N >= 2) and a CK03 checkpoint, cmdserve forks N - 1 logits workers once, after the
+note load (svlpool); they live until the server ends. The next-token logits of the last position
+note (xdpos's head: z = rms(x, gf), then p[c] = z . wte[c]) are split by vocabulary rows: process p
+note computes rows [p q, (p + 1) q) (q = V / N rounded up to a multiple of 4; the parent is p 0 and
+note takes the last share's remainder too) with xlogit's kernels (xdt4p/xdt1p in bank 1, xdt4w/xdt1w
+note in bank 2), one ascending sum per row exactly as xlogit, so every logit has xlogit's bits
+note (checked: serve-par-check.sh, logits_fnv_all over every step). z goes to the workers and their
+note rows come back through one shared mapping (flags 33) of D + V values; the barriers are pipes as
+note in svpar. Lifecycle: the workers close every inherited descriptor but their two pipe ends;
+note each waits on its down pipe and exits 0 at its end of file, which comes when the parent exits
+note for any reason (normal end, SIGTERM, SIGKILL, trap): no worker outlives the server. At the
+note normal end the parent closes the down pipes and waits for each worker. A parent whose up pipe
+note stays silent for 1 s checks the workers (waitpid WNOHANG) and exits 70 if one ended.
+note Mutant pq (OMUTPQ 0): each worker skips its last row (the parent keeps a stale value):
+note serve-par-check.sh must catch it.
+const OMUTPQ ulong 1
+note (svlw, svlf, svls: declared with the other globals at the top, before svmlog uses svls)
+
+fn svlfdk k ulong to int
+o = mul k 4
+v = or ulong get svlf o shl ulong get svlf add o 1 8
+v = or v shl ulong get svlf add o 2 16
+ret int v
+end
+
+note svlpool: fork the N - 1 logits workers (sv 56 = N >= 2, CK03 only); svls 0 mapping handle,
+note 1 N, 2 rows per process
+fn svlpool sv edit ulong 64 to void
+n = get sv 56
+if or lt n 2 ne get sv 41 4
+ret
+end
+d = get xg 2
+v = get xg 0
+h = mapnew int -1 0 mul add d v 8 3 33
+if lt h 0
+exit 70
+end
+put svls 0 bitcast ulong h
+put svls 1 n
+q = div add v sub n 1 n
+q = mul div add q 3 4 4
+put svls 2 q
+oflush
+for k ulong n
+x = pipefds svlf mul k 8 8 0
+if lt x 0
+exit 70
+end
+end
+for w ulong sub n 1
+p = add w 1
+pid = fork
+if lt pid 0
+exit 70
+end
+if eq pid 0
+svlwrk p
+end
+put svlw p pid
+end
+y = fclose svlfdk 1
+for w2 ulong sub n 1
+z = fclose svlfdk mul add w2 1 2
+end
+end
+
+note svlrow: the rows [a, b) of process p (b clipped to V)
+fn svlra p ulong to ulong
+a = mul p get svls 2
+if gt a get xg 0
+ret get xg 0
+end
+ret a
+end
+
+fn svlrb p ulong to ulong
+if eq add p 1 get svls 1
+ret get xg 0
+end
+ret svlra add p 1
+end
+
+note svlwrk: logits worker p (never returns): one svlstep per decoded token
+fn svlwrk p ulong to void
+ku = svlfdk 1
+kd = svlfdk mul p 2
+for f ulong 1021
+fd = int add f 3
+if and ne fd ku ne fd kd
+x = fclose fd
+end
+end
+for o ulong 999999
+for i ulong 999999
+svlstep p ku kd
+end
+end
+exit 0
+end
+
+fn svlstep p ulong ku int kd int to void
+y = read kd svpy 9 1
+if ne y 1
+exit 0
+end
+h = bitcast long get svls 0
+d = get xg 2
+z = get xg 34
+po = get xg 37
+svpr1h h 0 z d
+a = svlra p
+b = svlrb p
+if eq OMUTPQ 0
+b = sub b 1
+end
+svlogr z po a b
+svpw1h h add d a add po a sub b a
+put svpy 8 1
+k = write ku svpy 8 1
+end
+
+note map h [m + j] = oa[a + j] (svpw1h); oa[a + j] = map h [m + j] (svpr1h), j < n
+fn svpw1h h long m ulong a ulong n ulong to void
+for j ulong n
+x = mapset h mul add m j 8 8 bitcast ulong get oa add a j
+end
+end
+
+fn svpr1h h long m ulong a ulong n ulong to void
+for j ulong n
+put oa add a j bitcast f64 mapget h mul add m j 8 8
+end
+end
+
+note svlogr: p[c] = z . wte[c] for a <= c < b, xlogit's kernels and sums (zo, po in oa)
+fn svlogr zo ulong po ulong a ulong b ulong to void
+d = get xg 2
+ze = add zo d
+r1 = get xg 72
+e1 = b
+if lt r1 e1
+e1 = r1
+end
+c = a
+while le add c 4 e1 bound 999999
+xdt4p zo ze mul c d d
+kput4 add po c
+c = add c 4
+end
+while lt c e1 bound 999999
+put oa add po c xdt1p zo ze mul c d
+c = add c 1
+end
+svlogw zo po c b
+end
+
+fn svlogw zo ulong po ulong c ulong b ulong to void
+d = get xg 2
+ze = add zo d
+r1 = get xg 72
+while le add c 4 b bound 999999
+w = add get xg 73 mul sub c r1 d
+xdt4w zo ze w d
+kput4 add po c
+c = add c 4
+end
+while lt c b bound 999999
+w2 = add get xg 73 mul sub c r1 d
+put oa add po c xdt1w zo ze w2
+c = add c 1
+end
+end
+
+note svlhead: xdpos's head at the decoded row (XR), the logits split over the pool
+fn svlhead to void
+z = get xg 34
+frms get xg 49 0 z add get xg 55 2
+h = bitcast long get svls 0
+d = get xg 2
+svpw1h h 0 z d
+n = get svls 1
+put svpy 8 1
+for w ulong sub n 1
+x = write svlfdk add mul add w 1 2 1 svpy 8 1
+if ne x 1
+exit 70
+end
+end
+po = get xg 37
+svlogr z po 0 svlrb 0
+svlwait n
+for w2 ulong sub n 1
+p = add w2 1
+a = svlra p
+svpr1h h add d a add po a sub svlrb p a
+end
+end
+
+note svlwait: N - 1 bytes on the up pipe (exit 70 if a worker ended)
+fn svlwait n ulong to void
+c = ulong 0
+u = svlfdk 0
+while lt c sub n 1 bound 999999
+r = waitio u 1 long 1000000000
+if eq r 0
+svldead n
+continue
+end
+k = read u svpy 0 sub sub n 1 c
+if le k 0
+exit 70
+end
+c = add c ulong k
+end
+end
+
+fn svldead n ulong to void
+for w ulong sub n 1
+pd = int get svlw add w 1
+x = waitpid pd svpy 0 4 1
+if ne x 0
+exit 70
+end
+end
+end
+
+note svlend: the normal end: close the down pipes, wait for every worker
+fn svlend to void
+n = get svls 1
+if lt n 2
+ret
+end
+for w ulong sub n 1
+x = fclose svlfdk add mul add w 1 2 1
+end
+for w2 ulong sub n 1
+pd = int get svlw add w2 1
+y = waitpid pd svpy 0 4 0
+end
+z = fclose svlfdk 0
+put svls 1 0
 end
 
 note ======== encoding
@@ -2379,6 +2994,11 @@ end
 svmlog sv bd
 if eq get sv 7 0
 put sv 49 svlhash
+put sv 57 get sv 49
+else
+if eq get sv 22 1
+put sv 57 mul xor get sv 57 svlhash 1099511628211
+end
 end
 st = get sv 3
 tm = get sv 2
@@ -3398,6 +4018,14 @@ exit 2
 end
 put sv 23 v
 put sv 53 1
+continue
+end
+if svpre n svoptp
+v2 = svdig 4 n
+if or lt v2 1 gt v2 SVPMAX
+exit 2
+end
+put sv 56 v2
 else
 if and eq n len svopte svpre n svopte
 put sv 22 1
@@ -3418,7 +4046,7 @@ end
 note serve PORT CK MERGES [MAXCONN] [tplmax=N] [test=1]
 fn cmdserve to void
 na = oargc
-if or lt na 5 gt na 8
+if or lt na 5 gt na 9
 exit 2
 end
 port = oargu 2
@@ -3427,10 +4055,12 @@ exit 2
 end
 sv = new ulong 64 0
 put sv 23 65536
+put sv 56 1
 mx = svcli sv na
 if eq xpeek 3 XCK3
 xload 3
 xgd
+xkvg2
 put xg 47 0
 put xg 48 0
 put sv 41 4
@@ -3466,7 +4096,9 @@ end
 oputu port
 oputc 10
 oflush
+svlpool sv
 svloop cs io bd wb sv mx
+svlend
 y = fclose int lf
 end
 

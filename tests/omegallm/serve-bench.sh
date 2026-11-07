@@ -42,7 +42,8 @@ post() { curl -s -o /dev/null -w '%{http_code} %{time_total}' -H 'Content-Type: 
 lastlog() { grep '^C 200 ' "$log" | tail -1; }
 
 t0=$(date +%s%N)
-taskset -c "$CORES" nice -n 10 "$OLLM" serve "$PORT" "$CK" "$MERGES" test=1 >"$log" 2>&1 &
+# shellcheck disable=SC2086
+taskset -c "$CORES" nice -n 10 "$OLLM" serve "$PORT" "$CK" "$MERGES" test=1 ${SARGS:-} >"$log" 2>&1 &
 pid=$!
 until grep -q '^PORT' "$log" 2>/dev/null; do kill -0 $pid 2>/dev/null || { say "B start_fail $(cat "$log")"; exit 1; }; sleep 0.01; done
 t1=$(date +%s%N)
@@ -62,6 +63,20 @@ for L in $LENS; do
 	say "B decode_w1 target=$L http=$r2 log=[$l2]"
 	say "B decode_wd target=$L http=$r3 log=[$l3]"
 done
+if [ -n "${TURN:-}" ]; then # TURN=N: one cold harness-like turn, an N-token prompt then 60 tokens
+	nb=$(bytes_for "$TURN")
+	body "$nb" 60 ',"ollm_test_cold":true' >"$OUT/turn.json"
+	r=$(post "$OUT/turn.json")
+	say "B turn target=$TURN bytes=$nb max_tokens=60 http=$r log=[$(lastlog)]"
+fi
+if [ -n "${ONLY:-}" ]; then # ONLY=1: the prefill/decode lengths (and TURN) only
+	say "B peak_rss_kb $(awk '/VmHWM/{print $2}' /proc/$pid/status) pss_kb $(awk '/^Pss:/{print $2}' /proc/$pid/smaps_rollup)"
+	for k in $(pgrep -P $pid); do say "B worker pid=$k peak_rss_kb $(awk '/VmHWM/{print $2}' /proc/$k/status) pss_kb $(awk '/^Pss:/{print $2}' /proc/$k/smaps_rollup)"; done
+	kill $pid
+	wait $pid 2>/dev/null
+	say "B done"
+	exit 0
+fi
 
 # prefix reuse: a 2-turn conversation; turn 2 warm (cache of turn 1) against turn 2 cold
 nb=$(bytes_for 900)
