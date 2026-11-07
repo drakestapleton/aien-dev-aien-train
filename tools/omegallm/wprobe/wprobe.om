@@ -8,7 +8,7 @@ note FILE: records, each ended by byte 0; a record is PROMPT, optionally byte 31
 note ANSWER (probe needs it). The context is token 0, the prompt's encoding, then (probe) the
 note answer's encoding, as cmdsamp builds it; the answer starts a pre-tokenizer chunk, so the two
 note encodings join exactly where generation would.
-note Hook groups K L I A, at most 16 groups, L < layers; A in thousandths, at most 4000 for kinds
+note Hook groups K L I A, at most 64 groups, L < layers; A in thousandths, at most 4000 for kinds
 note 1 .. 3 and 100000 for kinds 4 and 5. Weight hooks (1, 2, 5) apply in their order before any record:
 note  K 1 scales the wo rows of head I of layer L (a weight edit in memory);
 note  K 2 scales w2 row I of layer L (neuron I's output, a weight edit in memory);
@@ -25,13 +25,13 @@ note \r \" \\ \xHH). probe prints `R idx np na div exp pred` and, on a divergenc
 note div, the readout of the row that predicts it with a = expected and b = predicted token:
 note  T  the top 8 logits; LD logit[a] - logit[b] and the sum of the parts below (equal up to rounding);
 note  E  the embedding part; H l n the part of head n of layer l; M l the part of layer l's MLP;
-note  N l f the 4 largest neuron parts of each MLP; A l n j p tok the 4 most attended positions of
+note  N l f the 16 largest |neuron parts| of each MLP; A l n j p tok the 4 most attended positions of
 note  the 6 heads with the largest |part|. A part of a residual stream term x is
 note  sum_c x[c] gf[c] (wte[a][c] - wte[b][c]) / s with s the final rms of the row, so the parts sum
 note  to LD. Values print with 4 decimals.
 note Exits: 2 usage, 60 layout, 61 file or record too long, 62 context full (T tokens).
 
-global wzh ulong 64
+global wzh ulong 256
 global wzhn ulong 1
 global wzs ulong 4
 global wzat ulong 4096
@@ -42,14 +42,18 @@ global wzm f64 64
 global wzk ulong 16
 global wzr f64 16
 
-note argument 1: 1 gen, 2 probe, else 0
+note argument 1: 1 gen, 2 probe, 3 save, else 0
 fn wzcmd to ulong
 n = oargp 1
-if and eq n 3 eq get oarg 0 103
+c = get oarg 0
+if and eq n 3 eq c 103
 ret 1
 end
-if and eq n 5 eq get oarg 0 112
+if and eq n 5 eq c 112
 ret 2
+end
+if and eq n 4 eq c 115
+ret 3
 end
 ret 0
 end
@@ -67,7 +71,64 @@ if eq c 2
 wzprbc
 ret 0
 end
+if eq c 3
+wzsavec
+ret 0
+end
 exit 2
+end
+
+note save CK OUT [K L I A]...: weight hooks (kinds 1, 2, 5) applied to CK, written to OUT with CK's
+note header fields and optimizer state unchanged (wpatch policy 0). Refuses OUT that exists (63), an
+note activation or decoding hook (2), and any nonfinite parameter or one over 1e6 in magnitude (64).
+fn wzsavec to void
+if lt oargc 4
+exit 2
+end
+wznone 3
+ockload 2
+l = get og 5
+if or ne get og 35 l ne get og 38 l
+exit 60
+end
+wzhooks 4
+for i ulong get wzhn 0
+k = get wzh mul i 4
+if or eq k 3 eq k 4
+exit 2
+end
+end
+wzfin
+ocksave 3
+end
+
+note exit 63 when the file named by argument ai exists, 70 on another open error
+fn wznone ai ulong to void
+n = oargp ai
+fd = int fopen oarg 0 n 0 0
+if ge fd 0
+r = fclose fd
+exit 63
+end
+if ne fd -2
+exit 70
+end
+end
+
+note exit 64 unless every parameter is finite with magnitude at most 1e6
+fn wzfin to void
+n = get og 8
+for q ulong ocn n
+i = mul q OCH
+ie = oce q n
+while lt i ie bound 999999
+v = owg i
+if not le fabs v 1000000.0
+exit 64
+end
+i = add i 1
+end
+end
 end
 
 note checkpoint argument 2, merges argument 3
@@ -91,7 +152,7 @@ if ne rem n 4 0
 exit 2
 end
 k = div n 4
-if gt k 16
+if gt k 64
 exit 2
 end
 put wzhn 0 k
@@ -617,7 +678,7 @@ end
 ret v
 end
 
-note MLP part of layer l at row r and its 4 largest neuron parts
+note MLP part of layer l at row r and its 16 largest |neuron parts|
 fn wzmlpr l ulong r ulong to void
 d = get og 2
 f = get og 4
@@ -636,8 +697,8 @@ oputu l
 wzsp
 wzpf t
 oputc 10
-wztopu f 4
-for q ulong 4
+wztopu f 16
+for q ulong 16
 oputc 78
 wzsp
 oputu l

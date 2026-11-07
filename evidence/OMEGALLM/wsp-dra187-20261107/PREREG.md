@@ -125,3 +125,15 @@ data, measuring how much of the edit survives the step. Reported; not a gate.
 
 Only an IMPROVE result is offered to ownmodel's promotion path (DRA-146/DRA-183 owner) with the patch,
 receipts and review. This lane does not install, deploy or restart any service.
+
+## Amendment 1, 2026-11-07T06:27Z (before section 5 results and before any search)
+
+Tool changes only; no change to splits, search space, acceptance or limits.
+- wprobe readout prints the 16 largest neuron parts per MLP (was 4), so E2 can rank neurons; hook cap 64
+  groups (was 16), so E2 with m = 32 fits; new `save` command writes a weight-hooked checkpoint (8-case
+  external check `tools/omegallm/wprobe/check.py` PASS). The forward pass, decoding and hooks 1 to 5 are
+  unchanged. Binary sha256 used from here: recorded per run in `runs/runs.jsonl`.
+- D defined by `make_d.py` (unread rows only: 186 records, 66 target, 120 control); D base probe
+  (MEASURED, 06:06:57Z to 06:18:28Z, core 19): target 7/66 (L6 7/18, L7 0/24, L8 0/24), control 120/120,
+  the cited failure reproduced. Ranking on its 59 digit-copy failure rows: heads 6.6, 7.11, 6.11, 7.0 lead;
+  mean logit gap -7.063. Output `diag/D-base.out`.
