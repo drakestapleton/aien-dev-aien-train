@@ -329,8 +329,8 @@ During a 4,064-token cold prefill on CK-B (106.9 s), `GET /health` polled every 
 answered 113 times out of 113 (median 0.42 s, max 0.88 s: the side connections wait at most one
 32-position chunk; `health-during-prefill.txt`).
 
-**Fork slots, measured and rejected**: the same `sample4` decode (CK-B, 64 tokens) took 4.29 s
-alone and 8.61 s for each of two copies run at once on core 4 (8.61 / (2 x 4.29) = 1.003): one core
+**Fork slots, measured and rejected**: the same `sample4` run (CK-B: load, prompt and a 64-token
+decode, all CPU) took 4.29 s alone and 8.61 s for each of two copies run at once on core 4 (8.61 / (2 x 4.29) = 1.003): one core
 gives no throughput from parallel slots, each request becomes twice as slow, and forked children
 would not share the prefix cache. `serve` keeps one generation slot and the FIFO queue
 (`evidence/OMEGALLM/serve/v4/fork-decision.txt`).
