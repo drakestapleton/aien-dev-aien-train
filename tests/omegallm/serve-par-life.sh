@@ -32,6 +32,9 @@ start() {
 kids() { pgrep -P "$1" | tr '\n' ' '; }
 # (1) a client that leaves during the prefill
 start s1
+# the logits workers are forked just after the PORT line: wait for them (at most 10 s)
+i=0
+while [ "$(pgrep -P $spid | wc -l)" -lt $((PAR - 1)) ] && [ $i -lt 100 ]; do sleep 0.1; i=$((i + 1)); done
 idle=$(kids $spid)
 curl -s -o /dev/null --max-time 3 -H 'Content-Type: application/json' --data-binary @"$OUT/req.json" "http://127.0.0.1:$PORT/v1/chat/completions"
 during=$(kids $spid)

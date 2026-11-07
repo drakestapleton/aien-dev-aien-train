@@ -28,13 +28,18 @@ prompts hold 4 token ids >= 27,660, so the layer prefill reads wte bank 2); CHAT
 | v1 suite par=1 | `serve-check.sh` CK=ck60000.bin MERGES=merges4096.bin SARGS=par=1 | measured, final | 105/0 PASS (rc 0) |
 | v1 suite par=2 | same, SARGS=par=2 | measured, final | 105/0 PASS (rc 0), both |
 | par check S1 | `serve-par-check.sh` CK=s1.ck LEN=500 GEN=16 | final (also measured, older driver) | PAR_CHECK PASS (rc 0) |
-| par check S2 vs before-binary | `serve-par-check.sh` CK=s2.ck ONE_OLLM=before LEN=1500 GEN=24 | measured (b2 and b3), final | PAR_CHECK PASS |
-| par check S2 par=2 vs par=1 | same without ONE_OLLM | final | see gates-final/par-s2.out |
-| lifecycle | `serve-par-life.sh` CK=s2.ck | final | PAR_LIFE PASS (rc 0) |
+| par check S2 vs before-binary | `serve-par-check.sh` CK=s2.ck ONE_OLLM=before LEN=1500 GEN=24 CORES=4,6 | measured (b2 and b3), final | PAR_CHECK PASS (rc 0), all three; first-step FNV 17027655477105207011 (cold turn 1, 388 tokens), 6661698870195181098 (turn 2, 523 tokens, 388 reused) |
+| par check S2 par=2 vs par=1 | same without ONE_OLLM | final | PAR_CHECK PASS (rc 0): logits_fnv and logits_fnv_all (24 steps) equal across par=2, ollm_test_serial and par=1 |
+| lifecycle | `serve-par-life.sh` CK=s2.ck CORES=4,6 (gates-final/life3-*) | final | PAR_LIFE PASS (rc 0): client left at 3 s, `C 499 1517 1 4 25652 ...`, then only the logits worker, /health in_flight 0; SIGTERM mid-prefill: both workers gone within 2 s |
 | mutant pp | `serve-par-check.sh` S1 | mutant pp | PAR_CHECK FAIL fails=3 (rc 1): required |
 | mutant pq | `serve-par-check.sh` S1 | mutant pq | PAR_CHECK FAIL fails=3 (rc 1): required |
 | mutant kg | `serve-par-check.sh` S2 ONE_OLLM=before | mutant kg | PAR_CHECK FAIL fails=3 (rc 1): required |
-| mutant lw | `serve-par-life.sh` S2 | mutant lw | PAR_LIFE FAIL (sigterm_mid_prefill: the logits worker left; the driver then killed it) (rc 1): required |
+| mutant lw | `serve-par-life.sh` S2 (life3) | mutant lw | PAR_LIFE FAIL fails=1 (sigterm_mid_prefill: the logits worker left; the driver then killed it) (rc 1): required |
+
+Driver history: `life-olddriver-*` ran before the 499 condition was added (same verdicts);
+`life2-race/` is a driver race, not a server fault: the driver sampled the children right after
+the PORT line, before the logits workers were forked (idle=[]), so step 1 failed for the product
+too; the driver now waits up to 10 s for N - 1 children (life3 = the receipts above).
 
 ## Benchmarks
 

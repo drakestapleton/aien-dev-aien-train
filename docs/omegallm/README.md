@@ -348,8 +348,8 @@ checkpoint's layer prefill and its decode head on N processes, every value bit-i
 - **KV bank 2** (`v4.om` `xkvg2`/`xkvg`/`xkvgf`, serve only, all `par`). Measuring first showed
   S2 (V 32768, D 384, H 6, F 1536, L 8) at T 4096 keeps only 3 of its 8 KV layers in `oa`
   (2 T D values each); the other 5 lived in host mapping 3 and every decode position reloaded
-  their rows 0 .. t-1 with one `mapget` per value, so decode cost grew by tens of milliseconds
-  per 1,000 context tokens. Serve now keeps those layers in `ogr` (the gradient window, which
+  their rows 0 .. t-1 with one `mapget` per value, so decode cost grew by 148.6 ms per 1,000
+  context tokens (512 to 2048, nice-19 runs; 26.1 ms after this change). Serve now keeps those layers in `ogr` (the gradient window, which
   serve never uses: 15,833,472 values = 5 layers of 2 T D at S2), copied with plain loads. Same
   bits (checked against the binary before the change).
 - **par=N** (`serve.om`, sections `par=N`). *Prefill*: per `svpref` call N - 1 workers are

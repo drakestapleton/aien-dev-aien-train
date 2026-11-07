@@ -1,0 +1,7 @@
+start 2026-11-07T06:06:08Z ollm ae4977d3c2352ab9f267721a2b389542d578ae327e8b3c8b6968f2e5dfb894d5
+v1 par=1 rc 0 SUMMARY pass=105 fail=0 06:18:53
+par-check s2 (par=2 vs par=1 same binary) rc 0 06:20:52
+par-check s2 (par=2 vs the before-binary par=1) rc 0 06:22:23
+life ollm rc 1 06:22:57
+life ollm-mut-lw rc 1 06:23:30
+done 2026-11-07T06:23:30Z
