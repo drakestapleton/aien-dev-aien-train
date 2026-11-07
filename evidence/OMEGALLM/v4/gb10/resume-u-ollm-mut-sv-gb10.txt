@@ -1,0 +1,9 @@
+receipt: resume-u-ollm-mut-sv-gb10
+utc: 2026-11-07T00:56:09Z window: 20261107T005239Z-a1107c
+binary: ollm-mut-sv-gb10 sha256 39c503eda372d8493461ae358b74c5a3575fbbbf799be2c44a15e31b9db17390
+$ timeout 300 taskset -c 5 nice -n 10 /dev/shm/hive/ownmodel/gpu4/L3/ollm-mut-sv-gb10 gtrain4 /home/drakestapleton/work/hive/ownmodel/gpu4/ref/r/u-ollm-mut-sv-gb10.ck /dev/shm/hive/ownmodel/gpu4/tr8.bin 200 200
+--- output
+T 200 2121535
+G4 200 409600 826828174 87038188 188855249 162251913 388381000 24025619 88355072 256
+maxrss_kb 100564
+--- rc 0 ms 1087

@@ -1,0 +1,12 @@
+receipt: traj-chipf-ollm-mut-h-gb10
+utc: 2026-11-07T00:56:26Z window: 20261107T005239Z-a1107c
+binary: ollm-mut-h-gb10 sha256 ec5d50ac7424a774d6acf9f863e2b186212bf7af4c83320eb60c6c57cb8074a5
+$ timeout 300 taskset -c 5 nice -n 10 /dev/shm/hive/ownmodel/gpu4/L3/ollm-mut-h-gb10 gtrain4f /home/drakestapleton/work/hive/ownmodel/gpu4/ref/tg.ck /dev/shm/hive/ownmodel/gpu4/tr8.bin 40 10
+--- output
+T 10 5330285
+T 20 5012192
+T 30 4648923
+T 40 4256193
+G4 40 5120 60216744 97070934 15782534 9675931 31588180 2056436 11172608 64
+maxrss_kb 17044
+--- rc 0 ms 244

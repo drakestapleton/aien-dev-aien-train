@@ -1,0 +1,9 @@
+receipt: resume-s1-ollm-gb10
+utc: 2026-11-07T00:56:07Z window: 20261107T005239Z-a1107c
+binary: ollm-gb10 sha256 195daeec586ea7b672cae18fa1c14f3df430e1ce542fc3cc5eed0f10da6ceb7d
+$ timeout 300 taskset -c 5 nice -n 10 /dev/shm/hive/ownmodel/gpu4/L3/ollm-gb10 gtrain4 /home/drakestapleton/work/hive/ownmodel/gpu4/ref/r/s-ollm-gb10.ck /dev/shm/hive/ownmodel/gpu4/tr8.bin 100 100
+--- output
+T 100 2602443
+G4 100 204800 413928463 104280929 95049236 80843637 194426487 11963294 88355072 256
+maxrss_kb 100564
+--- rc 0 ms 692

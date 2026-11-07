@@ -48,7 +48,7 @@ lies in one bank. The embedding gather (`xcpe`), the tied logits (`xlogit`, one 
 logit), the gradient outer product (`xgerw`), the embedding backward (`xembg`) and the
 dz = dl·wte column sums (`xdz`) address the banks directly; the column sums run over bank 1's rows and
 then on over bank 2's in the same accumulator, so every result has the bits of the one-window layout
-(the virtual parameter order and the CK03 payload are unchanged; receipts in section 6.1).
+(the virtual parameter order and the CK03 payload are unchanged; receipts in section 7.1).
 
 **Limits** (Wolfram; `init4` exits 12 past any of them):
 
@@ -80,7 +80,7 @@ measured unit costs, Wolfram), and staging once per sequence needs T·V stored l
 are the same V·D values as before (master to wte after Adam, dwte to the gradient region), and
 with wte out of `ow` more layers stay resident: staged layers pay one copy per step but no
 per-element map call inside the kernels (V 32768 D 384 L 6: one step 11.0 % less CPU than the
-one-window layout, checkpoints byte-identical, section 6.1).
+one-window layout, checkpoints byte-identical, section 7.1).
 
 `build.sh --variant wx` (bx's window sizes plus XWB1 2000) makes the small shape
 V 256 T 32 D 18 H 3 F 32 L 4 cross the bank boundary (R1 = 111 of 256 rows) with staged layers and
@@ -123,7 +123,12 @@ the backward: `gcheck4` must fail.
 
 Mutants j and jd and variant wx of the wte banks: section 2.1.
 
-## 6. Receipts
+## 6. GB10 path
+
+The chip path (`ginit4`, `gtrain4`, `geval4`, `gcmp4`, …; f32 master and Adam resident on the chip, CK03
+through mapping 0) is [CONTRACT-V4-GB10.md](CONTRACT-V4-GB10.md).
+
+## 7. Receipts
 
 MEASURED 2026-11-06 on Spark cores 4-5 (nice 10), aarch64 build, training text = this repository's
 own `.om` and docs (byte tokens; u16 copies for V > 256):
@@ -140,7 +145,7 @@ own `.om` and docs (byte tokens; u16 copies for V > 256):
 | over 1 GiB: V256 T64 D1024 H16 F4096 L12, P 151,282,688 (CK 3.63 GB) | `init4`, `eval4`, one `train4` step rc 0 (101 s, 4.99 GB RSS) |
 | V 32768 T256 D384 H6 F1536 L6 B4 G2 (P 23,204,736), u16 data, K = 2 | 3 `train4` steps rc 0, loss 10.407 → 9.701, 289.7 s (≈10.6 tok/s incl. load); `kvck` rc 0, 0 of 256 positions differ; byte data refused rc 21 |
 
-### 6.1 Wide receipts (wte banks, wide4)
+### 7.1 Wide receipts (wte banks, wide4)
 
 MEASURED 2026-11-07 on Spark core 6 (nice 10; core 6 was shared with other lanes' processes, so wall
 times are noisy and the per-step costs below are user + sys CPU seconds), aarch64 product binary
@@ -179,11 +184,11 @@ public text (the first 3,000,000 bytes of the base `val.txt`, 32K-tokenized):
 | S1 at T 4096: `init4`, `sample4` / `train4` | rc 0 (decode: 2 resident KV layers + staging) / 12 (training layout) |
 | D 768 H 12 F 3072 L 8 (P 81,801,984): `init4`, `eval4` | rc 0, rc 0 (RSS 2.34 GB) |
 
-NOT_RUN: x86linux and x86efi builds (no x86 pin on Spark), GB10 kernels for v4, `sample4` text I/O at
+NOT_RUN: x86linux and x86efi builds (no x86 pin on Spark), `sample4` text I/O at
 V > 4096 inside ollm (needs the 32k tokenizer unit; token mode covers it), a long training run,
 S1 `gcheck4` (gcheck4 runs on the wx crossing shape and the small shapes).
 
 MODELED (Wolfram, 6·P·tokens, attention excluded) for P = 23,204,736 at the GB10's MEASURED
 end-to-end v1 rate of 1.91 TFLOP/s (`evidence/OMEGALLM/gpu-max/README.md`; v4 has no GPU path
-yet, so this assumes one): 13,718 tok/s, i.e. 1.19e9 tokens in 24 h, 8.30e9 in 7 d, 3.56e10 in
+yet when written, so this assumes one; the measured chip rates are in CONTRACT-V4-GB10): 13,718 tok/s, i.e. 1.19e9 tokens in 24 h, 8.30e9 in 7 d, 3.56e10 in
 30 d; one epoch of the 550M-token base text 11.1 h, of a 3M-token personal corpus 3.6 min.

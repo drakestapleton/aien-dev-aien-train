@@ -16,7 +16,7 @@
 # Env: OMC (default ../omega-mv/seed/out/omc), OUT (default ../build), NVDISASM
 #      (default /usr/local/cuda/bin/nvdisasm), CORE (default 6), SHAPE (grset V T D H F B, default the
 #      parity shape "256 32 64 2 128 2"; "4096 256 256 8 1024 8" is the max shape, whose T 256 gives
-#      the softmax kernels 8 column chunks where the parity shape gives 1).
+#      the softmax kernels 8 column chunks where the parity shape gives 1), V4 (1: v4 mode, g4.om).
 set -eu
 here=$(cd "$(dirname "$0")/../.." && pwd)
 PIN=2c82480596bbdc50cda9626866209ef662d5834f278f839ff4ce0250c495029f
@@ -33,14 +33,22 @@ src=$here/native/omegallm
 g=$src/gpu
 # gk.om calls gb.om's BF16 check hooks and gb.om calls gg.om, so the dump takes the whole gb10 source;
 # gg.om's main becomes ggmain (gpu-dump.om's main runs) and gg.om supplies model.om's ogmask hook.
-cat "$src/math.om" "$src/data.om" "$src/lpool.om" "$src/model.om" "$src/adam.om" "$src/ckpt.om" "$src/bpe.om" "$src/cli.om" "$src/lio.om" |
+cat "$src/math.om" "$src/data.om" "$src/lpool.om" "$src/model.om" "$src/adam.om" "$src/ckpt.om" "$src/bpe.om" "$src/cli.om" "$src/v4.om" "$src/lio.om" "$src/noserve.om" |
   sed 's/^fn main to int$/fn ocpumain to int/' > "$OUT/gpu-dump.om"
 sed "s/^grset 256 32 64 2 128 2\$/grset $SHAPE/" "$here/tests/omegallm/gpu-dump.om" > "$OUT/gpu-dump-main.om"
 grep -qx "grset $SHAPE" "$OUT/gpu-dump-main.om" || { echo "SHAPE_NOT_SET $SHAPE" >&2; exit 2; }
+# V4=1 dumps the v4 mode (gr.om grd 6 = 1: slots 12, 17, 18, the D <= 1024 RMS banks and grall4's
+# slots 60, 61; g4.om), T a multiple of 256
+if [ "${V4:-0}" = 1 ]; then
+  sed "s/^grset $SHAPE\$/grset $SHAPE\nput grd 6 1/;s/^if not grall\$/if not and grall grall4/" "$OUT/gpu-dump-main.om" > "$OUT/gpu-dump-main4.om"
+  grep -qx "put grd 6 1" "$OUT/gpu-dump-main4.om" || { echo "V4_NOT_SET" >&2; exit 2; }
+  mv "$OUT/gpu-dump-main4.om" "$OUT/gpu-dump-main.om"
+fi
 cat "$g/context.om" "$g/vector.om" "$g/launch.om" "$g/gk.om" "$g/gr.om" "$g/gb.om" >> "$OUT/gpu-dump.om"
 n=$(grep -c '^fn main to int$' "$g/gg.om" || true)
 [ "$n" = 1 ] || { echo "GG_MAIN_COUNT $n, want 1" >&2; exit 4; }
 sed 's/^fn main to int$/fn ggmain to int/' "$g/gg.om" >> "$OUT/gpu-dump.om"
+cat "$g/g4.om" >> "$OUT/gpu-dump.om"
 cat "$OUT/gpu-dump-main.om" >> "$OUT/gpu-dump.om"
 taskset -c "$CORE" nice -n 19 "$OMC" < "$OUT/gpu-dump.om" > "$OUT/gpu-dump"
 chmod +x "$OUT/gpu-dump"

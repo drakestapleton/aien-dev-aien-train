@@ -1877,7 +1877,8 @@ ret add s 1.0f64
 end
 
 note gb10 platform main: gcmp, gcmp2, gtrain, gtrainf, gacmp, geval, gdiag and gprof here, the BF16
-note commands gtrainb, gprofb, gbcmp, gbcmp2 and gbfrag in gb.om, every other command through the CPU
+note commands gtrainb, gprofb, gbcmp, gbcmp2 and gbfrag in gb.om, the v4 commands (ginit4, gtrain4,
+note gtrain4f, geval4, ggrad4, gcmp4, gcmp4b, gprof4) in g4.om, every other command through the CPU
 note main (lio.om)
 fn main to int
 if lt oargc 2
@@ -1934,6 +1935,9 @@ ret 0
 end
 if eq w 113668228801127
 gbfrag
+ret 0
+end
+if g4cmd w
 ret 0
 end
 ret ocpumain

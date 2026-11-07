@@ -1,6 +1,7 @@
 #!/bin/sh
 # Build ollm (aien-train#52) from native/omegallm/*.om with the pinned seeded omc.
 # Usage: sh tests/omegallm/build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p|t|r|x|q|w|u|l|o|v|n|y|i|z|j|jd|pj|c1|pl | --variant h5|h7|r0|bx|wx]
+# Usage: sh tests/omegallm/build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p|t|r|x|q|w|u|l|o|v|n|y|i|z|rs|ri|cc|sv|od | --variant h5|h7|r0|bx]
 # Env: TARGET (aarch64, the default, gb10, x86linux or x86efi), OMC (default ../omega-mv/seed/out/omc
 #      beside this clone for aarch64 and gb10, ../omega-mv-x86/seed/out/omc for x86linux,
 #      ../omega-efi-ident/seed/out/omc for x86efi), OUT (default ../build beside it), CORE (taskset core,
@@ -52,6 +53,11 @@
 # net/http.om, net/json.om and net/jsonw.om (vendored unmodified from omega-mv e5b32567 seed/net/http.om,
 # seed/json/json.om and seed/json/jsonw.om; sha256 below, checked at build) before the ollm units and
 # serve.om after them. gb10, x86linux and x86efi take noserve.om, whose cmdserve exits 2.
+# v4 on the chip (gpu/g4.om after gg.om; docs/omegallm/CONTRACT-V4-GB10.md): ginit4, gtrain4 (BF16), gtrain4f,
+# geval4, ggrad4, gcmp4, gcmp4b, gprof4. Mutant rs (g4.om OMUTRS) rotates K with the inverse table in the
+# forward, ri (OMUTRI) skips the backward R^T on dQ and dK, cc (OMUTCC) drops the head's last CE row chunk;
+# gcmp4 must catch all three; sv (OMUTSV) saves no Adam v, which the resume check must catch; od (gr.om
+# OMUTOD) drops one 8-element chunk of ODOT's per-head row sum (SOFTBL1's s), which gcmp4 must catch.
 # Mutants (ollm-mut-X, one changed line) plant a defect the checks must catch. Variants (ollm-var-X)
 # h5 and h7 (two changed lines) set both gcheck steps GCH and GCH2 to 1e-5 (h5) or 1e-7 (h7), the step
 # sizes that the README's GCH section rejects; r0 (gk.om OKREU 0, one changed line) clears the GEMM FFMA
@@ -82,7 +88,7 @@ OUT=${OUT:-$here/../build}
 CORE=${CORE:-6}
 mut= kind=
 if [ $# -ge 1 ]; then
-  { [ "$1" = --mutant ] || [ "$1" = --variant ]; } && [ $# -eq 2 ] || { echo "usage: build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p|t|r|x|q|w|u|l|o|v|n|y|i|z|j|jd|pj|c1|pl | --variant h5|h7|r0|bx|wx]" >&2; exit 2; }
+  { [ "$1" = --mutant ] || [ "$1" = --variant ]; } && [ $# -eq 2 ] || { echo "usage: build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p|t|r|x|q|w|u|l|o|v|n|y|i|z|j|jd|pj|c1|pl|rs|ri|cc|sv|od | --variant h5|h7|r0|bx|wx]" >&2; exit 2; }
   kind=$1 mut=$2
 fi
 got=$(sha256sum "$OMC" | cut -d' ' -f1)
@@ -116,7 +122,7 @@ if [ "$TARGET" = gb10 ]; then
   [ "$n" = 1 ] || { echo "MAIN_COUNT $n, want 1" >&2; exit 4; }
   sed 's/^fn main to int$/fn ocpumain to int/' "$OUT/ollm.om" > "$OUT/ollm.tmp.om"
   g=$src/gpu
-  cat "$OUT/ollm.tmp.om" "$g/context.om" "$g/vector.om" "$g/launch.om" "$g/gk.om" "$g/gr.om" "$g/gb.om" "$g/gg.om" > "$OUT/ollm.om"
+  cat "$OUT/ollm.tmp.om" "$g/context.om" "$g/vector.om" "$g/launch.om" "$g/gk.om" "$g/gr.om" "$g/gb.om" "$g/gg.om" "$g/g4.om" > "$OUT/ollm.om"
   rm -f "$OUT/ollm.tmp.om"
 fi
 case "$kind$mut" in
@@ -149,6 +155,11 @@ case "$kind$mut" in
   --mutantpj) pat='s/^const OMUTPJ ulong 1$/const OMUTPJ ulong 0/' want=1 ;;
   --mutantc1) pat='s/^const OMUTC1 ulong 1$/const OMUTC1 ulong 0/' want=1 ;;
   --mutantpl) pat='s/^const OMUTPL ulong 1$/const OMUTPL ulong 0/' want=1 ;;
+  --mutantrs) pat='s/^const OMUTRS ulong 1$/const OMUTRS ulong 0/' want=1 ;;
+  --mutantri) pat='s/^const OMUTRI ulong 1$/const OMUTRI ulong 0/' want=1 ;;
+  --mutantcc) pat='s/^const OMUTCC ulong 1$/const OMUTCC ulong 0/' want=1 ;;
+  --mutantsv) pat='s/^const OMUTSV ulong 1$/const OMUTSV ulong 0/' want=1 ;;
+  --mutantod) pat='s/^const OMUTOD ulong 1$/const OMUTOD ulong 0/' want=1 ;;
   --varianth5) pat='s/^const GCH f64 0\.000001$/const GCH f64 0.00001/;s/^const GCH2 f64 0\.00000025$/const GCH2 f64 0.00001/' want=2 ;;
   --varianth7) pat='s/^const GCH f64 0\.000001$/const GCH f64 0.0000001/;s/^const GCH2 f64 0\.00000025$/const GCH2 f64 0.0000001/' want=2 ;;
   --variantr0) pat='s/^const OKREU ulong 1$/const OKREU ulong 0/' want=1 ;;
@@ -156,7 +167,7 @@ case "$kind$mut" in
   --variantwx) pat='s/^const OWC ulong 15833472$/const OWC ulong 8400/;s/^const OGC ulong 15833472$/const OGC ulong 5000/;s/^const OAC ulong 15016192$/const OAC ulong 12344/;s/^const XWB1 ulong 14161920$/const XWB1 ulong 2000/' want=4 ;;
   --mutantj) pat='s/^const OWC ulong 15833472$/const OWC ulong 8400/;s/^const OGC ulong 15833472$/const OGC ulong 5000/;s/^const OAC ulong 15016192$/const OAC ulong 12344/;s/^const XWB1 ulong 14161920$/const XWB1 ulong 2000/;s/^const OMUTJ ulong 1$/const OMUTJ ulong 0/' want=5 ;;
   --mutantjd) pat='s/^const OWC ulong 15833472$/const OWC ulong 8400/;s/^const OGC ulong 15833472$/const OGC ulong 5000/;s/^const OAC ulong 15016192$/const OAC ulong 12344/;s/^const XWB1 ulong 14161920$/const XWB1 ulong 2000/;s/^const OMUTJD ulong 1$/const OMUTJD ulong 0/' want=5 ;;
-  *) echo "usage: build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p|t|r|x|q|w|u|l|o|v|n|y|i|z|j|jd|pj|c1|pl | --variant h5|h7|r0|bx|wx]" >&2; exit 2 ;;
+  *) echo "usage: build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p|t|r|x|q|w|u|l|o|v|n|y|i|z|j|jd|pj|c1|pl|rs|ri|cc|sv|od | --variant h5|h7|r0|bx|wx]" >&2; exit 2 ;;
 esac
 if [ -n "$mut" ]; then
   [ "$kind" = --mutant ] && name=ollm-mut-$mut || name=ollm-var-$mut

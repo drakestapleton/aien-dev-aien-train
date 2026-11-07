@@ -1,0 +1,12 @@
+spark-window: window 20261107T005651Z-839f24 open, chip lock exclusive, quiet lock exclusive (waited 33 s); box state in /home/drakestapleton/yardsticks/windows/20261107T005651Z-839f24/open.json
+20261107T005651Z-839f24
+open rc 0
+speed-s1t1024 rc 0 want 0 PASS
+speed-s1t2048 rc 0 want 0 PASS
+speed-s1t4096 rc 0 want 0 PASS
+speed rc 0
+spark-window: verdict for its timings: quiet machine
+spark-window: window 20261107T005651Z-839f24 closed (closed). It holds:
+  close.json
+  open.json
+SPEED9_DONE
