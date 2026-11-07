@@ -140,7 +140,7 @@ defaults. The exit codes are listed in CONTRACT §7.
 ## Serve (DRA-119)
 
 ```sh
-ollm serve PORT CK MERGES [MAXCONN] [tplmax=N] [test=1]   # AArch64 Linux only; prints "PORT n" once listening
+ollm serve PORT CK MERGES [MAXCONN] [tplmax=N] [test=1] [par=N]   # AArch64 Linux only; prints "PORT n" once listening
 ```
 
 `serve.om` (aarch64 builds only; gb10 and the x86 targets get `noserve.om`, which exits 2) answers
@@ -352,6 +352,91 @@ would not share the prefix cache. `serve` keeps one generation slot and the FIFO
 **allen-chat system prompt** (`/opt/allen-chat/system-prompt.txt`, 14,364 bytes): 3,672 tokens in
 raw mode with `merges32k.bin` (`ollm-tok tokenc raw`); as a CHAT1 prompt with a user "hi" it is
 3,679 tokens (263 257 … 256 258 hi 256 259), which leaves 417 tokens of output in T 4096.
+
+## Serve par=N and KV bank 2: CPU serving latency for the S2 candidate (servefast)
+
+`ollm serve PORT CK MERGES ... par=N` (1 – 16, default 1 = the behaviour before) runs a CK03
+checkpoint's layer prefill and its decode head on N processes, every value bit-identical to
+`par=1`. Two changes, both in Omega (`serve.om`, `v4.om`):
+
+- **KV bank 2** (`v4.om` `xkvg2`/`xkvg`/`xkvgf`, serve only, all `par`). Measuring first showed
+  S2 (V 32768, D 384, H 6, F 1536, L 8) at T 4096 keeps only 3 of its 8 KV layers in `oa`
+  (2 T D values each); the other 5 lived in host mapping 3 and every decode position reloaded
+  their rows 0 .. t-1 with one `mapget` per value, so decode cost grew by 148.6 ms per 1,000
+  context tokens (512 to 2048, nice-19 runs; 26.1 ms after this change). Serve now keeps those layers in `ogr` (the gradient window, which
+  serve never uses: 15,833,472 values = 5 layers of 2 T D at S2), copied with plain loads. Same
+  bits (checked against the binary before the change).
+- **par=N** (`serve.om`, sections `par=N`). *Prefill*: per `svpref` call N - 1 workers are
+  forked (v4's train4 fork/waitpid pattern); chunk position s + i belongs to process i mod N;
+  per layer each process runs the first half of `xdlay` (RMS, Q K U, RoPE) for its positions,
+  publishes its K and U rows into a shared mapping (`mapnew` flags 33), one pipe barrier, imports
+  the others' rows into its own cache, then runs the second half (attention, Wo, FFN). The last
+  layer's second half is skipped (a prefill keeps only the cache). *Decode*: N - 1 logits
+  workers, forked once after the load, compute their share of the V 32768 vocabulary rows of the
+  head with `xlogit`'s kernels; z and the rows go through a shared mapping, barriers are pipes.
+  Every kept value is computed by the same kernels on the same inputs in the same order as
+  `par=1`, so the cache and the logits are bit-identical.
+- **Lifecycle**: prefill workers exist only inside one prefill (the parent `waitpid`s each);
+  logits workers live as long as the server. Every worker closes all inherited descriptors but
+  its two pipe ends (listener and client sockets stay the parent's alone) and exits at end of
+  file on its down pipe, which comes when the parent exits for any reason (normal end, SIGTERM,
+  SIGKILL, a trap). A parent whose up pipe stays silent 1 s checks its workers with
+  `waitpid WNOHANG` and exits 70 if one ended. A client that leaves during a prefill is noticed
+  after it, as before. Checked: `par_workers_idle` (exactly N - 1 children between requests) and
+  `par_workers_gone_after_sigterm`.
+- **Globals**: + 0.5 MiB (`svqr` 65,536 f64, small tables); the mappings are host memory
+  (L ch 2 D + D + V values, 1.8 MB at S2).
+
+Gates (`evidence/OMEGALLM/serve/par/RECEIPTS.md`; final binary `ollm` sha256 `ae4977d3…`, the
+measured binary `f7d25df6…` differs from it only by mutant lw's guarded branch): the CHAT1 suite
+(`serve-check.sh` with `t.ck`, `SARGS=par=N` passes the option to both servers) 43/43 at `par=1`
+and at `par=2`; the v1 suite 105/105 at `par=1` and at `par=2` (v3 checkpoints ignore `par`);
+`tests/omegallm/serve-par-life.sh` (new): a client that leaves mid-prefill (499; afterwards only
+the N - 1 logits workers remain and `/health` answers) and SIGTERM mid-prefill (no worker left
+2 s later), negative control mutant `lw` (a logits worker ignores the end of file: fails the
+SIGTERM step); `tests/omegallm/serve-par-check.sh` (new): per request three answers
+must agree in every bit, the par=N server's, the same server's with `ollm_test_serial`
+(position-by-position decode) and the par=1 server's: `logits_fnv` (first step), the new
+`logits_fnv_all` (every step's logits FNV, folded; `test=1`) and the greedy message; a cold
+turn, a warm second turn that prefills inside the reused cache, and the second turn cold. PASS
+at S2 (`ck/s2.ck`, T 4096, KV bank 2 in use) against the same binary at par=1 and against the
+binary before this work (`353dde35…`), and at S1 (`wide4/ck/s1.ck`, D 512, R1 27,660, so
+`svpemb` reads wte bank 2: the par prefill equals the serial decode there). Negative controls,
+each must fail and does: mutant `pp` (each prefill worker skips stage B of its last position,
+S1: 3 checks fail), mutant `pq` (each logits worker skips its last row, S1: 3 fail), mutant `kg`
+(KV bank 2 loads one row fewer, S2 against the old binary: 3 fail; the greedy text did not change,
+the logits FNVs did).
+
+### Measurements (MEASURED, spark-b87b, 2026-11-07, S2 `s2.ck` untrained: speed only)
+
+Driver `tests/omegallm/serve-bench.sh` (server log ms; cold prefill by `ollm_test_cold`; decode
+= (17-token warm request - 1-token warm request) / 16; `TURN=2500`: one cold 2,500-token prompt
+plus 60 generated tokens, the harness turn). Ratios and fits by Wolfram (MEASURED.md). The host
+was shared with other lanes (load average 11 – 13), and run-to-run variation was large (the same
+binary's 512-token prefill ranged 18.6 – 38.8 s); every run is in the receipts. Most comparable
+pair of rows: the server at nice 19 (driver and script both niced, as the earlier bench), one
+run each; and the server at nice 10 (`NICE=0` with the driver under nice 10), where `before`
+and `par=1` ran at the same time on cores 4 and 6.
+
+| S2, T 4096 | before (353dde35), core 4 | par=1 (KV bank 2), 1 core | par=2, cores 4,6 |
+|---|---|---|---|
+| prefill 512 / 2048 / 3072 tok/s (nice 19) | 27.6 / 18.9 / 8.78 | 28.2 / 19.3 / 16.3 | 39.9 / 27.7 / 23.7 |
+| decode ms/token at 512 / 2048 / 3072 (nice 19) | 127.5 / 355.7 / 612.9 | 62.8 / 102.9 / 129.1 | 74.1 / 140.5 / 140.8 |
+| harness turn, 2,500 cold + 60 tokens (nice 19) | **356.2 s** | 151.6 s | 85.9 s |
+| prefill 512 / 2048 / 3072 tok/s (nice 10) | 13.2 / 12.1 / 11.3 | 28.3 / 19.6 / 24.7 | **74.6 / 55.6 / 48.0** |
+| decode ms/token at 512 / 2048 / 3072 (nice 10) | 192.1 / 358.6 / 564.4 | 65.9 / 109.9 / 69.5 | **36.8 / 54.9 / 82.8** |
+| harness turn (nice 10) | **341.7 s** | 93.2 s | **51.6 s** |
+| peak RSS (VmHWM, nice 10 runs) | 1,009,904 kB | 1,009,996 kB | parent 1,011,796 kB (PSS 591,072) + logits worker 841,692 kB (PSS 420,968) |
+
+The harness turn fits well inside 300 s at par=2 (51.6 s measured) and at par=1 with KV bank 2;
+before this work it measured 356.2 s (nice 19) and 341.7 s (nice 10), over the 300 s budget
+(Wolfram: 356.161 / 51.647 = 6.90x; 341.687 / 51.647 = 6.62x). Two processes on cores 4,6 gave 1.41 – 1.45x over par=1 on
+prefill at nice 19 and 1.94 – 2.84x at nice 10 (above 2x because that par=1 run shared the host
+with the before-binary on the other core, so treat it as noise, not superlinear scaling): at nice 19 the scheduler often stacked the parent and the
+worker on one core (observed with `ps -o psr`; Omega has no affinity host word), so run par=N
+servers at nice 10, not 19. Not done: splitting the decode layers (Q K U, Wo, FFN rows and the
+attention heads) over the workers, which needs a barrier per matvec and the KV cache in every
+worker; at par=2 a decode token costs 37 – 83 ms, 60 tokens a few seconds of the turn.
 
 ## iMac
 

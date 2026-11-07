@@ -1,0 +1,13 @@
+B env date=2026-11-07T04:22:15Z host=spark-b87b cores=4 ollm=353dde359d1b0c6aad86fee31d86ab006a288709d9a4e806561cb79338ba9fab ck=s2.ck ck_bytes=641885312
+B startup_ms 6987 rss_kb_after_start 841640
+B prefill target=512 bytes=2026 http=200 32.214328 log=[C 200 512 1 2 32213 0 512 0]
+B decode_w1 target=512 http=200 0.154114 log=[C 200 512 1 2 153 511 1 0]
+B decode_wd target=512 http=200 2.787146 log=[C 200 512 17 2 2786 511 1 0]
+B prefill target=2048 bytes=8220 http=200 173.125836 log=[C 200 2048 1 2 173126 0 2048 0]
+B decode_w1 target=2048 http=200 0.408168 log=[C 200 2048 1 2 407 2047 1 0]
+B decode_wd target=2048 http=200 6.765838 log=[C 200 2048 17 2 6765 2047 1 0]
+B prefill target=3072 bytes=11995 http=200 312.279731 log=[C 200 3072 1 2 312282 0 3072 0]
+B decode_w1 target=3072 http=200 0.607974 log=[C 200 3072 1 2 607 3071 1 0]
+B decode_wd target=3072 http=200 10.862663 log=[C 200 3072 17 2 10861 3071 1 0]
+B peak_rss_kb 1009968
+B done

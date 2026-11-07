@@ -1,0 +1,46 @@
+PASS c1_health_idle 200 b'{"status":"ok","in_flight":0,"queued":0,"capacity":32,"busy":false}'
+PASS c1_models 200
+PASS c1_chat_json_t0 200 usage={'prompt_tokens': 8, 'completion_tokens': 12, 'total_tokens': 20} prompt_ref=8 content=',,,,,,,,,,,,' oracle=',,,,,,,,,,,,'
+PASS c1_chat_sse_t0 text=',,,,,,,,,,,,' fin=length
+PASS c1_chat_json_t800 200 usage={'prompt_tokens': 8, 'completion_tokens': 12, 'total_tokens': 20} prompt_ref=8 content='184 ymissibleREP?_;\\q25bbedpath attractive necessary forthcoming' oracle='184 ymissibleREP?_;\\q25bbedpath attractive necessary forthcoming'
+PASS c1_chat_sse_t800 text='184 ymissibleREP?_;\\q25bbedpath attractive necessary forthcoming' fin=length
+PASS c1_serve_eq_chatenc chatenc rc=0 b'H 5 301 44\n' serve=306 chatenc=301
+PASS c1_chatenc_eq_reference chatenc=301 reference=301
+PASS c1_mask_eq_reference masked=44 ref=44
+PASS c1_chatenc_line b'H 5 301 44\n'
+PASS c1_injection_raw specials=[263, 258, 256, 259]
+PASS c1_chatenc_refuse_line rc=22 b'F 2 26\n'
+PASS c1_refuse_role 400 invalid_request 'message role must be system, developer, user, assistant or tool (CHAT1 template)'
+PASS c1_context_exceeded 400 context_length_exceeded 'prompt is 1094 tokens including the start token; the context window is 512 tokens, so no room is left for output' ref=1094
+PASS c1_max_tokens_clamped 200 {'prompt_tokens': 344, 'completion_tokens': 168, 'total_tokens': 512} T=512 ref_prompt=344
+PASS c1_tool_call_json b'{"id":"chatcmpl-ollm-7","object":"chat.completion","created":1794030229,"model":"ollm","choices":[{"index":0,"message":{"role":"assistant","content":"Sure.","tool_calls":[{"id":"call_7_0","type":"function","function":{"name":"get_weather","arguments":"{\\"city\\": \\"Paris\\"}"}}]},"finish_reason":"tool'
+PASS c1_tool_call_sse text='Sure.' fin=tool_calls calls=[{'index': 0, 'id': 'call_8_0', 'type': 'function', 'function': {'name': 'get_weather', 'arguments': '{"city": "Paris"}'}}]
+PASS c1_tool_calls_two b'{"id":"chatcmpl-ollm-9","object":"chat.completion","created":1794030229,"model":"ollm","choices":[{"index":0,"message":{"role":"assistant","content":null,"tool_calls":[{"id":"call_9_0","type":"function","function":{"name":"get_weather","arguments":"{\\"city\\":\\"Rome\\"}"}},{"id":"call_9_1","type":"function","function":{"name":"get_time","arguments":"{}"}}]},"finish_reason":"tool_calls"}],"usage":{"p'
+PASS c1_ctl_undeclared_json b'{"id":"chatcmpl-ollm-10","object":"chat.completion","created":1794030229,"model":"ollm","choices":[{"index":0,"message":{"role":"assistant","content":"Sure.\\n<|tool_call|>{\\"name\\": \\"launch\\", \\"arguments\\": {\\"city\\": \\"Paris\\"}}\\n"},"finish_reason":"stop"}],"usage":{"prompt_tokens":79,"completion'
+PASS c1_ctl_undeclared_sse text='Sure.\n<|tool_call|>{"name": "launch", "arguments": {"city": "Paris"}}\n' fin=stop
+PASS c1_ctl_bad_json_json b'{"id":"chatcmpl-ollm-12","object":"chat.completion","created":1794030229,"model":"ollm","choices":[{"index":0,"message":{"role":"assistant","content":"Sure.\\n<|tool_call|>{\\"name\\": \\"get_weather\\", \\"arguments\\": {\\"city\\": \\"Paris\\"}\\n"},"finish_reason":"stop"}],"usage":{"prompt_tokens":79,"comple'
+PASS c1_ctl_bad_json_sse text='Sure.\n<|tool_call|>{"name": "get_weather", "arguments": {"city": "Paris"}\n' fin=stop
+PASS c1_ctl_trailing_text_json b'{"id":"chatcmpl-ollm-14","object":"chat.completion","created":1794030229,"model":"ollm","choices":[{"index":0,"message":{"role":"assistant","content":"Sure.\\n<|tool_call|>{\\"name\\": \\"get_weather\\", \\"arguments\\": {\\"city\\": \\"Paris\\"}}\\nand more"},"finish_reason":"stop"}],"usage":{"prompt_tokens":7'
+PASS c1_ctl_trailing_text_sse text='Sure.\n<|tool_call|>{"name": "get_weather", "arguments": {"city": "Paris"}}\nand more' fin=stop
+PASS c1_ctl_tool_choice_none_json b'{"id":"chatcmpl-ollm-16","object":"chat.completion","created":1794030229,"model":"ollm","choices":[{"index":0,"message":{"role":"assistant","content":"Sure.\\n<|tool_call|>{\\"name\\": \\"get_weather\\", \\"arguments\\": {\\"city\\": \\"Paris\\"}}\\n"},"finish_reason":"stop"}],"usage":{"prompt_tokens":79,"compl'
+PASS c1_ctl_tool_choice_none_sse text='Sure.\n<|tool_call|>{"name": "get_weather", "arguments": {"city": "Paris"}}\n' fin=stop
+PASS c1_ctl_no_tools_json b'{"id":"chatcmpl-ollm-18","object":"chat.completion","created":1794030229,"model":"ollm","choices":[{"index":0,"message":{"role":"assistant","content":"Sure.\\n<|tool_call|>{\\"name\\": \\"get_weather\\", \\"arguments\\": {\\"city\\": \\"Paris\\"}}\\n"},"finish_reason":"stop"}],"usage":{"prompt_tokens":9,"comple'
+PASS c1_ctl_no_tools_sse text='Sure.\n<|tool_call|>{"name": "get_weather", "arguments": {"city": "Paris"}}\n' fin=stop
+PASS c1_end_token_stops b'{"id":"chatcmpl-ollm-20","object":"chat.completion","created":1794030229,"model":"ollm","choices":[{"index":0,"message":{"role":"assistant","content":"Done."},"finish_reason":"stop"}],"usage":{"prompt'
+PASS c1_reuse_two_turn turn1=21 {'reused': 21, 'prefilled': 13}
+PASS c1_reuse_bitexact warm=14305952939368504775 cold=14305952939368504775
+PASS c1_prefill_layer_bitexact layer-major=14305952939368504775 serial=14305952939368504775
+PASS c1_reuse_diverge_bitexact lcp=17 reused=17 warm=13941588872906439644 cold=13941588872906439644
+PASS c1_reuse_logged [['C', '200', '34', '3', '2', '11', '21', '13', '0'], ['C', '200', '34', '3', '2', '13', '0', '34', '0'], ['C', '200', '34', '3', '2', '13', '0', '34', '0'], ['C', '200', '34', '3', '2', '9', '33', '1', '0'], ['C', '200', '34', '3', '2', '12', '17', '17', '0'], ['C', '200', '34', '3', '2', '12', '0', '34', '0']]
+PASS t_queue_health {'status': 'ok', 'in_flight': 1, 'queued': 3, 'capacity': 32, 'busy': True}
+PASS t_queue_fifo order=['q-one', 'q-two', 'q-three'] {'q-one': (797845.951344634, 200, 'q-one'), 'q-two': (797845.951431979, 200, 'q-two'), 'q-three': (797845.951517052, 200, 'q-three')}
+PASS t_queue_after_stream stream_ok=True stream_end=797845.951142056 {'q-one': (797845.951344634, 200, 'q-one'), 'q-two': (797845.951431979, 200, 'q-two'), 'q-three': (797845.951517052, 200, 'q-three')}
+PASS t_queue_full_503 {'status': 'ok', 'in_flight': 1, 'queued': 32, 'capacity': 32, 'busy': True} 503 queue_full ra='1' 'the request queue is full (32 waiting chat completions): retry after 1 s'
+PASS t_queue_full_all_served served=32 bad=[]
+PASS t_queue_drained 
+PASS t_queue_disconnect_frees before={'status': 'ok', 'in_flight': 1, 'queued': 1, 'capacity': 32, 'busy': True} after={'status': 'ok', 'in_flight': 1, 'queued': 0, 'capacity': 32, 'busy': True}
+PASS t_queue_disconnect_logged [['C', '499', '0', '0', '4', '1101', '0', '0', '1101']]
+PASS t_queue_stays_control 200 b'{"id":"chatcmpl-ollm-67","object":"chat.completion","created":1794030268,"model":"ollm","choices":[{"index":0,"message":{"role":"assistant","content":"stays"},"'
+SUMMARY pass=43 fail=0
+bind_loopback_only 1 LISTEN 0      16     127.0.0.1:18293 0.0.0.0:* users:(("ollm",pid=13410,fd=3)) LISTEN 0      16     127.0.0.1:18295 0.0.0.0:* users:(("ollm",pid=13596,fd=3)) 
+SERVE_CHECK PASS

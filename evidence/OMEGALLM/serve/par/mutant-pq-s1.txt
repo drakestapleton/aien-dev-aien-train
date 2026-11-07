@@ -1,0 +1,8 @@
+env date=2026-11-07T04:42:49Z host=spark-b87b ollm=436666b90986e47b12b32a1d25ff31d1dd39487276b1d4a63905eefbf2e0332a ck=8a8e13a16b0a70d64f720f4145c7d424d3f69fc2b2f325670203c7ba5bbed00d par=2 len=500 gen=16
+P par_cold_turn1 fail fnv=6405872648150970719/6405872648150970719/7391251385579148044 all=3172127127544047902/3172127127544047902/3299954739019886566 prompt_tokens=139 reused=0 prefilled=139 msg=["message":{"role":"assistant","content":",,,,,,,,,,,,,,,,"}] serial=["message":{"role":"assistant","content":",,,,,,,,,,,,,,,,"}] one=["message":{"role":"assistant","content":",,,,,,,,,,,,,,,,"}]
+P par_warm_turn2 fail fnv=8457515297051198030/8457515297051198030/5591071491514569175 all=13133839717997742243/13133839717997742243/3678541625672156282 prompt_tokens=189 reused=139 prefilled=50 msg=["message":{"role":"assistant","content":",,,,,,,,,,,,,,,,"}] serial=["message":{"role":"assistant","content":",,,,,,,,,,,,,,,,"}] one=["message":{"role":"assistant","content":",,,,,,,,,,,,,,,,"}]
+P par_warm_reused pass reused=139 prefilled=50
+P par_cold_turn2 fail fnv=8457515297051198030/8457515297051198030/5591071491514569175 all=13133839717997742243/13133839717997742243/3678541625672156282 prompt_tokens=189 reused=0 prefilled=189 msg=["message":{"role":"assistant","content":",,,,,,,,,,,,,,,,"}] serial=["message":{"role":"assistant","content":",,,,,,,,,,,,,,,,"}] one=["message":{"role":"assistant","content":",,,,,,,,,,,,,,,,"}]
+P par_workers_idle pass children=1 [2591654 ]
+P par_workers_gone_after_sigterm pass workers=[2591654 ]
+PAR_CHECK FAIL fails=3

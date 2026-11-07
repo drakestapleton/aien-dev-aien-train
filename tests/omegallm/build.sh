@@ -88,7 +88,7 @@ OUT=${OUT:-$here/../build}
 CORE=${CORE:-6}
 mut= kind=
 if [ $# -ge 1 ]; then
-  { [ "$1" = --mutant ] || [ "$1" = --variant ]; } && [ $# -eq 2 ] || { echo "usage: build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p|t|r|x|q|w|u|l|o|v|n|y|i|z|j|jd|pj|c1|pl|pp|pq|kg|rs|ri|cc|sv|od | --variant h5|h7|r0|bx|wx]" >&2; exit 2; }
+  { [ "$1" = --mutant ] || [ "$1" = --variant ]; } && [ $# -eq 2 ] || { echo "usage: build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p|t|r|x|q|w|u|l|o|v|n|y|i|z|j|jd|pj|c1|pl|pp|pq|kg|lw|rs|ri|cc|sv|od | --variant h5|h7|r0|bx|wx]" >&2; exit 2; }
   kind=$1 mut=$2
 fi
 got=$(sha256sum "$OMC" | cut -d' ' -f1)
@@ -158,6 +158,7 @@ case "$kind$mut" in
   --mutantpp) pat='s/^const OMUTPP ulong 1$/const OMUTPP ulong 0/' want=1 ;;
   --mutantpq) pat='s/^const OMUTPQ ulong 1$/const OMUTPQ ulong 0/' want=1 ;;
   --mutantkg) pat='s/^const OMUTKG ulong 1$/const OMUTKG ulong 0/' want=1 ;;
+  --mutantlw) pat='s/^const OMUTLW ulong 1$/const OMUTLW ulong 0/' want=1 ;;
   --mutantrs) pat='s/^const OMUTRS ulong 1$/const OMUTRS ulong 0/' want=1 ;;
   --mutantri) pat='s/^const OMUTRI ulong 1$/const OMUTRI ulong 0/' want=1 ;;
   --mutantcc) pat='s/^const OMUTCC ulong 1$/const OMUTCC ulong 0/' want=1 ;;
@@ -170,7 +171,7 @@ case "$kind$mut" in
   --variantwx) pat='s/^const OWC ulong 15833472$/const OWC ulong 8400/;s/^const OGC ulong 15833472$/const OGC ulong 5000/;s/^const OAC ulong 15016192$/const OAC ulong 12344/;s/^const XWB1 ulong 14161920$/const XWB1 ulong 2000/' want=4 ;;
   --mutantj) pat='s/^const OWC ulong 15833472$/const OWC ulong 8400/;s/^const OGC ulong 15833472$/const OGC ulong 5000/;s/^const OAC ulong 15016192$/const OAC ulong 12344/;s/^const XWB1 ulong 14161920$/const XWB1 ulong 2000/;s/^const OMUTJ ulong 1$/const OMUTJ ulong 0/' want=5 ;;
   --mutantjd) pat='s/^const OWC ulong 15833472$/const OWC ulong 8400/;s/^const OGC ulong 15833472$/const OGC ulong 5000/;s/^const OAC ulong 15016192$/const OAC ulong 12344/;s/^const XWB1 ulong 14161920$/const XWB1 ulong 2000/;s/^const OMUTJD ulong 1$/const OMUTJD ulong 0/' want=5 ;;
-  *) echo "usage: build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p|t|r|x|q|w|u|l|o|v|n|y|i|z|j|jd|pj|c1|pl|pp|pq|kg|rs|ri|cc|sv|od | --variant h5|h7|r0|bx|wx]" >&2; exit 2 ;;
+  *) echo "usage: build.sh [--mutant a|b|c|d|e|g|h|m|f|k|s|p|t|r|x|q|w|u|l|o|v|n|y|i|z|j|jd|pj|c1|pl|pp|pq|kg|lw|rs|ri|cc|sv|od | --variant h5|h7|r0|bx|wx]" >&2; exit 2 ;;
 esac
 if [ -n "$mut" ]; then
   [ "$kind" = --mutant ] && name=ollm-mut-$mut || name=ollm-var-$mut

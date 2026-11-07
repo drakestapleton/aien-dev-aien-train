@@ -1,0 +1,97 @@
+global big f64 16777216
+global b2 f64 16777216
+global b3 f64 16777216
+global b4 f64 16777216
+global b5 f64 16777216
+global b6 f64 16777216
+global st uchar 8
+global pb uchar 8
+global nb uchar 32
+global hh long 2
+fn pr x ulong to void
+i = ulong 31
+put nb i 10
+while true bound 30
+i = sub i 1
+put nb i uchar add 48 rem x 10
+x = div x 10
+if eq x 0
+break
+end
+end
+k = write 1 nb i sub 32 i
+end
+fn fill to void
+for i ulong 16777216
+put big i f64 i
+put b2 i f64 i
+put b3 i f64 i
+put b4 i f64 i
+put b5 i f64 i
+put b6 i f64 i
+end
+end
+fn tmap to void
+h = mapnew int -1 0 80000000 3 33
+t0 = monons
+for i ulong 10000000
+x = mapset h mul i 8 8 i
+end
+t1 = monons
+s = ulong 0
+for j ulong 10000000
+s = add s mapget h mul j 8 8
+end
+t2 = monons
+pr ulong sub t1 t0
+pr ulong sub t2 t1
+pr s
+end
+fn tfork to void
+t3 = monons
+for r ulong 10
+pid = fork
+if eq pid 0
+exit 0
+end
+x = waitpid int pid st 0 4 0
+end
+t4 = monons
+pr ulong div sub t4 t3 10
+end
+fn fd0 to int
+ret int or ulong get pb 0 shl ulong get pb 1 8
+end
+fn fd1 to int
+ret int or ulong get pb 4 shl ulong get pb 5 8
+end
+fn tpipe to void
+x = pipefds pb 0 8 0
+a = fd0
+b = fd1
+t5 = monons
+for r ulong 100000
+y = write b st 0 1
+y = read a st 0 1
+end
+t6 = monons
+pr ulong div sub t6 t5 100000
+end
+fn tglob to void
+s = ulong 0
+t7 = monons
+for i ulong 10000000
+s = add s bitcast ulong get big i
+end
+t8 = monons
+pr ulong sub t8 t7
+pr s
+end
+fn main to int
+fill
+tmap
+tfork
+tpipe
+tglob
+ret 0
+end
