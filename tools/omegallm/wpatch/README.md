@@ -66,10 +66,12 @@ SHA to match. All checkpoint-writing commands refresh the payload FNV.
 
 `bind` first verifies the applied checkpoint, then binds checkpoint SHA, f32
 weight SHA, runtime executable SHA and manifest SHA in a checksummed record.
-`checkbind` checks that record and the checkpoint/runtime identities. It does not
-load a model or invalidate an existing runtime cache. A serving caller must run
-checkbind, discard cached weights and KV state, and load the exact bound files
-before claiming a repaired run. Merely creating a binding is not deployment.
+`checkbind` checks that record and the checkpoint/runtime identities. It takes no
+manifest argument, never rereads the manifest, and cannot detect a replaced
+manifest. It also does not load a model or invalidate an existing runtime cache.
+A serving caller must retain the intended manifest identity, run checkbind,
+discard cached weights and KV state, and load the exact bound files before
+claiming a repaired run. Merely creating a binding is not deployment.
 
 No output is overwritten, including a symlink or an output equal to BASE. Patches
 and bindings are created read-only. Checkpoints are mode 0600. Inputs are mapped
@@ -93,14 +95,28 @@ taskset -c 0 nice -n 19 python3 tools/omegallm/wpatch/check.py \
 The instrument trains an own-model small checkpoint, checks all commands and all
 optimizer policies, independently parses and hashes manifests/checkpoints,
 checks f32 cast boundaries, and exercises corruptions with exact refusal codes.
-It prints JSONL including each command, exit code and elapsed nanoseconds.
+It builds expected output bytes directly from BASE and the requested edits,
+including optimizer resets, without taking expected values from a manifest.
+A fully rehashed manifest for a different finite value passes product verify but
+fails this independent byte oracle. That intentional FAIL is marked as a
+negative control; the overall acceptance must PASS. JSONL records each command,
+exit code and elapsed nanoseconds.
 
 For the pinned round40 fixture, add `--real PATH_TO_ROUND40/model.ck` and use a
 separate work directory. It changes ten layer-3 w2 entries in a copy, performs
-diff/validate/apply/verify/revert, and independently checks restored SHA and f32
-output SHA. It never writes into the source model directory. For lane wsp, first
-check the pool-19 lock; use its authorized flock/core-19 wrapper if free, otherwise
-core 0 at nice 19. Do not run on reserved cores 3, 7 or 15.
+diff/validate/apply/verify/revert, compares every output byte against the
+independently built expectation, and checks restored SHA and expected f32 SHA.
+It never writes into the source model directory. For the wsp review rerun, queue
+behind other authorized core-19 work:
+
+```sh
+flock -w 3600 -o "$HOME/handoffs/hive/queen/pool-19.lock" \
+  taskset -c 19 nice -n 10 python3 tools/omegallm/wpatch/check.py \
+  --build "$HOME/work/wsp/wpatch-build" --work "$HOME/work/wsp/ck/wpatch-real-new" \
+  --real "$HOME/.local/share/omega-tool-model/round40/model.ck"
+```
+
+Do not run on reserved cores 3, 7 or 15.
 
 Evidence: `evidence/OMEGALLM/wsp-patch-20261107/`. Host CPU execution is not GPU
 qualification, a model-quality result, a merge, or a deployment.

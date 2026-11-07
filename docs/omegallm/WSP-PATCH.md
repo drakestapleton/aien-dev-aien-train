@@ -116,8 +116,11 @@ The 168-byte binding record contains ASCII `OLLMWB01` at offset 0; complete
 checkpoint SHA at 8; f32 weight SHA at 40; runtime executable SHA at 72; manifest
 SHA at 104; SHA of the preceding 136 bytes at 136. Bind verifies PATCH against CK
 before creating the record. Checkbind validates record magic/length/checksum and
-CK/runtime identities. It does not take a patch path and does not prove that the
-record's patch is trusted. Preserve the canonical manifest alongside the binding.
+CK/runtime identities. It takes no manifest argument and never rereads a manifest,
+so it cannot detect a replaced manifest. The stored manifest digest identifies
+what bind checked earlier, not what a manifest path contains now. Checkbind also
+does not prove that the recorded patch is trusted. Preserve the canonical
+manifest alongside the binding and check its intended identity separately.
 
 A consumer must fail closed on checkbind failure, discard previously loaded
 weight and KV caches, and load the bound checkpoint with the bound executable.

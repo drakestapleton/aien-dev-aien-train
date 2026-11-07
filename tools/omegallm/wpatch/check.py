@@ -77,6 +77,38 @@ def reseal(b):
     return b
 
 
+def requested_output(base, output, edits, policy):
+    """Build expected bytes from BASE and caller intent, never from a manifest."""
+    shutil.copyfile(base, output)
+    with output.open('r+b') as f:
+        with mmap.mmap(f.fileno(), 0) as mm:
+            pp = u(mm, 96)
+            for ix, bits in edits.items():
+                put(mm, 120+8*ix, bits)
+                if policy:
+                    put(mm, 120+8*(pp+ix), 0)
+                if policy == 2:
+                    put(mm, 120+8*(2*pp+ix), 0)
+            put(mm, 112, fnv(memoryview(mm)[120:]))
+            mm.flush()
+
+
+def compare_requested(expected, actual, negative_control=False):
+    """Compare every byte, including header and unchanged optimizer words."""
+    equal = True
+    with expected.open('rb') as ef, actual.open('rb') as af:
+        while True:
+            eb, ab = ef.read(1048576), af.read(1048576)
+            if eb != ab:
+                equal = False
+            if not eb and not ab:
+                break
+    record(oracle='independent requested checkpoint bytes',
+           status='PASS' if equal else 'FAIL', negative_control=negative_control,
+           expected=str(expected), actual=str(actual))
+    return equal
+
+
 def f32bits(bits):
     x = F.unpack(U.pack(bits))[0]
     try:
@@ -201,6 +233,7 @@ def small(build, work):
     reseal(edited)
     ep = work/'edited.ck'
     ep.write_bytes(edited)
+    requested = {ix:u(edited,120+8*ix) for ix in indices+[1]}
     params = '{"delta":0.001,"name":"Ω patch"}\n'
     reason = 'Own-model fixture. Preserve exact rollback.\n'
     pf, rf = work/'params.txt',work/'rationale.txt'
@@ -217,12 +250,16 @@ def small(build, work):
         path = Path(run(wp,'diff',basep,ep,policy,pf,rf,od).strip())
         patches.append(path)
         expected = oracle(path,base,edited,params,reason)
+        requested_path = work/f'expected-{policy}.ck'
+        requested_output(basep,requested_path,requested,policy)
+        need(requested_path.read_bytes() == expected, 'manifest oracle agrees with independent request')
         shown = json.loads(run(wp,'show',path))
         need(shown['params'] == params and shown['rationale'] == reason, 'show UTF8 provenance')
         run(wp,'validate',path,basep)
         out, rev = work/f'applied-{policy}.ck',work/f'reverted-{policy}.ck'
         run(wp,'apply',path,basep,out)
         need(out.read_bytes() == expected, 'apply exact oracle bytes')
+        need(compare_requested(requested_path,out), 'apply equals independent requested bytes')
         report = run(wp,'verify',path,out)
         ent = manifest(path)[2]
         survivors = sum(f32bits(e[1]) != f32bits(e[2]) for e in ent)
@@ -257,6 +294,54 @@ def small(build, work):
         run(wp,'revert',path,out,basep,expect=52)
         run(wp,'diff',basep,ep,policy,pf,rf,od,expect=52)
     need(basep.read_bytes() == base, 'BASE never written')
+    # A fully rehashed, valid manifest for a different finite value must pass
+    # product verify but FAIL the same independent byte oracle used by real().
+    mutant_request = dict(requested)
+    mutant_request[0] = U.unpack(F.pack(0.25))[0]
+    mutant_out = work/'oracle-mutant.ck'
+    requested_output(basep,mutant_out,mutant_request,2)
+    mutant_bytes = mutant_out.read_bytes()
+    mutant = bytearray(patches[2].read_bytes())
+    meo = 376+128*u(mutant,24)
+    put(mutant,meo+16,mutant_request[0])
+    mutant[128:160] = sha(mutant_bytes)
+    mutant[160:192] = f32hash(mutant_bytes)
+    mutant[192:224] = sha(mutant[meo:meo+40*u(mutant,32)])
+    for i,(_,_,_,_,off,nn) in enumerate(ts):
+        to = 376+128*i
+        mutant[to+96:to+128] = sha(mutant_bytes[120+8*off:120+8*(off+nn)])
+    mutant_path = work/(sha(mutant).hex()+'.wp')
+    mutant_path.write_bytes(mutant)
+    run(wp,'verify',mutant_path,mutant_out)
+    need(not compare_requested(work/'expected-2.ck',mutant_out,negative_control=True),
+         'independent oracle rejects rehashed finite-value mutant accepted by verify')
+
+    # Admission, not just diff creation, enforces each metadata field's limit.
+    original = patches[2].read_bytes()
+    end = meo+40*u(original,32)
+    pn = u(original,224)
+    for field, offset in [('params',224),('rationale',232)]:
+        params_bytes = original[end:end+pn]
+        rationale_bytes = original[end+pn:]
+        if field == 'params':
+            params_bytes = b'a'*16777217
+        else:
+            rationale_bytes = b'a'*16777217
+        oversized = bytearray(original[:end]+params_bytes+rationale_bytes)
+        put(oversized,offset,16777217)
+        put(oversized,8,len(oversized))
+        overpath = work/('oversized-'+field+'.wp')
+        overpath.write_bytes(oversized)
+        run(wp,'validate',overpath,basep,expect=57)
+        run(wp,'show',overpath,expect=57)
+        rejected_out = work/('oversized-'+field+'.ck')
+        run(wp,'apply',overpath,basep,rejected_out,expect=57)
+        need(not rejected_out.exists(), 'oversized metadata creates no output')
+    invalid_utf8 = bytearray(original)
+    invalid_utf8[-1] = 255
+    invalid_path = work/'invalid-utf8.wp'
+    invalid_path.write_bytes(invalid_utf8)
+    run(wp,'validate',invalid_path,basep,expect=31)
     path = patches[1]
     mb = path.read_bytes()
     eo, es = 376+128*u(mb,24), 40
@@ -347,6 +432,7 @@ def real(build, work, source):
     need(file_sha(source).hex() == BASE_SHA, 'real base pinned SHA')
     edited = work/'round40-edited.ck'
     shutil.copyfile(source, edited)
+    requested = {}
     with edited.open('r+b') as f:
         with mmap.mmap(f.fileno(),0) as mm:
             hd = struct.unpack_from('<15Q',mm)
@@ -356,8 +442,11 @@ def real(build, work, source):
             for i in range(10):
                 o = 120+8*(off+i)
                 F.pack_into(mm,o,F.unpack_from(mm,o)[0]+0.001)
+                requested[off+i] = u(mm,o)
             put(mm,112,fnv(memoryview(mm)[120:]))
             mm.flush()
+    expected = work/'round40-expected.ck'
+    requested_output(source,expected,requested,2)
     pf,rf = work/'params.txt',work/'rationale.txt'
     pf.write_text('{"kind":"w2","layer":3,"entries":10,"delta":0.001}\n')
     rf.write_text('Read-only round40 baseline. Checked patch integration fixture, not a quality claim.\n')
@@ -369,15 +458,22 @@ def real(build, work, source):
     run(wp,'validate',patch,source)
     out,rev = work/'round40-applied.ck',work/'round40-reverted.ck'
     run(wp,'apply',patch,source,out)
+    need(compare_requested(expected,out), 'real apply equals independently requested bytes')
     run(wp,'verify',patch,out)
     run(wp,'revert',patch,out,rev)
     text = run('sha256sum',source,rev,out)
     need(file_sha(rev).hex() == BASE_SHA, 'real byte-identical revert SHA')
     need(file_sha(source).hex() == BASE_SHA, 'real base unchanged')
-    need(file_sha(out) == mb[128:160], 'real output SHA oracle')
+    expected_sha = file_sha(expected)
+    need(file_sha(out) == expected_sha, 'real output SHA matches independent expected bytes')
+    need(mb[128:160] == expected_sha, 'real manifest output SHA matches independent expected bytes')
+    with expected.open('rb') as f:
+        with mmap.mmap(f.fileno(),0,access=mmap.ACCESS_READ) as mm:
+            expected_f32 = f32hash(mm)
     with out.open('rb') as f:
         with mmap.mmap(f.fileno(),0,access=mmap.ACCESS_READ) as mm:
-            need(f32hash(mm) == mb[160:192], 'real f32 SHA oracle')
+            need(f32hash(mm) == expected_f32, 'real f32 SHA matches independent expected bytes')
+    need(mb[160:192] == expected_f32, 'real manifest f32 SHA matches independent expected bytes')
     record(real_patch=str(patch), real_hashes=text)
 
 

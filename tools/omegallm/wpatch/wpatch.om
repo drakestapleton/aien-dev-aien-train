@@ -637,6 +637,9 @@ end
 if gt wpget 0 24 131
 exit 36
 end
+if or gt wpget 0 224 16777216 gt wpget 0 232 16777216
+exit 57
+end
 put wpes 0 24
 if ne get wpol 0 0
 put wpes 0 40

@@ -1,0 +1,73 @@
+[
+  {
+    "command": [
+      "/home/drakestapleton/work/wsp/wpatch-build/wpatch",
+      "validate",
+      "/tmp/wpatch-review-kvpuocsc/oversized-params.wp",
+      "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck"
+    ],
+    "exit": 0,
+    "stdout": "PASS\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "/home/drakestapleton/work/wsp/wpatch-build/wpatch",
+      "diff",
+      "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck",
+      "/tmp/wpatch-review-kvpuocsc/mutated.ck",
+      "2",
+      "/home/drakestapleton/work/wsp/ck/wpatch-small-2/params.txt",
+      "/home/drakestapleton/work/wsp/ck/wpatch-small-2/rationale.txt",
+      "/tmp/wpatch-review-kvpuocsc/patches"
+    ],
+    "exit": 0,
+    "stdout": "/tmp/wpatch-review-kvpuocsc/patches/1ad4db1bbd875453c2d00bfdadf045af0639fe215d7f16ef23084c3001fe261a.wp\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "/home/drakestapleton/work/wsp/wpatch-build/wpatch",
+      "apply",
+      "/tmp/wpatch-review-kvpuocsc/patches/1ad4db1bbd875453c2d00bfdadf045af0639fe215d7f16ef23084c3001fe261a.wp",
+      "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck",
+      "/tmp/wpatch-review-kvpuocsc/mutant-applied.ck"
+    ],
+    "exit": 0,
+    "stdout": "PASS\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "/home/drakestapleton/work/wsp/wpatch-build/wpatch",
+      "verify",
+      "/tmp/wpatch-review-kvpuocsc/patches/1ad4db1bbd875453c2d00bfdadf045af0639fe215d7f16ef23084c3001fe261a.wp",
+      "/tmp/wpatch-review-kvpuocsc/mutant-applied.ck"
+    ],
+    "exit": 0,
+    "stdout": "PASS f32_surviving=19 changed=20\n",
+    "stderr": ""
+  },
+  {
+    "check": "old real oracle accepts self-consistent wrong requested values",
+    "self_consistent": true,
+    "wrong_requested_output": true,
+    "verify_exit": 0
+  },
+  {
+    "command": [
+      "/home/drakestapleton/work/wsp/wpatch-build/wpatch",
+      "validate",
+      "/tmp/wpatch-review-kvpuocsc/invalid-utf8.wp",
+      "/home/drakestapleton/work/wsp/ck/wpatch-small-2/base.ck"
+    ],
+    "exit": 31,
+    "stdout": "",
+    "stderr": ""
+  },
+  {
+    "check": "README existing relative link",
+    "resolved": "/home/drakestapleton/work/wsp/aien-train-wpatch/docs/omegallm/WSP-PATCH.md",
+    "exists": true
+  }
+]

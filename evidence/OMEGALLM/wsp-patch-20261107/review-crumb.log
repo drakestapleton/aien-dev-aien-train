@@ -1,0 +1,13 @@
+COMPILED   native/omegallm/tok
+COMPILED   tests/omegallm/tok
+COMPILED   tools/omegallm/wpatch
+COMPILED   docs/omegallm
+COMPILED   evidence/OMEGALLM
+COMPILED   native/omegallm
+COMPILED   native/omegalora
+COMPILED   tests/omegallm
+COMPILED   tools/omegallm-ui
+crumb compile: 16 crumbs, 9 rewritten, HEAD ca047de
+
+exit=0
+Restored exact pre-command snapshots of eight unrelated generated crumbs. Only owned wpatch crumb retained.
