@@ -3,8 +3,11 @@ sampling and scoring are the native Omega GPU binaries the round40/round41 lanes
 python3 gates.py CANDIDATE.ck OUTDIR
 Reuses round41's lib/repair/checker modules unchanged (as round41/c2/c2lib.py does) and redirects every write
 (receipts, scratch, fixtures, results) into OUTDIR, so no round40/round41 file is touched. Order: latency pair
-first (base then candidate, the same 64 copy-final prompts), then the gates; stops at the first failed gate.
-Prints and writes OUTDIR/gates.json."""
+first (base then candidate, the same 64 copy-final prompts, which also give the copies gate), then the gates;
+stops at the first failed gate. Resumable across windows (a window lease is at most 20 min): gates already in
+OUTDIR/gates.json are skipped, and a task that would overrun WSP_BUDGET seconds (default 1080) is left for the
+next window (exit 10). Exit 0 when finished. Prints and writes OUTDIR/gates.json.
+Open the window with --quiet exclusive: the latency gate is a timing."""
 import json, os, sys, time
 from pathlib import Path
 R41 = Path('/home/drakestapleton/handoffs/tool-omega-20261104/round41')
@@ -24,7 +27,11 @@ BASE_SHA = '7c7b5b5260f2d9453b6076b64e7f23e88341d96498584f2dfaa229c31ad2e346'
 R40 = lib.R40
 STORY_R40_W256 = 1190843  # round41 state.json final-round40-story (read only)
 assert sha(BASE) == BASE_SHA
-res = dict(candidate=str(CAND), candidate_sha256=sha(CAND), window=os.environ['SPARK_WINDOW'], start=utc(), gates={})
+GJ = OUT / 'gates.json'
+res = json.loads(GJ.read_text()) if GJ.exists() else dict(candidate=str(CAND), candidate_sha256=sha(CAND), start=utc(), gates={}, windows=[])
+assert res['candidate_sha256'] == sha(CAND), 'OUTDIR belongs to another candidate'
+res['windows'].append(os.environ['SPARK_WINDOW'])
+BUDGET = float(os.environ.get('WSP_BUDGET', '1080')); T0 = time.time()
 
 def d40(n): return read(R40 / f'data/{n}.json')
 def probes(label, ck, rows, first_request=False):
@@ -40,34 +47,45 @@ def cycles(label, ck, jobs):
 def put():
     (OUT / 'gates.json').write_text(json.dumps(res, indent=2))
 
-# latency pair: same prompts, same harness, base then candidate
-copies = d40('copy-final')
-for who, ck in (('base', BASE), ('candidate', CAND)):
-    t = time.time(); n = probes(f'latency-{who}-copy', ck, copies)
-    res[f'latency_{who}_s'] = round(time.time() - t, 2); res[f'latency_{who}_copy_pass'] = n
-res['latency_ratio'] = res['latency_candidate_s'] / res['latency_base_s']
-put()
-
 def gate(name, value, ok):
-    res['gates'][name] = dict(value=value, pass_=bool(ok)); put(); print(name, value, 'PASS' if ok else 'FAIL', flush=True)
-    return ok
+    res['gates'][name] = dict(value=value, pass_=bool(ok), window=os.environ['SPARK_WINDOW'], at=utc()); put()
+    print(name, value, 'PASS' if ok else 'FAIL', flush=True)
 
-v = probes('screen', CAND, d40('localization-screen'), True); ok = gate('screen', v, v == 8)
-if ok:
+def t_latency():
+    # same 64 copy-final prompts, same harness, base then candidate; also yields the copies gate
+    for who, ck in (('base', BASE), ('candidate', CAND)):
+        t = time.time(); n = probes(f'latency-{who}-copy', ck, d40('copy-final'))
+        res[f'latency_{who}_s'] = round(time.time() - t, 2); res[f'latency_{who}_copy_pass'] = n
+    r = res['latency_candidate_s'] / res['latency_base_s']
+    gate('latency', round(r, 4), r <= 1.02)
+    gate('copies', res['latency_candidate_copy_pass'], res['latency_candidate_copy_pass'] == 64)
+def t_screen():
+    v = probes('screen', CAND, d40('localization-screen'), True); gate('screen', v, v == 8)
+def t_dev():
     rows = cycles('dev-jobs', CAND, d40('dev-jobs'))
     logic = sum(r['pass'] for r in rows if r['job']['fault'] == 'logic')
     controls = sum(r['pass'] for r in rows if r['job']['fault'] != 'logic')
     pairs = {r['job']['pair'] for r in rows if 'pair' in r['job']}
     pp = sum(all(r['pass'] for r in rows if r['job'].get('pair') == p) for p in pairs)
-    ok = gate('dev_jobs', dict(logic=logic, controls=controls, pairs=pp), logic >= 72 and controls >= 12 and pp >= 24)
-if ok:
-    v = probes('regression', CAND, d40('regression')); ok = gate('regression', v, v == 685)
-if ok:
-    v = sum(r['pass'] for r in cycles('retention-jobs', CAND, d40('retention-jobs'))); ok = gate('retention', v, v == 847)
-if ok:
-    v = res['latency_candidate_copy_pass']; ok = gate('copies', v, v == 64)
-if ok:
-    v = score('story-w256', CAND, R40 / 'data/story-final.tok', 256); ok = gate('story_w256', v, v * 10000 <= STORY_R40_W256 * 10025)
-gate('latency', round(res['latency_ratio'], 4), res['latency_ratio'] <= 1.02)
-res['end'] = utc(); res['all_pass'] = all(g['pass_'] for g in res['gates'].values()) and len(res['gates']) == 7
-put(); print('ALL_PASS' if res['all_pass'] else 'NOT_ALL_PASS', flush=True)
+    gate('dev_jobs', dict(logic=logic, controls=controls, pairs=pp), logic >= 72 and controls >= 12 and pp >= 24)
+def t_regression():
+    v = probes('regression', CAND, d40('regression')); gate('regression', v, v == 685)
+def t_retention():
+    v = sum(r['pass'] for r in cycles('retention-jobs', CAND, d40('retention-jobs'))); gate('retention', v, v == 847)
+def t_story():
+    v = score('story-w256', CAND, R40 / 'data/story-final.tok', 256); gate('story_w256', v, v * 10000 <= STORY_R40_W256 * 10025)
+
+# (gate names produced, task, worst-case seconds from round41's task budgets)
+TASKS = [(('latency', 'copies'), t_latency, 150), (('screen',), t_screen, 60), (('dev_jobs',), t_dev, 400),
+         (('regression',), t_regression, 150), (('story_w256',), t_story, 40), (('retention',), t_retention, 700)]
+NAMES = [n for names, _, _ in TASKS for n in names]
+for names, task, est in TASKS:
+    if any(not res['gates'][n]['pass_'] for n in res['gates']):
+        break  # stop at the first failed gate
+    if all(n in res['gates'] for n in names):
+        continue
+    if time.time() - T0 + est > BUDGET:
+        put(); print('WINDOW_BUDGET_REACHED', flush=True); sys.exit(10)
+    task()
+res['all_pass'] = all(n in res['gates'] and res['gates'][n]['pass_'] for n in NAMES)
+res['end'] = utc(); put(); print('ALL_PASS' if res['all_pass'] else 'NOT_ALL_PASS', flush=True)
