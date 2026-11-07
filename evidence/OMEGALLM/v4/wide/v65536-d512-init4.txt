@@ -1,5 +1,5 @@
 receipt: v65536-d512-init4
 binary: ollm sha256 aa6cceda5358a797e463bc309d5baeac86db9fe366c8c80a5648837b608deaac
-$ taskset -c 6 nice -n 10 /dev/shm/hive/ownmodel/wide4/v4w-build/ollm init4 /home/drakestapleton/work/hive/ownmodel/wide4/v4w-work/e.ck 65536 64 512 8 2048 1 1 1 10 1000 1
+$ taskset -c 6 nice -n 10 ../v4w-build/ollm init4 ../v4w-work/e.ck 65536 64 512 8 2048 1 1 1 10 1000 1
 --- output
 --- rc 12 ms 3

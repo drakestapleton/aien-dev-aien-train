@@ -3,10 +3,12 @@
 # Run from anywhere: sh tests/omegallm/v4-wide-check.sh. Env: OMC (pinned omc), BUILD, WORK, CORES
 # (taskset list, default 6), EV (evidence dir), OLD (the commit before the banks, default 63353c9,
 # whose binaries write the reference checkpoints and outputs). Training text is this repository's
-# own .om sources and docs (first-party), split into stories every 40 lines; the V 32768 receipts
+# own .om sources and docs at OLD (first-party), split into stories every 40 lines; the V 32768 receipts
 # use the same bytes as u16 tokens.
 here=$(cd "$(dirname "$0")/../.." && pwd)
 cd "$here" || exit 70
+# C collation: the file order of the training text (and so its story splits) must not depend on the locale
+export LC_ALL=C
 BUILD=${BUILD:-scratch-v4w/build}
 WORK=${WORK:-scratch-v4w/work}
 CORES=${CORES:-6}
@@ -14,8 +16,8 @@ OLD=${OLD:-63353c9}
 E=${EV:-evidence/OMEGALLM/v4/wide}
 RUN="taskset -c $CORES nice -n 10"
 mkdir -p "$E" "$WORK" "$BUILD/old"
-BUILD=$(cd "$BUILD" && pwd)
-WORK=$(cd "$WORK" && pwd)
+# receipts print BUILD and WORK as given (pass relative paths so they name no private path)
+
 : > "$E/build.txt"
 for a in "" "--variant wx" "--mutant j" "--mutant jd"; do
 	# shellcheck disable=SC2086
@@ -27,14 +29,16 @@ done
 # the reference: the same build script and sources at $OLD (wte in the one window ow)
 rm -rf "$WORK/oldsrc"
 mkdir -p "$WORK/oldsrc"
-git archive "$OLD" native/omegallm tests/omegallm/build.sh | tar -x -C "$WORK/oldsrc" || exit 70
+git archive "$OLD" native/omegallm docs/omegallm tests/omegallm/build.sh | tar -x -C "$WORK/oldsrc" || exit 70
 OUT=$BUILD/old CORE=${CORES%%[-,]*} sh "$WORK/oldsrc/tests/omegallm/build.sh" >> "$E/build.txt" 2>&1 || {
 	echo "BUILD_FAIL old" | tee -a "$E/build.txt"
 	exit 1
 }
 echo "old source: $OLD $(git rev-parse "$OLD")" >> "$E/build.txt"
 cat "$E/build.txt"
-cat native/omegallm/*.om docs/omegallm/*.md | awk '{print} NR%40==0 {print "<|endoftext|>"}' > "$WORK/in.txt"
+# the training text is $OLD's sources and docs, so it does not change with later commits (gcheck4's
+# worst coordinate depends on the text: evidence/OMEGALLM/v4/wide/gcheck-textdep.txt)
+( cd "$WORK/oldsrc" && cat native/omegallm/*.om docs/omegallm/*.md ) | awk '{print} NR%40==0 {print "<|endoftext|>"}' > "$WORK/in.txt"
 TR=$WORK/train.bin
 HE=$WORK/held.bin
 SUM=$E/summary.tsv

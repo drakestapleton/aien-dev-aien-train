@@ -1,7 +1,7 @@
 receipt: old-train4-x
 binary: old/ollm sha256 beecf5fa3463c36dc44c7e4aa823aa747b55e5d0871a726d52dad243971c7631
-$ taskset -c 6 nice -n 10 /dev/shm/hive/ownmodel/wide4/v4w-build/old/ollm train4 /home/drakestapleton/work/hive/ownmodel/wide4/v4w-work/xo.ck /home/drakestapleton/work/hive/ownmodel/wide4/v4w-work/train.bin 6 3 2
+$ taskset -c 6 nice -n 10 ../v4w-build/old/ollm train4 ../v4w-work/xo.ck ../v4w-work/train.bin 6 3 2
 --- output
-T 3 5534639
-T 6 5518482
---- rc 0 ms 146
+T 3 5528202
+T 6 5501126
+--- rc 0 ms 137

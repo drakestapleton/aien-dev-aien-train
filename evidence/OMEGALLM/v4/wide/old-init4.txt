@@ -1,6 +1,6 @@
 receipt: old-init4
 binary: old/ollm sha256 beecf5fa3463c36dc44c7e4aa823aa747b55e5d0871a726d52dad243971c7631
-$ taskset -c 6 nice -n 10 /dev/shm/hive/ownmodel/wide4/v4w-build/old/ollm init4 /home/drakestapleton/work/hive/ownmodel/wide4/v4w-work/o.ck 256 64 16 2 32 2 4 1 100 1000 2
+$ taskset -c 6 nice -n 10 ../v4w-build/old/ollm init4 ../v4w-work/o.ck 256 64 16 2 32 2 4 1 100 1000 2
 --- output
 I 8272
---- rc 0 ms 9
+--- rc 0 ms 8

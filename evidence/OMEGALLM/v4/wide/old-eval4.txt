@@ -1,6 +1,6 @@
 receipt: old-eval4
 binary: old/ollm sha256 beecf5fa3463c36dc44c7e4aa823aa747b55e5d0871a726d52dad243971c7631
-$ taskset -c 6 nice -n 10 /dev/shm/hive/ownmodel/wide4/v4w-build/old/ollm eval4 /home/drakestapleton/work/hive/ownmodel/wide4/v4w-work/o.ck /home/drakestapleton/work/hive/ownmodel/wide4/v4w-work/held.bin 4
+$ taskset -c 6 nice -n 10 ../v4w-build/old/ollm eval4 ../v4w-work/o.ck ../v4w-work/held.bin 4
 --- output
-E 3 4 5554379 8013275
---- rc 0 ms 25
+E 3 4 5554376 8013270
+--- rc 0 ms 11

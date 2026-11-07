@@ -14,3 +14,8 @@ results in section 6.1. Spark core 6, pinned omc `2c824805…`.
 
 Core 6 was shared with other lanes' processes during these runs; wall times are noisy, CPU times are
 the cost figures. Numbers derived from them were computed with Wolfram.
+
+`v4-wide-check.sh` trains on the sources and docs of the fixed commit 63353c9 concatenated in C
+collation order (`LC_ALL=C`), so its data, and with it gcheck4's worst coordinate, does not change
+with later commits or the caller's locale. Run: `OMC=<pinned omc> BUILD=../v4w-build WORK=../v4w-work
+CORES=6 sh tests/omegallm/v4-wide-check.sh` from the clone root (exit 0, 53 of 53 PASS).

@@ -151,10 +151,10 @@ times are noisy and the per-step costs below are user + sys CPU seconds), aarch6
 |---|---|
 | `v4-wide-check.sh` | 53 of 53 PASS |
 | CK03 written by the reference build: `eval4`, `gcheck4`, `kvck`, `sample4` on the bank build | outputs byte-identical; 3 more `train4` steps (K = 2): checkpoints byte-identical |
-| crossing shape V 256 T 32 D 18 H 3 F 32 L 4 on `--variant wx` (R1 = 111, layers and activations staged) | `gcheck4` PASS rc 0, output byte-identical to the reference build's; `train4` K = 1, K = 2 and reference byte-identical; `kvck` 0 of 32 differ |
-| mutant j `gcheck4` / mutant jd `kvck` | rc 40 (max relative error 1.99, tolerance 1e-3) / rc 44 (30 of 32 positions differ), as required |
+| crossing shape V 256 T 32 D 18 H 3 F 32 L 4 on `--variant wx` (R1 = 111, layers and activations staged) | `gcheck4` PASS rc 0 (max relative error 4.5e-4), output byte-identical to the reference build's; `train4` K = 1, K = 2 and reference byte-identical; `kvck` 0 of 32 differ |
+| mutant j `gcheck4` / mutant jd `kvck` | rc 40 (max relative error 2.0, tolerance 1e-3) / rc 44 (30 of 32 positions differ), as required |
 | V 32768 D 512 H 8 F 2048 L 2 (R1 = 27,660, product build) | K = 1 vs K = 2 byte-identical; `kvck` 0 of 32 differ; token-mode `eval4`, `sample4` rc 0 |
-| V 32768 T 8 D 768 H 12 F 3072 L 1 seed 17 (R1 = 18,440, product build; 2 of gcheck4's 4 wte coordinates in bank 2) | `gcheck4` PASS (max relative error 1.71e-4, at bank-2 index 15,863,246); K = 1 vs K = 2 byte-identical; `kvck` 0 of 8 differ; token-mode `sample4`, `tune4` rc 0 |
+| V 32768 T 8 D 768 H 12 F 3072 L 1 seed 17 (R1 = 18,440, product build; 2 of gcheck4's 4 wte coordinates in bank 2) | `gcheck4` PASS (max relative error 2.26e-4, at bank-2 index 15,863,246); K = 1 vs K = 2 byte-identical; `kvck` 0 of 8 differ; token-mode `sample4`, `tune4` rc 0 |
 | `init4` V 32768 D 1024 / V 65536 D 512 (bank 2 would need 19,392,512 > XWB2) | rc 12 / 12 |
 | old `v4-check.sh` on the bank build (tree snapshot `ce3bb2d`) | 17 of 17 PASS |
 | v3 `equiv.sh` reference vs bank build, product and `--variant bx` | EQUAL (eval lines, checkpoints after 5 steps) |
@@ -162,7 +162,8 @@ times are noisy and the per-step costs below are user + sys CPU seconds), aarch6
 
 `v4-check.sh` trains on this repository's own text, which changes with every commit; its `gcheck4`
 receipt can exceed GCTOL on some texts with the reference build too (`gcheck-textdep.txt`: max
-relative error 1.44e-3, rc 40, byte-identical on both builds).
+relative error 1.44e-3, rc 40, byte-identical on both builds). `v4-wide-check.sh` therefore trains on
+the sources and docs of the fixed commit 63353c9.
 
 Full S1 (V 32768 T 256 D 512 H 8 F 2048 L 8 B 2 G 2, P = 41,951,744, CK03 1,006,841,984 bytes) on
 public text (the first 3,000,000 bytes of the base `val.txt`, 32K-tokenized):
