@@ -105,6 +105,8 @@ ggput 22 get og 8
 ggput 23 div ggp5 512
 note 37: split-K partials for ggsk, at most 2^21 floats (ggks stops doubling once a grid has 1024 blocks)
 ggput 37 2097152
+note 38: the CE kernel's per-row f32 dlogits scale (ggupt)
+ggput 38 r
 ret get gga 47
 end
 
@@ -529,7 +531,8 @@ x = gga1 3
 ggpt 2 x
 x = gga1 12
 ggpt 3 x
-ggrun 21 8 ggcd r 64 1 1
+ggpt 4 gga1 38
+ggrun 21 10 ggcd r 64 1 1
 end
 
 note layer l FFN backward: DH holds d out on entry, d hm on exit. The dF GEMM's fused epilogue (gkope 2)
@@ -788,6 +791,31 @@ m = mapset h add xo mul i 4 4 tk
 ty = get oby i
 m = mapset h add yo mul i 4 4 ty
 end
+ggupsc
+end
+
+note per-row CE scale into arena slot 38: grf(1/(T B)) for every row (the value the CE kernel held as a
+note constant before the loss mask), or under a loss mask grf(1/sum(w)) for rows of weight 1 and 0.0 for
+note rows of weight 0 (data.om omkden, omkuse). OMUTJ: 1 in the product; 0 in mutant j, which uploads
+note the weight-1 scale for every row (the chip ignores the mask while the CPU keeps it), the negative
+note control that gcmp with a MASK must catch.
+const OMUTJ ulong 1
+fn ggupsc to void
+h = get gbmem 5
+so = get gga 38
+sc = div 1.0f64 f64 mul get og 1 get og 6
+if ne get omkc 0 0
+sc = div 1.0f64 f64 omkden
+end
+w1 = ulong grf sc
+tt = get og 1
+for i ulong ggr
+w = w1
+if and not omkuse div i tt rem i tt ne OMUTJ 0
+w = ulong 0
+end
+m = mapset h add so mul i 4 4 w
+end
 end
 
 note counting sort of the R rows by input token: start (V + 1) and order (R) arrays
@@ -856,15 +884,26 @@ ret sub add flog sm m ly
 end
 
 fn ggloss to f64
-tt = get og 1
 for b ulong get og 6
-s = 0.0f64
-for t ulong tt
-s = add s ggrl add mul b tt t
-end
-put olos b div s f64 tt
+put olos b gglossb b
 end
 ret olsum
+end
+
+note sequence b's loss from the CE stats: the mean over T rows, or under a loss mask
+note B sum(w l) / sum(w) (model.om ohead)
+fn gglossb b ulong to f64
+tt = get og 1
+s = 0.0f64
+for t ulong tt
+if omkuse b t
+s = add s ggrl add mul b tt t
+end
+end
+if ne get omkc 0 0
+ret mul div s f64 get omkc 2 f64 get og 6
+end
+ret div s f64 tt
 end
 
 note the step loss and gradient for the batch in obx/oby; ggopen first. full: upload the f32
@@ -992,7 +1031,7 @@ end
 end
 end
 
-note gcmp CK DATA S: CPU ograd and GPU gradient for batch S; prints
+note gcmp CK DATA S [MASK]: CPU ograd and GPU gradient for batch S (MASK: the loss mask, data.om); prints
 note `GC P maxabs_e12 maxref_e12 rel_e9 cpu_loss_micro gpu_loss_micro gpu_ns tol_e9` and GCMP PASS
 note (rel < tol, |loss difference| < 1e-5) or GCMP FAIL (exit 45). tol = R 2^-24 is the first-order
 note bound gamma_R on the f32 error of a sum of R = B T rows, the longest reduction of the weight
@@ -1000,11 +1039,14 @@ note gradients, relative to the sum of magnitudes; the CPU reference is f64. ReL
 note pre-activation lies within f32 resolution of zero can take the other side on the GPU (receipt:
 note evidence/OMEGALLM/gpu/README.md), and both sides are valid subgradients.
 fn ggcmp to void
-if ne oargc 5
+if and ne oargc 5 ne oargc 6
 exit 2
 end
 ockload 2
 odopen 3
+if eq oargc 6
+omkopen 5
+end
 obatch oargu 4
 put og 10 0
 lc = ograd
@@ -1571,15 +1613,18 @@ oflush
 exit 46
 end
 
-note gtrainf CK TRAIN UNTIL EVERY: gtrain with the parameters and Adam state resident on the chip in
+note gtrainf CK TRAIN UNTIL EVERY [MASK]: gtrain with the parameters and Adam state resident on the chip in
 note f32 (ggadam); only the batch goes up each step. At save points the state comes back to f64 for
 note ocksave and `T s+1 loss_micro` is printed; GT at the end has the last step's phase times.
 fn ggtrainf to void
-if ne oargc 6
+if and ne oargc 6 ne oargc 7
 exit 2
 end
 ockload 2
 odopen 3
+if eq oargc 7
+omkopen 6
+end
 un = oargu 4
 ev = oargu 5
 if eq ev 0

@@ -10,7 +10,8 @@ note (serve.om on aarch64, noserve.om elsewhere). Fine-tune: tune 1701737844.
 note Exit codes: 0 ok; 2 usage; 10-15 checkpoint refusals (ckpt.om); 20 data file shorter than
 note T + 1 bytes; 21 data over 2^25 bytes or OFFS not exactly 8 B bytes; 22 an OFFS offset with
 note o + T >= N; 23 eval W = 0 or W T + 1 > M; 24 prep story over 999999 bytes; 40 gcheck over
-note tolerance; 41 adamck over tolerance; 42 mathck over tolerance; 70 I/O.
+note tolerance; 41 adamck over tolerance; 42 mathck over tolerance; 70 I/O; 82 loss mask refused, 83
+note a batch with no weighted target (data.om omkopen, omkden).
 
 fn ocmdw to ulong
 r = oargr 1
@@ -156,13 +157,17 @@ end
 end
 end
 
-note grad CK DATA OFFS OUT: the gradient of CONTRACT-V1 section 5 (G blocks, K = 1)
+note grad CK DATA OFFS OUT [MASK]: the gradient of CONTRACT-V1 section 5 (G blocks, K = 1); MASK is
+note the loss mask of data.om (omkopen)
 fn cmdgrad to void
-if ne oargc 6
+if and ne oargc 6 ne oargc 7
 exit 2
 end
 ockload 2
 odopen 3
+if eq oargc 7
+omkopen 6
+end
 ooffrd 4
 ooffok
 for b ulong get og 6
@@ -179,23 +184,27 @@ oputc 10
 oflush
 end
 
-note train CK TRAIN UNTIL EVERY [K]: steps step .. min(UNTIL, TOTAL)-1; after step s, when
+note train CK TRAIN UNTIL EVERY [K [MASK]]: steps step .. min(UNTIL, TOTAL)-1; after step s, when
 note (s+1) mod EVERY = 0 or s+1 is the end, save CK and print `T s+1 loss_micro(step s)`.
 note K worker processes (CONTRACT-V1 section 5.1): K < 1, K > G or G mod K != 0 is exit 29.
+note MASK: the loss mask of data.om (omkopen); the printed loss is then the masked batch mean.
 fn cmdtrain to void
 na = oargc
-if and ne na 6 ne na 7
+if or lt na 6 gt na 8
 exit 2
 end
 ockload 2
 odopen 3
+if eq na 8
+omkopen 7
+end
 un = oargu 4
 ev = oargu 5
 if eq ev 0
 exit 2
 end
 k = ulong 1
-if eq na 7
+if ge na 7
 k = oargu 6
 end
 gg = get og 44

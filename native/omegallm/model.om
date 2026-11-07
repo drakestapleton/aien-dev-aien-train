@@ -945,11 +945,19 @@ sm = osoft o n m
 ret sub flog sm sub ly m
 end
 
-note final rms, tied head and loss of sequence b; returns the mean loss over CT positions
+note final rms, tied head and loss of sequence b; returns the mean loss over CT positions. With a
+note loss mask (data.om omkopen) it returns B sum(w l) / sum(w), so olsum is the masked batch mean;
+note every row's logits are still computed (the backward needs them).
 fn ohead b ulong to f64
 ls = 0.0f64
 for t ulong get og 9
-ls = add ls oheadr b t
+rl = oheadr b t
+if omkuse b t
+ls = add ls rl
+end
+end
+if ne get omkc 0 0
+ret mul div ls f64 get omkc 2 f64 get og 6
 end
 ret div ls f64 get og 9
 end
@@ -1003,7 +1011,11 @@ fn ohbwd b ulong t ulong sc f64 to void
 v = get og 0
 pr = add get og 18 mul t v
 y = get oby add mul b get og 1 t
-kdlog pr v y sc
+s2 = sc
+if not omkuse b t
+s2 = 0.0f64
+end
+kdlog pr v y s2
 ohbwd2 pr t
 end
 

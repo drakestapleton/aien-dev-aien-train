@@ -389,7 +389,9 @@ end
 gkexit
 end
 note 21 CE: per row r of logits L (R x V): m, e = exp(l - m), sum; L <- (e/sum - [c = y]) sc;
-note stats[r] = (m, sum, l_y); sc = 1/(T B); args R*32 L y st. One warp per row (grrrow): lane l
+note stats[r] = (m, sum, l_y); sc = sc[r], the f32 per-row scale that gg.om ggupt uploads (1/(T B) for
+note every row, or w_r / sum(w) under a loss mask, data.om omkopen); args R*32 L y st sc. One warp per row
+note (grrrow): lane l
 note holds columns l + 32 u, read as 8 coalesced 128-byte lines per step of 256 columns. Pass 1 takes
 note the lane max, then the warp max. Pass 2 sums e per lane without storing it, then the warp sum
 note of the lane totals. Pass 3 recomputes e with the same FFMA and MUFU (bit-identical to pass 2),
@@ -410,11 +412,11 @@ fn grce to void
 v = uint get grd 0
 v4 = mul v 4
 it = div v 256
-sc = div 1.0f64 f64 mul get grd 1 get grd 5
 grrrow
 gkmovi 28 grf 1.4426950408889634f64
 gkmovi 29 grf neg 1.4426950408889634f64
-gkmovi 25 grf sc
+grptr 18 7 8 4
+gkldg 25 18 0 false
 grptr 12 3 8 4
 gkldg 20 12 0 false
 grptr 14 1 8 v4

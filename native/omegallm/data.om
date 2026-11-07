@@ -330,6 +330,74 @@ for t ulong tt
 put obx add mul b tt t odtk t
 put oby add mul b tt t odtk add t OMUTB
 end
+omkrow b o
+end
+
+note Loss mask (DRA-146; the per-target weight file of the tool-omega fine-tunes, restricted to 0 and 1).
+note MASK holds one byte per token of the data file: byte k is the weight of token k as a target, 1 for
+note a trained (agent) token and 0 for a conditioning (user, memory) token. With a mask open the step
+note loss is sum(w l) / sum(w) over the batch and row r's dlogits scale is w_r / sum(w), so a target of
+note weight 0 adds exactly zero to the loss and the gradient; with no mask nothing changes (scale
+note 1/(T B), CONTRACT section 5). omkc: 0 open (0 or 1), 1 the argument, 2 sum(w) of the last batch.
+note OMUTZ: 1 in the product; 0 in mutant z, which reads every weight as 1 (the mask is ignored), the
+note negative control that tests/personal/mask-check.sh must catch.
+note exit 82: MASK length differs from the data file's token count, B T > 16384, or a byte above 1;
+note exit 83: a batch whose weights are all 0.
+const OMUTZ ulong 1
+global omkc ulong 4
+global omkw uchar 16384
+fn omkopen ai ulong to void
+if ne ofsz ai get odn 0
+exit 82
+end
+if gt mul get og 1 get og 6 16384
+exit 82
+end
+put omkc 0 1
+put omkc 1 ai
+end
+
+note the weights of the targets of row b (tokens o + OMUTB .. o + OMUTB + T - 1)
+fn omkrow b ulong o ulong to void
+if eq get omkc 0 0
+ret
+end
+tt = get og 1
+if ne oprd get omkc 1 add o OMUTB 0 tt tt
+exit 82
+end
+for t ulong tt
+x = get opw t
+if gt x uchar 1
+exit 82
+end
+if eq OMUTZ 0
+x = uchar 1
+end
+put omkw add mul b tt t x
+end
+end
+
+note sum(w) over the B T rows of the batch into omkc[2]; exit 83 when it is 0
+fn omkden to ulong
+n = mul get og 1 get og 6
+s = ulong 0
+for i ulong n
+s = add s ulong get omkw i
+end
+if eq s 0
+exit 83
+end
+put omkc 2 s
+ret s
+end
+
+note true when row t of sequence b counts in the loss (always with no mask)
+fn omkuse b ulong t ulong to bool
+if eq get omkc 0 0
+ret true
+end
+ret ne get omkw add mul b get og 1 t 0
 end
 
 note base TRAIN HELD (CONTRACT section 7 and agreed reading A5): unigram and bigram add-one

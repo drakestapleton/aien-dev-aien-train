@@ -204,6 +204,9 @@ put og 10 p
 ozerog p p
 bb = get og 6
 sc = div 1.0f64 f64 mul get og 1 bb
+if ne get omkc 0 0
+sc = div 1.0f64 f64 omkden
+end
 r = div bb get og 44
 b = mul j r
 for i ulong r

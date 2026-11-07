@@ -1,0 +1,29 @@
+ollm_sha256=b22f65cb68a20a3ec795182d75dc70c058c9e05cd9b35642c3a4bde8de330596
+mpack_sha256=26965a1624a70b2198a8b035490aac154e5fae57fdf1f42cddd819bf3c0ce4db
+license_sha256=0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0
+PASS mpack: MP 3400 1246 2154 30
+PASS the two streams have the same mask: 0
+PASS the two streams differ in exactly one token: 1
+PASS init: I
+PASS masked final target: changing token 64 (weight 0, last target of window 0) leaves gradient and loss bit-identical: same
+PASS fully masked window: replacing window 1 (offset 610, all 64 targets weight 0) by another (offset 1010) leaves gradient and loss bit-identical: same
+PASS control: without the mask the same token change moves the gradient
+PASS all-ones mask: gradient bit-identical to no mask (scale 1/sum(w) = 1/(T B)): 0
+PASS all-ones mask: loss within 1 micro-nat of no mask (6084020 vs 6084020)
+PASS control: the partial mask changes the gradient
+PASS all-zero batch refused: 83
+PASS refused grad wrote no gradient
+PASS mask byte 2 in a read window refused: 82
+PASS mask length != token count refused: 82
+PASS mpack training stream: MP 2000 1000 1000 40
+PASS masked train 0..40 rc: 0
+PASS masked train saves: T 20,T 40,
+PASS masked train resume 0..20..40 bit-identical to 0..40: 0
+PASS masked train lowered the masked loss at fixed offsets (micro-nats 6184896 to 5144675)
+PASS train argument count 9 refused: 2
+PASS no mask: train 0..20 checkpoint bit-identical to the origin/main build (819664d5a228): 0
+PASS no mask: grad and loss bit-identical to the origin/main build: 0
+mutant_sha256=2b8bc5dc366160698fde4936e338ed6cff3dca2ffe6b1901df217566bb204353
+PASS negative control caught: mask ignored, the weight-0 final target moves the gradient
+PASS negative control caught: mask ignored, the fully masked window contributes
+MASK_PASS

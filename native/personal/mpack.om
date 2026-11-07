@@ -1,0 +1,242 @@
+note SPDX-License-Identifier: AGPL-3.0-only
+note native/personal/mpack.om (DRA-146): packs a loss-masked token stream for the ollm loss mask
+note (native/omegallm/data.om omkopen: `ollm train CK TOK UNTIL EVERY K MASK`, `ollm grad CK TOK OFFS
+note OUT MASK`, `ollm-gb10 gtrainb CK TOK UNTIL EVERY MASK`).
+note   mpack LIST OUTTOK OUTMASK
+note LIST holds one segment per line, in stream order:
+note   `1t PATH`  u16 little-endian tokens of PATH (ollm bpeenc output), weight 1 (trained target)
+note   `0t PATH`  the same with weight 0 (conditioning: user text, memory block, role markers)
+note   `1b PATH` / `0b PATH`  every byte of PATH as one token (byte-level test data, V > 256)
+note   `1z` / `0z`  one token 0 (the end-of-text token the samplers stop on)
+note OUTTOK gets the tokens as u16 LE, OUTMASK one byte (0 or 1) per token. Prints
+note `MP tokens weight1 weight0 segments`. Exits: 2 usage or a malformed LIST line; 21 an odd token file,
+note a token >= 32768, LIST of 999000 bytes or more or a path over 4096 bytes; 70 I/O.
+global lst uchar 999000
+global ib uchar 65536
+global ob uchar 65536
+global mb uchar 32768
+global pth uchar 4100
+global ms ulong 8
+global ofd long 2
+
+note ms: 0 tokens in ob/mb, 1 total tokens, 2 weight-1 tokens, 3 weight-0 tokens, 4 segments
+
+note write ob[0 .. n) (k 0) or mb[0 .. n) (k 1) to descriptor fd
+fn wall fd long k ulong n ulong to void
+o = ulong 0
+while lt o n bound 999999
+r = long 0
+if eq k 0
+r = write int fd ob o sub n o
+else
+r = write int fd mb o sub n o
+end
+if le r 0
+exit 70
+end
+o = add o ulong r
+end
+end
+
+fn flush to void
+n = get ms 0
+wall get ofd 0 0 mul n 2
+wall get ofd 1 1 n
+put ms 0 0
+end
+
+fn emit tk ulong w ulong to void
+if ge tk 32768
+exit 21
+end
+n = get ms 0
+if ge n 32768
+flush
+n = ulong 0
+end
+put ob mul n 2 uchar and tk 255
+put ob add mul n 2 1 uchar shr tk 8
+put mb n uchar w
+put ms 0 add n 1
+put ms 1 add get ms 1 1
+if eq w 1
+put ms 2 add get ms 2 1
+else
+put ms 3 add get ms 3 1
+end
+end
+
+note append the file named by pth[0 .. pn) as tokens (kind 116 t: u16 LE, 98 b: bytes)
+fn seg pn ulong kind ulong w ulong to void
+fd = fopen pth 0 pn 0 0
+if lt fd 0
+exit 70
+end
+odd = ulong 0
+lo = ulong 0
+dn = false
+while not dn bound 999999
+k = read int fd ib 0 65536
+if lt k 0
+exit 70
+end
+if eq k 0
+dn = true
+else
+for i ulong ulong k
+c = ulong get ib i
+if eq kind 98
+emit c w
+else
+if eq odd 0
+lo = c
+odd = ulong 1
+else
+emit or lo shl c 8 w
+odd = ulong 0
+end
+end
+end
+end
+end
+if ne fclose int fd 0
+exit 70
+end
+if ne odd 0
+exit 21
+end
+end
+
+fn openw ai ulong to long
+n = argread ai pth 0 4096
+if or le n 0 ge n 4096
+exit 2
+end
+fd = fopen pth 0 ulong n 577 384
+if lt fd 0
+exit 70
+end
+ret fd
+end
+
+note one LIST line lst[a .. e)
+fn line a ulong e ulong to void
+if eq a e
+ret
+end
+if lt sub e a 2
+exit 2
+end
+w = ulong get lst a
+if and ne w 48 ne w 49
+exit 2
+end
+w = sub w 48
+kind = ulong get lst add a 1
+if eq kind 122
+if ne sub e a 2
+exit 2
+end
+emit 0 w
+put ms 4 add get ms 4 1
+ret
+end
+if and ne kind 116 ne kind 98
+exit 2
+end
+if lt sub e a 4
+exit 2
+end
+if ne get lst add a 2 uchar 32
+exit 2
+end
+pn = sub e add a 3
+if gt pn 4096
+exit 21
+end
+for i ulong pn
+put pth i get lst add add a 3 i
+end
+seg pn kind w
+put ms 4 add get ms 4 1
+end
+
+fn putu v ulong to void
+d = new uchar 24 0
+n = ulong 0
+x = v
+while true bound 99
+put d n uchar add 48 rem x 10
+n = add n 1
+x = div x 10
+if eq x 0
+break
+end
+end
+o = new uchar 24 0
+for i ulong n
+put o i get d sub sub n 1 i
+end
+k = write 1 o 0 n
+end
+
+fn main to int
+if ne argcnt 4
+exit 2
+end
+n = argread 1 pth 0 4096
+if or le n 0 ge n 4096
+exit 2
+end
+fd = fopen pth 0 ulong n 0 0
+if lt fd 0
+exit 70
+end
+ln = ulong 0
+dn = false
+while not dn bound 999999
+if ge ln 999000
+exit 21
+end
+k = read int fd lst ln sub 999000 ln
+if lt k 0
+exit 70
+end
+if eq k 0
+dn = true
+else
+ln = add ln ulong k
+end
+end
+if ne fclose int fd 0
+exit 70
+end
+put ofd 0 openw 2
+put ofd 1 openw 3
+a = ulong 0
+for i ulong ln
+if eq get lst i uchar 10
+line a i
+a = add i 1
+end
+end
+line a ln
+flush
+if ne fclose int get ofd 0 0
+exit 70
+end
+if ne fclose int get ofd 1 0
+exit 70
+end
+sp = new uchar 1 32
+nl = new uchar 1 10
+mp = new uchar 2 77
+put mp 1 uchar 80
+k = write 1 mp 0 2
+for j ulong 4
+k = write 1 sp 0 1
+putu get ms add j 1
+end
+k = write 1 nl 0 1
+ret 0
+end
