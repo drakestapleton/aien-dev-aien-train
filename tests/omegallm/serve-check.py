@@ -53,7 +53,37 @@ def call(method, path, body=None, raw=None, timeout=600, port=None):
     ctype = r.getheader("Content-Type", "")
     LAST[threading.get_ident()] = {k.lower(): v for k, v in r.getheaders()}
     c.close()
+    if path == "/health" and r.status == 200:
+        out = _strip_identity(port or PORT, out)
     return r.status, ctype, out, dt
+
+
+# DRA-125 deploy: /health carries the loaded identity as a "model" member (serve.om section loaded
+# identity). It is recorded and removed here, so the protocol checks compare the queue fields as
+# before; identity_checks() then requires one identical, complete identity per port, equal to
+# SERVE_IDENTITY (a JSON object) when that is set.
+IDS = {}
+IDKEYS = ["ck", "V", "T", "D", "H", "F", "L", "B", "step", "P", "ck_bytes", "ck_fnv", "tok", "tok_V", "tok_fnv"]
+
+
+def _strip_identity(port, out):
+    try:
+        d = json.loads(out)
+    except ValueError:
+        return out
+    IDS.setdefault(port, []).append(d.pop("model", None))
+    return json.dumps(d, separators=(",", ":")).encode()
+
+
+def identity_checks():
+    want = json.loads(os.environ["SERVE_IDENTITY"]) if os.environ.get("SERVE_IDENTITY") else None
+    for port, seen in sorted(IDS.items()):
+        first = seen[0]
+        same = all(m == first for m in seen)
+        full = isinstance(first, dict) and list(first.keys()) == IDKEYS
+        check(f"identity_stable_{port}", same and full, f"n={len(seen)} first={first}")
+        if want is not None:
+            check(f"identity_expected_{port}", first == want, f"got={first} want={want}")
 
 
 def template(msgs):
@@ -436,6 +466,7 @@ if TOK1:
             check("c1_reuse_logged", any(len(l) == 9 and l[6] == str(t2.get("reused")) and l[7] == str(t2.get("prefilled")) for l in ll), f"{ll[-6:]}")
         queue_checks(TPORT, user)
 
+    identity_checks()
     fails = results.count(False)
     print(f"SUMMARY pass={results.count(True)} fail={fails}", flush=True)
     sys.exit(1 if fails else 0)
@@ -841,6 +872,7 @@ if TPORT:
     check("t_idle_not_busy_control", st == 200 and ch["message"]["content"] == greedy, f"{out[:200]!r}")
     queue_checks(TPORT, user)
 
+identity_checks()
 fails = results.count(False)
 print(f"SUMMARY pass={results.count(True)} fail={fails}", flush=True)
 sys.exit(1 if fails else 0)

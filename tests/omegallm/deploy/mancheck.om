@@ -1,0 +1,1362 @@
+om2
+note SPDX-License-Identifier: AGPL-3.0-only
+note mancheck.om (aien-train DRA-125 deploy, docs/omegallm/DEPLOY.md): the frozen identity of one
+note `ollm serve` deployment, checked from the files and from the running process.
+note A stage directory DIR holds model.manifest (OLLM-MANIFEST-1, the SI installer format,
+note sovereign-intelligence installer/share/MODEL-MANIFEST.md), deploy.manifest (OLLM-DEPLOY-1,
+note below), the checkpoint and tokenizer files the manifest's file lines name, and bin/ollm.
+note SUMS is `sha256sum` output (`HEX  NAME`, the host's sha256sum: a recorded host dependency;
+note this unit computes no sha256) for model.manifest, bin/ollm, each file line's file, and a line
+note `HEX  omc` for the omc that built bin/ollm.
+note OLLM-DEPLOY-1, six lines, each key once, no other lines:
+note   format OLLM-DEPLOY-1
+note   manifest SHA256                 sha256 of model.manifest
+note   commit HEX40                    aien-train commit bin/ollm was built from
+note   ck MAGIC V T D H F L B STEP P BYTES FNV16   checkpoint header fields, size, payload FNV-1a 64
+note   tok OLLMTOK1 V FNV16            tokenizer V and its header checksum
+note   launch bin/ollm serve PORT CKNAME TOKNAME
+note Commands (exit 0 pass, 1 refused with one line `MANCHECK FAIL reason`, 2 usage):
+note   mancheck id DIR CKNAME TOKNAME     recompute and print the ck and tok lines (header checksums
+note                                      must equal the recomputed ones)
+note   mancheck check DIR SUMS            the static check: model.manifest admitted by the SI rules
+note                                      (forbidden words, keys once, values, bytes, files, the two
+note                                      distinct file lines), every sha256 and size against SUMS and
+note                                      the files, the checkpoint and tokenizer recomputed (sizes,
+note                                      header fields, FNV-1a 64) against deploy.manifest
+note   mancheck live DIR SUMS HEALTH LIVE the static check, then the running process: HEALTH (the
+note                                      body of its GET /health) must hold exactly the "model"
+note                                      member deploy.manifest implies, and LIVE (`exe SHA256` of
+note                                      /proc/PID/exe, `argv` + its command line) must match serve
+note                                      and the launch line
+note Prints `MANCHECK PASS ...` on success. Every check reads the files itself; nothing is cached.
+
+note gb regions: 0 model.manifest (8192), 8192 deploy.manifest, 12288 SUMS, 16384 HEALTH, 20480
+note LIVE (8192), 28672 path, 32768 expected model member, 36864 DIR, 38912 text scratch
+global gb uchar 65536
+global fb uchar 524288
+global ob uchar 4096
+note gl: 0..4 region lengths (M D S H L), 5 DIR length, 6 out bytes, 7 seen keys M, 8 seen keys D,
+note 9 file count, 10 bytes sum, 11 ck file line, 12 tok file line, 13 ntok
+global gl ulong 32
+note ks/ke: value start/end of the M keys 0..9 and (at 16 + k) the D keys 0..5
+global ks ulong 32
+global ke ulong 32
+note cf: recomputed checkpoint 0 magic, 1..7 V T D H F L B, 8 step, 9 P, 10 bytes, 11 header FNV,
+note 12 payload FNV; 13 tokenizer V, 14 tokenizer header FNV, 15 tokenizer recomputed FNV
+global cf ulong 16
+note tp/tq: token starts/ends of the last tokens call
+global tp ulong 16
+global tq ulong 16
+note ap/aq: the LIVE argv tokens
+global ap ulong 16
+global aq ulong 16
+
+text tusage "usage: mancheck id DIR CK TOK | check DIR SUMS | live DIR SUMS HEALTH LIVE\n"
+text tfail "MANCHECK FAIL "
+text tpass "MANCHECK PASS "
+text tcid "id"
+text tcchk "check"
+text tclive "live"
+text fmodel "model.manifest"
+text fdepl "deploy.manifest"
+text fbin "bin/ollm"
+text fomc "omc"
+text kfmt "format"
+text knam "name"
+text kown "owner"
+text ksrc "source"
+text kck "checkpoint"
+text ktok "tokenizer"
+text kserv "serve"
+text komc "omc"
+text kbyt "bytes"
+text kfil "files"
+text kdman "manifest"
+text kdcom "commit"
+text kdck "ck"
+text kdtok "tok"
+text kdlau "launch"
+text vfmt "OLLM-MANIFEST-1"
+text vown "aien-dev/aien-train"
+text vsrc "local"
+text vdfmt "OLLM-DEPLOY-1"
+text vck0 "OLLMCK0"
+text vtok "OLLMTOK1"
+text vserve "serve"
+text w0 "qwen"
+text w1 "llama"
+text w2 "huggingface"
+text w3 "hf.co"
+text w4 "://"
+text w5 "safetensors"
+text w6 "gguf"
+text w7 "mistral"
+text w8 "gemma"
+text w9 "deepseek"
+text w10 "gpt2"
+text w11 "modelscope"
+text rarg "argument too long"
+text ropen "cannot open a file"
+text rbig "a manifest or record file is too large"
+text rread "short read"
+text rforb "names outside weights or a download address"
+text rblank "a blank line"
+text rdup "a key twice"
+text rkey "a line that is not a key or a file line"
+text rmiss "a key is missing"
+text rfmt "format is not OLLM-MANIFEST-1"
+text rown "owner is not aien-dev/aien-train"
+text rsrc "source is not local"
+text rname "name is not a plain name"
+text rck "checkpoint is not OLLMCK0N SHA256"
+text rtok "tokenizer is not OLLMTOK1 SHA256"
+text rsha "serve or omc is not a sha256"
+text rcnt "files or bytes is wrong"
+text rpair "checkpoint and tokenizer are not two different file lines"
+text rsum "a sha256 differs from SUMS (or SUMS lacks the file)"
+text rsize "a file size differs from its file line"
+text rserv "bin/ollm sha256 differs from serve"
+text romc "omc sha256 differs from the manifest"
+text rman "model.manifest sha256 differs from deploy.manifest"
+text rdfmt "deploy.manifest is not OLLM-DEPLOY-1 (six keys once)"
+text rcom "commit is not 40 hex digits"
+text rmag "checkpoint magic differs"
+text rcks "checkpoint is not a whole OLLMCK01/02/03 file (size, P)"
+text rcfnv "checkpoint payload FNV differs from its header"
+text rtks "tokenizer is not a whole OLLMTOK1 file"
+text rtfnv "tokenizer checksum differs from its header"
+text rdck "deploy.manifest ck line differs from the checkpoint"
+text rdtok "deploy.manifest tok line differs from the tokenizer"
+text rlau "launch line differs from bin/ollm serve PORT CKNAME TOKNAME"
+text rvv "tokenizer V differs from the checkpoint V"
+text rhlth "the running server's /health identity differs from deploy.manifest"
+text rexe "the running executable's sha256 differs from serve"
+text rargv "the running command line differs from the launch line"
+text jm0 "\"model\":{\"ck\":\""
+text jm1 "\",\"V\":"
+text jm2 ",\"T\":"
+text jm3 ",\"D\":"
+text jm4 ",\"H\":"
+text jm5 ",\"F\":"
+text jm6 ",\"L\":"
+text jm7 ",\"B\":"
+text jm8 ",\"step\":"
+text jm9 ",\"P\":"
+text jma ",\"ck_bytes\":"
+text jmb ",\"ck_fnv\":\""
+text jmc "\",\"tok\":\"OLLMTOK1\",\"tok_V\":"
+text jmd ",\"tok_fnv\":\""
+text jme "\"}}"
+text jst "{\"status\":\"ok\","
+text lexe "exe"
+text largv "argv"
+text tsp " "
+text tnl "\n"
+text tck "ck="
+text tstep " step="
+text tcfnv " ck_fnv="
+text ttfnv " tok_fnv="
+text tname "name="
+text tlive " live=exe,argv,health"
+
+note ======== output
+
+fn oflush to void
+n = get gl 6
+if gt n 0
+k = write 1 ob 0 n
+end
+put gl 6 0
+end
+
+fn oput c ulong to void
+if ge get gl 6 4096
+oflush
+end
+put ob get gl 6 uchar c
+put gl 6 add get gl 6 1
+end
+
+fn otext t view uchar * to void
+for i ulong len t
+oput ulong get t i
+end
+end
+
+fn ospan p ulong n ulong to void
+for i ulong n
+oput ulong get gb add p i
+end
+end
+
+fn odec v ulong to void
+d = new uchar 20 0
+i = ulong 20
+x = v
+for it ulong 20
+i = sub i 1
+put d i uchar add rem x 10 48
+x = div x 10
+if eq x 0
+break
+end
+end
+for k ulong sub 20 i
+oput ulong get d add i k
+end
+end
+
+fn ohex v ulong to void
+for i ulong 16
+d = and shr v mul sub 15 i 4 15
+if lt d 10
+oput add d 48
+else
+oput add d 87
+end
+end
+end
+
+note bad: print `MANCHECK FAIL reason` and exit 1
+fn bad t view uchar * to void
+oflush
+k = write 1 tfail 0 len tfail
+k = write 1 t 0 len t
+k = write 1 tnl 0 1
+exit 1
+end
+
+note ======== gb byte helpers
+
+fn gat p ulong to ulong
+ret ulong get gb p
+end
+
+note whether gb[p, p + len t) equals t, and the span is exactly that long (n)
+fn eqt p ulong n ulong t view uchar * to bool
+if ne n len t
+ret false
+end
+for i ulong n
+if ne get gb add p i get t i
+ret false
+end
+end
+ret true
+end
+
+note whether gb[p, p + n) equals gb[q, q + n)
+fn eqg p ulong q ulong n ulong to bool
+for i ulong n
+if ne get gb add p i get gb add q i
+ret false
+end
+end
+ret true
+end
+
+fn lnend p ulong e ulong to ulong
+q = p
+while lt q e bound 999999
+if eq gat q 10
+ret q
+end
+q = add q 1
+end
+ret e
+end
+
+note tokens: the space-separated tokens of gb[p, e) into tp/tq (at most 16); their count. Two
+note spaces in a row, or a leading or trailing space, make an empty token (refused by callers).
+fn tokens p ulong e ulong to ulong
+n = ulong 0
+s = p
+q = p
+while le q e bound 999999
+if or eq q e eq gat q 32
+if ge n 16
+ret 17
+end
+put tp n s
+put tq n q
+n = add n 1
+s = add q 1
+end
+q = add q 1
+end
+ret n
+end
+
+fn tlen i ulong to ulong
+ret sub get tq i get tp i
+end
+
+fn ishex c ulong to bool
+if and ge c 48 le c 57
+ret true
+end
+ret and ge c 97 le c 102
+end
+
+note whether gb[p, p + n) is exactly w lowercase hex digits
+fn hexn p ulong n ulong w ulong to bool
+if ne n w
+ret false
+end
+for i ulong n
+if not ishex gat add p i
+ret false
+end
+end
+ret true
+end
+
+note the decimal gb[p, p + n) (1 .. 19 digits, no leading zero unless "0"), or 2^64 - 1
+fn decv p ulong n ulong to ulong
+bad1 = ulong 18446744073709551615
+if or eq n 0 gt n 19
+ret bad1
+end
+if and gt n 1 eq gat p 48
+ret bad1
+end
+v = ulong 0
+for i ulong n
+c = gat add p i
+if or lt c 48 gt c 57
+ret bad1
+end
+v = add mul v 10 sub c 48
+end
+ret v
+end
+
+fn hexd c ulong to ulong
+if le c 57
+ret sub c 48
+end
+ret sub c 87
+end
+
+note the 16 hex digits at gb[p ..) as a ulong (hexn checked first)
+fn hex16 p ulong to ulong
+v = ulong 0
+for i ulong 16
+v = or shl v 4 hexd gat add p i
+end
+ret v
+end
+
+fn tdec i ulong to ulong
+ret decv get tp i tlen i
+end
+
+note ======== files
+
+note DIR (argument 2) into gb[36864 ..), its length into gl5
+fn dirarg to void
+k = argread 2 gb 36864 2000
+if le k 0
+bad rarg
+end
+put gl 5 ulong k
+end
+
+note the path DIR/gb[np, np + nl) into gb[28672 ..); its length
+fn pbuild np ulong nl ulong to ulong
+d = get gl 5
+if gt add d nl 4000
+bad rarg
+end
+for i ulong d
+put gb add 28672 i get gb add 36864 i
+end
+put gb add 28672 d 47
+for i ulong nl
+put gb add add 28673 d i get gb add np i
+end
+ret add add d 1 nl
+end
+
+note a text into the scratch gb[38912 ..); its start
+fn tscr t view uchar * to ulong
+for i ulong len t
+put gb add 38912 i get t i
+end
+ret 38912
+end
+
+fn fopenp n ulong to int
+f = int fopen gb 28672 n 0 0
+if lt f 0
+bad ropen
+end
+ret f
+end
+
+note read the file at path gb[28672, +n) whole into gb[dst, dst + cap); its length
+fn rdinto n ulong dst ulong cap ulong to ulong
+f = fopenp n
+sz = fseek f 0 2
+if lt sz 0
+x = fclose f
+bad rbig
+end
+if gt ulong sz cap
+x = fclose f
+bad rbig
+end
+r = fseek f 0 0
+got = ulong 0
+want = ulong sz
+while lt got want bound 999999
+k = read f gb add dst got sub want got
+if le k 0
+x = fclose f
+bad rread
+end
+got = add got ulong k
+end
+x = fclose f
+ret want
+end
+
+note the file argument ai (an absolute or relative path) whole into gb[dst, +cap); its length
+fn rdarg ai ulong dst ulong cap ulong to ulong
+k = argread ai gb 28672 4000
+if le k 0
+bad rarg
+end
+ret rdinto ulong k dst cap
+end
+
+note size of the file DIR/gb[np, +nl)
+fn fsize np ulong nl ulong to ulong
+n = pbuild np nl
+f = fopenp n
+sz = fseek f 0 2
+x = fclose f
+if lt sz 0
+bad ropen
+end
+ret ulong sz
+end
+
+fn rdle8 p ulong to ulong
+v = ulong 0
+for k ulong 8
+v = or v shl ulong get fb add p k mul k 8
+end
+ret v
+end
+
+note FNV-1a 64 of fb[0, n) from state h
+fn fnvb h ulong n ulong to ulong
+x = h
+for i ulong n
+x = mul xor x ulong get fb i 1099511628211
+end
+ret x
+end
+
+note FNV-1a 64 of the next rem bytes of f, read in 512 KiB chunks
+fn fnvf f int nrem ulong h ulong to ulong
+x = h
+left = nrem
+while gt left 0 bound 999999
+n = left
+if gt n 524288
+n = 524288
+end
+k = read f fb 0 n
+if le k 0
+bad rread
+end
+x = fnvb x ulong k
+left = sub left ulong k
+end
+ret x
+end
+
+note ======== recompute the checkpoint and the tokenizer
+
+note ckcalc: the checkpoint DIR/gb[np, +nl): header fields, size and recomputed payload FNV into cf
+fn ckcalc np ulong nl ulong to void
+n = pbuild np nl
+f = fopenp n
+sz = ulong fseek f 0 2
+r = fseek f 0 0
+if lt sz 128
+bad rcks
+end
+k = read f fb 0 128
+if ne k 128
+bad rread
+end
+mg = rdle8 0
+put cf 0 mg
+for i ulong 7
+put cf add i 1 rdle8 mul add i 1 8
+end
+put cf 8 rdle8 72
+put cf 9 rdle8 96
+put cf 10 sz
+hl = ckhl mg
+put cf 11 rdle8 sub hl 8
+if ne sz add hl mul 24 get cf 9
+bad rcks
+end
+r = fseek f long hl 0
+put cf 12 fnvf f sub sz hl 14695981039346656037
+x = fclose f
+if ne get cf 11 get cf 12
+bad rcfnv
+end
+end
+
+note header length of a checkpoint magic: OLLMCK03 128, 02 120, 01 112 (the FNV is its last 8 bytes)
+fn ckhl mg ulong to ulong
+if eq mg 3688530847248174159
+ret 128
+end
+if eq mg 3616473253210246223
+ret 120
+end
+if eq mg 3544415659172318287
+ret 112
+end
+bad rcks
+ret 0
+end
+
+note tkcalc: the OLLMTOK1 file DIR/gb[np, +nl) (FORMAT.md section 2) into cf 13 .. 15
+fn tkcalc np ulong nl ulong to void
+n = pbuild np nl
+f = fopenp n
+sz = ulong fseek f 0 2
+r = fseek f 0 0
+if or lt sz 32 gt sz 130016
+bad rtks
+end
+k = read f fb 0 sz
+x = fclose f
+if ne ulong k sz
+bad rread
+end
+if ne rdle8 0 3552019954604461135
+bad rtks
+end
+v = rdle8 8
+if or lt v 272 gt v 32768
+bad rtks
+end
+if ne rdle8 16 16
+bad rtks
+end
+if ne sz add 32 mul 4 sub v 272
+bad rtks
+end
+put cf 13 v
+put cf 14 rdle8 24
+h = fnvb 14695981039346656037 24
+put cf 15 tkrest h sz
+if ne get cf 14 get cf 15
+bad rtfnv
+end
+end
+
+note FNV-1a 64 continued over fb[32, sz)
+fn tkrest h ulong sz ulong to ulong
+x = h
+for i ulong sub sz 32
+x = mul xor x ulong get fb add 32 i 1099511628211
+end
+ret x
+end
+
+note ======== OLLM-MANIFEST-1 (model.manifest at gb[0, gl0))
+
+fn lower c ulong to ulong
+if and ge c 65 le c 90
+ret add c 32
+end
+ret c
+end
+
+fn atci p ulong t view uchar * to bool
+for i ulong len t
+if ne lower gat add p i ulong get t i
+ret false
+end
+end
+ret true
+end
+
+fn hasci e ulong t view uchar * to bool
+if lt e len t
+ret false
+end
+for p ulong add sub e len t 1
+if atci p t
+ret true
+end
+end
+ret false
+end
+
+fn forbid e ulong to void
+if or or or hasci e w0 hasci e w1 hasci e w2 hasci e w3
+bad rforb
+end
+if or or or hasci e w4 hasci e w5 hasci e w6 hasci e w7
+bad rforb
+end
+if or or or hasci e w8 hasci e w9 hasci e w10 hasci e w11
+bad rforb
+end
+end
+
+fn mkey p ulong n ulong to ulong
+if eqt p n kfmt
+ret 0
+end
+if eqt p n knam
+ret 1
+end
+if eqt p n kown
+ret 2
+end
+if eqt p n ksrc
+ret 3
+end
+if eqt p n kck
+ret 4
+end
+if eqt p n ktok
+ret 5
+end
+if eqt p n kserv
+ret 6
+end
+if eqt p n komc
+ret 7
+end
+if eqt p n kbyt
+ret 8
+end
+if eqt p n kfil
+ret 9
+end
+ret 99
+end
+
+fn plain c ulong to bool
+if or and ge c 48 le c 57 and ge c 65 le c 90
+ret true
+end
+if and ge c 97 le c 122
+ret true
+end
+ret or or eq c 46 eq c 95 eq c 45
+end
+
+fn plainn p ulong n ulong to bool
+if or eq n 0 gt n 255
+ret false
+end
+if eq gat p 46
+ret false
+end
+for i ulong n
+if not plain gat add p i
+ret false
+end
+end
+ret true
+end
+
+note a file line gb[p, q): SHA256 SIZE NAME
+fn fline p ulong q ulong to void
+n = tokens p q
+if ne n 3
+bad rkey
+end
+if not hexn get tp 0 tlen 0 64
+bad rkey
+end
+sz = tdec 1
+if eq sz 18446744073709551615
+bad rkey
+end
+if not plainn get tp 2 tlen 2
+bad rkey
+end
+put gl 9 add get gl 9 1
+put gl 10 add get gl 10 sz
+end
+
+note seen-bit bookkeeping for key k of slot base b (0 M, 16 D) in gl slot g; value start v, end q
+fn seen k ulong b ulong g ulong v ulong q ulong to void
+m = shl ulong 1 k
+if ne and get gl g m 0
+bad rdup
+end
+put gl g or get gl g m
+put ks add b k v
+put ke add b k q
+end
+
+fn mline p ulong q ulong to void
+t = p
+while lt t q bound 999999
+if eq gat t 32
+break
+end
+t = add t 1
+end
+k = mkey p sub t p
+if lt k 10
+if ge t q
+bad rkey
+end
+seen k 0 7 add t 1 q
+else
+fline p q
+end
+end
+
+fn mval k ulong to ulong
+ret get ks k
+end
+
+fn mvlen k ulong to ulong
+ret sub get ke k get ks k
+end
+
+note the file line whose sha256 is gb[h, h + 64), as its start; 2^64 - 1 when none
+fn findsha h ulong to ulong
+e = get gl 0
+p = ulong 0
+while lt p e bound 999999
+q = lnend p e
+if and ge sub q p 64 hexn p 64 64
+if eqg p h 64
+ret p
+end
+end
+p = add q 1
+end
+ret 18446744073709551615
+end
+
+fn mparse to void
+e = get gl 0
+forbid e
+p = ulong 0
+while lt p e bound 999999
+q = lnend p e
+if eq q p
+bad rblank
+end
+mline p q
+p = add q 1
+end
+if ne get gl 7 1023
+bad rmiss
+end
+end
+
+fn mvals to void
+if not eqt mval 0 mvlen 0 vfmt
+bad rfmt
+end
+if not eqt mval 2 mvlen 2 vown
+bad rown
+end
+if not eqt mval 3 mvlen 3 vsrc
+bad rsrc
+end
+if not plainn mval 1 mvlen 1
+bad rname
+end
+c = mval 4
+if ne mvlen 4 73
+bad rck
+end
+if not eqt c 7 vck0
+bad rck
+end
+d = gat add c 7
+if or or lt d 49 gt d 57 ne gat add c 8 32
+bad rck
+end
+if not hexn add c 9 64 64
+bad rck
+end
+c = mval 5
+if ne mvlen 5 73
+bad rtok
+end
+if or not eqt c 8 vtok ne gat add c 8 32
+bad rtok
+end
+if not hexn add c 9 64 64
+bad rtok
+end
+if or not hexn mval 6 mvlen 6 64 not hexn mval 7 mvlen 7 64
+bad rsha
+end
+mcount
+end
+
+fn mcount to void
+if or lt get gl 9 2 ne decv mval 9 mvlen 9 get gl 9
+bad rcnt
+end
+if ne decv mval 8 mvlen 8 get gl 10
+bad rcnt
+end
+a = findsha add mval 4 9
+b = findsha add mval 5 9
+if or eq a 18446744073709551615 eq b 18446744073709551615
+bad rpair
+end
+if eq a b
+bad rpair
+end
+put gl 11 a
+put gl 12 b
+end
+
+note ======== SUMS (gb[12288, +gl2)): `HEX  NAME` lines
+
+note the start of the sha256 SUMS gives for the name gb[np, +nl); bad rsum when absent
+fn sumof np ulong nl ulong to ulong
+e = add 12288 get gl 2
+p = ulong 12288
+while lt p e bound 999999
+q = lnend p e
+if eq sub q p add 66 nl
+if and eq gat add p 64 32 eq gat add p 65 32
+if and hexn p 64 64 eqg add p 66 np nl
+ret p
+end
+end
+end
+p = add q 1
+end
+bad rsum
+ret 0
+end
+
+note name of the file line at p: start and length (third token)
+fn flname p ulong to ulong
+n = tokens p lnend p get gl 0
+ret get tp 2
+end
+
+fn flnlen p ulong to ulong
+n = tokens p lnend p get gl 0
+ret tlen 2
+end
+
+fn flsize p ulong to ulong
+n = tokens p lnend p get gl 0
+ret tdec 1
+end
+
+note every file line: SUMS sha256 equal, size on disk equal
+fn sfiles to void
+e = get gl 0
+p = ulong 0
+while lt p e bound 999999
+q = lnend p e
+if and ge sub q p 64 hexn p 64 64
+np = flname p
+nl = flnlen p
+s = sumof np nl
+if not eqg s p 64
+bad rsum
+end
+if ne fsize np nl flsize p
+bad rsize
+end
+end
+p = add q 1
+end
+end
+
+fn ssums to void
+s = sumof tscr fbin len fbin
+if not eqg s mval 6 64
+bad rserv
+end
+s = sumof tscr fomc len fomc
+if not eqg s mval 7 64
+bad romc
+end
+s = sumof tscr fmodel len fmodel
+if not eqg s get ks 17 64
+bad rman
+end
+end
+
+note ======== OLLM-DEPLOY-1 (gb[8192, +gl1))
+
+fn dkey p ulong n ulong to ulong
+if eqt p n kfmt
+ret 0
+end
+if eqt p n kdman
+ret 1
+end
+if eqt p n kdcom
+ret 2
+end
+if eqt p n kdck
+ret 3
+end
+if eqt p n kdtok
+ret 4
+end
+if eqt p n kdlau
+ret 5
+end
+ret 99
+end
+
+fn dline p ulong q ulong to void
+t = p
+while lt t q bound 999999
+if eq gat t 32
+break
+end
+t = add t 1
+end
+k = dkey p sub t p
+if or ge k 6 ge t q
+bad rdfmt
+end
+seen k 16 8 add t 1 q
+end
+
+fn dparse to void
+e = add 8192 get gl 1
+p = ulong 8192
+while lt p e bound 999999
+q = lnend p e
+if eq q p
+bad rdfmt
+end
+dline p q
+p = add q 1
+end
+if ne get gl 8 63
+bad rdfmt
+end
+if not eqt get ks 16 sub get ke 16 get ks 16 vdfmt
+bad rdfmt
+end
+if not hexn get ks 17 sub get ke 17 get ks 17 64
+bad rman
+end
+if not hexn get ks 18 sub get ke 18 get ks 18 40
+bad rcom
+end
+end
+
+note the deploy ck line against cf (recomputed) and the manifest's checkpoint magic
+fn dck to void
+n = tokens get ks 19 get ke 19
+if ne n 12
+bad rdck
+end
+if or ne tlen 0 8 not eqg get tp 0 mval 4 8
+bad rmag
+end
+mg = ulong 0
+for k ulong 8
+mg = or mg shl gat add get tp 0 k mul k 8
+end
+if ne mg get cf 0
+bad rmag
+end
+for i ulong 10
+if ne tdec add i 1 get cf add i 1
+bad rdck
+end
+end
+if not hexn get tp 11 tlen 11 16
+bad rdck
+end
+if ne hex16 get tp 11 get cf 12
+bad rdck
+end
+end
+
+fn dtok to void
+n = tokens get ks 20 get ke 20
+if ne n 3
+bad rdtok
+end
+if not eqt get tp 0 tlen 0 vtok
+bad rdtok
+end
+if ne tdec 1 get cf 13
+bad rdtok
+end
+if not hexn get tp 2 tlen 2 16
+bad rdtok
+end
+if ne hex16 get tp 2 get cf 15
+bad rdtok
+end
+if ne get cf 13 get cf 1
+bad rvv
+end
+end
+
+note launch: bin/ollm serve PORT CKNAME TOKNAME, the names those of the two file lines
+fn dlau to void
+n = tokens get ks 21 get ke 21
+if ne n 5
+bad rlau
+end
+if or not eqt get tp 0 tlen 0 fbin not eqt get tp 1 tlen 1 vserve
+bad rlau
+end
+pt = tdec 2
+if or eq pt 0 gt pt 65535
+bad rlau
+end
+c = get gl 11
+if not samename 3 flname c flnlen c
+bad rlau
+end
+c = get gl 12
+if not samename 4 flname c flnlen c
+bad rlau
+end
+end
+
+note whether token i of the last tokens call equals gb[np, +nl). tokens is re-run by flname, so
+note the launch tokens are re-read here
+fn samename i ulong np ulong nl ulong to bool
+n = tokens get ks 21 get ke 21
+if ne tlen i nl
+ret false
+end
+ret eqg get tp i np nl
+end
+
+note ======== the whole static check
+
+fn loadall ai ulong to void
+dirarg
+n = pbuild tscr fmodel len fmodel
+put gl 0 rdinto n 0 8192
+n = pbuild tscr fdepl len fdepl
+put gl 1 rdinto n 8192 4096
+put gl 2 rdarg ai 12288 4096
+end
+
+fn chkall to void
+loadall 3
+mparse
+mvals
+dparse
+sfiles
+ssums
+c = get gl 11
+ckcalc flname c flnlen c
+c = get gl 12
+tkcalc flname c flnlen c
+dck
+dtok
+dlau
+end
+
+fn opass to void
+otext tpass
+otext tname
+ospan mval 1 mvlen 1
+otext tsp
+otext tck
+mg = get cf 0
+for k ulong 8
+oput and shr mg mul k 8 255
+end
+otext tstep
+odec get cf 8
+otext tcfnv
+ohex get cf 12
+otext ttfnv
+ohex get cf 15
+end
+
+note ======== live: /health and the process
+
+note the expected "model" member into gb[32768 ..); its length
+fn xput p ulong t view uchar * to ulong
+for i ulong len t
+put gb add p i get t i
+end
+ret add p len t
+end
+
+fn xdec p ulong v ulong to ulong
+d = new uchar 20 0
+i = ulong 20
+x = v
+for it ulong 20
+i = sub i 1
+put d i uchar add rem x 10 48
+x = div x 10
+if eq x 0
+break
+end
+end
+q = p
+for k ulong sub 20 i
+put gb q get d add i k
+q = add q 1
+end
+ret q
+end
+
+fn xhex p ulong v ulong to ulong
+q = p
+for i ulong 16
+d = and shr v mul sub 15 i 4 15
+if lt d 10
+put gb q uchar add d 48
+else
+put gb q uchar add d 87
+end
+q = add q 1
+end
+ret q
+end
+
+fn xmodel to ulong
+q = xput 32768 jm0
+mg = get cf 0
+for k ulong 8
+put gb add q k uchar and shr mg mul k 8 255
+end
+q = add q 8
+q = xput q jm1
+q = xdec q get cf 1
+q = xput q jm2
+q = xdec q get cf 2
+q = xput q jm3
+q = xdec q get cf 3
+q = xput q jm4
+q = xdec q get cf 4
+q = xput q jm5
+q = xdec q get cf 5
+q = xput q jm6
+q = xdec q get cf 6
+q = xput q jm7
+q = xdec q get cf 7
+q = xput q jm8
+q = xdec q get cf 8
+q = xput q jm9
+q = xdec q get cf 9
+q = xput q jma
+q = xdec q get cf 10
+q = xput q jmb
+q = xhex q get cf 12
+q = xput q jmc
+q = xdec q get cf 13
+q = xput q jmd
+q = xhex q get cf 15
+q = xput q jme
+ret sub q 32768
+end
+
+note HEALTH (gb[16384, +gl3)) starts with {"status":"ok", and ends with exactly the expected model
+note member (the bytes before it are serve's queue fields; a trailing newline is allowed)
+fn livehl to void
+xn = xmodel
+e = add 16384 get gl 3
+if and gt e 16384 eq gat sub e 1 10
+e = sub e 1
+end
+if lt sub e 16384 add xn len jst
+bad rhlth
+end
+if not eqt 16384 len jst jst
+bad rhlth
+end
+if not eqg sub e xn 32768 xn
+bad rhlth
+end
+if ne gat sub sub e xn 1 44
+bad rhlth
+end
+end
+
+note LIVE (gb[20480, +gl4)): `exe SHA256` and `argv A0 serve PORT CK TOK` lines
+fn livepr to void
+e = add 20480 get gl 4
+p = ulong 20480
+ex = ulong 0
+av = ulong 0
+while lt p e bound 999999
+q = lnend p e
+n = tokens p q
+if and eq n 2 eqt get tp 0 tlen 0 lexe
+if not hexn get tp 1 tlen 1 64
+bad rexe
+end
+if not eqg get tp 1 mval 6 64
+bad rexe
+end
+ex = add ex 1
+end
+if eqt get tp 0 tlen 0 largv
+liveav p q
+av = add av 1
+end
+p = add q 1
+end
+if ne ex 1
+bad rexe
+end
+if ne av 1
+bad rargv
+end
+end
+
+note the argv line: `argv` then 5 tokens; A0 ends with /bin/ollm (or equals bin/ollm), then serve
+note and the launch PORT, then paths equal to CKNAME and TOKNAME or ending with /CKNAME, /TOKNAME
+fn liveav p ulong q ulong to void
+n = tokens p q
+if ne n 6
+bad rargv
+end
+for i ulong 6
+put ap i get tp i
+put aq i get tq i
+end
+n = tokens get ks 21 get ke 21
+for j ulong 5
+if not lmatch j
+bad rargv
+end
+end
+end
+
+note argv token j + 1 against launch token j (the last tokens call)
+fn lmatch j ulong to bool
+a = get ap add j 1
+b = get aq add j 1
+s = get tp j
+n = tlen j
+if or eq j 1 eq j 2
+ret and eq sub b a n eqg a s n
+end
+ret endsw a b s n
+end
+
+note whether gb[a, b) equals gb[s, +n) or ends with / then it
+fn endsw a ulong b ulong s ulong n ulong to bool
+w = sub b a
+if eq w n
+ret eqg a s n
+end
+if le w n
+ret false
+end
+if ne gat sub sub b n 1 47
+ret false
+end
+ret eqg sub b n s n
+end
+
+note ======== commands
+
+fn cmdid to void
+if ne argcnt 5
+k = write 2 tusage 0 len tusage
+exit 2
+end
+dirarg
+k = argread 3 gb 38912 2000
+if le k 0
+bad rarg
+end
+ckcalc 38912 ulong k
+k = argread 4 gb 38912 2000
+if le k 0
+bad rarg
+end
+tkcalc 38912 ulong k
+if ne get cf 13 get cf 1
+bad rvv
+end
+otext kdck
+mg = get cf 0
+oput 32
+for j ulong 8
+oput and shr mg mul j 8 255
+end
+for i ulong 10
+oput 32
+odec get cf add i 1
+end
+oput 32
+ohex get cf 12
+oput 10
+otext kdtok
+oput 32
+otext vtok
+oput 32
+odec get cf 13
+oput 32
+ohex get cf 15
+oput 10
+oflush
+end
+
+fn argis i ulong t view uchar * to bool
+k = argread i gb 38912 64
+if ne k long len t
+ret false
+end
+ret eqt 38912 ulong k t
+end
+
+fn main to int
+na = argcnt
+if lt na 2
+k = write 2 tusage 0 len tusage
+ret 2
+end
+if argis 1 tcid
+cmdid
+ret 0
+end
+if and argis 1 tcchk eq na 4
+chkall
+opass
+oput 10
+oflush
+ret 0
+end
+if and argis 1 tclive eq na 6
+chkall
+put gl 3 rdarg 4 16384 4096
+put gl 4 rdarg 5 20480 8192
+livehl
+livepr
+opass
+otext tlive
+oput 10
+oflush
+ret 0
+end
+k = write 2 tusage 0 len tusage
+ret 2
+end
