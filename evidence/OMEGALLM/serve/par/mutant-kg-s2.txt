@@ -1,0 +1,8 @@
+env date=2026-11-07T04:38:00Z host=spark-b87b ollm=79ba8c1ecc338d3de868d59d08e81efcd35b03e7bdf6a84924bf36c0eea1f06f ck=ae7559ea1cfc89269905191fb64ea31f185a0c0940965144e4f94d05f9abb452 par=2 len=600 gen=8
+P par_cold_turn1 fail fnv=13952217195686466487/17963640633094847355/5611197138782582107 all=448995483035026072/18049125641009528424/448995483035026072 prompt_tokens=168 reused=0 prefilled=168 msg=["message":{"role":"assistant","content":"guerguerguerguerguerguerguerguer"}] serial=["message":{"role":"assistant","content":"guerguerguerguerguerguerguerguer"}] one=["message":{"role":"assistant","content":"guerguerguerguerguerguerguerguer"}]
+P par_warm_turn2 fail fnv=8873261295587999979/8576784111488931549/330882181139533041 all=11047819449971399431/6724261708665189692/11047819449971399431 prompt_tokens=225 reused=168 prefilled=57 msg=["message":{"role":"assistant","content":"guerguerguerguerguerguerguerguer"}] serial=["message":{"role":"assistant","content":"guerguerguerguerguerguerguerguer"}] one=["message":{"role":"assistant","content":"guerguerguerguerguerguerguerguer"}]
+P par_warm_reused pass reused=168 prefilled=57
+P par_cold_turn2 fail fnv=9838179151105508172/8576784111488931549/330882181139533041 all=12710547709840995188/6724261708665189692/12710547709840995188 prompt_tokens=225 reused=0 prefilled=225 msg=["message":{"role":"assistant","content":"guerguerguerguerguerguerguerguer"}] serial=["message":{"role":"assistant","content":"guerguerguerguerguerguerguerguer"}] one=["message":{"role":"assistant","content":"guerguerguerguerguerguerguerguer"}]
+P par_workers_idle pass children=1 [2409347 ]
+P par_workers_gone_after_sigterm pass workers=[2409347 ]
+PAR_CHECK FAIL fails=3

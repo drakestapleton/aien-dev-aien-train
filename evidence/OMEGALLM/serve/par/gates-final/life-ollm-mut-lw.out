@@ -1,0 +1,4 @@
+env date=2026-11-07T05:58:50Z ollm=03f53809308092d64577c9c8163014c3f00736815de304a23e1a5ccd3249428e par=2 len=6000
+L client_left_mid_prefill pass idle=[516889 ] during=[516889 516925 ] after=[516889 ] log=[C 200 0 0 0 0 0 0 0] health={"status":"ok","in_flight":0,"queued":0,"capacity":32,"busy":false}
+L sigterm_mid_prefill fail workers=[516889 534954 ] left=[ 516889]
+PAR_LIFE FAIL fails=1
