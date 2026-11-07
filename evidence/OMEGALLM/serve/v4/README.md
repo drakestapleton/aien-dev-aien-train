@@ -18,3 +18,4 @@ built with the pinned omc `2c82480596bbdc50cda9626866209ef662d5834f278f839ff4ce0
 | `bench-B.txt`, `bench-A.txt` | `serve-bench.sh` on CK-B (D256 T4096) and CK-A (D384 T2048) | MEASURED table in docs/omegallm/README.md |
 | `checkpoints.txt` | how the measurement checkpoints were made (init4, train4, the header T change) | |
 | `fork-decision.txt` | one vs two concurrent decodes on one core | 4.29 s vs 8.61 s each: no gain, not added |
+| `health-during-prefill.txt` | GET /health every 0.5 s during a 4,064-token cold prefill on CK-B (106.9 s) | 113 of 113 answered (busy), latency median 0.42 s, max 0.88 s |

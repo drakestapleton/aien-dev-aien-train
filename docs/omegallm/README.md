@@ -268,7 +268,9 @@ request it varies. Receipts: `evidence/OMEGALLM/serve/`.
   Parallel generation slots by `fork` were measured and not added (see below).
 - **Test-only members** (`test=1`): `ollm_test_info: true` adds `"ollm_test":{"logits_fnv",
   "reused","prefilled","prompt"}` to a JSON answer (the word-wise FNV-1a of the first sampled
-  step's logits and the prompt ids); `ollm_test_cold: true` drops the cache first (a cold prefill).
+  step's logits and the prompt ids); `ollm_test_cold: true` drops the cache first (a cold prefill);
+  `ollm_test_serial: true` decodes the prompt position by position (sample4's order) instead of
+  layer by layer.
 
 Checks (`serve-check.py`, `SERVE_CHECK PASS` required; 105 checks with v1 merges, 43 with
 OLLMTOK1 merges): with OLLMTOK1 merges the referee runs the CHAT1 suite: content against `sample4` (same binary, chat-mode prompt), `c1_serve_eq_chatenc`
@@ -322,6 +324,10 @@ The 4 clients are served one after another in arrival order (each waits in the q
 previous one finishes: the log's queue_ms); no request was refused. Prefill is O(context) per position, so its tok/s
 falls with length on CK-B; on CK-A it is bound by staging (32 positions share one staging of each
 layer; a decode position stages all six).
+
+During a 4,064-token cold prefill on CK-B (106.9 s), `GET /health` polled every 0.5 s was
+answered 113 times out of 113 (median 0.42 s, max 0.88 s: the side connections wait at most one
+32-position chunk; `health-during-prefill.txt`).
 
 **Fork slots, measured and rejected**: the same `sample4` decode (CK-B, 64 tokens) took 4.29 s
 alone and 8.61 s for each of two copies run at once on core 4 (8.61 / (2 x 4.29) = 1.003): one core
