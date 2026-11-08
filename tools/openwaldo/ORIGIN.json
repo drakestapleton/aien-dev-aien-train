@@ -1,0 +1,17 @@
+{
+  "kind": "aien-public-exchange-origin",
+  "schema": 1,
+  "source": "urn:aien:public:openwaldo-exchange-smoke:v1",
+  "authors": "AIEN contributors",
+  "asserted_license": "Apache-2.0",
+  "origin": "Authored public compiler smoke fixture for this exchange; not copied from any evaluation or training set.",
+  "training_eligible": false,
+  "evaluation_eligible": false,
+  "upstream_repository": "https://github.com/openwaldo/waldo",
+  "upstream_commit": "cec5e69c306460ba0c89aa0d1e6a0c9d95c4f0f0",
+  "contract": "docs/OPENWALDO-BOM.md",
+  "record_contract": "internal/record/record.go",
+  "omega_commit": "049356cbf40e7238fa1c206a9f58f58d60575bdd",
+  "original_openwaldo_export_bom": null,
+  "limitation": "Schema-compatible authored JSONL fixture; not an official indexed WALDO export or a verified corpus BOM."
+}

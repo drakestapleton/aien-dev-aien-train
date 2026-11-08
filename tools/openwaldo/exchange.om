@@ -1,0 +1,164 @@
+note Bounded schema-1 pretrain record exchange. Original bytes survive import/export.
+note Compose after existing JSON reader and SHA256. No training admission is implied.
+text owsha "sha256"
+text owkind "kind"
+text owtext "text"
+text owsource "source"
+text owlic "license"
+text owpre "pretrain"
+text owexport "export"
+text owimport "import"
+text owext "extract"
+
+fn ow_fld src view uchar * tape view uint * key view uchar * to ulong
+k = js_first tape 0
+while ne k jsnone bound 4096
+if js_streq src js_off tape k key
+ret add k 1
+end
+k = js_mnext tape k
+end
+ret jsnone
+end
+
+fn ow_str src view uchar * tape view uint * key view uchar * to ulong
+v = ow_fld src tape key
+if or eq v jsnone ne js_type tape v jsstr
+exit 21
+end
+if eq js_slen tape v 0
+exit 21
+end
+ret v
+end
+
+fn ow_wr src view uchar * n ulong to void
+p = ulong 0
+while lt p n bound 16385
+k = write 1 src p sub n p
+if le k 0
+exit 90
+end
+p = add p ulong k
+end
+end
+
+fn ow_eq a view uchar * n long b view uchar * to bool
+if ne n long len b
+ret false
+end
+for i ulong len b
+if ne get a i get b i
+ret false
+end
+end
+ret true
+end
+
+fn ow_dups src view uchar * tape view uint * to void
+note Reject duplicate top-level keys, including escaped spellings.
+keybuf = new uchar 16384 0
+k = js_first tape 0
+while ne k jsnone bound 4096
+sz = js_sget src js_off tape k keybuf
+j = js_mnext tape k
+while ne j jsnone bound 4096
+if js_streq src js_off tape j part keybuf 0 ulong sz
+exit 24
+end
+j = js_mnext tape j
+end
+k = js_mnext tape k
+end
+end
+
+fn ow_hx d ulong to uchar
+if gt d 9
+ret uchar add d 87
+end
+ret uchar add d 48
+end
+
+fn ow_hash body view uchar * sz ulong expected view uchar * to void
+h = new uchar 32 0
+sha256_hash part body 0 sz h
+for i ulong 32
+if ne get expected mul i 2 ow_hx shr ulong get h i 4
+exit 27
+end
+if ne get expected add mul i 2 1 ow_hx and ulong get h i 15
+exit 27
+end
+end
+end
+
+fn main to int
+if ne argcnt 2
+ret 20
+end
+mode = new uchar 16 0
+m = argread 1 mode 0 16
+extract = false
+if ow_eq mode m owext
+extract = true
+else
+if not or ow_eq mode m owexport ow_eq mode m owimport
+ret 20
+end
+end
+src = new uchar 16384 0
+n = ulong 0
+while lt n len src bound 16385
+r = read 0 src n sub len src n
+if lt r 0
+ret 90
+end
+if eq r 0
+break
+end
+n = add n ulong r
+end
+if eq n len src
+ret 22
+end
+if or eq n 0 ne get src sub n 1 10
+ret 22
+end
+for i ulong sub n 1
+if eq get src i 10
+ret 22
+end
+end
+tape = new uint 16384 0
+r = js_init tape 16384 64
+r = js_parse src tape n
+if or lt r 0 ne js_type tape 0 jsobj
+ret 23
+end
+ow_dups src tape
+kind = ow_str src tape owkind
+if not js_streq src js_off tape kind owpre
+ret 25
+end
+v = ow_str src tape owsource
+v = ow_str src tape owlic
+v = ow_str src tape owtext
+body = new uchar 16384 0
+sz = js_sget src js_off tape v body
+if le sz 0
+ret 26
+end
+v = ow_str src tape owsha
+expected = new uchar 64 0
+hn = js_sget src js_off tape v expected
+if ne hn 64
+ret 27
+end
+ow_hash body ulong sz expected
+if extract
+ow_wr body ulong sz
+else
+ow_wr src n
+end
+ret 0
+end

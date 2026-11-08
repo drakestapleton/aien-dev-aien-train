@@ -1,0 +1,16 @@
+PASS exact import/export, extraction, unknown metadata, SHA256 oracle
+PASS 15 refusal inputs across three modes; no output on refusal
+original.jsonl: OK
+imported.jsonl: OK
+exported.jsonl: OK
+ORIGIN.json: OK
+compact.om: OK
+expanded.om: OK
+catalog.om: OK
+catalog.lock: OK
+resolve.map: OK
+compiler: OK
+exchange: OK
+resolver: OK
+program: OK
+PASS pinned OpenWALDO Record.Validate and AppendCanonical exact-byte oracle
